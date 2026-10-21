@@ -22,18 +22,22 @@
 #
 #   --php X.Y        act on one version only (default: every installed
 #                    version in SUPPORTED_VERS)
-#   --ignore-env     proceed past soft environment blockers (unrecognized
-#                    derivative, live mod_php, live sites on skipped versions).
-#                    Hard blockers (non-Debian, no systemd, no AppArmor, not
-#                    root, no supported FPM) can't be overridden.
+#   --ignore-env     proceed past soft environment blockers (live unpatched
+#                    mod_php, live sites only on skipped versions). Hard
+#                    blockers (non-Debian, no service manager, no AppArmor,
+#                    not root, no supported FPM) can't be overridden.
 #
 # Every command first checks, in order: OS (Debian, Ubuntu, Trisquel and
 # popular derivatives), PHP-FPM versions and their package source, web
-# servers (Apache/nginx and what PHP they use), then system (root, systemd,
-# container, AppArmor, tools). It reports, then refuses to start if needed.
+# servers (Apache/nginx and what PHP they use), then system (root, init
+# system, container, AppArmor, tools). It reports, then refuses to start only
+# if it can't work safely. Derivatives and non-systemd init (sysvinit/OpenRC)
+# are supported. Each version's patch state is reported from three signals:
+# upstream version, known distro backport builds, and the package changelog.
 #
 # Env overrides:
 #   SUPPORTED_VERS="7.0 ... 8.5"       versions this script will touch
+#   FIXED_BUILDS="7.4.33-1+deb11u9"    extra fixed distro builds (backports)
 #   PATCHED_X_Y=<version>              first fixed upstream release for branch
 #                                      X.Y, e.g. PATCHED_8_4=8.4.27. Defaults:
 #                                      8.2.35 8.3.36 8.4.27 8.5.12 (21 Oct 2026).
@@ -58,6 +62,19 @@ declare -A PATCHED_DEFAULT=([8.2]=8.2.35 [8.3]=8.3.36 [8.4]=8.4.27 [8.5]=8.5.12)
 patched_ver() { local n="PATCHED_${1/./_}"; echo "${!n:-${PATCHED_DEFAULT[$1]:-}}"; }
 # Branches PHP no longer fixes; only a distro or PPA backport can patch them
 EOL_VERS="7.0 7.1 7.2 7.3 7.4 8.0 8.1"
+# Distro builds that carry the fix without changing the upstream version.
+# Ubuntu USN-8948-1/-2 (21 Oct 2026). Debian (DSA-6574-1) and sury ship the new
+# upstream release instead, which the PATCHED_DEFAULT check already covers.
+declare -A BACKPORT_FIXED=(
+    [7.0]="7.0.33-0ubuntu0.16.04.16+esm22"
+    [7.2]="7.2.24-0ubuntu0.18.04.17+esm14"
+    [7.4]="7.4.3-4ubuntu2.29+esm5"
+    [8.1]="8.1.2-1ubuntu2.28"
+    [8.3]="8.3.6-0ubuntu0.24.04.13"
+    [8.5]="8.5.4-0ubuntu1.5 8.5.9-0ubuntu2.1"
+)
+# Add fixed builds as they're published, e.g. a Debian LTS/ELTS 7.4 update
+FIXED_BUILDS="${FIXED_BUILDS:-}"
 MARKER="# managed-by: php2shell-mitigation"
 BACKUP_ROOT="/var/backups/php2shell/$(date +%Y%m%d-%H%M%S)"
 WEB_ROOTS="${WEB_ROOTS:-/var/www /srv/www}"
@@ -71,6 +88,25 @@ info()  { echo -e "${GREEN}[+]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
 step()  { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
 die()   { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+
+# ---------- service manager --------------------------------------------------
+# systemd when it's PID 1; otherwise service(8) + init scripts (sysvinit or
+# OpenRC, as on Devuan, MX and antiX). Debian's php-fpm init scripts support
+# status, restart and reload.
+have_systemd() { [[ -d /run/systemd/system ]]; }
+svc_active() {
+    if have_systemd; then systemctl is-active --quiet "$1" 2>/dev/null
+    else service "$1" status >/dev/null 2>&1; fi
+}
+svc_enabled() {
+    if have_systemd; then systemctl is-enabled --quiet "$1" 2>/dev/null; return; fi
+    if command -v rc-update >/dev/null; then rc-update show 2>/dev/null | grep -qE "^[[:space:]]*$1[[:space:]]"; return; fi
+    compgen -G "/etc/rc[2-5].d/S*$1" >/dev/null
+}
+svc_do() {   # restart|reload <service>
+    if have_systemd; then systemctl "$1" "$2"; else service "$2" "$1"; fi
+}
+svc_hint() { if have_systemd; then echo "systemctl $1 $2"; else echo "service $2 $1"; fi; }
 
 # ---------- per-version context ----------------------------------------------
 set_ver() {
@@ -91,7 +127,7 @@ set_ver() {
     HINT="--php ${PHP_VER}"
     FPM_INFO=""
     # Don't start services the admin had stopped; test config only
-    if systemctl is-active --quiet "$FPM_SERVICE" || systemctl is-enabled --quiet "$FPM_SERVICE" 2>/dev/null; then
+    if svc_active "$FPM_SERVICE" || svc_enabled "$FPM_SERVICE"; then
         SVC_LIVE=1
     else
         SVC_LIVE=0
@@ -147,20 +183,42 @@ fpm_health() {
         warn "$FPM_SERVICE is stopped and disabled — config tested only, not started"
         return 0
     fi
-    systemctl restart "$FPM_SERVICE" >/dev/null 2>&1 || return 1
-    sleep 2; systemctl is-active --quiet "$FPM_SERVICE" || return 1
-    systemctl reload "$FPM_SERVICE" >/dev/null 2>&1 || return 1
-    sleep 2; systemctl is-active --quiet "$FPM_SERVICE" || return 1
+    svc_do restart "$FPM_SERVICE" >/dev/null 2>&1 || return 1
+    sleep 2; svc_active "$FPM_SERVICE" || return 1
+    svc_do reload "$FPM_SERVICE" >/dev/null 2>&1 || return 1
+    sleep 2; svc_active "$FPM_SERVICE" || return 1
     local s
     for s in $(listen_sockets); do
         [[ -S "$s" ]] || { warn "Listen socket missing: $s"; return 1; }
     done
 }
 
+# Accepts "YYYY-mm-dd HH:MM:SS" or "-24h"
+aa_since_epoch() { if [[ "$1" == -24h ]]; then echo $(( $(date +%s) - 86400 )); else date -d "$1" +%s; fi; }
+
+# AppArmor records reach different places: the journal (kernel or audit
+# transport), auditd's audit.log when auditd runs, or syslog's kern.log on
+# systems without systemd. Read all of them; dedupe on the audit(epoch:serial) id.
+aa_raw() {
+    local since="$1" f
+    if have_systemd && command -v journalctl >/dev/null; then
+        journalctl -k --since "@${since}" --no-pager 2>/dev/null | grep -F 'apparmor="' || true
+        journalctl _TRANSPORT=audit --since "@${since}" --no-pager 2>/dev/null | grep -F 'apparmor="' || true
+    fi
+    for f in /var/log/audit/audit.log /var/log/kern.log /var/log/kern.log.1 /var/log/syslog; do
+        [[ -r "$f" ]] && { grep -hF 'apparmor="' "$f" 2>/dev/null || true; }
+    done
+    dmesg 2>/dev/null | grep -F 'apparmor="' || true
+}
+
 aa_events() {
-    journalctl -k --since "$1" --no-pager 2>/dev/null \
+    local since; since="$(aa_since_epoch "$1")"
+    aa_raw "$since" \
       | grep -E 'apparmor="(DENIED|ALLOWED|AUDIT)"' \
-      | grep -F "profile=\"${FPM_BIN}\"" || true
+      | grep -F "profile=\"${FPM_BIN}\"" \
+      | awk -v s="$since" 'match($0, /audit\([0-9]+\.[0-9]+:[0-9]+\)/) {
+            id = substr($0, RSTART + 6, RLENGTH - 7); split(id, t, ".")
+            if (t[1] + 0 >= s && !seen[id]++) print }' || true
 }
 
 aa_event_summary() {
@@ -188,25 +246,66 @@ unload_profile() {
     warn "Profile unloaded and disabled (remove $AA_DISABLE to re-enable)"
 }
 
-is_patched() {
-    local v; v="$(dpkg-query -W -f='${Version}' "php${PHP_VER}-fpm" 2>/dev/null || true)"
-    [[ -n "$v" ]] || return 1
-    v="${v#*:}"
-    if [[ -n "$PATCHED_VER" ]] && dpkg --compare-versions "${v%%-*}" ge "$PATCHED_VER"; then
-        return 0
+# Is the installed package fixed? Sets PATCH_HOW. Returns 0 patched,
+# 1 not patched, 2 can't tell. Three independent signals, strongest first:
+#   1. upstream version >= first fixed release (Debian, sury, upstream builds)
+#   2. same upstream version as a known distro backport, and >= that build
+#   3. the package changelog names both CVEs (catches backports not listed)
+# Package dates aren't used: embargoed fixes are often dated before the public
+# release, and a later unrelated rebuild doesn't contain the fix.
+patch_status() {   # [package], default php${PHP_VER}-fpm
+    local pkg="${1:-php${PHP_VER}-fpm}" full v up f cl c have_cl=0 below=""
+    PATCH_HOW=""
+    full="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
+    if [[ -z "$full" ]]; then PATCH_HOW="${pkg} isn't an installed dpkg package"; return 2; fi
+    v="${full#*:}"; up="${v%%-*}"
+
+    if [[ -n "$PATCHED_VER" ]] && dpkg --compare-versions "$up" ge "$PATCHED_VER"; then
+        PATCH_HOW="${v}: upstream ${up} >= ${PATCHED_VER}"; return 0
     fi
-    # Distro backport: upstream version unchanged, CVEs listed in changelog
-    local cl c
-    for cl in /usr/share/doc/php"${PHP_VER}"-fpm/changelog.Debian.gz /usr/share/doc/php"${PHP_VER}"-common/changelog.Debian.gz; do
-        [[ -f "$cl" ]] || continue
-        for c in "${CVES[@]}"; do zgrep -q "$c" "$cl" || continue 2; done
-        return 0
+    for f in ${BACKPORT_FIXED[$PHP_VER]:-} $FIXED_BUILDS; do
+        [[ "${f%%-*}" == "$up" ]] || continue
+        if dpkg --compare-versions "$v" ge "$f"; then PATCH_HOW="${v} >= fixed build ${f}"; return 0; fi
+        below="$f"
     done
-    return 1
+    for cl in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/php${PHP_VER}-common/changelog.Debian.gz"; do
+        [[ -f "$cl" ]] || continue
+        # Only trust a changelog whose newest entry is the installed build
+        [[ "$(zcat "$cl" 2>/dev/null | head -1)" == *"(${v})"* ]] || continue
+        have_cl=1
+        for c in "${CVES[@]}"; do zgrep -q "$c" "$cl" || continue 2; done
+        PATCH_HOW="${v}: changelog lists ${CVES[*]}"; return 0
+    done
+    if [[ -n "$below" ]]; then PATCH_HOW="${v} is older than fixed build ${below}"; return 1; fi
+    if [[ $have_cl -eq 1 ]]; then PATCH_HOW="${v}: no fixed release, no known backport, changelog doesn't list the CVEs"; return 1; fi
+    PATCH_HOW="${v}: no changelog to check (docs stripped?) and no known fixed build"; return 2
+}
+is_patched() { patch_status; }
+
+# Processes still executing the pre-upgrade binary: dpkg replaced the file, but
+# the running FPM keeps the old (deleted) inode until it's restarted.
+stale_fpm_pids() {
+    local p e out=""
+    for p in /proc/[0-9]*; do
+        e="$(readlink "$p/exe" 2>/dev/null)" || continue
+        [[ "$e" == "${FPM_BIN} (deleted)" ]] && out+="${p#/proc/} "
+    done
+    echo "${out% }"
+}
+
+# For the environment report, outside set_ver: "<rc>|<how>|<stale pids>"
+patch_report() {   # <version> [package]
+    (
+        PHP_VER="$1"; PATCHED_VER="$(patched_ver "$1")"; FPM_BIN="/usr/sbin/php-fpm$1"
+        rc=0; patch_status "${2:-}" || rc=$?
+        echo "${rc}|${PATCH_HOW}|$( [[ -z "${2:-}" ]] && stale_fpm_pids )"
+    )
 }
 
 patch_target() {
-    if [[ -n "$PATCHED_VER" ]]; then echo "PHP ${PATCHED_VER}+ or a distro build listing ${CVES[*]}"
+    local b="${BACKPORT_FIXED[$PHP_VER]:-}"
+    if [[ -n "$PATCHED_VER" ]]; then echo "PHP ${PATCHED_VER}+${b:+, Ubuntu build ${b// / or }+,} or a distro build listing ${CVES[*]}"
+    elif [[ -n "$b" ]]; then echo "Ubuntu build ${b// / or }+ (ESM/backport), or a distro build listing ${CVES[*]}"
     else echo "a distro/PPA build listing ${CVES[*]} (no upstream fix for ${PHP_VER}; set PATCHED_${PHP_VER/./_} if one appears)"; fi
 }
 
@@ -425,7 +524,7 @@ cmd_apply() {
         fi
         if "$FPM_BIN" -t >/dev/null 2>&1; then
             unload_profile; fpm_health || true
-            die "FPM fails even in complain mode — profile unloaded so the service stays up. Check: journalctl -xeu $FPM_SERVICE"
+            die "FPM fails even in complain mode — profile unloaded so the service stays up. Check the $FPM_SERVICE log (journalctl -xeu $FPM_SERVICE, or /var/log/php${PHP_VER}-fpm.log)"
         fi
         die "FPM config test fails independent of AppArmor: $FPM_BIN -t"
     fi
@@ -445,12 +544,22 @@ verify() {
     local loaded; loaded="$(aa-status 2>/dev/null | grep -cF "$FPM_BIN" || true)"
     info "AppArmor: $( [[ "$loaded" -gt 0 ]] && echo loaded || echo 'NOT loaded' ), file mode: $(current_mode)"
     if [[ $SVC_LIVE -eq 1 ]]; then
-        systemctl is-active --quiet "$FPM_SERVICE" && info "$FPM_SERVICE active" || warn "$FPM_SERVICE NOT running"
+        if svc_active "$FPM_SERVICE"; then info "$FPM_SERVICE active"; else warn "$FPM_SERVICE NOT running"; fi
     else
         info "$FPM_SERVICE stopped/disabled (left as found)"
     fi
-    if is_patched; then info "php${PHP_VER}-fpm appears patched — run: ${SELF} cleanup ${HINT}"
-    else warn "Not yet patched. Target: $(patch_target)"; fi
+    local prc=0 stale; patch_status || prc=$?
+    case $prc in
+        0)  info "php${PHP_VER}-fpm patched (${PATCH_HOW})"
+            stale="$(stale_fpm_pids)"
+            if [[ -n "$stale" ]]; then
+                warn "...but PIDs ${stale} still run the old binary. Restart: $(svc_hint restart "$FPM_SERVICE")"
+            else
+                info "Running code is current — the mitigation can go: ${SELF} cleanup ${HINT}"
+            fi ;;
+        1)  warn "NOT patched (${PATCH_HOW}). Target: $(patch_target)" ;;
+        *)  warn "Patch status unknown (${PATCH_HOW}). Target: $(patch_target)" ;;
+    esac
 }
 
 cmd_enforce() {
@@ -491,7 +600,7 @@ cmd_status() {
 
 cmd_cleanup() {
     if ! is_patched && [[ -z "$FORCE" ]]; then
-        die "php${PHP_VER}-fpm doesn't look patched. Target: $(patch_target). Or add --force"
+        die "php${PHP_VER}-fpm doesn't look patched (${PATCH_HOW}). Target: $(patch_target). Or add --force"
     fi
     if [[ -f "$DROP_IN_CONF" ]]; then
         backup "$DROP_IN_CONF"; rm -f "$DROP_IN_CONF"; info "Removed $DROP_IN_CONF"
@@ -506,7 +615,7 @@ cmd_cleanup() {
 # Hard blockers always stop the run. Soft blockers stop it unless --ignore-env
 # is given. Cautions are reported but never stop it.
 OS_SUPPORTED="debian ubuntu trisquel"
-OS_DERIVATIVES="linuxmint pop elementary zorin neon kali raspbian pureos parrot deepin tuxedo devuan"
+OS_DERIVATIVES="linuxmint pop elementary zorin neon kali raspbian pureos parrot deepin tuxedo devuan mx antix sparky q4os peppermint bunsenlabs siduction"
 declare -A DISTRO_PHP=([stretch]=7.0 [buster]=7.3 [bullseye]=7.4 [bookworm]=8.2 [trixie]=8.4
                        [xenial]=7.0 [bionic]=7.2 [focal]=7.4 [jammy]=8.1 [noble]=8.3)
 declare -A TRISQUEL_BASE=([etiona]=bionic [nabia]=focal [aramo]=jammy [ecne]=noble)
@@ -522,8 +631,8 @@ section() { echo -e "\n  ${CYAN}$*${NC}"; }
 in_list() { [[ " $2 " == *" $1 "* ]]; }
 
 svc_state() {
-    if systemctl is-active --quiet "$1" 2>/dev/null; then echo running
-    elif systemctl is-enabled --quiet "$1" 2>/dev/null; then echo "enabled, not running"
+    if svc_active "$1"; then echo running
+    elif svc_enabled "$1"; then echo "enabled, not running"
     else echo stopped; fi
 }
 
@@ -554,8 +663,9 @@ check_os() {
     elif in_list "$id" "$OS_DERIVATIVES"; then
         ok "$pretty (known derivative, ID=$id)"
     elif in_list ubuntu "$like" || in_list debian "$like"; then
-        soft "$pretty is an unrecognized Debian/Ubuntu derivative (ID=$id, ID_LIKE=$like)" \
-             "Layout is probably fine but hasn't been checked. Read the report below before overriding."
+        ok "$pretty (Debian/Ubuntu derivative, ID=$id, ID_LIKE=$like)"
+    elif [[ -r /etc/debian_version ]]; then
+        ok "$pretty (Debian-based: /etc/debian_version present, ID=$id)"
     else
         hard "$pretty is not Debian, Ubuntu, Trisquel or a derivative (ID=$id)" \
              "This script assumes dpkg, /etc/php/X.Y and AppArmor. RHEL/Fedora/SUSE/Arch/Alpine need a different approach."
@@ -576,6 +686,8 @@ check_os() {
             local dv; dv="$(cut -d. -f1 /etc/debian_version)"; base="${DEBIAN_MAJOR[$dv]:-}"
         fi
     fi
+    # Derivatives often reuse their base's codename (MX, Kali-style setups)
+    [[ -n "$base" || -z "$code" || -z "${DISTRO_PHP[$code]:-}" ]] || base="$code"
     if [[ -n "$base" ]]; then
         local dp="${DISTRO_PHP[$base]:-}"
         inf "Base: ${fam^} ${base}${dp:+, distro PHP ${dp}}"
@@ -588,6 +700,18 @@ check_os() {
 
     command -v dpkg-query >/dev/null || { hard "dpkg-query not found — Debian package layout required"; return 1; }
     return 0
+}
+
+report_patch() {   # <version> <package> <service>
+    local rep rc how stale
+    rep="$(patch_report "$1" "$2")"; rc="${rep%%|*}"; rep="${rep#*|}"; how="${rep%%|*}"; stale="${rep#*|}"
+    case $rc in
+        0) ok "  patched: ${how}"
+           [[ -z "$stale" ]] || caution "  but PIDs ${stale} still run the old binary — restart: $(svc_hint restart "$3")" ;;
+        1) caution "  NOT patched: ${how}. Upgrade: apt-get install --only-upgrade $2" ;;
+        *) caution "  patch status unknown: ${how}" ;;
+    esac
+    return "$rc"
 }
 
 check_php() {
@@ -613,6 +737,7 @@ check_php() {
         else
             ok "php${v}-fpm ${pv} (${src}), service $(svc_state "php${v}-fpm") — will be handled"
             in_list "$v" "$EOL_VERS" && caution "PHP ${v} is end of life: no upstream fix, only distro/PPA backports"
+            report_patch "$v" "php${v}-fpm" "php${v}-fpm" || true   # informational, never stops the run
             ENV_PHP+=("$v")
         fi
     done
@@ -653,11 +778,15 @@ check_web() {
         [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: $(echo $refs)"
         [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
         for v in "${modphp[@]+"${modphp[@]}"}"; do
-            if [[ "$st" == running ]] && in_list "$v" "$SUPPORTED_VERS" && [[ $CMD == apply ]]; then
-                soft "Apache is running mod_php ${v} — PHP inside Apache is NOT covered by this script" \
-                     "Manual drop-in: echo 'session.upload_progress.enabled = Off' > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && systemctl restart apache2 (no AppArmor layer). Better: switch Apache to php${v}-fpm."
-            else
-                caution "Apache has mod_php ${v} enabled — not covered by this script"
+            caution "Apache has mod_php ${v} enabled — PHP inside Apache is not covered by this script"
+            local mrc=0; report_patch "$v" "libapache2-mod-php${v}" apache2 || mrc=$?
+            if [[ $mrc -eq 0 ]]; then
+                if grep -lsF "libphp${v}.so (deleted)" /proc/[0-9]*/maps >/dev/null 2>&1; then
+                    caution "  Apache still has the old libphp${v}.so loaded — restart: $(svc_hint restart apache2)"
+                fi
+            elif [[ "$st" == running && $CMD == apply ]]; then
+                soft "Apache is running mod_php ${v}, which isn't patched and isn't covered by this script" \
+                     "Upgrade libapache2-mod-php${v} and restart Apache. Interim: echo 'session.upload_progress.enabled = Off' > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2)"
             fi
         done
     fi
@@ -709,11 +838,18 @@ check_system() {
         ok "Running as root"
     fi
 
-    if [[ -d /run/systemd/system ]]; then
+    local init; init="$(cat /proc/1/comm 2>/dev/null || echo unknown)"
+    if have_systemd; then
         ok "systemd is PID 1"
+    elif command -v service >/dev/null; then
+        ok "No systemd (PID 1 is ${init}) — using service(8) and init scripts, AppArmor events from audit.log/kern.log/dmesg"
+        local v
+        for v in "${ENV_PHP[@]+"${ENV_PHP[@]}"}"; do
+            [[ -x "/etc/init.d/php${v}-fpm" ]] || hard "No /etc/init.d/php${v}-fpm — can't restart FPM ${v} without systemd"
+        done
     else
-        hard "systemd isn't PID 1 ($(cat /proc/1/comm 2>/dev/null || echo unknown))" \
-             "This script restarts FPM and reads AppArmor events through systemctl/journalctl."
+        hard "Neither systemd nor service(8) available (PID 1 is ${init})" \
+             "This script has to restart FPM and confirm it came back."
     fi
 
     local ct; ct="$(systemd-detect-virt --container 2>/dev/null || true)"
@@ -725,7 +861,7 @@ check_system() {
         ok "AppArmor enabled in the kernel"
     elif [[ $MUTATES -eq 1 ]]; then
         hard "AppArmor isn't enabled in the kernel — the profile can't be loaded" \
-             "To apply just the ini layer by hand: echo 'session.upload_progress.enabled = Off' > /etc/php/X.Y/fpm/conf.d/99-php2shell-mitigation.ini && systemctl restart phpX.Y-fpm"
+             "To apply just the ini layer by hand: echo 'session.upload_progress.enabled = Off' > /etc/php/X.Y/fpm/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart phpX.Y-fpm)"
     else
         caution "AppArmor isn't enabled in the kernel"
     fi
@@ -741,7 +877,7 @@ check_system() {
     fi
 
     local t missing=()
-    for t in systemctl journalctl awk sed grep zgrep install mktemp; do
+    for t in awk sed grep zgrep install mktemp readlink date; do
         command -v "$t" >/dev/null || missing+=("$t")
     done
     [[ ${#missing[@]} -eq 0 ]] || hard "Missing tools: ${missing[*]}"
