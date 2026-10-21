@@ -39,18 +39,40 @@ The script is designed so that it can't take your site down. It syntax-checks ea
 
 ### Quick start
 
-```bash
-# BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
-# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
-# curl -fLO "$BASE/php/php2shell-mitigate.sh"
-curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/php/php2shell-mitigate.sh
-less php2shell-mitigate.sh          # read it first, always
-chmod +x php2shell-mitigate.sh
-./php2shell-mitigate.sh check       # environment report only, changes nothing
-sudo ./php2shell-mitigate.sh        # apply to every installed PHP-FPM, complain mode
-```
+1. Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.
 
-This repository is mirrored on [GitHub](https://github.com/PrivacySafe/security-patches) and [Codeberg](https://codeberg.org/PrivacySafe/security-patches). To confirm both serve the same script, compare checksums:
+   ```bash
+   # BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+   # BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+   # curl -fLO "$BASE/php/php2shell-mitigate.sh"
+   curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/php/php2shell-mitigate.sh
+   ```
+
+2. Read it before running it. Always.
+
+   ```bash
+   less php2shell-mitigate.sh
+   ```
+
+3. Make it executable.
+
+   ```bash
+   chmod +x php2shell-mitigate.sh
+   ```
+
+4. Check the environment. This changes nothing and needs no root.
+
+   ```bash
+   ./php2shell-mitigate.sh check
+   ```
+
+5. Apply, to every installed PHP-FPM, in complain mode.
+
+   ```bash
+   sudo ./php2shell-mitigate.sh
+   ```
+
+The repository lives on [GitHub](https://github.com/PrivacySafe/security-patches) and [Codeberg](https://codeberg.org/PrivacySafe/security-patches). To confirm both serve the same script, compare checksums:
 
 ```bash
 sha256sum php2shell-mitigate.sh
@@ -177,16 +199,38 @@ The script is designed so it can't break your CA store or leave you exposed by m
 
 ### Quick start
 
-```bash
-# BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
-# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
-# curl -fLO "$BASE/pki/emudhra-mitigate.sh"
-curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-mitigate.sh
-less emudhra-mitigate.sh          # read it first, always
-chmod +x emudhra-mitigate.sh
-./emudhra-mitigate.sh check       # environment report only, changes nothing
-sudo TEST_HOSTS="api.example.com:443 mirror.example.org" ./emudhra-mitigate.sh   # apply
-```
+1. Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.
+
+   ```bash
+   # BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+   # BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+   # curl -fLO "$BASE/pki/emudhra-mitigate.sh"
+   curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-mitigate.sh
+   ```
+
+2. Read it before running it. Always.
+
+   ```bash
+   less emudhra-mitigate.sh
+   ```
+
+3. Make it executable.
+
+   ```bash
+   chmod +x emudhra-mitigate.sh
+   ```
+
+4. Check the environment. This changes nothing and needs no root.
+
+   ```bash
+   ./emudhra-mitigate.sh check
+   ```
+
+5. Apply. Set `TEST_HOSTS` to hosts your server actually talks to, so the script flags any that stop verifying after the change.
+
+   ```bash
+   sudo TEST_HOSTS="api.example.com:443 mirror.example.org" ./emudhra-mitigate.sh
+   ```
 
 To confirm GitHub and Codeberg serve the same script, compare checksums:
 
