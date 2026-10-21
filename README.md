@@ -21,7 +21,7 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 
 | Patch | Targets | CVEs | Type |
 |---|---|---|---|
-| [PHP2Shell](#-php2shell-interim-mitigation) | PHP-FPM 8.1, 8.2, 8.3 on Debian/Ubuntu | CVE-2026-109618, CVE-2026-109619 | Interim mitigation |
+| [PHP2Shell](#-php2shell-interim-mitigation) | PHP-FPM 8.1, 8.2, 8.3 on Debian/Ubuntu/Trisquel | CVE-2026-109618, CVE-2026-109619 | Interim mitigation |
 
 ---
 
