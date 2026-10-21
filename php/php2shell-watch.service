@@ -1,0 +1,18 @@
+# php2shell-watch as a service. Install the script at /usr/local/sbin, then:
+#   cp php2shell-watch.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now php2shell-watch
+#   journalctl -fu php2shell-watch     # watch it
+[Unit]
+Description=php2shell log watcher (read-only)
+After=php-fpm.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/php2shell-watch.sh
+Restart=on-failure
+# read-only; drop privileges but keep log read access via the adm group
+User=root
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

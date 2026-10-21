@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# php2shell-watch 
-# 2026-08-21: follow PHP/web logs live and flag php2shell-style trouble.
+# php2shell-watch - follow PHP/web logs live and flag php2shell-style trouble.
 #
 #   sudo ./php2shell-watch.sh            # watch here; Ctrl-C to stop
 #   sudo nohup ./php2shell-watch.sh >/var/log/php2shell-watch.log 2>&1 &   # background
 #   tail -f /var/log/php2shell-watch.log # then watch it
 #   LOGS="/a.log /b.log" ./php2shell-watch.sh   # watch specific files
 #
+# Prints one line per hit, and a count summary on stop.
+# A hit is a lead, not proof: extensions crash workers too, and the
+# upload-progress field is in legit forms. Only patching PHP fixes the bug.
 
 set -uo pipefail
 
