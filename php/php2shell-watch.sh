@@ -22,6 +22,15 @@ shopt -u nullglob
 [ "${#FILES[@]}" -gt 0 ] || { echo "no log files found; set LOGS=\"file ...\"" >&2; exit 1; }
 
 # Signatures (same as the mitigate script's hunt), with label and severity.
+# The last three cover the serialized-object variant seen 2026-10-21: a PHP
+# object (a gadget chain ending in system()) is sent in the upload-progress
+# field, lands in the session file, and fires on the next page load. The
+# payload itself travels in the POST body and sits in the session file, neither
+# of which is a log, so these catch the attack only when it surfaces an error:
+# the gadget chain spawning a shell, that shell failing, or the object failing
+# to deserialize. The campaign marker 'p2s:s' (probe string <!--p2s:s-->) is
+# the strongest tell; under bash the broken probe command echoes it into the
+# FPM error log.
 RES=(
   'exited on signal (6|7|11)[ (]'
   'AH00052|child pid [0-9]+ exit signal (Segmentation|Bus|Abort)'
@@ -29,10 +38,13 @@ RES=(
   'Allowed memory size of [0-9]+ bytes exhausted|Out of memory \(alloc'
   'PHP_SESSION_UPLOAD_PROGRESS'
   '(php-fpm|php-cgi|apache2|httpd)[^ ]*.*(/bin/(ba)?sh|/dev/tcp/|fsockopen|mkfifo|nc |ncat |wget |curl .*(-o|http)|certutil|whoami|uname -a)'
+  'p2s:[a-z]'
+  'said into stderr[^"]*"[^"]*(ba)?sh:|(ba)?sh:( [0-9]+:)? .*(cannot (open|create)|No such file|[Ss]yntax error|unexpected (token|end))'
+  'unserialize\(\): (Error|Function|Class|Extra)|__PHP_Incomplete_Class|session_decode\(\)|[Ff]ailed to decode session'
 )
-LBL=("fpm worker crash" "apache worker crash" "allocator panic" "memory_limit fatal" "upload-progress field" "shell/tool from php")
-SEV=("CRASH" "CRASH" "CORRUPT" "ATTACK" "ATTACK" "RESIDUE")
-CNT=(0 0 0 0 0 0)
+LBL=("fpm worker crash" "apache worker crash" "allocator panic" "memory_limit fatal" "upload-progress field" "shell/tool from php" "p2s object-injection marker" "shell exec error from php" "php object injection / unserialize")
+SEV=("CRASH" "CRASH" "CORRUPT" "ATTACK" "ATTACK" "RESIDUE" "RESIDUE" "RESIDUE" "ATTACK")
+CNT=(0 0 0 0 0 0 0 0 0)
 
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 

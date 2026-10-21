@@ -779,6 +779,14 @@ cmd_hunt() {
     # Appears in access logs / mod_security, not usually error logs.
     hunt_grep "PHP_SESSION_UPLOAD_PROGRESS seen in logs (triage signal, also in legit forms)" \
         'PHP_SESSION_UPLOAD_PROGRESS' "${LOGS[@]}"
+    # Serialized-object variant (seen 2026-10-21): a PHP gadget chain is sent in
+    # the upload-progress field and fires from the session on the next request.
+    # The object sits in the POST body and session file (not logs); what reaches
+    # a log is the campaign marker and the deserialization erroring.
+    hunt_grep "p2s object-injection marker (campaign IOC)" \
+        'p2s:[a-z]' "${LOGS[@]}"
+    hunt_grep "PHP object injection / unserialize errors (session-deserialization path)" \
+        'unserialize\(\): (Error|Function|Class|Extra)|__PHP_Incomplete_Class|session_decode\(\)|[Ff]ailed to decode session' "${LOGS[@]}"
 
     step "3/3  Post-exploitation residue"
     # FPM/Apache executing a shell or tool is what nearly every PHP intrusion
@@ -801,6 +809,10 @@ cmd_hunt() {
     # Webshell-shaped writes mentioned in logs (very rough; real check is on disk)
     hunt_grep "Shell/interpreter/tool names in PHP or web logs (context-dependent)" \
         '(php-fpm|php-cgi|apache2|httpd)[^ ]*.*(/bin/(ba)?sh|/dev/tcp/|fsockopen|mkfifo|nc |ncat |wget |curl .*(-o|http)|certutil|whoami|uname -a)' "${LOGS[@]}"
+    # A shell spawned by a worker that then errors: the broken p2s probe command
+    # lands here, as does failed command injection generally.
+    hunt_grep "Shell exec error from an FPM worker (failed command injection)" \
+        'said into stderr[^"]*"[^"]*(ba)?sh:|(ba)?sh:( [0-9]+:)? .*(cannot (open|create)|No such file|[Ss]yntax error|unexpected (token|end))' "${LOGS[@]}"
 
     step "Hunt summary"
     if [[ $HUNT_FINDINGS -eq 0 ]]; then

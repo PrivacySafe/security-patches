@@ -40,6 +40,9 @@ The script is designed so that it can't take your site down. It syntax-checks ea
 ### Quick start
 
 ```bash
+# BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO "$BASE/php/php2shell-mitigate.sh"
 curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/php/php2shell-mitigate.sh
 less php2shell-mitigate.sh          # read it first, always
 chmod +x php2shell-mitigate.sh
@@ -120,6 +123,8 @@ sudo ./php2shell-mitigate.sh hunt
 
 It looks for crashed PHP-FPM and Apache workers (segfault, abort, bus error), allocator panics including the `double free detected` message a separate unpatched PHP bug produces, bursts of `memory_limit` fatals (php2shell's out-of-memory trigger), the `PHP_SESSION_UPLOAD_PROGRESS` field, PHP processes that ran a shell or download tool, and, if a profile from this script is loaded, any exec attempt it logged. Where log lines are dated it prints a rough before/after split around the disclosure date, so a spike stands out.
 
+It also covers the serialized-object variant of the upload-progress attack seen on 2026-10-21, where a PHP gadget chain is sent in the upload-progress field, lands in the session file, and fires on the next page load. The object travels in the POST body and sits in the session file, neither of which a log tailer can see, so `hunt` and `php2shell-watch.sh` catch this one only when it surfaces an error: the `p2s:s` campaign marker reaching a log (the broken probe command echoes it under bash), a shell spawned by a worker that then fails, or the object failing to deserialize (`unserialize()` errors, incomplete-class, session-decode failures). A silent, successful chain leaves nothing in the logs; the payload in the session file is the ground truth, so check `session.save_path` directly if you suspect this.
+
 A match is a lead, not proof. Buggy extensions crash workers too, and the upload-progress field appears in legitimate forms. Compare the counts against a quiet period, correlate crashes with memory-limit fatals and multipart POSTs from the same client, and check the web root for new files. The signatures were confirmed against real PHP-FPM 8.4 output. Applying this script's AppArmor profile in complain mode first makes `hunt` more useful, because it turns any FPM attempt to run a binary into a logged signal.
 
 ### Watching live
@@ -173,6 +178,9 @@ The script is designed so it can't break your CA store or leave you exposed by m
 ### Quick start
 
 ```bash
+# BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO "$BASE/pki/emudhra-mitigate.sh"
 curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-mitigate.sh
 less emudhra-mitigate.sh          # read it first, always
 chmod +x emudhra-mitigate.sh
