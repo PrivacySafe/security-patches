@@ -27,7 +27,7 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 
 ## 🐘 PHP2Shell Interim Mitigation
 
-**Script:** [`php/php2shell/php2shell-mitigate.sh`](php/php2shell/php2shell-mitigate.sh)
+**Script:** [`php/php2shell-mitigate.sh`](php/php2shell-mitigate.sh)
 
 We released this script ahead of upstream patches for two 0day vulnerabilities in PHP. It adds two layers of defense to every installed PHP-FPM 8.1, 8.2, and 8.3:
 
@@ -39,7 +39,7 @@ The script is designed so that it can't take your site down. It syntax-checks ea
 ### Quick start
 
 ```bash
-curl -O https://raw.githubusercontent.com/PrivacySafe/security-patches/main/php/php2shell/php2shell-mitigate.sh
+curl -O https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/php/php2shell-mitigate.sh
 less php2shell-mitigate.sh          # read it first, always
 chmod +x php2shell-mitigate.sh
 sudo ./php2shell-mitigate.sh        # apply to every installed PHP-FPM, complain mode
