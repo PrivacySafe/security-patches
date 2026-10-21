@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# PHP2Shell interim mitigation — PHP-FPM 8.1 / 8.2 / 8.3  (v3)
+# PHP2Shell interim mitigation — PHP-FPM 7.0 through 8.5  (v3)
 # CVE-2026-109618 / CVE-2026-109619
 #
 # If this script is helpful please donate to PrivacySafe Foundation: 
@@ -9,8 +9,10 @@
 # This script was released ahead of patches for two 0day vulns in php.
 #
 # Usage (as root):
-#   ./php2shell-mitigate.sh [command] [--php X.Y] [--force]
+#   ./php2shell-mitigate.sh [command] [--php X.Y] [--force] [--ignore-env]
 #
+#   check            environment report only; changes nothing, root optional
+#                    (exit 0 = ok, 1 = hard blocker, 2 = needs --ignore-env)
 #   apply (default)  drop-in + AppArmor profile, safe-load, per FPM version
 #   enforce          switch profile(s) to enforce; refuses if complain mode
 #                    logged unhandled accesses (override with --force)
@@ -20,16 +22,28 @@
 #
 #   --php X.Y        act on one version only (default: every installed
 #                    version in SUPPORTED_VERS)
+#   --ignore-env     proceed past soft environment blockers (unrecognized
+#                    derivative, live mod_php, live sites on skipped versions).
+#                    Hard blockers (non-Debian, no systemd, no AppArmor, not
+#                    root, no supported FPM) can't be overridden.
+#
+# Every command first checks, in order: OS (Debian, Ubuntu, Trisquel and
+# popular derivatives), PHP-FPM versions and their package source, web
+# servers (Apache/nginx and what PHP they use), then system (root, systemd,
+# container, AppArmor, tools). It reports, then refuses to start if needed.
 #
 # Env overrides:
-#   SUPPORTED_VERS="8.1 8.2 8.3"       versions this script will touch
-#   PATCHED_8_1= PATCHED_8_2= PATCHED_8_3=8.3.36
-#                                      first fixed upstream release per branch;
-#                                      empty = rely on distro changelog CVE check
+#   SUPPORTED_VERS="7.0 ... 8.5"       versions this script will touch
+#   PATCHED_X_Y=<version>              first fixed upstream release for branch
+#                                      X.Y, e.g. PATCHED_8_4=8.4.27. Defaults:
+#                                      8.2.35 8.3.36 8.4.27 8.5.12 (21 Oct 2026).
+#                                      7.0-8.1 get no upstream fix: only a
+#                                      distro/PPA changelog listing both CVEs
+#                                      counts as patched.
 #   WEB_ROOTS="/var/www /srv/www"      read-only docroots
 #   WRITABLE_PATHS="..."               rwk paths (uploads, cache)
 #
-# Debian/Ubuntu layout (distro packages, ondrej/sury PPA). Each version gets
+# Debian/Ubuntu/Trisquel layout (distro packages, ondrej/sury PPA). Each version gets
 # its own drop-in, profile, local override and backups; a failure on one
 # version doesn't stop the others.
 # =============================================================================
@@ -37,18 +51,13 @@
 set -euo pipefail
 
 # ---------- config -----------------------------------------------------------
-SUPPORTED_VERS="${SUPPORTED_VERS:-8.1 8.2 8.3}"
+SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
-declare -A PATCHED=(
-    [8.1]="${PATCHED_8_1:-}"
-    [8.2]="${PATCHED_8_2:-}"
-    [8.3]="${PATCHED_8_3:-8.3.36}"
-)
-# Zend extension API dirs — fallback only; real value read from FPM
-declare -A ABI=([8.1]=20210902 [8.2]=20220829 [8.3]=20230831)
-declare -A EOL_NOTE=(
-    [8.1]="PHP 8.1 is past upstream end of life; a fix may only arrive as a distro/PPA backport. Plan an upgrade."
-)
+# Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
+declare -A PATCHED_DEFAULT=([8.2]=8.2.35 [8.3]=8.3.36 [8.4]=8.4.27 [8.5]=8.5.12)
+patched_ver() { local n="PATCHED_${1/./_}"; echo "${!n:-${PATCHED_DEFAULT[$1]:-}}"; }
+# Branches PHP no longer fixes; only a distro or PPA backport can patch them
+EOL_VERS="7.0 7.1 7.2 7.3 7.4 8.0 8.1"
 MARKER="# managed-by: php2shell-mitigation"
 BACKUP_ROOT="/var/backups/php2shell/$(date +%Y%m%d-%H%M%S)"
 WEB_ROOTS="${WEB_ROOTS:-/var/www /srv/www}"
@@ -76,8 +85,9 @@ set_ver() {
     AA_DISABLE="/etc/apparmor.d/disable/${AA_NAME}"
     DROP_IN_CONF="${FPM_INI_DIR}/99-php2shell-mitigation.ini"
     BACKUP_DIR="${BACKUP_ROOT}/${PHP_VER}"
-    PATCHED_VER="${PATCHED[$PHP_VER]:-}"
-    DEFAULT_EXT_DIR="/usr/lib/php/${ABI[$PHP_VER]:-}"
+    PATCHED_VER="$(patched_ver "$PHP_VER")"
+    # Fallback only (real value comes from FPM -i): the API dir the package ships
+    DEFAULT_EXT_DIR="$(dpkg -L "php${PHP_VER}-common" 2>/dev/null | grep -m1 -E '^/usr/lib/php/[0-9]{8}$' || true)"
     HINT="--php ${PHP_VER}"
     FPM_INFO=""
     # Don't start services the admin had stopped; test config only
@@ -94,11 +104,8 @@ detect_versions() {
     for b in /usr/sbin/php-fpm[0-9]*; do
         v="${b#/usr/sbin/php-fpm}"
         [[ -x "$b" && "$v" =~ ^[0-9]+\.[0-9]+$ ]] || continue
-        if [[ " $SUPPORTED_VERS " == *" $v "* ]]; then
-            echo "$v"
-        else
-            warn "Found php-fpm${v} — not in SUPPORTED_VERS (${SUPPORTED_VERS}); skipped" >&2
-        fi
+        # unsupported versions were already reported by env_check
+        [[ " $SUPPORTED_VERS " != *" $v "* ]] || echo "$v"
     done | sort -V
     shopt -u nullglob
 }
@@ -200,14 +207,14 @@ is_patched() {
 
 patch_target() {
     if [[ -n "$PATCHED_VER" ]]; then echo "PHP ${PATCHED_VER}+ or a distro build listing ${CVES[*]}"
-    else echo "a distro/PPA build listing ${CVES[*]} (no upstream fixed version set — PATCHED_${PHP_VER/./_})"; fi
+    else echo "a distro/PPA build listing ${CVES[*]} (no upstream fix for ${PHP_VER}; set PATCHED_${PHP_VER/./_} if one appears)"; fi
 }
 
 global_preflight() {
     step "Preflight"
     [[ $EUID -eq 0 ]] || die "Must run as root (sudo $SELF)"
     command -v dpkg-query >/dev/null || die "Debian/Ubuntu (dpkg) layout required"
-    if ! command -v apparmor_parser >/dev/null; then
+    if ! command -v apparmor_parser >/dev/null && [[ $CMD == apply ]]; then
         apt-get install -y --no-install-recommends apparmor || die "Could not install apparmor"
     fi
     aa-status --enabled 2>/dev/null || warn "AppArmor not enabled in the kernel — profiles will not apply"
@@ -216,7 +223,9 @@ global_preflight() {
 ver_preflight() {
     [[ -x "$FPM_BIN" ]] || die "$FPM_BIN not found"
     [[ -d "$FPM_INI_DIR" ]] || die "$FPM_INI_DIR missing — unexpected PHP layout"
-    [[ -z "${EOL_NOTE[$PHP_VER]:-}" ]] || warn "${EOL_NOTE[$PHP_VER]}"
+    if [[ " $EOL_VERS " == *" $PHP_VER "* ]]; then
+        warn "PHP ${PHP_VER} is past upstream end of life and PHP won't fix it. Unless your distro (Debian LTS/ELTS, Ubuntu ESM) or the sury PPA backports the fix, this mitigation is permanent. Plan an upgrade to 8.2+."
+    fi
 
     # v1 left backups inside /etc/apparmor.d/, where they load as duplicate profiles
     local f
@@ -492,20 +501,306 @@ cmd_cleanup() {
     echo "  To remove it too: apparmor_parser -R $AA_PROFILE && rm $AA_PROFILE"
 }
 
+# ---------- environment check ------------------------------------------------
+# Runs before anything is changed, in this order: OS, PHP, web servers, system.
+# Hard blockers always stop the run. Soft blockers stop it unless --ignore-env
+# is given. Cautions are reported but never stop it.
+OS_SUPPORTED="debian ubuntu trisquel"
+OS_DERIVATIVES="linuxmint pop elementary zorin neon kali raspbian pureos parrot deepin tuxedo devuan"
+declare -A DISTRO_PHP=([stretch]=7.0 [buster]=7.3 [bullseye]=7.4 [bookworm]=8.2 [trixie]=8.4
+                       [xenial]=7.0 [bionic]=7.2 [focal]=7.4 [jammy]=8.1 [noble]=8.3)
+declare -A TRISQUEL_BASE=([etiona]=bionic [nabia]=focal [aramo]=jammy [ecne]=noble)
+declare -A DEBIAN_MAJOR=([9]=stretch [10]=buster [11]=bullseye [12]=bookworm [13]=trixie)
+ENV_HARD=(); ENV_SOFT=(); ENV_PHP=(); RUNNING_WIRED=(); MUTATES=0
+
+ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
+inf()     { echo -e "  • $*"; }
+caution() { echo -e "  ${YELLOW}!${NC} $*"; }
+soft()    { ENV_SOFT+=("$1"); echo -e "  ${YELLOW}✗${NC} $1 ${YELLOW}[stops; --ignore-env overrides]${NC}"; [[ -z "${2:-}" ]] || echo -e "      $2"; }
+hard()    { ENV_HARD+=("$1"); echo -e "  ${RED}✗${NC} $1 ${RED}[stops]${NC}"; [[ -z "${2:-}" ]] || echo -e "      $2"; }
+section() { echo -e "\n  ${CYAN}$*${NC}"; }
+in_list() { [[ " $2 " == *" $1 "* ]]; }
+
+svc_state() {
+    if systemctl is-active --quiet "$1" 2>/dev/null; then echo running
+    elif systemctl is-enabled --quiet "$1" 2>/dev/null; then echo "enabled, not running"
+    else echo stopped; fi
+}
+
+fpm_refs() {   # PHP versions a web server config points at, via phpX.Y-fpm.sock or php-fpm.sock
+    local alt
+    grep -rhoE 'php(-|[0-9]+\.[0-9]+-)fpm\.sock' "$@" 2>/dev/null | sort -u | while read -r s; do
+        if [[ "$s" == php-fpm.sock ]]; then   # unversioned alternative -> current target
+            alt="$(readlink /etc/alternatives/php-fpm.sock 2>/dev/null || true)"
+            [[ "$alt" =~ php([0-9]+\.[0-9]+)-fpm\.sock$ ]] && echo "${BASH_REMATCH[1]}"
+        else
+            s="${s#php}"; echo "${s%-fpm.sock}"
+        fi
+    done | sort -uV || true
+}
+
+check_os() {
+    section "1/4  Operating system"
+    if [[ ! -r /etc/os-release ]]; then
+        hard "/etc/os-release missing — can't identify the distribution"; return 1
+    fi
+    local kv id like pretty code ubu deb
+    kv="$(. /etc/os-release; printf '%s\x1f' "${ID:-}" "${ID_LIKE:-}" "${PRETTY_NAME:-unknown}" \
+          "${VERSION_CODENAME:-}" "${UBUNTU_CODENAME:-}" "${DEBIAN_CODENAME:-}")"
+    IFS=$'\x1f' read -r id like pretty code ubu deb <<<"$kv"
+
+    if in_list "$id" "$OS_SUPPORTED"; then
+        ok "$pretty (supported)"
+    elif in_list "$id" "$OS_DERIVATIVES"; then
+        ok "$pretty (known derivative, ID=$id)"
+    elif in_list ubuntu "$like" || in_list debian "$like"; then
+        soft "$pretty is an unrecognized Debian/Ubuntu derivative (ID=$id, ID_LIKE=$like)" \
+             "Layout is probably fine but hasn't been checked. Read the report below before overriding."
+    else
+        hard "$pretty is not Debian, Ubuntu, Trisquel or a derivative (ID=$id)" \
+             "This script assumes dpkg, /etc/php/X.Y and AppArmor. RHEL/Fedora/SUSE/Arch/Alpine need a different approach."
+        return 1
+    fi
+
+    # Base release, used only to tell the user what PHP their distro ships
+    local base="" fam=debian
+    if [[ "$id" == ubuntu || "$id" == trisquel || -n "$ubu" ]] || in_list ubuntu "$like"; then fam=ubuntu; fi
+    if [[ $fam == ubuntu ]]; then
+        base="$ubu"
+        [[ -n "$base" || "$id" != ubuntu ]] || base="$code"
+        [[ -n "$base" || "$id" != trisquel ]] || base="${TRISQUEL_BASE[$code]:-}"
+    else
+        base="$deb"
+        [[ -n "$base" ]] || { [[ "$id" =~ ^(debian|raspbian)$ ]] && base="$code"; } || true
+        if [[ -z "$base" && -r /etc/debian_version ]]; then
+            local dv; dv="$(cut -d. -f1 /etc/debian_version)"; base="${DEBIAN_MAJOR[$dv]:-}"
+        fi
+    fi
+    if [[ -n "$base" ]]; then
+        local dp="${DISTRO_PHP[$base]:-}"
+        inf "Base: ${fam^} ${base}${dp:+, distro PHP ${dp}}"
+        if [[ -n "$dp" ]] && ! in_list "$dp" "$SUPPORTED_VERS"; then
+            caution "Distro PHP ${dp} isn't in SUPPORTED_VERS (${SUPPORTED_VERS}) and will be skipped"
+        fi
+    else
+        caution "Couldn't determine the Debian/Ubuntu base release"
+    fi
+
+    command -v dpkg-query >/dev/null || { hard "dpkg-query not found — Debian package layout required"; return 1; }
+    return 0
+}
+
+check_php() {
+    section "2/4  PHP"
+    local b v pv src
+    shopt -s nullglob
+    for b in /usr/sbin/php-fpm[0-9]*; do
+        v="${b#/usr/sbin/php-fpm}"
+        [[ -x "$b" && "$v" =~ ^[0-9]+\.[0-9]+$ ]] || continue
+        pv="$(dpkg-query -W -f='${Version}' "php${v}-fpm" 2>/dev/null || true)"
+        if   [[ -z "$pv" ]];       then src="not installed by dpkg"
+        elif [[ "$pv" == *sury* ]]; then src="ondrej/sury"
+        else src="distro"; fi
+        if [[ "$v" == 5.* ]]; then
+            caution "php${v}-fpm ${pv:-?} (${src}) — PHP 5.4+ is reported affected, but 5.x isn't covered by this script. Upgrade."
+        elif ! in_list "$v" "$SUPPORTED_VERS"; then
+            caution "php${v}-fpm ${pv:-?} (${src}) — not in SUPPORTED_VERS, will be skipped. Check whether this branch is affected."
+        elif [[ -n "$ONLY_VER" && "$v" != "$ONLY_VER" ]]; then
+            inf "php${v}-fpm ${pv:-?} (${src}) — skipped (--php ${ONLY_VER})"
+        elif [[ -z "$pv" ]]; then
+            soft "php${v}-fpm present but not owned by dpkg — patch detection and backups assume packaged PHP"
+            ENV_PHP+=("$v")
+        else
+            ok "php${v}-fpm ${pv} (${src}), service $(svc_state "php${v}-fpm") — will be handled"
+            in_list "$v" "$EOL_VERS" && caution "PHP ${v} is end of life: no upstream fix, only distro/PPA backports"
+            ENV_PHP+=("$v")
+        fi
+    done
+    shopt -u nullglob
+
+    local cli; cli="$(readlink -f /usr/bin/php 2>/dev/null || true)"
+    [[ "$cli" =~ php([0-9]+\.[0-9]+)$ ]] && inf "Default CLI: PHP ${BASH_REMATCH[1]} (CLI isn't exposed to the web; not touched)"
+
+    # PHP this script cannot see or protect
+    local p
+    for p in /usr/local/sbin/php-fpm* /usr/local/bin/php-fpm* /opt/*/sbin/php-fpm* /opt/*/bin/php-fpm*; do
+        [[ -x "$p" ]] && caution "Non-packaged PHP-FPM at $p — NOT covered by this script"
+    done
+    [[ -d /usr/local/lsws ]] && caution "LiteSpeed lsphp under /usr/local/lsws — NOT covered (it doesn't use php-fpm)"
+
+    if [[ -n "$ONLY_VER" ]] && ! in_list "$ONLY_VER" "$SUPPORTED_VERS"; then
+        hard "--php ${ONLY_VER} is not in SUPPORTED_VERS (${SUPPORTED_VERS})"
+    elif [[ ${#ENV_PHP[@]} -eq 0 ]]; then
+        hard "No PHP-FPM ${ONLY_VER:-in SUPPORTED_VERS (${SUPPORTED_VERS})} installed under /usr/sbin" \
+             "Nothing to mitigate. If PHP runs inside Apache (mod_php) see the web server section."
+    fi
+}
+
+check_web() {
+    section "3/4  Web servers"
+    local any=0 st ver v f modphp=()
+
+    if [[ -x /usr/sbin/apache2 ]]; then
+        any=1; st="$(svc_state apache2)"
+        ver="$(/usr/sbin/apache2 -v 2>/dev/null | sed -n 's/^Server version: //p' || true)"
+        local mpm=""
+        shopt -s nullglob
+        for f in /etc/apache2/mods-enabled/mpm_*.load; do mpm="${f##*/mpm_}"; mpm="${mpm%.load}"; done
+        for f in /etc/apache2/mods-enabled/php*.load; do v="${f##*/php}"; modphp+=("${v%.load}"); done
+        shopt -u nullglob
+        inf "Apache: ${ver:-installed}, ${st}${mpm:+, MPM ${mpm}}"
+        local refs; refs="$(fpm_refs /etc/apache2/sites-enabled /etc/apache2/conf-enabled)"
+        [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: $(echo $refs)"
+        [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
+        for v in "${modphp[@]+"${modphp[@]}"}"; do
+            if [[ "$st" == running ]] && in_list "$v" "$SUPPORTED_VERS" && [[ $CMD == apply ]]; then
+                soft "Apache is running mod_php ${v} — PHP inside Apache is NOT covered by this script" \
+                     "Manual drop-in: echo 'session.upload_progress.enabled = Off' > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && systemctl restart apache2 (no AppArmor layer). Better: switch Apache to php${v}-fpm."
+            else
+                caution "Apache has mod_php ${v} enabled — not covered by this script"
+            fi
+        done
+    fi
+
+    if [[ -x /usr/sbin/nginx ]]; then
+        any=1; st="$(svc_state nginx)"
+        ver="$(/usr/sbin/nginx -v 2>&1 | sed -n 's/^nginx version: //p' || true)"
+        inf "nginx: ${ver:-installed}, ${st}"
+        local refs; refs="$(fpm_refs /etc/nginx)"
+        [[ -z "$refs" ]] || inf "  → php-fpm via fastcgi_pass: $(echo $refs)"
+        [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
+        if grep -rqE '^[[:space:]]*fastcgi_pass[[:space:]]+[^;/]+:[0-9]+' /etc/nginx 2>/dev/null; then
+            caution "nginx has TCP fastcgi_pass upstream(s) — can't map those to a PHP version; check pool 'listen =' lines"
+        fi
+    fi
+
+    # Less common servers: report only
+    local name bin
+    for name in angie lighttpd caddy; do
+        bin="$(command -v "$name" 2>/dev/null || true)"; [[ -n "$bin" ]] || continue
+        any=1; st="$(svc_state "$name")"
+        local refs; refs="$(fpm_refs "/etc/${name}")"
+        inf "${name}: ${st}${refs:+ → php-fpm $(echo $refs)}"
+        [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
+    done
+
+    [[ $any -eq 1 ]] || caution "No Apache, nginx, angie, lighttpd or caddy found — FPM may be served remotely; mitigation still applies to FPM"
+
+    # Cross-check: what's actually serving traffic vs what we'll touch
+    local w covered=0 seen=" "
+    for w in "${RUNNING_WIRED[@]+"${RUNNING_WIRED[@]}"}"; do
+        in_list "$w" "$seen" && continue; seen+="$w "
+        if in_list "$w" "${ENV_PHP[*]:-}"; then covered=1
+        elif [[ ! -x "/usr/sbin/php-fpm${w}" ]]; then caution "A running web server points at php${w}-fpm, which isn't installed (stale config?)"
+        else caution "A running web server uses php${w}-fpm, which this run will NOT touch"; fi
+    done
+    if [[ $CMD == apply && ${#RUNNING_WIRED[@]} -gt 0 && $covered -eq 0 ]]; then
+        soft "None of the PHP-FPM versions your running web server uses would be mitigated" \
+             "Live: $(echo "${RUNNING_WIRED[@]}" | tr ' ' '\n' | sort -uV | xargs). Handled: ${ENV_PHP[*]:-none}."
+    fi
+}
+
+check_system() {
+    section "4/4  System"
+    if [[ $EUID -ne 0 ]]; then
+        if [[ $CMD == check ]]; then caution "Not root — some results may be incomplete"
+        else hard "Must run as root (sudo $SELF $CMD)"; fi
+    else
+        ok "Running as root"
+    fi
+
+    if [[ -d /run/systemd/system ]]; then
+        ok "systemd is PID 1"
+    else
+        hard "systemd isn't PID 1 ($(cat /proc/1/comm 2>/dev/null || echo unknown))" \
+             "This script restarts FPM and reads AppArmor events through systemctl/journalctl."
+    fi
+
+    local ct; ct="$(systemd-detect-virt --container 2>/dev/null || true)"
+    [[ -z "$ct" || "$ct" == none ]] || caution "Running inside a container (${ct}) — AppArmor profiles usually have to be loaded from the host"
+
+    local aa_on=0
+    [[ "$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)" == Y ]] && aa_on=1
+    if [[ $aa_on -eq 1 ]]; then
+        ok "AppArmor enabled in the kernel"
+    elif [[ $MUTATES -eq 1 ]]; then
+        hard "AppArmor isn't enabled in the kernel — the profile can't be loaded" \
+             "To apply just the ini layer by hand: echo 'session.upload_progress.enabled = Off' > /etc/php/X.Y/fpm/conf.d/99-php2shell-mitigation.ini && systemctl restart phpX.Y-fpm"
+    else
+        caution "AppArmor isn't enabled in the kernel"
+    fi
+    [[ -e /sys/fs/selinux/enforce ]] && caution "SELinux is active — AppArmor and SELinux don't normally run together here"
+
+    if command -v apparmor_parser >/dev/null; then
+        ok "apparmor_parser present"
+    elif [[ $CMD == apply ]]; then
+        inf "apparmor package not installed — apply will install it"
+        [[ -z "$(dpkg --audit 2>/dev/null)" ]] || caution "dpkg reports half-installed packages; installing apparmor may fail (dpkg --audit)"
+    elif [[ $MUTATES -eq 1 ]]; then
+        hard "apparmor_parser not installed — run apply first"
+    fi
+
+    local t missing=()
+    for t in systemctl journalctl awk sed grep zgrep install mktemp; do
+        command -v "$t" >/dev/null || missing+=("$t")
+    done
+    [[ ${#missing[@]} -eq 0 ]] || hard "Missing tools: ${missing[*]}"
+}
+
+env_check() {
+    [[ "$CMD" =~ ^(apply|enforce|complain)$ ]] && MUTATES=1
+    step "Environment check"
+    if check_os; then
+        check_php
+        check_web
+    else
+        echo "      (skipping PHP and web server checks)"
+    fi
+    check_system
+
+    step "Verdict"
+    local r
+    if [[ ${#ENV_HARD[@]} -gt 0 ]]; then
+        echo -e "${RED}Not starting.${NC} ${#ENV_HARD[@]} blocking problem(s):"
+        for r in "${ENV_HARD[@]}"; do echo "  - $r"; done
+        if [[ ${#ENV_SOFT[@]} -gt 0 ]]; then
+            echo "Also (overridable):"; for r in "${ENV_SOFT[@]}"; do echo "  - $r"; done
+        fi
+        echo "Nothing was changed."
+        exit 1
+    fi
+    if [[ ${#ENV_SOFT[@]} -gt 0 ]]; then
+        if [[ -n "$IGNORE_ENV" && $CMD != check ]]; then
+            warn "--ignore-env: proceeding despite ${#ENV_SOFT[@]} problem(s):"
+            for r in "${ENV_SOFT[@]}"; do echo "  - $r"; done
+            return 0
+        fi
+        echo -e "${YELLOW}Not starting.${NC} ${#ENV_SOFT[@]} problem(s) need a decision:"
+        for r in "${ENV_SOFT[@]}"; do echo "  - $r"; done
+        [[ $CMD == check ]] || echo "Review the report above. To proceed anyway: ${SELF} ${CMD} --ignore-env"
+        echo "Nothing was changed."
+        exit 2
+    fi
+    if [[ $CMD == check ]]; then info "Environment OK — nothing blocks apply"; exit 0; fi
+    info "Environment OK — starting ${CMD}"
+}
+
 # ---------- dispatch ---------------------------------------------------------
 CMD="${1:-apply}"; [[ $# -gt 0 ]] && shift
-ONLY_VER="${PHP_VER:-}"; FORCE=""
-case "$CMD" in -h|--help) sed -n '2,30p' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
+ONLY_VER="${PHP_VER:-}"; FORCE=""; IGNORE_ENV=""
+case "$CMD" in -h|--help) awk 'NR>2 && /^# =+$/ {exit} NR>2 {sub(/^# ?/, ""); print}' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --php)   ONLY_VER="${2:?--php needs a version, e.g. 8.2}"; shift 2 ;;
         --php=*) ONLY_VER="${1#*=}"; shift ;;
         --force) FORCE=1; shift ;;
+        --ignore-env) IGNORE_ENV=1; shift ;;
         *) die "Unknown option: $1" ;;
     esac
 done
-case "$CMD" in apply|enforce|complain|status|cleanup) ;; *) die "Unknown command: $CMD (apply|enforce|complain|status|cleanup)" ;; esac
+case "$CMD" in check|apply|enforce|complain|status|cleanup) ;; *) die "Unknown command: $CMD (check|apply|enforce|complain|status|cleanup)" ;; esac
 
+env_check      # exits here for "check", or if the environment blocks the run
 global_preflight
 
 mapfile -t VERS < <(detect_versions)
