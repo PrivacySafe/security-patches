@@ -1,14 +1,23 @@
-privacysafe-main
+security-patches
 NOTICE
 
-Copyright (C) 2026 Ivy Cyber LLC
+Security Patches by Ivy Cyber LLC
 https://ivycyber.com
 
-Unless a file or component carries a different notice, copyright is held by
-Ivy Cyber LLC.
+To the extent possible under law, Ivy Cyber LLC has waived all copyright
+and related or neighboring rights to Security Patches, including its
+software and documentation, under the Creative Commons CC0 1.0 Universal
+Public Domain Dedication (CC0-1.0).
 
-Software: GNU Affero General Public License version 3 or later (AGPL-3.0-or-later)
-Documentation: Apache License 2.0 (Apache-2.0)
+Unless a file or component carries a different notice, this dedication
+applies to everything in this repository.
 
-See LICENSE and LICENSES for applicable license terms. Third-party components
-retain their original copyright notices and licenses.
+See LICENSE for the full CC0 1.0 legal code. Third-party components retain
+their original copyright notices and licenses.
+
+CC0 does not waive trademark or patent rights. PrivacySafe(R) and 3NWeb(R)
+are registered trademarks. PrivacySafe Foundation(TM) and Ivy Cyber(TM) are
+pending trademarks.
+
+If this work is useful to you, please consider supporting PrivacySafe
+Foundation: https://privacysafe.foundation
