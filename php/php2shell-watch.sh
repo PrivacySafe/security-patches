@@ -31,10 +31,21 @@ shopt -u nullglob
 # to deserialize. The campaign marker 'p2s:s' (probe string <!--p2s:s-->) is
 # the strongest tell; under bash the broken probe command echoes it into the
 # FPM error log.
+# The asan/zend-alloc and php-S entries cover the variant seen 2026-10-22: an
+# allocator double-free (free -> __zend_free -> _efree, zend_alloc.c) reported by
+# AddressSanitizer and reproduced through the built-in CLI server (php -S) with a
+# crafted POST body. A sanitizer/debug build phrases the double-free differently
+# from the glibc/Zend panic line, and prints its backtrace to the process's
+# stderr - redirect php -S / FPM stderr into one of the watched files to see it.
+# The CLI server is a dev tool, not the FPM path these CVEs target, and the
+# mitigate script's AppArmor profile does not confine the `php` binary; treat a
+# php-S hit as "a dev server is crashing / exposed", not as a contained event.
 RES=(
   'exited on signal (6|7|11)[ (]'
   'AH00052|child pid [0-9]+ exit signal (Segmentation|Bus|Abort)'
   'zend_mm_heap corrupted|double free detected|free\(\): |malloc\(\): |corrupted (top size|size vs\. prev_size)'
+  'AddressSanitizer: (attempting )?(double-free|heap-use-after-free|heap-buffer-overflow)|SUMMARY: AddressSanitizer|in (__zend_free|_efree|_emalloc|_erealloc)( |\()|zend_alloc\.c:[0-9]+'
+  'php_cli_server_(dispatch|recv_event_read_request|do_event|poller)|PHP [0-9.]+ Development Server'
   'Allowed memory size of [0-9]+ bytes exhausted|Out of memory \(alloc'
   'PHP_SESSION_UPLOAD_PROGRESS'
   '(php-fpm|php-cgi|apache2|httpd)[^ ]*.*(/bin/(ba)?sh|/dev/tcp/|fsockopen|mkfifo|nc |ncat |wget |curl .*(-o|http)|certutil|whoami|uname -a)'
@@ -42,9 +53,9 @@ RES=(
   'said into stderr[^"]*"[^"]*(ba)?sh:|(ba)?sh:( [0-9]+:)? .*(cannot (open|create)|No such file|[Ss]yntax error|unexpected (token|end))'
   'unserialize\(\): (Error|Function|Class|Extra)|__PHP_Incomplete_Class|session_decode\(\)|[Ff]ailed to decode session'
 )
-LBL=("fpm worker crash" "apache worker crash" "allocator panic" "memory_limit fatal" "upload-progress field" "shell/tool from php" "p2s object-injection marker" "shell exec error from php" "php object injection / unserialize")
-SEV=("CRASH" "CRASH" "CORRUPT" "ATTACK" "ATTACK" "RESIDUE" "RESIDUE" "RESIDUE" "ATTACK")
-CNT=(0 0 0 0 0 0 0 0 0)
+LBL=("fpm worker crash" "apache worker crash" "allocator panic" "asan/zend-alloc crash backtrace" "php -S dev server crash/exposure" "memory_limit fatal" "upload-progress field" "shell/tool from php" "p2s object-injection marker" "shell exec error from php" "php object injection / unserialize")
+SEV=("CRASH" "CRASH" "CORRUPT" "CORRUPT" "CRASH" "ATTACK" "ATTACK" "RESIDUE" "RESIDUE" "RESIDUE" "ATTACK")
+CNT=(0 0 0 0 0 0 0 0 0 0 0)
 
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
