@@ -66,6 +66,15 @@ set -euo pipefail
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
+# CAUTION (observed 2026-10-22): an ASan double-free in the Zend allocator
+# (free -> __zend_free -> _efree, zend_alloc.c) was reproduced on 8.5.12 - the
+# release listed below as fixed - via the built-in CLI server (php -S), with a
+# crafted POST body. Unconfirmed on a stock (non-ASan) release build, and it may
+# be a distinct bug rather than an incomplete fix for CVE-2026-109618/-109619.
+# The baseline is left as-is pending confirmation. If you want the script to stop
+# treating 8.5.12 as safe on your hosts, raise the bar: PATCHED_8_5=8.5.13 (or
+# the real fixed release once it ships) makes 8.5.12 read as unpatched, so the
+# mitigations stay applied and `check` won't report an all-clear.
 declare -A PATCHED_DEFAULT=([8.2]=8.2.35 [8.3]=8.3.36 [8.4]=8.4.27 [8.5]=8.5.12)
 patched_ver() { local n="PATCHED_${1/./_}"; echo "${!n:-${PATCHED_DEFAULT[$1]:-}}"; }
 # Branches PHP no longer fixes; only a distro or PPA backport can patch them
@@ -749,6 +758,21 @@ cmd_hunt() {
     # Zend/glibc allocator panics seen on corruption (incl. USE_ZEND_ALLOC=0 staging)
     hunt_grep "Allocator panic (zend_mm heap / glibc double free / malloc)" \
         'zend_mm_heap corrupted|double free detected|free\(\): |malloc\(\): |corrupted (top size|size vs. prev_size)' "${LOGS[@]}"
+    # Sanitizer / Zend-allocator crash backtrace (observed 2026-10-22). ASan and
+    # debug/staging builds report the double-free in words the glibc/Zend panic
+    # regex above misses, and name the Zend allocator frames. Catches it in any
+    # log the sanitizer's stderr was captured to (console builds print to the
+    # terminal, so redirect php -S / FPM stderr to a file for this to see it).
+    hunt_grep "Sanitizer/Zend-allocator crash backtrace (ASan double-free / UAF, zend_alloc frames)" \
+        'AddressSanitizer: (attempting )?(double-free|heap-use-after-free|heap-buffer-overflow)|SUMMARY: AddressSanitizer|in (__zend_free|_efree|_emalloc|_erealloc)( |\()|zend_alloc\.c:[0-9]+' "${LOGS[@]}"
+    # Built-in CLI server (php -S) in a crash backtrace. It's a development tool
+    # and not the FPM path these CVEs target, but the same allocator double-free
+    # was reproduced through it on 2026-10-22, and a dev server facing untrusted
+    # traffic is its own exposure. NOTE: the AppArmor layer confines php-fpm, not
+    # the `php` CLI binary, so it does NOT contain an exploit of the dev server -
+    # the only fixes there are patching PHP and not exposing `php -S`.
+    hunt_grep "PHP CLI dev server in crash path (php -S; not covered by the AppArmor profile)" \
+        'php_cli_server_(dispatch|recv_event_read_request|do_event|poller)|PHP [0-9.]+ Development Server' "${LOGS[@]}"
     # Kernel view of the same crashes
     if [[ $EUID -eq 0 ]] && have_systemd && command -v journalctl >/dev/null; then
         local kre='(php-fpm|php[0-9.]*-fpm|apache2|httpd)[^ ]*.*(segfault|general protection|trap)'
@@ -826,6 +850,7 @@ cmd_hunt() {
     echo "    - Check the web root for new/modified files, and for new cron jobs, scheduled tasks and accounts."
     echo "    - Preserve web-server and PHP logs before they rotate."
     echo "    - Patch: the only complete fix is an updated PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35) or your distro's backport."
+    echo "    - Caveat (2026-10-22): an allocator double-free was reproduced on 8.5.12 via the CLI server; if you saw the sanitizer/CLI-server signatures above, 8.5.12 may not be the last word on the 8.5 branch. Keep the AppArmor layer enforced and watch for a follow-up release."
     return 1
 }
 inf_hunt() { echo -e "  ${CYAN}note:${NC} $*"; }
