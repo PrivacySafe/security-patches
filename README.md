@@ -206,6 +206,8 @@ That's deliberate. The patch fixes these bugs; the profile confines PHP-FPM agai
 
 ---
 
+<a name="php-session-audit-cve-2026-115560"></a>
+
 ## PHP Session Audit (CVE-2026-115560)
 
 **Script:** [`php/php-session-audit.sh`](php/php-session-audit.sh)
@@ -224,6 +226,8 @@ WEB_ROOTS="/var/www /srv" ./php-session-audit.sh
 Exits `0` if nothing matched, `1` if all three conditions are present, `2` for a partial match worth reviewing. The code scan is a grep: it finds literal switches, and flags non-literal ones for you to check.
 
 ---
+
+<a name="nodejs-october-2026-interim-mitigation"></a>
 
 ## Node.js October 2026 Interim Mitigation
 
