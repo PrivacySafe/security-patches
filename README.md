@@ -26,7 +26,10 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 | [PHP session audit](#php-session-audit-cve-2026-115560) | Any PHP host | CVE-2026-115560 | Read-only audit |
 | [Node.js October 2026](#nodejs-october-2026-interim-mitigation) | Node.js on GNU/Linux; systemd for the guard | CVE-2026-111497 and 9 others | Interim mitigation |
 | [Ruby and GitLab Regexp](#ruby-and-gitlab-regexp-check) | Ruby runtimes, Ruby apps and GitLab on GNU/Linux | CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264 | Read-only check and audit |
+| [libheif HEIF/AVIF Decoder](#libheif-heifavif-decoder-check) | libheif, ImageMagick and Discourse on GNU/Linux | [writeup](https://www.hacktron.ai/blog/hacking-openai); DSA-6417-1 | Read-only check and audit |
 | [eMudhra CA Compromise](#emudhra-intermediate-ca-compromise-interim-mitigation) | System CA store on Debian/Ubuntu/Trisquel and derivatives | [disclosure](https://emudhra.we-have-a-problem.com/); Go: CVE-2026-111943 | Interim mitigation |
+
+> ℹ️ **New 2026-10-23:** a read-only [libheif checker](#libheif-heifavif-decoder-check) for the HEIF/AVIF decoder heap overflow used to compromise a Discourse forum through an image upload. Update libheif, rebuild containers that bundle it, and disable HEIF in ImageMagick as defence in depth.
 
 > ℹ️ **New 2026-10-23:** a read-only [Ruby and GitLab checker](#ruby-and-gitlab-regexp-check) for the Regexp fixes in Ruby 4.0.9, 3.4.12 and 3.3.13 and the four GitLab CVEs behind them. If you run GitLab, upgrade it first: two of the CVEs need no login.
 
@@ -469,7 +472,7 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/rub
 
 | Command | What it does |
 |---|---|
-| `check` (default) | Reports every GitLab install, every Ruby runtime on disk and every running Ruby process, with whether each is fixed. Flags processes still running a Ruby that was replaced on disk since they started. Changes nothing, root optional. Exits `0` if nothing running is exposed, `1` if unfixed Ruby is running or GitLab is unfixed, `2` if some version couldn't be read |
+| `check` (default) | Reports every GitLab and Discourse install, every Ruby runtime on disk and every running Ruby process, with whether each is fixed. Flags processes still running a Ruby that was replaced on disk since they started. Changes nothing, root optional. Exits `0` if nothing running is exposed, `1` if unfixed Ruby is running or a bundled app is unfixed, `2` if some version couldn't be read |
 | `scan` | Read-only. Finds application code that compiles regexps from strings, grouped by application, and grades each line (see [Ruby scan grades](#ruby-scan-grades)). Exits `0` if nothing needs review, `1` if something does |
 | `hunt` | Read-only log triage. Scans the journal, syslog, kernel log, GitLab's Puma, Sidekiq and Rails logs, and application logs under `/srv` and `/var/www`, for Ruby crash reports, Onigmo frames in backtraces, heap corruption aborts, services killed by a crash signal, and `RegexpError`. Exits `0` if nothing matched, `1` if it found something to look at |
 | `version` | Prints the script version. Every other command prints it on its first line too |
@@ -477,9 +480,10 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/rub
 ### What the Ruby check looks at
 
 1. **GitLab.** Omnibus installs under `/opt/gitlab`, source installs under `/home/git/gitlab`, and `gitlab/gitlab-ce` and `gitlab/gitlab-ee` images in Docker or Podman. The version comes from GitLab's own `VERSION` file or version manifest, or from the image tag. An image tagged `latest` can't be judged and is reported as unknown.
-2. **Ruby runtimes on disk.** Everything on `PATH`, `/usr/bin/ruby*`, `/usr/local/bin/ruby`, chruby's `/opt/rubies`, and every user's rbenv, rvm, asdf, mise and chruby installs.
-3. **Vendor-bundled Rubies.** Rubies that ship inside another product, under `/opt/*/embedded` (Chef, Fluentd, Vagrant and others) or `/opt/puppetlabs`, are listed but not judged by version: their fix comes from that vendor's update. GitLab's embedded Ruby is judged by the GitLab version, since GitLab patched it.
-4. **Running processes.** Every process whose binary is a Ruby or that has `libruby` loaded, which catches Puma, Sidekiq and Unicorn under their own names, with its user and systemd unit. A process whose Ruby binary or `libruby` was replaced on disk since it started still runs the old code until you restart it.
+2. **Discourse.** The Docker launcher under `/var/discourse`, a bare-metal checkout under `/var/www/discourse` (or a user home, or `/srv/discourse`), and `discourse/discourse` and `discourse/base` images. Discourse has published no Discourse-version fix for these CVEs, so each install is judged by the Ruby it runs: a bare-metal checkout by its `.ruby-version`, the Docker launcher by the running web process, since that Ruby lives inside the container. Discourse compiles patterns from admin and user input (watched words, search, theme and automation settings), so an unfixed Ruby is reachable. This is the Ruby Regexp issue, separate from the Discourse `libheif` image-upload RCE, which is fixed by rebuilding the container, not by upgrading Ruby.
+3. **Ruby runtimes on disk.** Everything on `PATH`, `/usr/bin/ruby*`, `/usr/local/bin/ruby`, chruby's `/opt/rubies`, and every user's rbenv, rvm, asdf, mise and chruby installs.
+4. **Vendor-bundled Rubies.** Rubies that ship inside another product, under `/opt/*/embedded` (Chef, Fluentd, Vagrant and others) or `/opt/puppetlabs`, are listed but not judged by version: their fix comes from that vendor's update. GitLab's embedded Ruby is judged by the GitLab version, since GitLab patched it.
+5. **Running processes.** Every process whose binary is a Ruby or that has `libruby` loaded, which catches Puma, Sidekiq and Unicorn under their own names, with its user and systemd unit. A process whose Ruby binary or `libruby` was replaced on disk since it started still runs the old code until you restart it.
 
 The script reads each Ruby version from the description string compiled into the binary or into the `libruby` it links. It never executes a Ruby binary, so root never runs one planted in a user's version manager.
 
@@ -527,6 +531,8 @@ A match is a lead, not proof. Native gems crash Ruby too, and `RegexpError` is o
 | `FIXED_BUILDS` | *(empty)* | Extra fixed distro builds, space-separated full versions |
 | `GITLAB_FIXED` | `18.11.13 19.0.10 19.1.9 19.2.9 19.3.6 19.4.3 19.5.1` | First fixed GitLab release for each minor line |
 | `GITLAB_ROOT` | `/opt/gitlab` | Where Omnibus GitLab is installed |
+| `DISCOURSE_ROOT` | `/var/discourse` | Where the Discourse Docker launcher lives |
+| `DISCOURSE_APP` | `/var/www/discourse` | Where a bare-metal Discourse checkout lives |
 | `SCAN_PATHS` | `/srv /opt /var/www /home /usr/local/lib` | Where `scan` looks for code |
 | `SCAN_DEPTH` | `10` | How deep `scan` goes |
 | `SCAN_GEMS` | `0` | `1` also scans installed gems and `vendor/bundle` |
@@ -543,6 +549,138 @@ A match is a lead, not proof. Native gems crash Ruby too, and `RegexpError` is o
 - **Containers get their own fix.** Each image carries its own Ruby; rebuild on `ruby:3.3.13`, `3.4.12`, `4.0.9` or later. The script checks GitLab images by tag but can't see Rubies inside other images.
 - **`scan` is a grep.** It misses patterns built across several lines or in another file, and it can flag interpolated strings that aren't regexps. Use it to find where to look, not as a verdict.
 - **GNU/Linux only.** Process inspection reads `/proc`.
+
+---
+
+## libheif HEIF/AVIF Decoder Check
+
+**Script:** [`heif/libheif-oct2026-check.sh`](heif/libheif-oct2026-check.sh)
+
+A heap buffer overflow in `libheif`, the HEIF and AVIF image decoder, was used to get remote code execution on a Discourse forum and then pivot further into the services behind it. The decode path is reached by uploading a crafted HEIF or AVIF image: an app that processes user images hands the file to ImageMagick (or libvips), which calls `libheif`. Disabling a single "image uploads" setting does not reliably close it, because avatars, emoji, oneboxed remote images and other surfaces feed the same conversion path.
+
+The fix is to update `libheif` (and `libde265`, the HEVC codec it calls) and rebuild anything that bundles them. For a Discourse Docker install this means a container rebuild, not a web-interface update, because the old library stays in the image until it is rebuilt:
+
+```bash
+cd /var/discourse
+git pull
+./launcher rebuild app
+```
+
+The version story is messy. The upstream heap-write class was fixed across 1.21.0, 1.22.0 and 1.22.1, with security releases continuing into the 1.23.x line. Debian fixed a batch in [DSA-6417-1](https://lists.debian.org/debian-security-announce/2026/msg00328.html) (`libheif 1.19.8-1+deb13u1`, trixie, 8 August 2026), and other distributions backport under their own version strings, so a package can carry the fixes under an older-looking upstream number. This script accounts for that: a distribution build is judged by `FIXED_BUILDS` and its package changelog first, and only falls back to the upstream version floor when it is not a distribution package.
+
+This is a separate issue from the Ruby Regexp CVEs. For Ruby and GitLab, use [`ruby/ruby-regexp-oct2026-check.sh`](#ruby-and-gitlab-regexp-check) instead.
+
+### libheif quick start
+
+1. Download the script. The repository is mirrored on GitHub and Codeberg; pick a base URL.
+
+   ```bash
+   # BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+   # BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+   # curl -fLO "$BASE/heif/libheif-oct2026-check.sh"
+   curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/heif/libheif-oct2026-check.sh
+   ```
+
+2. Read it before running it. Always.
+
+   ```bash
+   less libheif-oct2026-check.sh
+   ```
+
+3. Make it executable.
+
+   ```bash
+   chmod +x libheif-oct2026-check.sh
+   ```
+
+4. See what's exposed. Root is optional, but without it you won't read every library or exec into other users' containers.
+
+   ```bash
+   sudo ./libheif-oct2026-check.sh check
+   ```
+
+5. Check whether ImageMagick still lets HEIF through, and get the lines to block it.
+
+   ```bash
+   sudo ./libheif-oct2026-check.sh policy
+   ```
+
+6. Look for crashes that suggest someone already tried.
+
+   ```bash
+   sudo ./libheif-oct2026-check.sh hunt
+   ```
+
+To confirm GitHub and Codeberg serve the same file, compare checksums:
+
+```bash
+sha256sum libheif-oct2026-check.sh
+curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/heif/libheif-oct2026-check.sh | sha256sum
+```
+
+### libheif commands
+
+| Command | What it does |
+|---|---|
+| `check` (default) | Reports every `libheif` and `libde265` on the host, the ImageMagick and libvips that reach them, every Discourse install, and `libheif` inside running containers, with whether each `libheif` carries the fixes. For a Discourse container it says a rebuild is needed, not a restart. Changes nothing, root optional. Exits `0` if nothing is exposed, `1` if a vulnerable `libheif` is reachable, `2` if something couldn't be judged |
+| `policy` | Read-only. Checks whether ImageMagick's `policy.xml` still lets HEIC, HEIF or AVIF through, and prints the lines that block them. Exits `0` if HEIF is blocked everywhere a policy was found, `1` if it is still allowed, `2` if no policy was found |
+| `hunt` | Read-only log triage for image-processor crashes: ImageMagick, `libheif` and `libde265` segfaults, HEIF decoder frames in backtraces, services killed by a crash signal, and repeated HEIF decode errors. Exits `0` if nothing matched, `1` if it found something |
+| `version` | Prints the script version. Every other command prints it on its first line too |
+
+### What the libheif check looks at
+
+1. **`libheif` on the host.** Every `libheif` shared object on the standard library paths and in `ldconfig`'s cache, judged by its package build or, if it is not a distribution package, by the upstream version floor. The version is read from the library's own soname, never from a stray build string inside it, and the library is never executed.
+2. **`libde265`.** The HEVC codec `libheif` calls for HEIC. It has its own CVE history and its own fixed versions, so the script reports its version but does not judge it against the `libheif` floor. Update it from your distribution too.
+3. **What reaches `libheif`.** ImageMagick (`magick` or `convert`) and libvips, with whether ImageMagick can even decode HEIF or AVIF. A build with no HEIF delegate is not a path to this bug through that tool.
+4. **Discourse.** The Docker launcher under `/var/discourse`, a bare-metal checkout under `/var/www/discourse`, and `discourse/discourse` and `discourse/base` images. A forum's image-upload path runs an attacker-supplied file through ImageMagick into `libheif`, so a Discourse install on top of a vulnerable `libheif` is a path to it. For a Docker install the library lives inside the web container, so the script points at the container section and tells you to rebuild rather than restart.
+5. **`libheif` inside running containers.** For each running Docker or Podman container, the script reads the `libheif` the container actually loads. This is how a Discourse web container still carrying the old library gets caught: a web-interface update does not replace it, only a rebuild does.
+
+### libheif patch detection
+
+For each `libheif` the checks run in order, and the first that applies decides:
+
+1. **`FIXED_BUILDS`.** Distribution builds you list as fixed, for a backport the script doesn't know about. A build only counts for the same upstream version.
+2. **Changelog.** For a `libheif` installed from a Debian or Ubuntu package, the package changelog names DSA-6417-1 or one of the batch CVEs, and its newest entry is the installed build. Because distributions backport under old upstream numbers, this overrides the version floor: a package at `1.17.6` can read as fixed when its changelog proves it.
+3. **Upstream floor.** For a library that is not a distribution package (self-built or bundled), the version is at or above `HEIF_FIXED_UPSTREAM` (default 1.22.0). A dpkg-owned build with no changelog proof is reported as unknown rather than fixed, because its number alone cannot clear it.
+
+### libheif disabling the coder as defence in depth
+
+Even after `libheif` is patched, more decoder bugs in this format are likely, so it is worth refusing untrusted HEIF and AVIF at the converter. `policy` reports whether ImageMagick already does, and prints the lines to add inside `<policymap>` in `policy.xml`:
+
+```xml
+<policy domain="coder" rights="none" pattern="HEIC" />
+<policy domain="coder" rights="none" pattern="HEIF" />
+<policy domain="coder" rights="none" pattern="AVIF" />
+```
+
+This stops ImageMagick handing HEIF and AVIF to `libheif`. It is not a substitute for updating the library, and it does not help a caller that reaches `libheif` without going through ImageMagick. Discourse added ImageMagick sandboxing as its own defence in depth.
+
+### libheif hunting for exploitation
+
+A crafted image corrupts memory while it decodes, so a failed attempt usually shows as a crashed image worker rather than an application error. `hunt` reads the journal and logs, never changes anything, and reports ImageMagick, `libheif` and `libde265` segfaults, `libheif` and `libde265` frames in a backtrace, services killed by a crash signal, heap corruption aborts, and repeated HEIF, HEIC or AVIF handling errors. `HUNT_SINCE` sets how far back it reads the journal, and `HUNT_LOGS` adds your own log files.
+
+A match is a lead, not proof. Image decoders crash on genuinely broken files too. A crash with `libheif` or `libde265` frames on a vulnerable build, or a burst of HEIF decode errors from one source just before a worker died, is worth treating as an incident: check what the process could reach and rotate it. On a forum that includes its admin and session stores.
+
+### libheif configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `HEIF_FIXED_UPSTREAM` | `1.22.0` | Upstream floor the heap-write class is fixed at, used only for libraries that are not distribution packages |
+| `FIXED_BUILDS` | *(empty)* | Extra fixed distribution builds, space-separated full versions |
+| `DISCOURSE_ROOT` | `/var/discourse` | Where the Discourse Docker launcher lives |
+| `DISCOURSE_APP` | `/var/www/discourse` | Where a bare-metal Discourse checkout lives |
+| `POLICY_PATHS` | ImageMagick-6 and -7 config dirs | Where `policy` looks for `policy.xml` |
+| `HUNT_SINCE` | `2026-07-01` | How far back `hunt` reads the journal |
+| `HUNT_LOGS` | *(empty)* | Extra log globs for `hunt` |
+
+### libheif know before you run it
+
+- **This is a check, not a mitigation.** Update `libheif` and `libde265`, rebuild anything that bundles them, and for Discourse rebuild the container (`/var/discourse/launcher rebuild app`), which a web-interface update does not do.
+- **A single upload setting is not the fix.** Many surfaces reach the decoder. Disabling the coder in ImageMagick (`policy`) blocks the path at the converter and is the reliable interim step.
+- **Distribution backports read correctly.** A package can carry the fixes under an older upstream number; the script trusts the package changelog over the version. If you know a build is fixed and the changelog doesn't name it, add it to `FIXED_BUILDS`.
+- **`libde265` is reported, not judged.** It has its own fixed versions. Update it from your distribution.
+- **Containers need their own fix.** Each image carries its own `libheif`; rebuild on a fixed base. The script reads the library inside running containers but can't see one that was installed in an unusual way.
+- **GNU/Linux only.** Library discovery and container inspection assume it.
 
 ---
 

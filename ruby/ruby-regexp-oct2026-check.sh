@@ -15,11 +15,12 @@
 #   check (default)  every Ruby runtime on the host (system packages, rbenv,
 #                    rvm, chruby, asdf, mise, vendor-bundled Rubies under /opt),
 #                    every running Ruby process (Puma, Sidekiq, Unicorn...),
-#                    and GitLab (Omnibus, source and container installs),
+#                    GitLab (Omnibus, source and container installs) and
+#                    Discourse (Docker launcher and bare-metal installs),
 #                    with whether each is fixed. Root optional (root sees
 #                    every process). Exit 0 = nothing exposed, 1 = something
-#                    unfixed is running or GitLab is unfixed, 2 = something
-#                    couldn't be read.
+#                    unfixed is running or a bundled app is unfixed, 2 =
+#                    something couldn't be read.
 #   scan             application code that compiles regexps from strings:
 #                    Regexp.new / Regexp.compile / Regexp.union and
 #                    interpolated regexp literals, graded by whether the
@@ -43,6 +44,8 @@
 #   RUBY_FIXED_33=3.3.13 RUBY_FIXED_34=3.4.12 RUBY_FIXED_40=4.0.9
 #   FIXED_BUILDS="3.3.8-2ubuntu1.2"    distro builds known to carry the fixes
 #   GITLAB_FIXED="18.11.13 19.0.10 19.1.9 19.2.9 19.3.6 19.4.3 19.5.1"
+#   DISCOURSE_ROOT="/var/discourse"   where the Docker launcher lives
+#   DISCOURSE_APP="/var/www/discourse"  where a bare-metal checkout lives
 #   SCAN_PATHS="/srv /opt /var/www /home /usr/local/lib"
 #   SCAN_DEPTH=10                      how deep scan descends
 #   SCAN_GEMS=0                        1 = also scan installed gems and
@@ -69,6 +72,8 @@ SCAN_SHOW="${SCAN_SHOW:-5}"
 HUNT_SINCE="${HUNT_SINCE:-2026-09-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 GITLAB_ROOT="${GITLAB_ROOT:-/opt/gitlab}"
+DISCOURSE_ROOT="${DISCOURSE_ROOT:-/var/discourse}"
+DISCOURSE_APP="${DISCOURSE_APP:-/var/www/discourse}"
 SCRIPT_NAME="ruby-regexp-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
 SCRIPT_DATE="2026-10-23"
@@ -266,9 +271,45 @@ gitlab_state() {   # <X.Y.Z> -> "<rc>|<explanation>"
     echo "1|${v}: GitLab ${mm} got no fixed release. CVE-2026-110264 affects every version from 7.0; move to a fixed line"
 }
 
+# Discourse installs: "kind|where|version|ruby"
+# Discourse has published no Discourse-version fix for these Ruby CVEs: the
+# fix is the Ruby it runs. So each install reports the Ruby that judges it,
+# never a Discourse cutoff this script doesn't have.
+#   docker   the launcher at DISCOURSE_ROOT. The app and its Ruby live inside
+#            the web container, out of reach from the host, so ruby is left
+#            empty and the running-process step judges it instead.
+#   source   a bare-metal checkout at DISCOURSE_APP, judged by the Ruby in
+#            its .ruby-version, or the system ruby if none is pinned.
+discourse_installs() {
+    local v rv
+    if [[ -x "${DISCOURSE_ROOT}/launcher" || -d "${DISCOURSE_ROOT}/containers" ]]; then
+        v=""
+        [[ -r "${DISCOURSE_ROOT}/version" ]] && v="$(grep -oE '[0-9a-f]{7,40}|v?[0-9]+\.[0-9]+\.[0-9]+' "${DISCOURSE_ROOT}/version" | head -1 || true)"
+        echo "docker|${DISCOURSE_ROOT}|${v}|"
+    fi
+    local app f
+    for app in "$DISCOURSE_APP" /home/*/discourse /srv/discourse; do
+        f="${app}/lib/version.rb"
+        [[ -r "$f" || -r "${app}/VERSION" ]] || continue
+        v=""
+        [[ -r "$f" ]] && v="$(grep -oE 'STRING *= *"[0-9.]+(\.beta[0-9]*)?"' "$f" | grep -oE '[0-9][0-9.]*' | head -1 || true)"
+        [[ -z "$v" && -r "${app}/VERSION" ]] && v="$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "${app}/VERSION" | head -1 || true)"
+        rv=""
+        [[ -r "${app}/.ruby-version" ]] && rv="$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "${app}/.ruby-version" | head -1 || true)"
+        echo "source|${app}|${v}|${rv}"
+    done
+    local rt img
+    for rt in docker podman; do
+        have "$rt" || continue
+        "$rt" image ls --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep -E '(^|/)discourse/(discourse|base):' | sort -u | while read -r img; do
+            echo "${rt} image|${img}||"
+        done
+    done
+}
+
 # ---------- check ------------------------------------------------------------
 cmd_check() {
-    local rc=0 bin v lib ps how vendor gl_bad=0
+    local rc=0 bin v lib ps how vendor gl_bad=0 exposed=0
 
     step "GitLab"
     local kind where gv any=0
@@ -285,6 +326,34 @@ cmd_check() {
         esac
     done < <(gitlab_installs)
     [[ $any -eq 1 ]] || inf "no GitLab install found (Omnibus under ${GITLAB_ROOT}, source under /home/git/gitlab, or gitlab/gitlab-ce|ee images)"
+
+    step "Discourse"
+    local dkind dwhere dv drv dps dhow
+    any=0
+    while IFS='|' read -r dkind dwhere dv drv; do
+        [[ -n "$dkind" ]] || continue
+        any=1
+        if [[ -n "$drv" ]]; then
+            IFS='|' read -r dps dhow <<<"$(ruby_state "$drv")"
+            case $dps in
+                0) ok "${dkind} ${dwhere}${dv:+  Discourse ${dv}}  Ruby ${drv}  $(state_word 0)  (${dhow})" ;;
+                1) bad "${dkind} ${dwhere}${dv:+  Discourse ${dv}}  Ruby ${drv}  $(state_word 1)  (${dhow})"; exposed=1 ;;
+                *) caution "${dkind} ${dwhere}${dv:+  Discourse ${dv}}  Ruby ${drv}  $(state_word 2)  (${dhow})"; [[ $rc -eq 0 ]] && rc=2 ;;
+            esac
+        else
+            case "$dkind" in
+                docker)   caution "${dkind} ${dwhere}${dv:+  ${dv}}: app Ruby runs inside the web container. Judged by the running process below, or run this script inside it: ${DISCOURSE_ROOT}/launcher enter app" ;;
+                *" image") caution "${dkind} ${dwhere}: rebuild on a base image whose Ruby is 3.3.13, 3.4.12, 4.0.9 or later" ;;
+                *)        caution "${dkind} ${dwhere}${dv:+  Discourse ${dv}}: no pinned Ruby found; judged by the system Ruby above and the running process below" ;;
+            esac
+        fi
+    done < <(discourse_installs)
+    if [[ $any -eq 1 ]]; then
+        [[ $exposed -eq 1 ]] && inf "Discourse compiles patterns from admin and user input (watched words, search, theme and automation settings), so an unfixed Ruby is reachable. Upgrade the Ruby it runs, then restart it"
+        inf "Note: this is the Ruby Regexp issue, not the separate Discourse libheif/ImageMagick image-upload RCE. For that, rebuild the container (${DISCOURSE_ROOT}/launcher rebuild app)"
+    else
+        inf "no Discourse install found (Docker launcher under ${DISCOURSE_ROOT}, checkout under ${DISCOURSE_APP}, or discourse/discourse|base images)"
+    fi
 
     step "Ruby runtimes on disk"
     is_root || caution "not root: other users' version managers and processes may be hidden"
@@ -308,7 +377,7 @@ cmd_check() {
     [[ $found -eq 1 ]] || inf "no Ruby runtime found in the usual places"
 
     step "Running Ruby processes"
-    local pid exe user unit stale name running=0 exposed=0 where
+    local pid exe user unit stale name running=0 where
     while IFS='|' read -r pid exe lib user unit stale name; do
         [[ -n "$pid" ]] || continue
         running=1
