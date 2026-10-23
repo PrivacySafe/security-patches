@@ -27,9 +27,9 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 | [Node.js October 2026](#nodejs-october-2026-interim-mitigation) | Node.js on GNU/Linux; systemd for the guard | CVE-2026-111497 and 9 others | Interim mitigation |
 | [eMudhra CA Compromise](#emudhra-intermediate-ca-compromise-interim-mitigation) | System CA store on Debian/Ubuntu/Trisquel and derivatives | [disclosure](https://emudhra.we-have-a-problem.com/); Go: CVE-2026-111943 | Interim mitigation |
 
-> ℹ️ **Update 2026-10-23:** PHP announced **CVE-2026-115560**, an RCE through session upload progress that the 21 October releases don't fix. `php2shell-mitigate.sh` v5 keeps `session.upload_progress` off after `cleanup` until your build is fixed for it, and on PHP 8.5 also turns off `fatal_error_backtraces`. **If you ran `cleanup` with v4, upload progress is back on: download v5 and run `cleanup` again.** It writes back a drop-in that keeps upload progress off, and leaves everything else as `cleanup` did. Every script now prints its version on the first line of output; please include that line when you send us a report. Later the same day, 5.0.1 started reporting Ubuntu 14.04's `php5` packages against the ESM Legacy fix, and 5.0.2 started pointing to a [third-party extension](#know-before-you-run-it) for PHP that neither this script nor a package update can cover.
+> ℹ️ **Update 2026-10-23:** PHP announced **CVE-2026-115560**, an RCE through session upload progress that the 21 October releases don't fix. `php2shell-mitigate.sh` v5 keeps `session.upload_progress` off after `cleanup` until your build is fixed for it, and on PHP 8.5 also turns off `fatal_error_backtraces`. **If you ran `cleanup` with v4, upload progress is back on: download v5 and run `cleanup` again.** It writes back a drop-in that keeps upload progress off, and leaves everything else as `cleanup` did. Every script now prints its version on the first line of output; please include that line when you send us a report. Later the same day, 5.0.1 started reporting Ubuntu 14.04's `php5` packages against the ESM Legacy fix, and 5.0.2 started pointing to a [third-party extension](#php2shell-know-before-you-run-it) for PHP that neither this script nor a package update can cover.
 
-> ℹ️ **Update 2026-10-22:** an allocator double-free in this class (`free` -> `__zend_free` -> `_efree`, `zend_alloc.c`) was reproduced on **8.5.12**, the release listed as fixed, through PHP's built-in CLI server (`php -S`) with a crafted POST body. It's unconfirmed on a stock (non-ASan) release build and may be a distinct bug rather than an incomplete fix for CVE-2026-109618/-109619. `hunt` and `php2shell-watch.sh` now detect this signature; see [Hunting for exploitation](#hunting-for-exploitation). Note that the AppArmor layer confines **PHP-FPM**, not the `php` CLI binary, so it does **not** contain an exploit of the dev server; don't expose `php -S` to untrusted traffic.
+> ℹ️ **Update 2026-10-22:** an allocator double-free in this class (`free` -> `__zend_free` -> `_efree`, `zend_alloc.c`) was reproduced on **8.5.12**, the release listed as fixed, through PHP's built-in CLI server (`php -S`) with a crafted POST body. It's unconfirmed on a stock (non-ASan) release build and may be a distinct bug rather than an incomplete fix for CVE-2026-109618/-109619. `hunt` and `php2shell-watch.sh` now detect this signature; see [Hunting for exploitation](#php2shell-hunting-for-exploitation). Note that the AppArmor layer confines **PHP-FPM**, not the `php` CLI binary, so it does **not** contain an exploit of the dev server; don't expose `php -S` to untrusted traffic.
 
 ---
 
@@ -44,7 +44,7 @@ We released this script ahead of upstream patches for two 0day vulnerabilities i
 
 The script is designed so that it can't take your site down. It syntax-checks each profile before installing it. Then it tests FPM with a config check, a restart, a reload, and a socket check. Under systemd it also checks that the unit didn't restart itself during the test. PHP 8.4 and later units use `Restart=on-failure`, which can make a crash-looping FPM look active. If FPM won't come up, it falls back to complain mode, and if that still fails, it unloads the profile. Each PHP version is handled on its own, so a problem with one never blocks the others.
 
-### Quick start
+### PHP2Shell quick start
 
 1. Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.
 
@@ -86,7 +86,7 @@ sha256sum php2shell-mitigate.sh
 curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/php/php2shell-mitigate.sh | sha256sum
 ```
 
-Every command starts with an environment check and refuses to run if your server isn't a fit. See [Environment check](#environment-check).
+Every command starts with an environment check and refuses to run if your server isn't a fit. See [Environment check](#php2shell-environment-check).
 
 New profiles start in **complain mode**, which logs but does not block. Let real traffic run, then review and enforce:
 
@@ -97,7 +97,7 @@ sudo ./php2shell-mitigate.sh enforce    # start blocking
 
 If `status` lists paths your app legitimately needs, such as an uploads or cache directory, add them to `/etc/apparmor.d/local/usr.sbin.php-fpm<version>` and rerun the script. That file is never overwritten.
 
-### Commands
+### PHP2Shell commands
 
 | Command | What it does |
 |---|---|
@@ -113,12 +113,12 @@ If `status` lists paths your app legitimately needs, such as an uploads or cache
 
 Add `--php 8.2` to any command to act on a single version.
 
-### Environment check
+### PHP2Shell environment check
 
 Before changing anything, the script checks your server in this order and prints what it found:
 
 1. **Operating system.** Debian, Ubuntu and Trisquel are supported, and so is any derivative. The check recognizes Linux Mint, Pop!_OS, elementary OS, Zorin OS, KDE neon, Kali, Raspberry Pi OS, PureOS, Parrot, deepin, TUXEDO OS, Devuan, MX Linux, antiX, SparkyLinux, Q4OS, Peppermint, BunsenLabs and siduction by name. It also accepts anything else whose `ID_LIKE` names Debian or Ubuntu, or that has `/etc/debian_version`. A derivative never stops the run. The check also reports the base release and the PHP version it ships.
-2. **PHP.** Every PHP-FPM under `/usr/sbin`, its package version, whether it came from your distro or the ondrej/sury repository, and whether it's patched (see [Patch detection](#patch-detection)). It flags PHP it can't protect: versions outside `SUPPORTED_VERS`, PHP-FPM built outside dpkg, LiteSpeed's `lsphp`, and Ubuntu 14.04's `php5` packages (reported against the ESM Legacy fix). Where no package fix is coming, it points to a third-party extension; see [Know before you run it](#know-before-you-run-it).
+2. **PHP.** Every PHP-FPM under `/usr/sbin`, its package version, whether it came from your distro or the ondrej/sury repository, and whether it's patched (see [Patch detection](#php2shell-patch-detection)). It flags PHP it can't protect: versions outside `SUPPORTED_VERS`, PHP-FPM built outside dpkg, LiteSpeed's `lsphp`, and Ubuntu 14.04's `php5` packages (reported against the ESM Legacy fix). Where no package fix is coming, it points to a third-party extension; see [Know before you run it](#php2shell-know-before-you-run-it).
 3. **Web servers.** Apache and nginx (plus angie, lighttpd and caddy), whether each is running, and which PHP-FPM version each one actually sends traffic to.
 4. **System.** Root, the init system, containers, AppArmor in the kernel, SELinux, and required tools. Without systemd (sysvinit or OpenRC, as on Devuan, MX and antiX), the script uses `service` and the PHP-FPM init scripts. It reads AppArmor events from `audit.log`, `kern.log` and `dmesg`.
 
@@ -129,7 +129,7 @@ Problems fall into two groups. **Hard blockers** always stop the run: a distribu
 
 `--ignore-env` doesn't affect `--force`, and `--force` doesn't skip the environment check.
 
-### Patch detection
+### PHP2Shell patch detection
 
 For each PHP version, the report, `status` and `cleanup` say whether the installed package is fixed. Three checks run in order, and any one is enough:
 
@@ -143,7 +143,7 @@ The result is *patched*, *not patched*, or *unknown*. *Unknown* usually means an
 
 A patched package isn't enough on its own, because a running FPM keeps executing the old binary until it restarts. The script checks for FPM processes still running a binary that dpkg has replaced, and for Apache holding an old `libphp*.so`, and tells you which service to restart.
 
-### Hunting for exploitation
+### PHP2Shell hunting for exploitation
 
 These bugs run below the application, so your app logs won't show much. What they leave behind is memory-corruption crashes, and, on a server that was actually exploited, a PHP worker doing something it shouldn't. `hunt` reads your logs (never changes anything) and reports both:
 
@@ -170,7 +170,7 @@ tail -f /var/log/php2shell-watch.log
 
 It survives log rotation, prints a count summary on stop, and changes nothing. A [systemd unit](php/php2shell-watch.service) is included for running it as a managed service (`journalctl -fu php2shell-watch`). The same caveat applies: a hit is a lead to investigate, not proof of compromise.
 
-### Configuration
+### PHP2Shell configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -184,7 +184,7 @@ It survives log rotation, prints a count summary on stop, and changes nothing. A
 
 When no upstream fixed version is set for a branch, the script checks your distro's changelog for both CVEs instead. That catches backported fixes from Ubuntu, Debian, and the ondrej/sury PPAs, which often keep the old version number.
 
-### Know before you run it
+### PHP2Shell know before you run it
 
 - **This is not a patch.** PHP released fixes on 21 October 2026 in 8.5.12, 8.4.27, 8.3.36 and 8.2.35, and distributions are shipping backports under their own version numbers. Upgrade, then run `cleanup`.
 - **The profile blocks `mail()`**, because PHP runs sendmail through `/bin/sh`. It also blocks ImageMagick delegates. If your app sends mail, use SMTP from PHP.
@@ -236,7 +236,7 @@ We wrote these for the Node services we couldn't upgrade the same day. There are
 1. **`brotli-guard.cjs`** is a small file Node loads before your application, through `--require`. It makes Node's Brotli decoder refuse to run, for CommonJS and ES modules alike, and stops `fetch()` asking servers for `br`. Compression keeps working, and so do gzip and deflate. A blocked decode fails the way corrupt input does, so code that already copes with a bad compressed body copes with this too. On a fixed runtime it goes idle by itself.
 2. **`node-oct2026-mitigate.sh`** finds every Node runtime and process on the host, tells you which are exposed, finds the code that decodes Brotli, and loads the guard into systemd services for you. It checks the guard works on each service's own runtime before installing it, and rolls back if the service won't start with it.
 
-### Quick start
+### Node.js quick start
 
 1. Download both files into the same directory. The script looks for `brotli-guard.cjs` next to itself. The repository is mirrored on GitHub and Codeberg; pick a base URL.
 
@@ -304,7 +304,7 @@ Once Node is upgraded, take the guard out again:
 sudo ./node-oct2026-mitigate.sh unguard --unit myapp
 ```
 
-### Commands
+### Node.js commands
 
 | Command | What it does |
 |---|---|
@@ -325,7 +325,7 @@ sudo ./node-oct2026-mitigate.sh unguard --unit myapp
 
 The script reads each Node version from the binary's contents instead of running it, so root never executes a binary planted in a user's `~/.nvm` or inside a container. It only runs a binary when it can't read the version, and only if root owns it and nobody else can write to it.
 
-### Patch detection
+### Node.js patch detection
 
 For each runtime, three checks run in order, and the first that applies decides:
 
@@ -360,7 +360,7 @@ Its behavior is set through the environment:
 | `BROTLI_GUARD_FORCE` | *(unset)* | `1` keeps the guard active on a runtime that already has the fix |
 | `BROTLI_GUARD_QUIET` | *(unset)* | `1` drops the startup line. Blocked calls are still reported |
 
-### Hunting for exploitation
+### Node.js hunting for exploitation
 
 A crash in Node's Brotli decoder doesn't show in application logs; it shows as a dead process. `hunt` reads the journal and system logs, never changes anything, and reports what it finds:
 
@@ -372,7 +372,7 @@ It looks for Node segfaults and protection faults in the kernel log, V8 fatal er
 
 A match is a lead, not proof. Buggy native addons crash Node too, and a segfaulting service may not be running Node at all. A crash in the Brotli decoder on an unfixed runtime is worth treating as an incident: check what the process could reach (secrets in its environment, database credentials, API tokens) and rotate them. A blocked decode on a route attackers can reach tells you which request to look at.
 
-### Configuration
+### Node.js configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -383,7 +383,7 @@ A match is a lead, not proof. Buggy native addons crash Node too, and a segfault
 | `GUARD_DST` | `/usr/local/lib/privacysafe/brotli-guard.cjs` | Where `guard` installs the guard |
 | `HUNT_SINCE` | `2026-10-14` | How far back `hunt` reads the journal |
 
-### Know before you run it
+### Node.js know before you run it
 
 - **This is not a patch.** Upgrade to Node.js 22.23.4, 24.22.1 or 26.12.1, restart, then run `unguard`. Node 25 and older will never be fixed; move to a supported line.
 - **The guard only covers CVE-2026-111497.** The other nine CVEs (TLS hostname checks, DNS, keep-alive sockets, the permission model, ZipFile, random value caching) have no workaround here.
@@ -411,7 +411,7 @@ The intermediates reach the store through two roots: emSign ECC Root CA - G3, wh
 
 The script is designed so it can't break your CA store or leave you exposed by mistake. It checks that the rebuilt bundle lost only affected certificates and still has hash links, and rolls back if not. If `TEST_HOSTS` is set, it checks those hosts before and after so you see any collateral breakage immediately. `cleanup` never removes the distrust unless the store still rejects every compromised intermediate without it, and re-applies it if not.
 
-### Quick start
+### eMudhra quick start
 
 1. Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.
 
@@ -455,7 +455,7 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/pki
 
 Set `TEST_HOSTS` to the hosts your server actually talks to: APIs, package mirrors, webhooks. A host that verifies before the change and fails after it most likely chains to one of the two distrusted roots.
 
-### Commands
+### eMudhra commands
 
 | Command | What it does |
 |---|---|
@@ -465,12 +465,12 @@ Set `TEST_HOSTS` to the hosts your server actually talks to: APIs, package mirro
 | `restore` | Undoes everything this script distrusted. This re-exposes you if `ca-certificates` isn't patched |
 | `cleanup` | Once `ca-certificates` is patched, removes this script's distrust, but only if the store still rejects every compromised intermediate. Otherwise it puts the distrust back. `--force` skips the patch check, never the store test |
 
-### Environment check
+### eMudhra environment check
 
 Before changing anything, the script checks your server in this order and prints what it found:
 
 1. **Operating system.** The same set as PHP2Shell: Debian, Ubuntu, Trisquel, the derivatives the check knows by name, and anything whose `ID_LIKE` names Debian or Ubuntu. It works out the base release so it can compare against the right fixed `ca-certificates` build. Other systems are refused with a pointer to their workaround on the disclosure page.
-2. **System CA store.** The `ca-certificates` version and its patch status (see [Patch detection](#patch-detection-1)). It lists every affected certificate it finds, whether shipped, already distrusted, or added by hand, and tests the current bundle.
+2. **System CA store.** The `ca-certificates` version and its patch status (see [Patch detection](#emudhra-patch-detection)). It lists every affected certificate it finds, whether shipped, already distrusted, or added by hand, and tests the current bundle.
 3. **Other CA stores.** This run doesn't fix these, so they're reported with the command that does:
    - **Java.** The system keystore follows the store; other JDKs carry their own `cacerts`.
    - **Bundled CA files** such as Python certifi, vendored pip and Homebrew, found under `SCAN_PATHS`. Debian's patched certifi reads the system store and is recognized as such.
@@ -488,7 +488,7 @@ Before changing anything, the script checks your server in this order and prints
 - a running Java process on a JDK whose own `cacerts` still holds affected certificates;
 - a system-wide `SSL_CERT_FILE` or `SSL_CERT_DIR` that points at an exposed store.
 
-### Patch detection
+### eMudhra patch detection
 
 For `ca-certificates`, three checks run in order, and any one is enough:
 
@@ -509,7 +509,7 @@ The result is *patched*, *not patched*, or *unknown*. The store tests decide wha
 
 A fixed store isn't enough on its own, because a long-running process keeps the trust it loaded at start. `status` and `apply` list processes started before the current store that loaded a TLS library or a JVM, or are Node.js, and tell you what to restart. One-shot tools like curl, apt and git need nothing.
 
-### Configuration
+### eMudhra configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -519,7 +519,7 @@ A fixed store isn't enough on its own, because a long-running process keeps the 
 | `SCAN_DEPTH` | `9` | How deep that scan goes |
 | `JAVA_STOREPASS` | `changeit` | Password for the Java keystores |
 
-### Know before you run it
+### eMudhra know before you run it
 
 - **This is not a patch.** Upgrade `ca-certificates` when your distribution ships the fix, then run `cleanup`.
 - **It distrusts two whole roots, not just the eight intermediates.** The system store can only drop roots, so every site whose chain ends at emSign ECC Root CA - G3 or AAA Certificate Services fails verification until you run `cleanup` or `restore`. Set `TEST_HOSTS` and check `status` after applying. If the store already rejects every compromised intermediate, for example because a patched package cut the path, `apply` leaves those two roots trusted.
