@@ -21,8 +21,12 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 
 | Patch | Targets | CVEs | Type |
 |---|---|---|---|
-| [PHP2Shell](#php2shell-interim-mitigation) | PHP-FPM 7.0 through 8.5 on Debian/Ubuntu/Trisquel and derivatives | CVE-2026-109618, CVE-2026-109619 | Interim mitigation |
+| [PHP2Shell](#php2shell-interim-mitigation) | PHP-FPM 7.0 through 8.5 on Debian/Ubuntu/Trisquel and derivatives | CVE-2026-109618, CVE-2026-109619, CVE-2026-115560 | Interim mitigation |
+| [PHP session audit](#php-session-audit-cve-2026-115560) | Any PHP host | CVE-2026-115560 | Read-only audit |
+| [Node.js October 2026](#nodejs-october-2026-interim-mitigation) | Node.js on Linux; systemd for the guard | CVE-2026-111497 and 9 others | Interim mitigation |
 | [eMudhra CA Compromise](#emudhra-intermediate-ca-compromise-interim-mitigation) | System CA store on Debian/Ubuntu/Trisquel and derivatives | [disclosure](https://emudhra.we-have-a-problem.com/); Go: CVE-2026-111943 | Interim mitigation |
+
+> ℹ️ **Update 2026-10-23:** PHP announced **CVE-2026-115560**, an RCE through session upload progress that the 21 October releases don't fix. `php2shell-mitigate.sh` v5 keeps `session.upload_progress` off after `cleanup` until your build is fixed for it, and on PHP 8.5 also turns off `fatal_error_backtraces`. **If you ran `cleanup` with v4, upload progress is back on: download v5 and run `cleanup` again.** It writes back a drop-in that keeps upload progress off, and leaves everything else as `cleanup` did. Every script now prints its version on the first line of output; please include that line when you send us a report. Later the same day, 5.0.1 started reporting Ubuntu 14.04's `php5` packages against the ESM Legacy fix, and 5.0.2 started pointing to a [third-party extension](#know-before-you-run-it) for PHP that neither this script nor a package update can cover.
 
 > ℹ️ **Update 2026-10-22:** an allocator double-free in this class (`free` -> `__zend_free` -> `_efree`, `zend_alloc.c`) was reproduced on **8.5.12**, the release listed as fixed, through PHP's built-in CLI server (`php -S`) with a crafted POST body. It's unconfirmed on a stock (non-ASan) release build and may be a distinct bug rather than an incomplete fix for CVE-2026-109618/-109619. `hunt` and `php2shell-watch.sh` now detect this signature; see [Hunting for exploitation](#hunting-for-exploitation). Note that the AppArmor layer confines **PHP-FPM**, not the `php` CLI binary, so it does **not** contain an exploit of the dev server; don't expose `php -S` to untrusted traffic.
 
@@ -102,7 +106,8 @@ If `status` lists paths your app legitimately needs, such as an uploads or cache
 | `enforce` | Switches to enforce mode. Refuses if complain mode logged accesses you haven't handled (override with `--force`) |
 | `complain` | Switches back to log-only mode |
 | `hunt` | Read-only log triage. Scans PHP-FPM, Apache and nginx logs for the memory-corruption crashes these bugs cause (including AddressSanitizer/debug-build double-free and use-after-free backtraces, and crashes through the built-in CLI server, `php -S`), and for signs of exploitation. Changes nothing, doesn't need root. Exits `0` if nothing matched, `1` if it found something to look at |
-| `cleanup` | Removes the ini drop-in once you're patched. The AppArmor profile is left loaded, since it confines FPM against the next bug too (the patch doesn't). Once patched, either switch it on for real with `enforce`, or take it out with `remove` |
+| `version` | Prints the script version. Every other command prints it on its first line too |
+| `cleanup` | Removes the ini drop-in once you're patched, except `session.upload_progress = Off`, which stays until the build is also fixed for CVE-2026-115560 (set `PATCHED_115560_X_Y` once PHP names the release, or the package changelog naming the CVE is enough; `--force` removes it anyway). The AppArmor profile is left loaded, since it confines FPM against the next bug too (the patch doesn't). Once patched, either switch it on for real with `enforce`, or take it out with `remove` |
 | `remove` | Removes the AppArmor profile entirely: unloads it from the kernel, deletes the profile, the `local/` override and any disable symlink, then confirms `aa-status` no longer lists FPM. Leaves the ini drop-in (that's `cleanup`'s job) and needs no patch. Refuses to touch a profile this script didn't create |
 
 Add `--php 8.2` to any command to act on a single version.
@@ -112,7 +117,7 @@ Add `--php 8.2` to any command to act on a single version.
 Before changing anything, the script checks your server in this order and prints what it found:
 
 1. **Operating system.** Debian, Ubuntu and Trisquel are supported, and so is any derivative. The check recognizes Linux Mint, Pop!_OS, elementary OS, Zorin OS, KDE neon, Kali, Raspberry Pi OS, PureOS, Parrot, deepin, TUXEDO OS, Devuan, MX Linux, antiX, SparkyLinux, Q4OS, Peppermint, BunsenLabs and siduction by name. It also accepts anything else whose `ID_LIKE` names Debian or Ubuntu, or that has `/etc/debian_version`. A derivative never stops the run. The check also reports the base release and the PHP version it ships.
-2. **PHP.** Every PHP-FPM under `/usr/sbin`, its package version, whether it came from your distro or the ondrej/sury repository, and whether it's patched (see [Patch detection](#patch-detection)). It flags PHP it can't protect: versions outside `SUPPORTED_VERS`, PHP-FPM built outside dpkg, and LiteSpeed's `lsphp`.
+2. **PHP.** Every PHP-FPM under `/usr/sbin`, its package version, whether it came from your distro or the ondrej/sury repository, and whether it's patched (see [Patch detection](#patch-detection)). It flags PHP it can't protect: versions outside `SUPPORTED_VERS`, PHP-FPM built outside dpkg, LiteSpeed's `lsphp`, and Ubuntu 14.04's `php5` packages (reported against the ESM Legacy fix). Where no package fix is coming, it points to a third-party extension; see [Know before you run it](#know-before-you-run-it).
 3. **Web servers.** Apache and nginx (plus angie, lighttpd and caddy), whether each is running, and which PHP-FPM version each one actually sends traffic to.
 4. **System.** Root, the init system, containers, AppArmor in the kernel, SELinux, and required tools. Without systemd (sysvinit or OpenRC, as on Devuan, MX and antiX), the script uses `service` and the PHP-FPM init scripts. It reads AppArmor events from `audit.log`, `kern.log` and `dmesg`.
 
@@ -128,7 +133,7 @@ Problems fall into two groups. **Hard blockers** always stop the run: a distribu
 For each PHP version, the report, `status` and `cleanup` say whether the installed package is fixed. Three checks run in order, and any one is enough:
 
 1. **Upstream version.** The package is at or above the first fixed release: 8.2.35, 8.3.36, 8.4.27 or 8.5.12. This covers Debian, which ships the new upstream release (for example `8.4.27-1~deb13u1` in DSA-6574-1), and the sury repository.
-2. **Known distro backport.** Ubuntu backports fixes without changing the upstream version, so `8.3.6-0ubuntu0.24.04.13` is fixed even though it says 8.3.6. The script carries the fixed builds from USN-8948 for 16.04 through 26.10 and compares the full version. Add builds as they're published with `FIXED_BUILDS`.
+2. **Known distro backport.** Ubuntu backports fixes without changing the upstream version, so `8.3.6-0ubuntu0.24.04.13` is fixed even though it says 8.3.6. The script carries the fixed builds from USN-8948 for 16.04 through 26.10 and compares the full version. On 14.04, whose `php5` packages Ubuntu also fixed (`5.5.9+dfsg-1ubuntu4.29+esm18`, ESM Legacy), the environment check reports whether `php5-fpm`, `libapache2-mod-php5` and `php5-cgi` carry the fix, but doesn't mitigate them. Add builds as they're published with `FIXED_BUILDS`.
 3. **Changelog.** The package changelog names both CVEs. This catches backports the script doesn't know about. The changelog only counts if its newest entry is the installed version.
 
 If none of those finds a fix, a build below the first fixed release counts as *not patched* unless it's an Ubuntu build. sury and Debian ship the new upstream release rather than backporting, so their older upstream versions are unfixed even when there's no changelog to read, as on Docker images.
@@ -171,6 +176,8 @@ It survives log rotation, prints a count summary on stop, and changes nothing. A
 | `WEB_ROOTS` | `/var/www /srv/www` | Read-only document roots |
 | `WRITABLE_PATHS` | *(empty)* | Paths your app writes to, such as uploads |
 | `PATCHED_X_Y` (for example `PATCHED_8_4`) | `8.2.35`, `8.3.36`, `8.4.27`, `8.5.12`; empty for 7.0-8.1 | First fixed upstream release for each branch |
+| `GUARD_HINT` | `1` | Set to `0` to stop the environment check pointing to the third-party extension for PHP this script can't cover |
+| `PATCHED_115560_X_Y` | *(empty)* | First release fixing CVE-2026-115560 for branch X.Y. Until set, only a changelog naming the CVE counts |
 | `SUPPORTED_VERS` | `7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5` | Versions the script will touch |
 | `FIXED_BUILDS` | *(empty)* | Extra fixed distro builds, space-separated full versions, for example a Debian LTS 7.4 update |
 
@@ -181,10 +188,72 @@ When no upstream fixed version is set for a branch, the script checks your distr
 - **This is not a patch.** PHP released fixes on 21 October 2026 in 8.5.12, 8.4.27, 8.3.36 and 8.2.35, and distributions are shipping backports under their own version numbers. Upgrade, then run `cleanup`.
 - **The profile blocks `mail()`**, because PHP runs sendmail through `/bin/sh`. It also blocks ImageMagick delegates. If your app sends mail, use SMTP from PHP.
 - **PHP 7.0 through 8.1 are past upstream end of life.** PHP fixed only 8.2 through 8.5. For older branches a fix can only come as a distro or PPA backport, such as Debian LTS, Ubuntu ESM or the sury PPA. Without one, this mitigation is permanent, so plan your upgrade.
-- **PHP 5.x is reported affected but not covered.** The environment check flags it.
+- **PHP 5.x is reported affected but not covered.** The environment check flags it, and on Ubuntu 14.04 tells you whether the ESM Legacy fix is installed.
+- **Checking by hand, check the package your server actually runs.** `apt list '?installed ?name(^php[0-9.]+$)'` lists the `php8.3`-style metapackages, which a server with only `php8.3-fpm` or `libapache2-mod-php8.3` may not have installed. Query those packages directly: `dpkg-query -W 'php*-fpm' 'libapache2-mod-php*'`.
 - **Debian, Ubuntu, Trisquel and their derivatives only**, with systemd, sysvinit or OpenRC. RHEL, Remi, and other SELinux-based layouts need a different approach. The environment check refuses to run on them.
 - **PHP-FPM only.** Apache mod_php and LiteSpeed lsphp are reported but not mitigated.
+- **For PHP nothing here covers and no package will fix** (an end-of-life branch with no distro backport, PHP 5, unpatched mod_php, PHP built outside dpkg), the environment check points to [php_uploadprogress_guard](https://github.com/HOSTED-POWER/php_uploadprogress_guard), a third-party PHP extension (5.4 to 8.5, any SAPI) that removes the session upload-progress handler and carries a fixed multipart parser. It's not part of this project and we haven't reviewed it. It runs inside every PHP process, so read the source, build it yourself rather than installing the prebuilt binaries, and test on staging. Upgrading remains the fix. `GUARD_HINT=0` turns the pointer off.
 - **Backups** of everything the script touches go to `/var/backups/php2shell/<timestamp>/<version>/`.
+
+### Why `cleanup` leaves the AppArmor profile loaded
+
+That's deliberate. The patch fixes these bugs; the profile confines PHP-FPM against the next one, which no patch does. After `cleanup` you choose: `enforce` to start blocking (review `status` first), or `remove` to unload the profile and delete its files. Until you pick one, it stays in complain mode and only logs.
+
+### `php -v` and backported fixes
+
+`php -v` reports PHP's upstream version, never the distro build, so Ubuntu's `8.3.6-0ubuntu0.24.04.13` shows as plain 8.3.6. The script reads the package build with dpkg and prints it in every patch verdict. To check by hand: `dpkg-query -W -f='${Version}\n' php8.3-fpm` (or `libapache2-mod-php8.3` for mod_php).
+
+---
+
+## PHP Session Audit (CVE-2026-115560)
+
+**Script:** [`php/php-session-audit.sh`](php/php-session-audit.sh)
+
+CVE-2026-115560 needs three things at once: `session.serialize_handler` set to `php_binary` or `php_serialize` in config, application code switching it to `php` at runtime before `session_start()`, and session upload progress left on. Turning upload progress off closes it, and `php2shell-mitigate.sh` does that. This read-only script tells you whether the other two conditions exist, so you know whether you were exposed:
+
+- the configured handler and upload-progress setting for every PHP-FPM version and pool, and for mod_php;
+- per-directory overrides in Apache config, `.htaccess` and `.user.ini`;
+- code under `WEB_ROOTS` that switches the serializer through `ini_set()` or `session_start([...])`;
+- a `session.save_path` shared by pools with different serializers.
+
+```bash
+WEB_ROOTS="/var/www /srv" ./php-session-audit.sh
+```
+
+Exits `0` if nothing matched, `1` if all three conditions are present, `2` for a partial match worth reviewing. The code scan is a grep: it finds literal switches, and flags non-literal ones for you to check.
+
+---
+
+## Node.js October 2026 Interim Mitigation
+
+**Scripts:** [`node/node-oct2026-mitigate.sh`](node/node-oct2026-mitigate.sh), [`node/brotli-guard.cjs`](node/brotli-guard.cjs)
+
+Node.js 22.23.4, 24.22.1 and 26.12.1 (21 October 2026) fix ten CVEs. The serious one is **CVE-2026-111497**, an out-of-bounds write in the Brotli decoder that can lead to remote code execution. Any code that decodes attacker-controlled Brotli reaches it, and on an unfixed runtime that includes every `fetch()`, because fetch decodes `Content-Encoding: br` responses on its own. Node lines 25 and older get no fix.
+
+**Upgrade Node.** For what you can't upgrade today:
+
+- **`brotli-guard.cjs`** is preloaded with `--require` and refuses Brotli decoding in `node:zlib`, for CommonJS and ES modules, and stops `fetch()` asking servers for `br`. Compression keeps working. A blocked decode fails the way corrupt input does, so code that handles a bad compressed body handles it. It goes idle on a fixed runtime. `BROTLI_GUARD=log` decodes normally and reports each caller instead, so you can see which dependency uses Brotli. Test it on your runtime with `node brotli-guard.cjs --self-test`.
+- **`node-oct2026-mitigate.sh`** finds and fixes the rest:
+
+| Command | What it does |
+|---|---|
+| `check` (default) | Every Node runtime: PATH, nvm, n, fnm, volta, asdf, mise, `/opt`, running processes (including ones still running a replaced binary) and container images that declare `NODE_VERSION`. Reports fixed or not, with Debian/Ubuntu backports read from the package changelog. Read-only |
+| `scan` | Application code and dependencies that decode Brotli, single executable applications and startup snapshots that must be rebuilt (CVE-2026-106074). Read-only |
+| `guard --unit U` | Installs the guard to `/usr/local/lib/privacysafe/` and loads it into systemd unit `U` through a drop-in, after self-testing it on that unit's runtime as that unit's user. Restarts `U`, proves the guard is live, and rolls back if `U` won't start |
+| `unguard --unit U` | Removes the drop-in and restarts `U` |
+| `status` | Guarded units, their runtime, and what the guard blocked in the last 7 days |
+| `hunt` | Node segfaults, V8 fatal errors, Brotli decoder frames and guard events in the journal and logs. Read-only |
+| `version` | Prints the script version |
+
+The script reads Node versions from the binary's contents instead of running it, so root never executes a binary planted in a user's `~/.nvm` or inside a container.
+
+**Know before you run it:**
+
+- **The guard covers Node's decoder as reached from JavaScript.** A native addon that calls the bundled Brotli library directly isn't covered, and neither is code that saved a reference to the zlib functions before the guard loaded. That's why it must load first, through `--require` or `NODE_OPTIONS`.
+- **`guard` refuses when an `EnvironmentFile` sets `NODE_OPTIONS`**, because that would silently override the drop-in. Add `--require=/usr/local/lib/privacysafe/brotli-guard.cjs` there yourself.
+- **Processes that reset `NODE_OPTIONS`** (some wrapper scripts, pm2 ecosystems, containers) won't carry the guard. `guard` warns when it can't confirm the guard is live.
+- **SEAs and startup snapshots must be rebuilt** with a fixed Node. Treat `crypto.randomUUID()` and `randomInt()` values they produced as guessable and rotate any that need to be secret.
+- **The other nine CVEs** (TLS hostname checks, DNS, keep-alive, permission model, ZipFile) have no workaround here. Upgrade.
 
 ---
 

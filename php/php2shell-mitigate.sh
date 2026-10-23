@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# PHP2Shell interim mitigation - PHP-FPM 7.0 through 8.5  (v4)
-# CVE-2026-109618 / CVE-2026-109619
+# PHP2Shell interim mitigation - PHP-FPM 7.0 through 8.5  (v5)
+# CVE-2026-109618 / CVE-2026-109619, and CVE-2026-115560 (session upload
+# progress, announced 23 Oct 2026, fix due in the next regular PHP release)
 #
 # If this script is helpful please donate to PrivacySafe Foundation: 
 # https://privacysafe.foundation
@@ -21,7 +22,10 @@
 #   hunt             read-only: scan logs for signs of exploitation or the
 #                    memory-corruption crashes these bugs cause. Changes
 #                    nothing, root optional. Exit 0 = clean, 1 = findings.
-#   cleanup          remove the ini drop-in once patched (--force to skip check)
+#   cleanup          remove the ini drop-in once patched (--force to skip check).
+#                    Keeps session.upload_progress off until the build is
+#                    also fixed for CVE-2026-115560 (--force drops that too)
+#   version          print the script version and exit
 #   remove           remove the AppArmor profile entirely: unload it, delete
 #                    the profile, local override and disable symlink, verify.
 #                    Leaves the ini drop-in (that's cleanup). No patch needed.
@@ -50,6 +54,12 @@
 #                                      7.0-8.1 get no upstream fix: only a
 #                                      distro/PPA changelog listing both CVEs
 #                                      counts as patched.
+#   PATCHED_115560_X_Y=<version>       first release fixing CVE-2026-115560 for
+#                                      branch X.Y, e.g. PATCHED_115560_8_4=8.4.28.
+#                                      No defaults yet: until PHP ships it, only a
+#                                      changelog naming the CVE counts.
+#   GUARD_HINT=0                       don't point to the third-party extension
+#                                      for PHP this script can't cover
 #   WEB_ROOTS="/var/www /srv/www"      read-only docroots
 #   WRITABLE_PATHS="..."               rwk paths (uploads, cache)
 #
@@ -63,6 +73,11 @@
 set -euo pipefail
 
 # ---------- config -----------------------------------------------------------
+# Printed at the top of every run and written into everything the script
+# installs, so any pasted output or file says which version produced it.
+SCRIPT_NAME="php2shell-mitigate.sh"
+SCRIPT_VERSION="5.0.2"
+SCRIPT_DATE="2026-10-23"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
@@ -77,6 +92,15 @@ CVES=(CVE-2026-109618 CVE-2026-109619)
 # mitigations stay applied and `check` won't report an all-clear.
 declare -A PATCHED_DEFAULT=([8.2]=8.2.35 [8.3]=8.3.36 [8.4]=8.4.27 [8.5]=8.5.12)
 patched_ver() { local n="PATCHED_${1/./_}"; echo "${!n:-${PATCHED_DEFAULT[$1]:-}}"; }
+# CVE-2026-115560 (23 Oct 2026): RCE through session upload progress when an
+# app configured with serialize_handler php_binary/php_serialize switches to
+# "php" at runtime before session_start(). PHP fixes it in the next regular
+# release; until then upload progress must stay off even on a build patched for
+# the two CVEs above. Fill these in as fixed releases ship, or set
+# PATCHED_115560_X_Y. Empty means "not known fixed".
+UPLOAD_CVE="CVE-2026-115560"
+declare -A PATCHED_115560_DEFAULT=()
+patched_115560_ver() { local n="PATCHED_115560_${1/./_}"; echo "${!n:-${PATCHED_115560_DEFAULT[$1]:-}}"; }
 # Branches PHP no longer fixes; only a distro or PPA backport can patch them
 EOL_VERS="7.0 7.1 7.2 7.3 7.4 8.0 8.1"
 # Distro builds that carry the fix without changing the upstream version.
@@ -90,6 +114,17 @@ declare -A BACKPORT_FIXED=(
     [8.3]="8.3.6-0ubuntu0.24.04.13"
     [8.5]="8.5.4-0ubuntu1.5 8.5.9-0ubuntu2.1"
 )
+# Ubuntu 14.04 (ESM Legacy) fixed PHP 5.5 in USN-8948 too. Trusty's FPM is
+# /usr/sbin/php5-fpm under upstart, which this script can't mitigate, but the
+# environment check reports whether the installed php5 packages carry the fix.
+TRUSTY_PHP5_FIXED="5.5.9+dfsg-1ubuntu4.29+esm18"
+# For PHP this script can't protect and no package will fix (end-of-life
+# branches without a backport, PHP 5, mod_php, PHP built outside dpkg), point
+# to a third-party PHP extension that removes the upload-progress handler and
+# carries a fixed multipart parser. We don't ship or vouch for it: it's linked
+# so admins with nothing else know it exists. Set GUARD_HINT=0 to silence it.
+LEGACY_GUARD_URL="https://github.com/HOSTED-POWER/php_uploadprogress_guard"
+GUARD_HINT="${GUARD_HINT:-1}"; GUARD_HINT_SHOWN=0
 # Add fixed builds as they're published, e.g. a Debian LTS/ELTS 7.4 update
 FIXED_BUILDS="${FIXED_BUILDS:-}"
 MARKER="# managed-by: php2shell-mitigation"
@@ -332,6 +367,31 @@ patch_status() {   # [package], default php${PHP_VER}-fpm
 }
 is_patched() { patch_status; }
 
+# Is the installed build also fixed for CVE-2026-115560? Upstream version
+# (once known) or a changelog that names it. 0 = fixed, 1 = not known fixed.
+patch_115560() {
+    local pkg="php${PHP_VER}-fpm" full v up want cl
+    UPLOAD_HOW=""
+    full="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
+    [[ -n "$full" ]] || { UPLOAD_HOW="${pkg} isn't installed"; return 1; }
+    v="${full#*:}"; up="${v%%-*}"
+    want="$(patched_115560_ver "$PHP_VER")"
+    if [[ -n "$want" ]] && dpkg --compare-versions "$up" ge "$want"; then
+        UPLOAD_HOW="upstream ${up} >= ${want}"; return 0
+    fi
+    for cl in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/php${PHP_VER}-common/changelog.Debian.gz"; do
+        [[ -f "$cl" ]] || continue
+        [[ "$(zcat "$cl" 2>/dev/null | head -1)" == *"(${v})"* ]] || continue
+        if zgrep -q "$UPLOAD_CVE" "$cl"; then UPLOAD_HOW="changelog lists ${UPLOAD_CVE}"; return 0; fi
+    done
+    UPLOAD_HOW="${v}: no release or changelog yet that fixes ${UPLOAD_CVE}"
+    return 1
+}
+
+# PHP 8.5 added fatal_error_backtraces, the producer in the confirmed
+# CVE-2026-109619 RCE. Older branches don't have the directive.
+has_fatal_backtraces() { dpkg --compare-versions "$PHP_VER" ge 8.5; }
+
 # Processes still executing the pre-upgrade binary: dpkg replaced the file, but
 # the running FPM keeps the old (deleted) inode until it's restarted.
 stale_fpm_pids() {
@@ -417,7 +477,7 @@ write_profile() {   # $1 = output path, $2 = mode
     cat > "$out" <<AAEOF
 ${MARKER}
 # AppArmor profile - php-fpm ${PHP_VER} - PHP2Shell interim mitigation
-# Generated $(date -u +%FT%TZ) by ${SELF}. Regenerated on every run:
+# Generated $(date -u +%FT%TZ) by ${SCRIPT_NAME} ${SCRIPT_VERSION} (${SELF}). Regenerated on every run:
 # put site-specific rules in ${AA_LOCAL} (never overwritten).
 # Switch modes with: ${SELF} enforce ${HINT} | ${SELF} complain ${HINT}
 
@@ -536,10 +596,7 @@ cmd_apply() {
 
     step "PHP ${PHP_VER} 1/3  session.upload_progress"
     local want
-    want=$(printf '%s\n' \
-        "; PHP2Shell interim mitigation (${CVES[*]})" \
-        "; Remove with: ${SELF} cleanup ${HINT}  (once patched)" \
-        "session.upload_progress.enabled = Off")
+    want="$(dropin_full)"
     if [[ -f "$DROP_IN_CONF" ]] && [[ "$(cat "$DROP_IN_CONF")" == "$want" ]]; then
         info "Drop-in already current"
     else
@@ -597,11 +654,35 @@ cmd_apply() {
     fi
 }
 
+# The drop-in apply writes, and the reduced one cleanup leaves while
+# CVE-2026-115560 is still open
+dropin_full() {
+    printf '%s\n' \
+        "; PHP2Shell interim mitigation (${CVES[*]} ${UPLOAD_CVE})" \
+        "; Written by ${SCRIPT_NAME} ${SCRIPT_VERSION}" \
+        "; Remove with: ${SELF} cleanup ${HINT}  (once patched)" \
+        "session.upload_progress.enabled = Off"
+    if has_fatal_backtraces; then printf '%s\n' "fatal_error_backtraces = Off"; fi
+}
+dropin_upload_only() {
+    printf '%s\n' \
+        "; PHP2Shell interim mitigation, reduced: this build is patched for ${CVES[*]}," \
+        "; but ${UPLOAD_CVE} (session upload progress) is fixed only in a later release." \
+        "; Written by ${SCRIPT_NAME} ${SCRIPT_VERSION}." \
+        "; Rerun ${SELF} cleanup ${HINT} once it is." \
+        "session.upload_progress.enabled = Off"
+}
+
 verify() {
     refresh_info
     local up; up="$(ini_val session.upload_progress.enabled)"
     if [[ "$up" =~ ^(Off|0)$ ]]; then info "session.upload_progress.enabled = $up"
     else warn "session.upload_progress.enabled = '${up:-unknown}' - drop-in not effective"; fi
+    if has_fatal_backtraces; then
+        local fb; fb="$(ini_val fatal_error_backtraces)"
+        if [[ "$fb" =~ ^(Off|0)$ ]]; then info "fatal_error_backtraces = $fb"
+        else warn "fatal_error_backtraces = '${fb:-unknown}' - drop-in not effective (the confirmed 8.5 RCE producer stays on)"; fi
+    fi
     local loaded; loaded="$(aa-status 2>/dev/null | grep -cF "$FPM_BIN" || true)"
     info "AppArmor: $( [[ "$loaded" -gt 0 ]] && echo loaded || echo 'NOT loaded' ), file mode: $(current_mode)"
     if [[ $SVC_LIVE -eq 1 ]]; then
@@ -615,8 +696,11 @@ verify() {
             stale="$(stale_fpm_pids)"
             if [[ -n "$stale" ]]; then
                 warn "...but PIDs ${stale} still run the old binary. Restart: $(svc_hint restart "$FPM_SERVICE")"
+            elif patch_115560; then
+                info "Running code is current and ${UPLOAD_CVE} is fixed too (${UPLOAD_HOW}) - the mitigation can go: ${SELF} cleanup ${HINT}"
             else
-                info "Running code is current - the mitigation can go: ${SELF} cleanup ${HINT}"
+                info "Running code is current. ${UPLOAD_CVE} isn't fixed yet (${UPLOAD_HOW}):"
+                info "  ${SELF} cleanup ${HINT} will keep session.upload_progress off until it is"
             fi ;;
         1)  warn "NOT patched (${PATCH_HOW}). Target: $(patch_target)" ;;
         *)  warn "Patch status unknown (${PATCH_HOW}). Target: $(patch_target)" ;;
@@ -859,11 +943,25 @@ cmd_cleanup() {
     if ! is_patched && [[ -z "$FORCE" ]]; then
         die "php${PHP_VER}-fpm doesn't look patched (${PATCH_HOW}). Target: $(patch_target). Or add --force"
     fi
-    if [[ -f "$DROP_IN_CONF" ]]; then
-        backup "$DROP_IN_CONF"; rm -f "$DROP_IN_CONF"; info "Removed $DROP_IN_CONF"
+    local keep=0
+    if ! patch_115560 && [[ -z "$FORCE" ]]; then keep=1; fi
+    [[ -f "$DROP_IN_CONF" ]] && backup "$DROP_IN_CONF"
+    if [[ $keep -eq 1 ]]; then
+        # Written even if there's no drop-in: a v4 cleanup removed it outright
+        # and turned upload progress back on while CVE-2026-115560 is open
+        dropin_upload_only > "$DROP_IN_CONF"
+        info "Wrote $DROP_IN_CONF: session.upload_progress stays off (${UPLOAD_HOW})"
+    elif [[ -f "$DROP_IN_CONF" ]]; then
+        rm -f "$DROP_IN_CONF"; info "Removed $DROP_IN_CONF"
+        [[ -z "$FORCE" ]] || patch_115560 || warn "--force: session.upload_progress is back on while ${UPLOAD_CVE} is unfixed"
     fi
     fpm_health || die "$FPM_SERVICE failed to restart after cleanup"
-    info "Drop-in removed. AppArmor profile kept as defense-in-depth."
+    refresh_info
+    if [[ $keep -eq 1 ]]; then
+        info "session.upload_progress.enabled = $(ini_val session.upload_progress.enabled) until ${UPLOAD_CVE} is fixed. AppArmor profile kept as defense-in-depth."
+    else
+        info "Drop-in removed. AppArmor profile kept as defense-in-depth."
+    fi
     echo "  The profile still confines FPM (blocks it running a shell etc.), which the patch doesn't do."
     echo "  Recommended now that you're patched and the app is known-good: ${SELF} enforce ${HINT}"
     echo "  To remove the profile instead (both files, unload, verify): ${SELF} remove ${HINT}"
@@ -913,7 +1011,7 @@ cmd_remove() {
 # is given. Cautions are reported but never stop it.
 OS_SUPPORTED="debian ubuntu trisquel"
 OS_DERIVATIVES="linuxmint pop elementary zorin neon kali raspbian pureos parrot deepin tuxedo devuan mx antix sparky q4os peppermint bunsenlabs siduction"
-declare -A DISTRO_PHP=([stretch]=7.0 [buster]=7.3 [bullseye]=7.4 [bookworm]=8.2 [trixie]=8.4
+declare -A DISTRO_PHP=([trusty]=5.5 [stretch]=7.0 [buster]=7.3 [bullseye]=7.4 [bookworm]=8.2 [trixie]=8.4
                        [xenial]=7.0 [bionic]=7.2 [focal]=7.4 [jammy]=8.1 [noble]=8.3 [resolute]=8.5)
 declare -A TRISQUEL_BASE=([etiona]=bionic [nabia]=focal [aramo]=jammy [ecne]=noble)
 declare -A DEBIAN_MAJOR=([9]=stretch [10]=buster [11]=bullseye [12]=bookworm [13]=trixie)
@@ -999,16 +1097,50 @@ check_os() {
     return 0
 }
 
+# Once per run: the full pointer; after that, a short reference to it
+legacy_guard_hint() {   # <what>
+    [[ "$GUARD_HINT" == 1 ]] || return 0
+    if [[ $GUARD_HINT_SHOWN -eq 0 ]]; then
+        GUARD_HINT_SHOWN=1
+        echo -e "      ${CYAN}no fix coming for $1?${NC} Third-party option, not part of this project and not"
+        echo "      reviewed by us: ${LEGACY_GUARD_URL}"
+        echo "      A PHP extension (5.4 to 8.5, any SAPI) that removes the upload-progress handler and"
+        echo "      carries a fixed multipart parser. Read it, build it from source rather than using"
+        echo "      prebuilt binaries, and test on staging: it runs inside every PHP process."
+    else
+        echo "      (for $1, see the third-party extension linked above)"
+    fi
+}
+
 report_patch() {   # <version> <package> <service>
     local rep rc how stale
     rep="$(patch_report "$1" "$2")"; rc="${rep%%|*}"; rep="${rep#*|}"; how="${rep%%|*}"; stale="${rep#*|}"
     case $rc in
         0) ok "  patched: ${how}"
            [[ -z "$stale" ]] || caution "  but PIDs ${stale} still run the old binary - restart: $(svc_hint restart "$3")" ;;
-        1) caution "  NOT patched: ${how}. Upgrade: apt-get install --only-upgrade $2" ;;
+        1) caution "  NOT patched: ${how}. Upgrade: apt-get install --only-upgrade $2"
+           # No upstream fix for EOL branches; mod_php isn't covered here at all
+           if in_list "$1" "$EOL_VERS" || [[ "$2" == libapache2-mod-php* ]]; then legacy_guard_hint "$2"; fi ;;
         *) caution "  patch status unknown: ${how}" ;;
     esac
     return "$rc"
+}
+
+# Ubuntu 14.04's unversioned php5 packages (php5-fpm, libapache2-mod-php5,
+# php5-cgi). Reported only: no FPM layer here runs under upstart.
+check_php5() {
+    local pkg pv
+    for pkg in php5-fpm libapache2-mod-php5 php5-cgi; do
+        pv="$(dpkg-query -W -f='${db:Status-Status} ${Version}' "$pkg" 2>/dev/null || true)"
+        [[ "$pv" == installed\ * ]] || continue
+        pv="${pv#installed }"
+        if dpkg --compare-versions "$pv" ge "$TRUSTY_PHP5_FIXED"; then
+            ok "${pkg} ${pv} - patched (>= ${TRUSTY_PHP5_FIXED}, USN-8948). Not mitigated by this script; none needed once restarted"
+        else
+            caution "${pkg} ${pv} - NOT patched and not covered by this script. Fixed in ${TRUSTY_PHP5_FIXED} (Ubuntu Pro, ESM Legacy): apt-get install --only-upgrade ${pkg}, then restart its service"
+            legacy_guard_hint "${pkg} without Ubuntu Pro"
+        fi
+    done
 }
 
 check_php() {
@@ -1024,12 +1156,14 @@ check_php() {
         else src="distro"; fi
         if [[ "$v" == 5.* ]]; then
             caution "php${v}-fpm ${pv:-?} (${src}) - PHP 5.4+ is reported affected, but 5.x isn't covered by this script. Upgrade."
+            legacy_guard_hint "PHP ${v}"
         elif ! in_list "$v" "$SUPPORTED_VERS"; then
             caution "php${v}-fpm ${pv:-?} (${src}) - not in SUPPORTED_VERS, will be skipped. Check whether this branch is affected."
         elif [[ -n "$ONLY_VER" && "$v" != "$ONLY_VER" ]]; then
             inf "php${v}-fpm ${pv:-?} (${src}) - skipped (--php ${ONLY_VER})"
         elif [[ -z "$pv" ]]; then
             soft "php${v}-fpm present but not owned by dpkg - patch detection and backups assume packaged PHP"
+            legacy_guard_hint "a PHP built outside dpkg"
             ENV_PHP+=("$v")
         else
             ok "php${v}-fpm ${pv} (${src}), service $(svc_state "php${v}-fpm") - will be handled"
@@ -1038,6 +1172,7 @@ check_php() {
             ENV_PHP+=("$v")
         fi
     done
+    check_php5
     shopt -u nullglob
 
     local cli; cli="$(readlink -f /usr/bin/php 2>/dev/null || true)"
@@ -1082,8 +1217,10 @@ check_web() {
                     caution "  Apache still has the old libphp${v}.so loaded - restart: $(svc_hint restart apache2)"
                 fi
             elif [[ "$st" == running && $CMD == apply ]]; then
+                local modphp_ini="'session.upload_progress.enabled = Off'"
+                dpkg --compare-versions "$v" ge 8.5 && modphp_ini+=" 'fatal_error_backtraces = Off'"
                 soft "Apache is running mod_php ${v}, which isn't patched and isn't covered by this script" \
-                     "Upgrade libapache2-mod-php${v} and restart Apache. Interim: echo 'session.upload_progress.enabled = Off' > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2)"
+                     "Upgrade libapache2-mod-php${v} and restart Apache. Interim: printf '%s\\n' ${modphp_ini} > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2). To filter requests before they reach mod_php, see php/edge/"
             fi
         done
     fi
@@ -1225,6 +1362,7 @@ env_check() {
 main() {
 CMD="${1:-apply}"; [[ $# -gt 0 ]] && shift
 ONLY_VER="${PHP_VER:-}"; FORCE=""; IGNORE_ENV=""
+case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
 case "$CMD" in -h|--help) awk 'NR>2 && /^# =+$/ {exit} NR>2 {sub(/^# ?/, ""); print}' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -1235,6 +1373,7 @@ while [[ $# -gt 0 ]]; do
         *) die "Unknown option: $1" ;;
     esac
 done
+echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
 case "$CMD" in check|apply|enforce|complain|status|cleanup|remove|hunt) ;; *) die "Unknown command: $CMD (check|apply|enforce|complain|status|cleanup|remove|hunt)" ;; esac
 
 # hunt is global and read-only: it doesn't mitigate a version, it reads logs

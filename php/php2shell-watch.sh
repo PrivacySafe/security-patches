@@ -12,6 +12,9 @@
 
 set -uo pipefail
 
+SCRIPT_VERSION="1.1.0"
+case "${1:-}" in -V|--version) echo "php2shell-watch.sh ${SCRIPT_VERSION}"; exit 0 ;; esac
+
 # Log files to follow. Globs; missing ones are skipped. Override with $LOGS.
 GLOBS="${LOGS:-/var/log/php*-fpm.log /var/log/php-fpm.log /var/log/php/*.log /var/log/apache2/error.log /var/log/apache2/*error*.log /var/log/httpd/error_log /var/log/nginx/error.log}"
 
@@ -68,7 +71,7 @@ summary() {
 cleanup() { [ -n "${TAILER_PID:-}" ] && kill "$TAILER_PID" 2>/dev/null; summary; exit 0; }
 trap cleanup INT TERM
 
-echo "php2shell-watch $(ts): following ${#FILES[@]} file(s)" >&2
+echo "php2shell-watch ${SCRIPT_VERSION} $(ts): following ${#FILES[@]} file(s)" >&2
 printf '   %s\n' "${FILES[@]}" >&2
 
 # -q drops the ==> headers, -F survives rotation. exec so TAILER_PID is tail.
