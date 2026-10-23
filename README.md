@@ -26,10 +26,10 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 | [PHP session audit](#php-session-audit-cve-2026-115560) | Any PHP host | CVE-2026-115560 | Read-only audit |
 | [Node.js October 2026](#nodejs-october-2026-interim-mitigation) | Node.js on GNU/Linux; systemd for the guard | CVE-2026-111497 and 9 others | Interim mitigation |
 | [Ruby and GitLab Regexp](#ruby-and-gitlab-regexp-check) | Ruby runtimes, Ruby apps and GitLab on GNU/Linux | CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264 | Read-only check and audit |
-| [libheif HEIF/AVIF Decoder](#libheif-heifavif-decoder-check) | libheif, ImageMagick and Discourse on GNU/Linux | [writeup](https://www.hacktron.ai/blog/hacking-openai); DSA-6417-1 | Read-only check and audit |
+| [libheif HEIF/AVIF Decoder](#libheif-heifavif-decoder-check) | libheif, ImageMagick and Discourse on GNU/Linux | [writeup](https://www.hacktron.ai/blog/hacking-openai); DSA-6417-1 | Check, audit and ImageMagick coder mitigation |
 | [eMudhra CA Compromise](#emudhra-intermediate-ca-compromise-interim-mitigation) | System CA store on Debian/Ubuntu/Trisquel and derivatives | [disclosure](https://emudhra.we-have-a-problem.com/); Go: CVE-2026-111943 | Interim mitigation |
 
-> ℹ️ **New 2026-10-23:** a read-only [libheif checker](#libheif-heifavif-decoder-check) for the HEIF/AVIF decoder heap overflow used to compromise a Discourse forum through an image upload. Update libheif, rebuild containers that bundle it, and disable HEIF in ImageMagick as defence in depth.
+> ℹ️ **New 2026-10-23:** a [libheif checker](#libheif-heifavif-decoder-check) for the HEIF/AVIF decoder heap overflow used to compromise a Discourse forum through an image upload. Detection is read-only, and finds Discourse and MediaWiki installs that feed images to ImageMagick. Update libheif and rebuild containers that bundle it; `harden` disables HEIF in ImageMagick host-wide, and `mw-harden` blocks HEIF uploads in a MediaWiki, as defence in depth.
 
 > ℹ️ **New 2026-10-23:** a read-only [Ruby and GitLab checker](#ruby-and-gitlab-regexp-check) for the Regexp fixes in Ruby 4.0.9, 3.4.12 and 3.3.13 and the four GitLab CVEs behind them. If you run GitLab, upgrade it first: two of the CVEs need no login.
 
@@ -552,6 +552,8 @@ A match is a lead, not proof. Native gems crash Ruby too, and `RegexpError` is o
 
 ---
 
+<a name="libheif-heifavif-decoder-check"></a>
+
 ## libheif HEIF/AVIF Decoder Check
 
 **Script:** [`heif/libheif-oct2026-check.sh`](heif/libheif-oct2026-check.sh)
@@ -599,10 +601,11 @@ This is a separate issue from the Ruby Regexp CVEs. For Ruby and GitLab, use [`r
    sudo ./libheif-oct2026-check.sh check
    ```
 
-5. Check whether ImageMagick still lets HEIF through, and get the lines to block it.
+5. Check whether ImageMagick still lets HEIF through. `policy` reports and prints the lines to block it; `harden` writes them for you (reversible with `unharden`).
 
    ```bash
    sudo ./libheif-oct2026-check.sh policy
+   sudo ./libheif-oct2026-check.sh harden
    ```
 
 6. Look for crashes that suggest someone already tried.
@@ -624,6 +627,10 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/hei
 |---|---|
 | `check` (default) | Reports every `libheif` and `libde265` on the host, the ImageMagick and libvips that reach them, every Discourse install, and `libheif` inside running containers, with whether each `libheif` carries the fixes. For a Discourse container it says a rebuild is needed, not a restart. Changes nothing, root optional. Exits `0` if nothing is exposed, `1` if a vulnerable `libheif` is reachable, `2` if something couldn't be judged |
 | `policy` | Read-only. Checks whether ImageMagick's `policy.xml` still lets HEIC, HEIF or AVIF through, and prints the lines that block them. Exits `0` if HEIF is blocked everywhere a policy was found, `1` if it is still allowed, `2` if no policy was found |
+| `harden` | Writes a managed block into ImageMagick's `policy.xml` that refuses the HEIC, HEIF and AVIF coders, so a crafted upload never reaches `libheif` through ImageMagick. Backs the file up first, is idempotent, and is the one thing this script changes. Needs root. Defence in depth, not a substitute for updating `libheif` |
+| `unharden` | Removes the managed block and restores. Needs root. Only touches a block this script wrote; a block added by hand is left alone |
+| `mw-harden` | Blocks HEIF, HEIC and AVIF uploads in every MediaWiki found, by adding those MIME types to `$wgMimeTypeExclusions` in `LocalSettings.php`, so a crafted upload is rejected by its detected type before the scaler runs. Backs the file up first, is idempotent, checks the result still parses as PHP before saving, and is reversible. Needs root. Application-level defence, not a substitute for updating `libheif` |
+| `mw-unharden` | Removes the MediaWiki block and restores. Needs root. Only touches a block this script wrote |
 | `hunt` | Read-only log triage for image-processor crashes: ImageMagick, `libheif` and `libde265` segfaults, HEIF decoder frames in backtraces, services killed by a crash signal, and repeated HEIF decode errors. Exits `0` if nothing matched, `1` if it found something |
 | `version` | Prints the script version. Every other command prints it on its first line too |
 
@@ -633,7 +640,8 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/hei
 2. **`libde265`.** The HEVC codec `libheif` calls for HEIC. It has its own CVE history and its own fixed versions, so the script reports its version but does not judge it against the `libheif` floor. Update it from your distribution too.
 3. **What reaches `libheif`.** ImageMagick (`magick` or `convert`) and libvips, with whether ImageMagick can even decode HEIF or AVIF. A build with no HEIF delegate is not a path to this bug through that tool.
 4. **Discourse.** The Docker launcher under `/var/discourse`, a bare-metal checkout under `/var/www/discourse`, and `discourse/discourse` and `discourse/base` images. A forum's image-upload path runs an attacker-supplied file through ImageMagick into `libheif`, so a Discourse install on top of a vulnerable `libheif` is a path to it. For a Docker install the library lives inside the web container, so the script points at the container section and tells you to rebuild rather than restart.
-5. **`libheif` inside running containers.** For each running Docker or Podman container, the script reads the `libheif` the container actually loads. This is how a Discourse web container still carrying the old library gets caught: a web-interface update does not replace it, only a rebuild does.
+5. **MediaWiki.** `LocalSettings.php` under the usual web roots. MediaWiki is a path to this bug only when it is configured for it, so the script reads the config rather than assuming: the scaler must be ImageMagick (`$wgUseImageMagick`), not GD (its default when both are installed), and a HEIF-family extension must be in `$wgFileExtensions` (not a default). It reports a wiki as exposed only when both are true, and otherwise says why it is not a path. Reading the PHP config file is not executing it.
+6. **`libheif` inside running containers.** For each running Docker or Podman container, the script reads the `libheif` the container actually loads. This is how a Discourse web container still carrying the old library gets caught: a web-interface update does not replace it, only a rebuild does.
 
 ### libheif patch detection
 
@@ -653,7 +661,25 @@ Even after `libheif` is patched, more decoder bugs in this format are likely, so
 <policy domain="coder" rights="none" pattern="AVIF" />
 ```
 
-This stops ImageMagick handing HEIF and AVIF to `libheif`. It is not a substitute for updating the library, and it does not help a caller that reaches `libheif` without going through ImageMagick. Discourse added ImageMagick sandboxing as its own defence in depth.
+`harden` writes those lines for you, as a marked, managed block, so you don't have to edit the XML by hand:
+
+```bash
+sudo ./libheif-oct2026-check.sh harden      # write the block (backs the file up first)
+sudo ./libheif-oct2026-check.sh unharden    # take it back out
+```
+
+`harden` is the only host-wide change this script makes. It backs the file up under `/var/backups/libheif-oct2026/` first, writes one managed block (running it again refreshes that block rather than adding a second), and creates a `policy.xml` if none exists, since ImageMagick with no policy decodes HEIF by default. `unharden` removes only the block this script wrote and leaves any coder lines you added by hand alone. This stops ImageMagick handing HEIF and AVIF to `libheif`. It is not a substitute for updating the library, and it does not help a caller that reaches `libheif` without going through ImageMagick. Discourse added ImageMagick sandboxing as its own defence in depth.
+
+### libheif blocking HEIF uploads in MediaWiki
+
+The ImageMagick coder policy above is host-wide. If you run a MediaWiki that is configured to accept HEIF (ImageMagick scaler plus a HEIF-family extension in `$wgFileExtensions`), `mw-harden` blocks the upload at the application instead, which is more targeted and survives an ImageMagick reconfigure:
+
+```bash
+sudo ./libheif-oct2026-check.sh mw-harden      # block HEIF/HEIC/AVIF uploads in every wiki found
+sudo ./libheif-oct2026-check.sh mw-unharden    # take the block back out
+```
+
+It appends a marked, managed block to `LocalSettings.php` that adds the HEIF-family MIME types (`image/heif`, `image/heic`, `image/avif`, and the `-sequence` variants) to `$wgMimeTypeExclusions`, mirrors it to the pre-1.37 `$wgMimeTypeBlacklist` name when that is in use, and drops `heif`, `heic` and `avif` from `$wgFileExtensions` if they are there. Excluding by MIME type rejects a crafted file by its detected type, so renaming it to `.jpg` does not get it past. The edit is backed up first, is idempotent, and is checked with `php -l` before it is saved, so a file that would not parse is left untouched (and its backup kept). This is an application-level block; the host `libheif` still needs updating.
 
 ### libheif hunting for exploitation
 
@@ -670,13 +696,15 @@ A match is a lead, not proof. Image decoders crash on genuinely broken files too
 | `DISCOURSE_ROOT` | `/var/discourse` | Where the Discourse Docker launcher lives |
 | `DISCOURSE_APP` | `/var/www/discourse` | Where a bare-metal Discourse checkout lives |
 | `POLICY_PATHS` | ImageMagick-6 and -7 config dirs | Where `policy` looks for `policy.xml` |
+| `MW_PATHS` | common web roots | Where `check` and `mw-harden` look for MediaWiki's `LocalSettings.php` |
 | `HUNT_SINCE` | `2026-07-01` | How far back `hunt` reads the journal |
 | `HUNT_LOGS` | *(empty)* | Extra log globs for `hunt` |
 
 ### libheif know before you run it
 
-- **This is a check, not a mitigation.** Update `libheif` and `libde265`, rebuild anything that bundles them, and for Discourse rebuild the container (`/var/discourse/launcher rebuild app`), which a web-interface update does not do.
-- **A single upload setting is not the fix.** Many surfaces reach the decoder. Disabling the coder in ImageMagick (`policy`) blocks the path at the converter and is the reliable interim step.
+- **The real fix is the update, which this script does not run for you.** Update `libheif` and `libde265`, rebuild anything that bundles them, and for Discourse rebuild the container (`/var/discourse/launcher rebuild app`), which a web-interface update does not do. A package upgrade or a container rebuild is an operator's call to time, so the script prints it rather than firing it.
+- **It changes only two things, and only when asked.** `harden` writes the ImageMagick coder block; `mw-harden` writes the MediaWiki upload block. Both back the file up first and are reversible (`unharden`, `mw-unharden`). Everything else is read-only. A single upload setting is not the fix on its own, because many surfaces reach the decoder; blocking the coder at the converter (or the upload at the wiki) is the reliable interim step while you schedule the update.
+- **MediaWiki is only exposed when configured for it.** The check flags a wiki only when it uses ImageMagick and accepts HEIF; a default install uses GD and does not accept HEIF, so it is not a path. `mw-harden` edits `LocalSettings.php`, so it checks the result parses with `php -l` before saving and leaves a file that wouldn't parse untouched.
 - **Distribution backports read correctly.** A package can carry the fixes under an older upstream number; the script trusts the package changelog over the version. If you know a build is fixed and the changelog doesn't name it, add it to `FIXED_BUILDS`.
 - **`libde265` is reported, not judged.** It has its own fixed versions. Update it from your distribution.
 - **Containers need their own fix.** Each image carries its own `libheif`; rebuild on a fixed base. The script reads the library inside running containers but can't see one that was installed in an unusual way.

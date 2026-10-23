@@ -21,12 +21,12 @@
 # Usage:
 #   ./libheif-oct2026-check.sh [command]
 #
-#   check (default)  every libheif and libde265 on the host, the ImageMagick
-#                    and libvips that reach them, every Discourse install
-#                    (whose image-upload path runs an attacker-supplied file
-#                    through ImageMagick into libheif), and container images,
-#                    with whether each libheif carries the fixes. For a
-#                    Discourse container it says whether a rebuild is needed
+#   check (default)  read-only: every libheif and libde265 on the host, the
+#                    ImageMagick and libvips that reach them, every Discourse
+#                    install (whose image-upload path runs an attacker-supplied
+#                    file through ImageMagick into libheif), and container
+#                    images, with whether each libheif carries the fixes. For
+#                    a Discourse container it says whether a rebuild is needed
 #                    rather than a restart. Root optional. Exit 0 = nothing
 #                    exposed, 1 = a vulnerable libheif is reachable, 2 =
 #                    something couldn't be read.
@@ -35,15 +35,33 @@
 #                    interim fix when you can't patch libheif yet. Exit 0 =
 #                    HEIF is blocked everywhere a policy was found, 1 = HEIF
 #                    is still allowed, 2 = no policy found.
+#   harden           write a managed block into ImageMagick's policy.xml that
+#                    refuses the HEIC/HEIF/AVIF coders, so a crafted upload
+#                    never reaches libheif through ImageMagick. Backs the file
+#                    up first, is reversible with unharden, and is the one
+#                    thing this script changes. Needs root. This is defence in
+#                    depth, NOT a substitute for updating libheif.
+#   unharden         remove that managed block and restore. Needs root. Only
+#                    touches a block this script wrote.
+#   mw-harden        block HEIF/HEIC/AVIF uploads in every MediaWiki found, by
+#                    adding those MIME types to wgMimeTypeExclusions in
+#                    LocalSettings.php, so a crafted upload is rejected by its
+#                    detected type before the scaler runs. Backs up first,
+#                    checks the result still parses as PHP, reversible with
+#                    mw-unharden. Needs root. Application-level defence; the
+#                    host libheif still needs updating.
+#   mw-unharden      remove that MediaWiki block and restore. Needs root.
 #   hunt             read-only: the journal and logs for image-processor
 #                    crashes (ImageMagick/libheif/libde265 segfaults, HEIF
 #                    decoder frames, repeated convert/magick aborts).
 #                    Exit 0 = clean, 1 = findings.
 #   version          print the script version.
 #
-# Everything here is read-only. The fix is to update libheif (and libde265),
-# rebuild anything that bundles it (Discourse containers especially), and,
-# as defence in depth, disable untrusted HEIF/AVIF decoding in ImageMagick.
+# The real fix is to update libheif (and libde265) and rebuild anything that
+# bundles it (Discourse containers especially); this script does not run that
+# for you, because a package upgrade or a container rebuild is an operator's
+# call to make and time. The only change it will make is the ImageMagick coder
+# policy, and only when you ask for it with harden.
 #
 # Env overrides:
 #   HEIF_FIXED_UPSTREAM=1.22.0        upstream floor the heap-write class is
@@ -75,13 +93,23 @@ FIXED_BUILDS="${FIXED_BUILDS:-}"
 DISCOURSE_ROOT="${DISCOURSE_ROOT:-/var/discourse}"
 DISCOURSE_APP="${DISCOURSE_APP:-/var/www/discourse}"
 POLICY_PATHS="${POLICY_PATHS:-/etc/ImageMagick-7 /etc/ImageMagick-6 /etc/ImageMagick /usr/local/etc/ImageMagick-7 /usr/local/etc/ImageMagick-6}"
+MW_PATHS="${MW_PATHS:-/var/www/mediawiki /var/www/html /var/www/html/mediawiki /var/www/html/w /var/www/w /srv/mediawiki /srv/www/mediawiki /usr/share/mediawiki}"
+# The HEIF-family MIME types MediaWiki detects. Blocking these rejects a
+# crafted upload by its detected type, whatever extension it was given.
+MW_HEIF_MIMES=("image/heif" "image/heic" "image/avif" "image/heif-sequence" "image/heic-sequence")
 HUNT_SINCE="${HUNT_SINCE:-2026-07-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="libheif-oct2026-check.sh"
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.1.0"
 SCRIPT_DATE="2026-10-23"
 SELF="$0"
 ADVISORY="https://www.hacktron.ai/blog/hacking-openai"
+MARKER="managed-by: libheif-oct2026-check"
+# Begin carries the version for humans; detection and stripping key on the
+# version-independent MARKER so a block written by any version is recognised.
+BLOCK_BEGIN="<!-- BEGIN ${MARKER} (v${SCRIPT_VERSION}) -->"
+BLOCK_END="<!-- END ${MARKER} -->"
+BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/libheif-oct2026}"
 
 # ---------- output -----------------------------------------------------------
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -223,6 +251,39 @@ discourse_installs() {   # "kind|where|version"
     done
 }
 
+# ---------- MediaWiki (another image-upload path into libheif) ---------------
+# MediaWiki is a path to this bug only when it is configured for it: the
+# scaler must be ImageMagick (not GD, its default when both exist), and HEIF
+# must be an allowed upload type (not a default). So this reads LocalSettings
+# rather than assuming. Reading a PHP config file is not executing it.
+mw_installs() { for d in $MW_PATHS; do [[ -r "${d}/LocalSettings.php" ]] && echo "${d}/LocalSettings.php"; done; }
+
+# Last assignment wins in PHP, so read the last one. Values are read as text,
+# nothing is evaluated.
+mw_last() {   # <file> <var-without-$>
+    grep -oE "\\\$${2}[[:space:]]*=[^;]*" "$1" 2>/dev/null | tail -1 || true
+}
+
+# "uses_im|accepts_heif|version"  (1/0 flags, version may be empty)
+mw_profile() {   # <LocalSettings.php>
+    local f="$1" uses_im=0 accepts=0 ver="" a dir rl
+    a="$(mw_last "$f" wgUseImageMagick)"
+    [[ "$a" == *[Tt]rue* ]] && uses_im=1
+    # An explicit convert command with ImageMagick not disabled also counts
+    a="$(mw_last "$f" wgImageMagickConvertCommand)"
+    [[ -n "$a" && "$(mw_last "$f" wgUseImageMagick)" != *[Ff]alse* ]] && uses_im=1
+    # HEIF reachable if any heif-family extension is in wgFileExtensions
+    if grep -oE '\$wgFileExtensions[^;]*' "$f" 2>/dev/null | grep -qiE "['\"](heif|heic|avif)['\"]"; then accepts=1; fi
+    # Version from the sibling install (RELEASE-NOTES or includes/Defines)
+    dir="$(dirname "$f")"
+    for rl in "${dir}/includes/Defines.php" "${dir}/RELEASE-NOTES-"*; do
+        [[ -r "$rl" ]] || continue
+        ver="$(grep -oE "MW_VERSION'?,?[[:space:]]*'?[0-9]+\.[0-9]+(\.[0-9]+)?" "$rl" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1 || true)"
+        [[ -n "$ver" ]] && break
+    done
+    echo "${uses_im}|${accepts}|${ver}"
+}
+
 # ---------- containers -------------------------------------------------------
 # Report libheif inside running containers. Reading a file from an image or a
 # container is not executing the app, and it is how a Discourse web container
@@ -289,6 +350,25 @@ cmd_check() {
     done < <(discourse_installs)
     [[ $n -eq 1 ]] || inf "no Discourse install found (Docker launcher under ${DISCOURSE_ROOT}, checkout under ${DISCOURSE_APP}, or discourse images)"
 
+    step "MediaWiki (image uploads run through ImageMagick into libheif)"
+    local mf uses accepts mver mw_n=0
+    while read -r mf; do
+        [[ -n "$mf" ]] || continue
+        mw_n=1
+        IFS='|' read -r uses accepts mver <<<"$(mw_profile "$mf")"
+        if [[ $uses -eq 1 && $accepts -eq 1 ]]; then
+            bad "${mf}${mver:+  MediaWiki ${mver}}: uses ImageMagick AND accepts HEIF/HEIC/AVIF uploads. A crafted upload reaches the host libheif above. Block it at the wiki: sudo ${SELF} mw-harden"
+            exposed=1
+        elif [[ $uses -eq 1 ]]; then
+            ok "${mf}${mver:+  MediaWiki ${mver}}: uses ImageMagick but HEIF/HEIC/AVIF is not in wgFileExtensions, so the wiki won't accept it. Keep it that way, or if you add it run: ${SELF} mw-harden"
+        elif [[ $accepts -eq 1 ]]; then
+            caution "${mf}${mver:+  MediaWiki ${mver}}: accepts HEIF uploads but ImageMagick isn't enabled (GD doesn't reach libheif). If you switch to ImageMagick, block HEIF first: ${SELF} mw-harden"
+        else
+            ok "${mf}${mver:+  MediaWiki ${mver}}: not a path to libheif (GD scaler and/or HEIF not accepted)"
+        fi
+    done < <(mw_installs)
+    [[ $mw_n -eq 1 ]] || inf "no MediaWiki install found (looked under ${MW_PATHS}; set MW_PATHS if yours is elsewhere)"
+
     step "libheif inside running containers"
     local rt ref kind cv any_c=0
     if ! have docker && ! have podman; then
@@ -329,22 +409,25 @@ coder_blocked() {   # <file> <CODER> -> 0 if a none-rights policy names it
     return 1
 }
 
+# Every policy.xml this host has, one per line. Shared by policy/harden/unharden.
+policy_files() {
+    local d p
+    {
+        for p in $POLICY_PATHS; do
+            [[ -d "$p" && -e "$p/policy.xml" ]] && echo "$p/policy.xml"
+        done
+        if have magick; then
+            d="$(magick -list configure 2>/dev/null | awk '/CONFIGURE_PATH/{print $2}' | head -1 || true)"
+            [[ -n "$d" && -e "$d/policy.xml" ]] && echo "$d/policy.xml"
+        fi
+    } | sort -u
+}
+
 cmd_policy() {
     step "ImageMagick HEIF/AVIF coder policy"
-    local d f found=0 allowed=0
+    local f found=0 allowed=0
     local -a files=()
-    local p
-    for p in $POLICY_PATHS; do
-        [[ -d "$p" ]] || continue
-        [[ -r "$p/policy.xml" ]] && files+=("$p/policy.xml")
-    done
-    # Also ask ImageMagick where its policy is, if it will say
-    if have magick; then
-        d="$(magick -list configure 2>/dev/null | awk '/CONFIGURE_PATH/{print $2}' | head -1 || true)"
-        [[ -n "$d" && -r "$d/policy.xml" ]] && files+=("$d/policy.xml")
-    fi
-    # De-duplicate
-    mapfile -t files < <(printf '%s\n' "${files[@]}" | sort -u)
+    mapfile -t files < <(policy_files)
     [[ ${#files[@]} -gt 0 ]] || { caution "no readable policy.xml under ${POLICY_PATHS}. ImageMagick with no coder policy decodes HEIF by default, which is the exposed case"; return 2; }
 
     local c
@@ -369,8 +452,234 @@ cmd_policy() {
     echo '      <policy domain="coder" rights="none" pattern="AVIF" />'
     echo "  This stops ImageMagick handing HEIF/AVIF to libheif. It is not a substitute for"
     echo "  updating libheif, and it won't help a caller that reaches libheif without ImageMagick."
+    [[ $allowed -eq 1 ]] && echo "  To write this block for you (reversible): sudo ${SELF} harden"
     [[ $found -eq 1 ]] || return 2
     return "$allowed"
+}
+
+# ---------- harden / unharden (the only writes this script makes) ------------
+need_root() { is_root || die "${1} needs root (it edits a config file owned by another user). Re-run with sudo"; }
+
+backup_file() {   # <path> -> prints backup path
+    local dst
+    dst="${BACKUP_ROOT}/$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$dst"
+    cp -a "$1" "$dst/" || die "could not back up $1"
+    echo "${dst}/$(basename "$1")"
+}
+
+# The managed block, indented to sit inside <policymap>.
+managed_block() {
+    printf '  %s\n' "$BLOCK_BEGIN"
+    printf '  <policy domain="coder" rights="none" pattern="HEIC" />\n'
+    printf '  <policy domain="coder" rights="none" pattern="HEIF" />\n'
+    printf '  <policy domain="coder" rights="none" pattern="AVIF" />\n'
+    printf '  %s\n' "$BLOCK_END"
+}
+
+# True if the file carries a managed block from any version of this script.
+has_block() { grep -qF "BEGIN ${MARKER}" "$1" 2>/dev/null; }
+
+# Print <file> with every managed block (from any version) removed. Matches
+# markers as literal substrings via index(), never as regex, so the version
+# in the BEGIN line and the ( ) and . in it can't break the match. A single
+# blank line immediately before a BEGIN marker is dropped too, so repeated
+# harden/unharden cycles don't accumulate blank lines.
+strip_block() {   # <file>
+    awk -v bm="BEGIN ${MARKER}" -v em="END ${MARKER}" '
+        index($0, bm) {
+            if (held != "" ) held = ""   # discard a blank line held before the block
+            skip=1; next
+        }
+        skip && index($0, em) {skip=0; next}
+        skip {next}
+        # Buffer a blank line: emit it only once we know a BEGIN marker does not follow
+        /^[[:space:]]*$/ {
+            if (held != "") print held
+            held=$0; next
+        }
+        { if (held != "") { print held; held="" } print }
+        END { if (held != "") print held }
+    ' "$1"
+}
+
+cmd_harden() {
+    need_root harden
+    step "Hardening ImageMagick against HEIF/AVIF decoding"
+    local -a files=()
+    mapfile -t files < <(policy_files)
+    if [[ ${#files[@]} -eq 0 ]]; then
+        # No policy.xml at all: ImageMagick decodes HEIF by default. Create one
+        # in the first configured directory that exists.
+        local p
+        for p in $POLICY_PATHS; do [[ -d "$p" ]] && { files=("$p/policy.xml"); break; }; done
+        [[ ${#files[@]} -gt 0 ]] || die "no ImageMagick config directory found under ${POLICY_PATHS}; set POLICY_PATHS"
+        caution "no policy.xml found; creating ${files[0]}"
+        { echo '<policymap>'; managed_block; echo '</policymap>'; } > "${files[0]}"
+        ok "wrote ${files[0]} with the HEIF/AVIF block"
+        return 0
+    fi
+
+    local f bak changed=0
+    for f in "${files[@]}"; do
+        [[ -w "$f" ]] || { caution "${f}: not writable, skipping"; continue; }
+        if has_block "$f"; then
+            # Refresh in place: drop the old managed block, re-insert current one
+            inf "${f}: already has a managed block; refreshing it"
+        fi
+        bak="$(backup_file "$f")"
+        local tmp; tmp="$(mktemp)"
+        # Strip any existing managed block, then insert a fresh one before
+        # </policymap> (or append a policymap if the file has none).
+        strip_block "$f" > "$tmp"
+        if grep -qiF '</policymap>' "$tmp"; then
+            local blk; blk="$(managed_block)"
+            awk -v blk="$blk" 'BEGIN{done=0}
+                !done && /<\/policymap>/ {print blk; done=1}
+                {print}
+            ' "$tmp" > "${tmp}.2" && mv "${tmp}.2" "$tmp"
+        else
+            { echo '<policymap>'; managed_block; echo '</policymap>'; cat "$tmp"; } > "${tmp}.2" && mv "${tmp}.2" "$tmp"
+            caution "${f}: had no <policymap>; added one"
+        fi
+        cat "$tmp" > "$f"; rm -f "$tmp"
+        changed=1
+        ok "${f}: HEIF/AVIF coders disabled (backup ${bak})"
+    done
+    echo
+    if [[ $changed -eq 1 ]]; then
+        info "ImageMagick will now refuse HEIC/HEIF/AVIF. Verify with: ${SELF} policy"
+        inf "This is defence in depth. Still update libheif and rebuild anything that bundles it"
+        inf "Reverse with: sudo ${SELF} unharden"
+    else
+        warn "nothing was changed (no writable policy.xml)"
+        return 1
+    fi
+}
+
+cmd_unharden() {
+    need_root unharden
+    step "Removing the managed HEIF/AVIF block"
+    local -a files=()
+    mapfile -t files < <(policy_files)
+    local f bak changed=0 any=0
+    for f in "${files[@]}"; do
+        has_block "$f" || continue
+        any=1
+        [[ -w "$f" ]] || { caution "${f}: has the block but is not writable, skipping"; continue; }
+        bak="$(backup_file "$f")"
+        local tmp; tmp="$(mktemp)"
+        strip_block "$f" > "$tmp"
+        cat "$tmp" > "$f"; rm -f "$tmp"
+        changed=1
+        ok "${f}: managed block removed (backup ${bak})"
+    done
+    if [[ $any -eq 0 ]]; then
+        inf "no managed block found; nothing of this script's to remove"
+        inf "If you added the coder lines by hand, remove them by hand"
+        return 0
+    fi
+    [[ $changed -eq 1 ]] && info "Done. Verify with: ${SELF} policy"
+    return 0
+}
+
+# ---------- mw-harden / mw-unharden (MediaWiki-level upload block) ------------
+# A managed PHP block appended to LocalSettings.php that adds the HEIF-family
+# MIME types to wgMimeTypeExclusions (and its pre-1.37 name wgMimeTypeBlacklist),
+# so MediaWiki rejects a crafted HEIF upload by its detected type, whatever
+# extension it carries, before the scaler ever runs. It also drops heif/heic/
+# avif from wgFileExtensions if present. This complements the host libheif
+# update; it does not replace it.
+mw_managed_block() {
+    local m
+    printf '\n// %s\n' "$BLOCK_BEGIN"
+    printf '// Reject HEIF/HEIC/AVIF uploads: a crafted one can reach a libheif\n'
+    printf '// heap overflow through ImageMagick. Remove with the matching unharden.\n'
+    printf '$wgMimeTypeExclusions = array_values( array_unique( array_merge(\n'
+    printf '\t( $wgMimeTypeExclusions ?? [] ),\n\t[\n'
+    for m in "${MW_HEIF_MIMES[@]}"; do printf "\t\t'%s',\n" "$m"; done
+    printf '\t]\n) ) );\n'
+    # Pre-1.37 fallback name, honoured when the new one is absent
+    printf 'if ( isset( $wgMimeTypeBlacklist ) ) {\n'
+    printf '\t$wgMimeTypeBlacklist = $wgMimeTypeExclusions;\n}\n'
+    # Drop the extensions from the allow-list if they were added
+    printf 'if ( isset( $wgFileExtensions ) ) {\n'
+    printf "\t\$wgFileExtensions = array_values( array_diff( \$wgFileExtensions, [ 'heif', 'heic', 'avif', 'heifs', 'heics' ] ) );\n}\n"
+    printf '// %s\n' "$BLOCK_END"
+}
+
+# Insert text before a closing "?>" if the file has one, else append. A
+# LocalSettings.php that ends inside PHP (no "?>") is the common case.
+mw_insert() {   # <stripped-file> <block-text>  -> writes combined to stdout
+    local f="$1" blk="$2"
+    if grep -qE '^\s*\?>\s*$' "$f"; then
+        awk -v blk="$blk" 'BEGIN{done=0}
+            !done && /^[[:space:]]*\?>[[:space:]]*$/ {print blk; done=1}
+            {print}
+        ' "$f"
+    else
+        cat "$f"; printf '%s\n' "$blk"
+    fi
+}
+
+cmd_mw_harden() {
+    need_root mw-harden
+    step "Blocking HEIF/HEIC/AVIF uploads in MediaWiki"
+    local -a files=()
+    mapfile -t files < <(mw_installs)
+    [[ ${#files[@]} -gt 0 ]] || { warn "no LocalSettings.php found under ${MW_PATHS}; set MW_PATHS"; return 2; }
+    local f bak changed=0 uses accepts mver
+    for f in "${files[@]}"; do
+        [[ -w "$f" ]] || { caution "${f}: not writable, skipping"; continue; }
+        IFS='|' read -r uses accepts mver <<<"$(mw_profile "$f")"
+        has_block "$f" && inf "${f}: already has a managed block; refreshing it"
+        bak="$(backup_file "$f")"
+        local tmp blk; tmp="$(mktemp)"; blk="$(mw_managed_block)"
+        strip_block "$f" > "$tmp"
+        mw_insert "$tmp" "$blk" > "${tmp}.2" && mv "${tmp}.2" "$tmp"
+        # Refuse to install a file that no longer parses, if php is available
+        if have php && ! php -l "$tmp" >/dev/null 2>&1; then
+            rm -f "$tmp"; caution "${f}: edit would not parse as PHP; left unchanged (backup ${bak} kept)"; continue
+        fi
+        cat "$tmp" > "$f"; rm -f "$tmp"
+        changed=1
+        ok "${f}: HEIF/HEIC/AVIF uploads blocked (backup ${bak})"
+        [[ $uses -eq 1 ]] || inf "    note: this wiki uses GD, not ImageMagick, so it wasn't a libheif path anyway; the block is harmless"
+    done
+    echo
+    if [[ $changed -eq 1 ]]; then
+        info "MediaWiki will now reject HEIF/HEIC/AVIF uploads by detected type. Verify with: ${SELF} check"
+        inf "This is an application-level block. Still update the host libheif"
+        inf "Reverse with: sudo ${SELF} mw-unharden"
+    else
+        warn "nothing was changed (no writable LocalSettings.php, or edits wouldn't parse)"
+        return 1
+    fi
+}
+
+cmd_mw_unharden() {
+    need_root mw-unharden
+    step "Removing the MediaWiki HEIF upload block"
+    local -a files=()
+    mapfile -t files < <(mw_installs)
+    local f bak changed=0 any=0 tmp
+    for f in "${files[@]}"; do
+        has_block "$f" || continue
+        any=1
+        [[ -w "$f" ]] || { caution "${f}: has the block but is not writable, skipping"; continue; }
+        bak="$(backup_file "$f")"
+        tmp="$(mktemp)"
+        strip_block "$f" > "$tmp"
+        if have php && ! php -l "$tmp" >/dev/null 2>&1; then
+            rm -f "$tmp"; caution "${f}: removal would not parse as PHP; left unchanged (backup ${bak} kept)"; continue
+        fi
+        cat "$tmp" > "$f"; rm -f "$tmp"
+        changed=1
+        ok "${f}: managed block removed (backup ${bak})"
+    done
+    [[ $any -eq 1 ]] || { inf "no managed block found; nothing of this script's to remove"; return 0; }
+    [[ $changed -eq 1 ]] && info "Done. Verify with: ${SELF} check"
+    return 0
 }
 
 # ---------- hunt -------------------------------------------------------------
@@ -431,8 +740,10 @@ case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /
 echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
 echo "reference: ${KEY_REF}; writeup: ${ADVISORY}"
 case "$CMD" in
-    check|policy|hunt) "cmd_${CMD}" ;;
-    *) die "Unknown command: $CMD (check|policy|hunt|version)" ;;
+    check|policy|harden|unharden|hunt) "cmd_${CMD}" ;;
+    mw-harden)   cmd_mw_harden ;;
+    mw-unharden) cmd_mw_unharden ;;
+    *) die "Unknown command: $CMD (check|policy|harden|unharden|mw-harden|mw-unharden|hunt|version)" ;;
 esac
 }
 main "$@"; exit
