@@ -1,7 +1,16 @@
-# php2shell-watch as a service. Install the script at /usr/local/sbin, then:
+# SPDX-License-Identifier: CC0-1.0
+# =============================================================================
+# php2shell-watch systemd unit - run the live log watcher as a service
+# CVE-2026-109618 / CVE-2026-109619
+#
+# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# https://privacysafe.foundation
+#
+# Install the script at /usr/local/sbin, then:
 #   cp php2shell-watch.service /etc/systemd/system/
 #   systemctl daemon-reload && systemctl enable --now php2shell-watch
 #   journalctl -fu php2shell-watch     # watch it
+# =============================================================================
 [Unit]
 Description=php2shell log watcher (read-only)
 After=php-fpm.service
