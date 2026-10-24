@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: CC0-1.0
 # =============================================================================
 # eMudhra intermediate CA compromise, interim mitigation  (v1)
 # Disclosed 20 Oct 2026: https://emudhra.we-have-a-problem.com/
 #
-# If this script is helpful please donate to PrivacySafe Foundation:
+# If this script was helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # The private keys of eight eMudhra intermediate CAs can be recovered from
@@ -1658,3 +1659,5 @@ if [[ "$CMD" == apply ]]; then
 fi
 }
 main "$@"; exit
+
+# Assisted-by: Claude Opus 5.5

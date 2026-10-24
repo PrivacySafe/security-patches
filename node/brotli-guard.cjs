@@ -4,7 +4,7 @@
 // brotli-guard - in-process stopgap for CVE-2026-111497 (Node.js Brotli
 // decoder out-of-bounds write, fixed in 22.23.4 / 24.22.1 / 26.12.1)
 //
-// If this is helpful please donate to PrivacySafe Foundation:
+// If this script was helpful, consider a donation to our 501c3 nonprofit:
 // https://privacysafe.foundation
 //
 // Load it before any application code:
@@ -291,3 +291,5 @@ if (require.main === module) {
 }
 
 module.exports = { install, runtimeFixed, GUARD_VERSION, FIXED };
+
+// Assisted-by: Claude Opus 5.5

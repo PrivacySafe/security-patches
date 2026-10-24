@@ -3,7 +3,7 @@
 # =============================================================================
 # PHP session audit - CVE-2026-115560 preconditions  (v1)
 #
-# If this script is helpful please donate to PrivacySafe Foundation:
+# If this script was helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # Read-only. Changes nothing; root is optional but sees more.
@@ -251,3 +251,5 @@ else
     caution "Partial match. Review the items above; none alone is the full ${CVE} chain."
 fi
 exit "$RESULT"
+
+# Assisted-by: Claude Opus 5.5

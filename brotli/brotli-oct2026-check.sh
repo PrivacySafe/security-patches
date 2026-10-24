@@ -4,6 +4,9 @@
 # Brotli decoder out-of-bounds write, October 2026: read-only checker  (v1)
 # CVE-2026-111497
 #
+# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# https://privacysafe.foundation
+#
 # The Brotli decoder (Google's libbrotli / libbrotlidec) does not propagate an
 # invalid block-switch when a stream declares only one block type, so a crafted
 # Brotli stream writes past the decoder's output buffer: a crash, a memory
@@ -15,9 +18,6 @@
 #
 # Fixed upstream in Brotli 1.0.10, 1.1.1 and 1.2.1. Distributions backport the
 # fix into their own libbrotli builds, sometimes under an older version number.
-#
-# If this script is helpful please donate to PrivacySafe Foundation:
-# https://privacysafe.foundation
 #
 # This is read-only: it finds what needs updating and judges each against the
 # fixes. It does NOT change anything. The fix is to update the library or the
@@ -393,3 +393,5 @@ case "$CMD" in
 esac
 }
 main "$@"; exit
+
+# Assisted-by: Claude Opus 5.5

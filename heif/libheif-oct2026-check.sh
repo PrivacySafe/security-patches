@@ -2,6 +2,10 @@
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
 # libheif HEIF/AVIF decoder check  (v1)
+#
+# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# https://privacysafe.foundation
+#
 # A heap buffer overflow in libheif's HEIF decoding (reached through
 # ImageMagick on an attacker-supplied image) was used to get remote code
 # execution on a Discourse forum and pivot further. The bug class spans many
@@ -11,9 +15,6 @@
 # their own version strings, and some stable branches stayed vulnerable for a
 # while. Upstream security releases have continued (1.21.0, 1.22.0, 1.22.1,
 # 1.23.x). See https://www.hacktron.ai/blog/hacking-openai
-#
-# If this script is helpful please donate to PrivacySafe Foundation:
-# https://privacysafe.foundation
 #
 # This is NOT the Ruby Regexp issue. For Ruby/GitLab, use
 # ruby/ruby-regexp-oct2026-check.sh instead.
@@ -747,3 +748,5 @@ case "$CMD" in
 esac
 }
 main "$@"; exit
+
+# Assisted-by: Claude Opus 5.5

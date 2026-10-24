@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: CC0-1.0
 # =============================================================================
 # PHP2Shell interim mitigation - PHP-FPM 7.0 through 8.5  (v5)
 # CVE-2026-109618 / CVE-2026-109619, and CVE-2026-115560 (session upload
 # progress, announced 23 Oct 2026, fix due in the next regular PHP release)
 #
-# If this script is helpful please donate to PrivacySafe Foundation: 
+# If this script was helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # This script was released ahead of patches for two 0day vulns in php.
@@ -1210,7 +1211,7 @@ check_web() {
         [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: $(echo $refs)"
         [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
         for v in "${modphp[@]+"${modphp[@]}"}"; do
-            caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script"
+            caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script (mod_php is a demonstrated exploitation surface, so upgrade it and restart Apache)"
             local mrc=0; report_patch "$v" "libapache2-mod-php${v}" apache2 || mrc=$?
             if [[ $mrc -eq 0 ]]; then
                 if grep -lsF "libphp${v}.so (deleted)" /proc/[0-9]*/maps >/dev/null 2>&1; then
@@ -1416,3 +1417,5 @@ fi
 [[ ${#FAILED[@]} -eq 0 ]] || exit 1
 }
 main "$@"; exit
+
+# Assisted-by: Claude Opus 5.5
