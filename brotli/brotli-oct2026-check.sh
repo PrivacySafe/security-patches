@@ -12,9 +12,9 @@
 # Brotli stream writes past the decoder's output buffer: a crash, a memory
 # disclosure, or remote code execution. The flaw is in the upstream C library,
 # and the same CVE has advisories across everything that bundles it: Node.js,
-# Bun, Envoy, Istio, the Python brotli extension, and OS packages. Some people
-# are calling the broadened picture "HTTP2Shell", since any HTTP path that
-# decodes untrusted Brotli can be a route to it.
+# Bun, Envoy, Istio, the Python brotli and brotlicffi bindings, and OS
+# packages. Some people are calling the broadened picture "HTTP2Shell", since
+# any HTTP path that decodes untrusted Brotli can be a route to it.
 #
 # Fixed upstream in Brotli 1.0.10, 1.1.1 and 1.2.1. Distributions backport the
 # fix into their own libbrotli builds, sometimes under an older version number.
@@ -74,11 +74,12 @@ HUNT_LOGS="${HUNT_LOGS:-}"
 # Fixed runtime releases (first fixed per line), for things that bundle Brotli.
 NODE_FIXED="${NODE_FIXED:-22.23.4 24.22.1 26.12.1}"
 BUN_FIXED="${BUN_FIXED:-1.4.4}"
+PYBROTLICFFI_FIXED="${PYBROTLICFFI_FIXED:-1.2.1.0}"
 ENVOY_FIXED="${ENVOY_FIXED:-1.40.0 1.39.3 1.38.6 1.37.8 1.36.12}"
 ISTIO_FIXED="${ISTIO_FIXED:-1.29.9 1.30.6 1.31.2}"
 SCRIPT_NAME="brotli-oct2026-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-23"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-10-24"
 SELF="$0"
 UPSTREAM="https://github.com/google/brotli"
 
@@ -223,15 +224,30 @@ node_versions() {   # prints each node binary's version, one per line
     done | sort -uV
 }
 
-py_brotli_version() {
+py_brotli_modules() {   # prints "<module>|<version>" for each importable Python Brotli binding
     have python3 || return 0
     python3 - <<'PY' 2>/dev/null || true
+import sys
 try:
-    import brotli, sys
-    v = getattr(brotli, "__version__", "") or getattr(brotli, "version", "")
-    if v: sys.stdout.write(str(v))
+    from importlib.metadata import version as dist_version
 except Exception:
-    pass
+    dist_version = None
+for mod, dist in (("brotli", "Brotli"), ("brotlicffi", "brotlicffi")):
+    try:
+        m = __import__(mod)
+    except Exception:
+        continue
+    # Only the real Brotli codec bindings expose decompress(); skip an
+    # unrelated or namespace module that merely shares the name.
+    if not hasattr(m, "decompress"):
+        continue
+    v = getattr(m, "__version__", "") or getattr(m, "version", "")
+    if not v and dist_version:
+        try:
+            v = dist_version(dist)
+        except Exception:
+            v = ""
+    sys.stdout.write("%s|%s\n" % (mod, str(v)))
 PY
 }
 
@@ -286,16 +302,29 @@ cmd_check() {
 
     if have bun; then runtime_report "Bun" "$(bun --version 2>/dev/null | head -1 || true)" "$BUN_FIXED" major || exposed=1; else inf "Bun: not found"; fi
 
-    # Python's brotli extension is versioned like upstream Brotli (per branch).
-    local pbv rc why; pbv="$(py_brotli_version)"
-    if [[ -n "$pbv" ]]; then
-        IFS='|' read -r rc why <<<"$(upstream_state "$pbv")"
-        case $rc in
-            0) ok "Python brotli ${pbv}  $(state_word 0)  (${why})" ;;
-            1) bad "Python brotli ${pbv}  $(state_word 1)  (${why}); upgrade the brotli wheel to 1.2.1"; exposed=1 ;;
-            *) caution "Python brotli ${pbv}  $(state_word 2)  (${why})"; unknownz=1 ;;
-        esac
-    else inf "Python brotli extension: not found (or not importable)"; fi
+    # Python Brotli bindings. The "brotli" package is versioned per upstream
+    # branch; "brotlicffi" carries its own four-part version, fixed at 1.2.1.0.
+    # An HTTP client such as urllib3 or requests decodes Content-Encoding: br
+    # on its own whenever either binding is importable, so a present binding is
+    # a live decode path, not dormant code.
+    local dist pv pstate pwhy had_py=0
+    while IFS='|' read -r dist pv; do
+        [[ -n "$dist" ]] || continue
+        had_py=1
+        if [[ "$dist" == brotlicffi ]]; then
+            if [[ -z "$pv" ]]; then caution "Python brotlicffi (version unreadable)  $(state_word 2)"; unknownz=1
+            elif ver_ge "$pv" "$PYBROTLICFFI_FIXED"; then ok "Python brotlicffi ${pv}  $(state_word 0)  (>= ${PYBROTLICFFI_FIXED})"
+            else bad "Python brotlicffi ${pv}  $(state_word 1)  (< ${PYBROTLICFFI_FIXED}); upgrade the brotlicffi wheel to ${PYBROTLICFFI_FIXED}"; exposed=1; fi
+        else
+            IFS='|' read -r pstate pwhy <<<"$(upstream_state "$pv")"
+            case $pstate in
+                0) ok "Python brotli ${pv}  $(state_word 0)  (${pwhy})" ;;
+                1) bad "Python brotli ${pv}  $(state_word 1)  (${pwhy}); upgrade the brotli wheel to 1.2.1"; exposed=1 ;;
+                *) caution "Python brotli ${pv}  $(state_word 2)  (${pwhy})"; unknownz=1 ;;
+            esac
+        fi
+    done < <(py_brotli_modules)
+    [[ $had_py -eq 1 ]] || inf "Python Brotli bindings (brotli, brotlicffi): not found (or not importable)"
 
     if have envoy; then runtime_report "Envoy" "$(envoy --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)" "$ENVOY_FIXED" minor "disable the Brotli decompressor filter if you can't upgrade" || exposed=1; else inf "Envoy: not found"; fi
     if have istioctl; then runtime_report "Istio (istioctl)" "$(istioctl version --remote=false 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)" "$ISTIO_FIXED" minor || exposed=1; else inf "Istio (istioctl): not found"; fi
