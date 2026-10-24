@@ -4,7 +4,7 @@
 <h1 align="center">Security Patches</h1>
 
 <h3 align="center">
-Security mitigations and auditing tools shared for the public benefit 🛡️
+Security mitigations and auditing tools shared for the public good.
 </h3>
 
 <p align="center">
