@@ -4,20 +4,20 @@
 <h1 align="center">Security Patches</h1>
 
 <h3 align="center">
-Security patches we use, shared here for the public good 🛡️
+Security mitigations and auditing tools shared for the public benefit 🛡️
 </h3>
 
 <p align="center">
-  <a href="https://privacysafe.foundation"><strong>❤️ Donate to PrivacySafe Foundation</strong></a>
+  <a href="https://privacysafe.foundation"><strong>❤️ Support PrivacySafe Foundation</strong></a>
 </p>
 
-This repository holds the mitigations, hardening scripts, and interim fixes we run on PrivacySafe and Ivy Cyber infrastructure. When a vulnerability lands before a vendor patch does, we write something to keep our own systems safe, and then we publish it here so every other admin can use it too.
+This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. We publish these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
-> 💚 **If one of these saved you a long night, please [donate to PrivacySafe Foundation](https://privacysafe.foundation).** The Foundation is a 501(c)(3) nonprofit, and your support pays for exactly this kind of public-interest security work.
+> 💚 If this work has been useful, please consider [supporting PrivacySafe Foundation](https://privacysafe.foundation), a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, and public-interest privacy and security research.
 
 ---
 
-## 📦 Patches
+## 📦 Available tools
 
 | Patch | Targets | CVEs | Type |
 |---|---|---|---|
@@ -32,9 +32,9 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 
 > ℹ️ **Update 2026-10-23:** CVE-2026-111497 is not only a Node.js bug. It is an out-of-bounds write in Google's Brotli C decoder (`libbrotli`), and the same CVE now has advisories across Node.js, Bun, Envoy, Istio, the Python `brotli` extension and OS packages (some are calling the broadened picture "HTTP2Shell"). The Node.js guard here still applies; for everything else, update the library or runtime. A read-only [Brotli checker](#brotli-checker-quick-start) finds `libbrotli` on the host, the runtimes that bundle it, and `libbrotli` inside containers, and reports which are fixed. See [CVE-2026-111497 is not only a Node.js bug](#cve-2026-111497-is-not-only-a-nodejs-bug).
 
-> ℹ️ **New 2026-10-23:** a [libheif checker](#libheif-heifavif-decoder-check) for the HEIF/AVIF decoder heap overflow used to compromise a Discourse forum through an image upload. Detection is read-only, and finds Discourse and MediaWiki installs that feed images to ImageMagick. Update libheif and rebuild containers that bundle it; `harden` disables HEIF in ImageMagick host-wide, and `mw-harden` blocks HEIF uploads in a MediaWiki, as defence in depth.
+> **Added 2026-10-23:** a [libheif checker](#libheif-heifavif-decoder-check) for the HEIF/AVIF decoder heap overflow used to compromise a Discourse forum through an image upload. Detection is read-only, and finds Discourse and MediaWiki installs that feed images to ImageMagick. Update libheif and rebuild containers that bundle it; `harden` disables HEIF in ImageMagick host-wide, and `mw-harden` blocks HEIF uploads in a MediaWiki, as defence in depth.
 
-> ℹ️ **New 2026-10-23:** a read-only [Ruby and GitLab checker](#ruby-and-gitlab-regexp-check) for the Regexp fixes in Ruby 4.0.9, 3.4.12 and 3.3.13 and the four GitLab CVEs behind them. If you run GitLab, upgrade it first: two of the CVEs need no login.
+> **Added 2026-10-23:** a read-only [Ruby and GitLab checker](#ruby-and-gitlab-regexp-check) for the Regexp fixes in Ruby 4.0.9, 3.4.12 and 3.3.13 and the four GitLab CVEs behind them. If you run GitLab, upgrade it first: two of the CVEs need no login.
 
 > ℹ️ **Update 2026-10-23:** PHP announced **CVE-2026-115560**, an RCE through session upload progress that the 21 October releases don't fix. `php2shell-mitigate.sh` v5 keeps `session.upload_progress` off after `cleanup` until your build is fixed for it, and on PHP 8.5 also turns off `fatal_error_backtraces`. **If you ran `cleanup` with v4, upload progress is back on: download v5 and run `cleanup` again.** It writes back a drop-in that keeps upload progress off, and leaves everything else as `cleanup` did. Every script now prints its version on the first line of output; please include that line when you send us a report. Later the same day, 5.0.1 started reporting Ubuntu 14.04's `php5` packages against the ESM Legacy fix, and 5.0.2 started pointing to a [third-party extension](#php2shell-know-before-you-run-it) for PHP that neither this script nor a package update can cover.
 
@@ -48,12 +48,12 @@ This repository holds the mitigations, hardening scripts, and interim fixes we r
 
 **Script:** [`php/php2shell-mitigate.sh`](php/php2shell-mitigate.sh)
 
-We released this script ahead of upstream patches for two 0day vulnerabilities in PHP. It adds two layers of defense to every installed PHP-FPM from 7.0 through 8.5:
+We published this script before upstream fixes became available for two zero-day vulnerabilities in PHP. It adds two layers of defense to every installed PHP-FPM from 7.0 through 8.5:
 
 1. **An ini drop-in** that turns off `session.upload_progress`. PHP core developers dispute that this setting alone fully mitigates the vulnerability, so treat it as one layer, not a fix.
 2. **An AppArmor profile** that stops FPM from executing shells and other binaries. This is the layer that keeps a successful exploit from turning into remote code execution. The profile is built from each version's own FPM config (log paths, sessions, sockets, extension directory), so it fits your server instead of a generic template. It lets FPM signal readiness to systemd, which every Debian, Ubuntu and sury unit requires (`Type=notify`). Where the parser supports it (AppArmor 3.0 and later), it declares `abi <abi/3.0>`, so the rules mean the same thing on Ubuntu and Debian 13.
 
-The script is designed so that it can't take your site down. It syntax-checks each profile before installing it. Then it tests FPM with a config check, a restart, a reload, and a socket check. Under systemd it also checks that the unit didn't restart itself during the test. PHP 8.4 and later units use `Restart=on-failure`, which can make a crash-looping FPM look active. If FPM won't come up, it falls back to complain mode, and if that still fails, it unloads the profile. Each PHP version is handled on its own, so a problem with one never blocks the others.
+The script includes checks and rollback procedures intended to reduce the risk of service disruption. It syntax-checks each profile before installing it. Then it tests FPM with a config check, a restart, a reload, and a socket check. Under systemd it also checks that the unit didn't restart itself during the test. PHP 8.4 and later units use `Restart=on-failure`, which can make a crash-looping FPM look active. If FPM won't come up, it falls back to complain mode, and if that still fails, it unloads the profile. Each PHP version is handled on its own, so a problem with one never blocks the others.
 
 ### PHP2Shell quick start
 
@@ -97,7 +97,7 @@ sha256sum php2shell-mitigate.sh
 curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/php/php2shell-mitigate.sh | sha256sum
 ```
 
-Every command starts with an environment check and refuses to run if your server isn't a fit. See [Environment check](#php2shell-environment-check).
+Every command begins with an environment check and refuses to proceed on unsupported systems. See [Environment check](#php2shell-environment-check).
 
 New profiles start in **complain mode**, which logs but does not block. Let real traffic run, then review and enforce:
 
@@ -156,7 +156,7 @@ A patched package isn't enough on its own, because a running FPM keeps executing
 
 ### PHP2Shell hunting for exploitation
 
-These bugs run below the application, so your app logs won't show much. What they leave behind is memory-corruption crashes, and, on a server that was actually exploited, a PHP worker doing something it shouldn't. `hunt` reads your logs (never changes anything) and reports both:
+These vulnerabilities affect PHP below the application layer, so application logs may contain little evidence. Possible indicators include memory-corruption crashes and unexpected commands executed by PHP worker processes. `hunt` reads your logs (never changes anything) and reports both:
 
 ```bash
 sudo ./php2shell-mitigate.sh hunt
@@ -417,7 +417,7 @@ A match is a lead, not proof. Buggy native addons crash Node too, and a segfault
 
 ### CVE-2026-111497 is not only a Node.js bug
 
-The guard and scripts here cover Node.js, because that is what we run. The underlying flaw is in Google's Brotli C decoder (`libbrotli` / `libbrotlidec`): the decoder fails to propagate an invalid block-switch when a stream declares only one block type, so a crafted Brotli stream writes past the decoder's output buffer. Node.js bundles that decoder, but so do many other things, and the same CVE has advisories across the ecosystem (some people are now calling the broadened picture "HTTP2Shell", since any HTTP path that decodes untrusted Brotli can be a route to it). Anything on your estate that decompresses attacker-controlled Brotli is worth checking, not only Node.
+The guard and scripts here cover Node.js, because that is what we run. The underlying flaw is in Google's Brotli C decoder (`libbrotli` / `libbrotlidec`): the decoder fails to propagate an invalid block-switch when a stream declares only one block type, so a crafted Brotli stream writes past the decoder's output buffer. Node.js bundles that decoder, but so do many other things, and the same CVE has advisories across the ecosystem (some people are now calling the broadened picture "HTTP2Shell", since any HTTP path that decodes untrusted Brotli can be a route to it). Review all applications and services that decompress Brotli data from untrusted sources, not only those using Node.js.
 
 The fix is the upstream library, so for everything other than Node.js the answer is to update the package or runtime. A read-only checker, [`brotli/brotli-oct2026-check.sh`](brotli/brotli-oct2026-check.sh), finds `libbrotli` on the host, the runtimes that bundle their own Brotli (Node.js, Bun, Python's `brotli`, Envoy, Istio) and `libbrotli` inside running containers, and reports which are fixed. It changes nothing; it only tells you what to update. Fixed versions, reviewed 23 October 2026:
 
@@ -646,7 +646,7 @@ git pull
 ./launcher rebuild app
 ```
 
-The version story is messy. The upstream heap-write class was fixed across 1.21.0, 1.22.0 and 1.22.1, with security releases continuing into the 1.23.x line. Debian fixed a batch in [DSA-6417-1](https://lists.debian.org/debian-security-announce/2026/msg00328.html) (`libheif 1.19.8-1+deb13u1`, trixie, 8 August 2026), and other distributions backport under their own version strings, so a package can carry the fixes under an older-looking upstream number. This script accounts for that: a distribution build is judged by `FIXED_BUILDS` and its package changelog first, and only falls back to the upstream version floor when it is not a distribution package.
+Fixed-version information varies across upstream releases and distribution packages. The upstream heap-write class was fixed across 1.21.0, 1.22.0 and 1.22.1, with security releases continuing into the 1.23.x line. Debian fixed a batch in [DSA-6417-1](https://lists.debian.org/debian-security-announce/2026/msg00328.html) (`libheif 1.19.8-1+deb13u1`, trixie, 8 August 2026), and other distributions backport under their own version strings, so a package can carry the fixes under an older-looking upstream number. This script accounts for that: a distribution build is judged by `FIXED_BUILDS` and its package changelog first, and only falls back to the upstream version floor when it is not a distribution package.
 
 This is a separate issue from the Ruby Regexp CVEs. For Ruby and GitLab, use [`ruby/ruby-regexp-oct2026-check.sh`](#ruby-and-gitlab-regexp-check) instead.
 
@@ -925,9 +925,9 @@ A fixed store isn't enough on its own, because a long-running process keeps the 
 
 ---
 
-## ⚠️ Use at Your Own Risk
+## ⚠️ Important notice
 
-These scripts are what we run in production, and we test them carefully, but your systems are not our systems. Read every script before you run it, try it on staging first when you can, and keep backups. Everything here comes with no warranty, as described in the license.
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 
