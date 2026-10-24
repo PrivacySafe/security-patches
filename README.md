@@ -13,6 +13,8 @@ Security mitigations and auditing tools shared for the public good.
 
 This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. We publish these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
+**9 scripts addressing 22 CVEs, plus 2 disclosed incidents without a dedicated CVE.**
+
 > 💚 If this work has been useful, please consider [supporting PrivacySafe Foundation](https://privacysafe.foundation), a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, and public-interest privacy and security research.
 
 ---
