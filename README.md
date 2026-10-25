@@ -15,7 +15,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 
 **16 scripts addressing 36 CVEs across 15 software projects and 6 programming languages, plus 4 other global security incidents.**
 
-> 💚 If this work has been useful, please consider [supporting PrivacySafe Foundation](https://privacysafe.foundation), a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, and public-interest privacy and security research.
+> 💚 If this work is helpful, please consider [supporting PrivacySafe Foundation](https://privacysafe.foundation), a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, and public-interest privacy and security research.
 
 ---
 
