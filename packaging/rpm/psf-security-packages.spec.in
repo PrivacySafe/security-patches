@@ -1,0 +1,62 @@
+%global debug_package %{nil}
+%global _build_id_links none
+%global __os_install_post %{nil}
+
+Name:           psf-security-packages
+Version:        @DATEVER@
+Release:        @REV@
+Summary:        PrivacySafe security checks, hunts and interim mitigations
+License:        CC0-1.0
+URL:            https://codeberg.org/PrivacySafe/security-patches
+Source0:        %{name}-%{version}-%{release}.tar.gz
+BuildArch:      noarch
+AutoReqProv:    no
+Requires:       bash >= 4.0
+Requires:       coreutils
+Packager:       @MAINT@
+Vendor:         PrivacySafe Foundation
+
+%description
+Free public domain tools for GNU/Linux servers: check whether you are
+exposed, hunt for signs of exploitation, and apply interim mitigations where
+the vendor fix is not enough. Covers PHP2Shell (CVE-2026-109618 and
+CVE-2026-109619), Nextcloud Collabora, nginx, curl, Brotli, libheif, Ruby
+and GitLab, Plex, LiteLLM, GhostAction and more.
+
+Everything installs under /opt/psf-security-patches, plus the
+php2shell-watch systemd unit, which is not enabled automatically. Patching
+is the fix: these tools reduce risk while you patch and help you find out
+whether you were hit.
+
+Built and published by PrivacySafe Foundation 501(c)(3) nonprofit with the
+assistance of Ivy Cyber LLC, under CC0 1.0 Universal. If this software is
+helpful, please consider a donation to PrivacySafe Foundation:
+https://privacysafe.foundation
+
+%prep
+%setup -q -n %{name}-%{version}-%{release}
+
+%build
+
+%install
+rm -rf %{buildroot}
+install -d %{buildroot}/opt/psf-security-patches
+cp -a . %{buildroot}/opt/psf-security-patches/
+rm -rf %{buildroot}/opt/psf-security-patches/packaging \
+       %{buildroot}/opt/psf-security-patches/.gitattributes
+find %{buildroot}/opt/psf-security-patches -type d -exec chmod 0755 {} +
+find %{buildroot}/opt/psf-security-patches -type f -exec chmod 0644 {} +
+find %{buildroot}/opt/psf-security-patches -type f -name '*.sh' -exec chmod 0755 {} +
+install -D -m 0644 packaging/systemd/php2shell-watch.service \
+    %{buildroot}/usr/lib/systemd/system/php2shell-watch.service
+
+%files
+%defattr(-,root,root,-)
+%license LICENSE NOTICE
+%doc README.md CHANGELOG.md
+/opt/psf-security-patches
+/usr/lib/systemd/system/php2shell-watch.service
+
+%changelog
+* @RPMDATE@ @MAINT@ - @DATEVER@-@REV@
+- Release of PrivacySafe Security Patches. See CHANGELOG.md for details.

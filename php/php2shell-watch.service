@@ -3,7 +3,7 @@
 # php2shell-watch systemd unit - run the live log watcher as a service
 # CVE-2026-109618 / CVE-2026-109619
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # Install the script at /usr/local/sbin, then:

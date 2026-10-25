@@ -4,7 +4,7 @@
 # Brotli decoder out-of-bounds write, October 2026: read-only checker  (v1)
 # CVE-2026-111497
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # The Brotli decoder (Google's libbrotli / libbrotlidec) does not propagate an
@@ -35,9 +35,10 @@
 #   ./brotli-oct2026-check.sh [command]
 #
 #   check (default)  every libbrotli on the host, the runtimes that bundle
-#                    their own Brotli (Node.js, Bun, Python's brotli, Envoy,
-#                    Istio), and libbrotli inside running containers, with
-#                    whether each carries the fix. Root optional. Exit 0 =
+#                    their own Brotli (Node.js, Bun, Python's brotli and
+#                    brotlicffi, Envoy, Istio, cdxgen), and libbrotli inside
+#                    running containers, with whether each carries the fix.
+#                    Root optional. Exit 0 =
 #                    nothing exposed, 1 = a vulnerable Brotli is present, 2 =
 #                    something couldn't be read.
 #   hunt             read-only: the journal and logs for process crashes that
@@ -48,8 +49,12 @@
 #
 # Env overrides:
 #   FIXED_BUILDS="1.0.9-2+deb12u2 1.1.0-2ubuntu0.1"
-#                                     distro libbrotli builds known to carry the
-#                                     fix, space-separated full versions
+#                                     extra distro libbrotli builds known to
+#                                     carry the fix, space-separated full
+#                                     versions. Checked alongside a built-in
+#                                     list of known builds (Debian 13's
+#                                     1.1.0-2+deb13u1), which a value here does
+#                                     not replace.
 #   BRANCH_FIXED="1.0:1.0.10 1.1:1.1.1 1.2:1.2.1"
 #                                     first fixed upstream release per branch
 #   SCAN_CONTAINERS=1                 1 = read libbrotli inside running
@@ -67,6 +72,10 @@ CVE="CVE-2026-111497"
 # First fixed upstream release for each minor branch.
 declare -A BRANCH_FIXED_DEFAULT=([1.0]=1.0.10 [1.1]=1.1.1 [1.2]=1.2.1)
 FIXED_BUILDS="${FIXED_BUILDS:-}"
+# Distro builds known to carry the fix under an older-looking upstream number.
+# Checked alongside any user-supplied FIXED_BUILDS, so a user override does not
+# drop these. Debian 13 (trixie): brotli 1.1.0-2+deb13u1, 23 Oct 2026.
+FIXED_BUILDS_KNOWN="1.1.0-2+deb13u1"
 CHANGELOG_MARKERS=(CVE-2026-111497)
 SCAN_CONTAINERS="${SCAN_CONTAINERS:-1}"
 HUNT_SINCE="${HUNT_SINCE:-2026-10-01}"
@@ -77,8 +86,9 @@ BUN_FIXED="${BUN_FIXED:-1.4.4}"
 PYBROTLICFFI_FIXED="${PYBROTLICFFI_FIXED:-1.2.1.0}"
 ENVOY_FIXED="${ENVOY_FIXED:-1.40.0 1.39.3 1.38.6 1.37.8 1.36.12}"
 ISTIO_FIXED="${ISTIO_FIXED:-1.29.9 1.30.6 1.31.2}"
+CDXGEN_FIXED="${CDXGEN_FIXED:-13.5.0 12.8.9}"
 SCRIPT_NAME="brotli-oct2026-check.sh"
-SCRIPT_VERSION="1.1.0"
+SCRIPT_VERSION="1.2.0"
 SCRIPT_DATE="2026-10-24"
 SELF="$0"
 UPSTREAM="https://github.com/google/brotli"
@@ -152,7 +162,7 @@ lib_state() {   # <X.Y.Z> <path>
         pkg="$(owner_pkg "$p")"
         if [[ -n "$pkg" ]]; then
             full="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
-            for f in $FIXED_BUILDS; do
+            for f in $FIXED_BUILDS_KNOWN $FIXED_BUILDS; do
                 if [[ -n "$full" ]] && dpkg --compare-versions "$full" ge "$f" 2>/dev/null \
                    && [[ "${f%%[-+~]*}" == "${full%%[-+~]*}" ]]; then
                     echo "0|${pkg} ${full} >= fixed build ${f}"; return
@@ -328,8 +338,9 @@ cmd_check() {
 
     if have envoy; then runtime_report "Envoy" "$(envoy --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)" "$ENVOY_FIXED" minor "disable the Brotli decompressor filter if you can't upgrade" || exposed=1; else inf "Envoy: not found"; fi
     if have istioctl; then runtime_report "Istio (istioctl)" "$(istioctl version --remote=false 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)" "$ISTIO_FIXED" minor || exposed=1; else inf "Istio (istioctl): not found"; fi
+    if have cdxgen; then runtime_report "cdxgen" "$(cdxgen --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)" "$CDXGEN_FIXED" major "standalone binaries and images bundle Brotli; rebuild them, a version bump alone is not enough" || exposed=1; else inf "cdxgen: not found on PATH"; fi
 
-    inf "Bun, Envoy and Istio bundle Brotli; upgrading the runtime is the fix. This script reads only the versions it can reach from the command line"
+    inf "Bun, Envoy, Istio and cdxgen bundle Brotli; upgrading the runtime is the fix. This script reads only the versions it can reach from the command line"
 
     step "libbrotli inside running containers"
     if [[ "$SCAN_CONTAINERS" != 1 ]]; then

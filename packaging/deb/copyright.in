@@ -1,0 +1,30 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: PrivacySafe Security Patches
+Upstream-Contact: @MAINT@
+Source: https://codeberg.org/PrivacySafe/security-patches
+ https://github.com/PrivacySafe/security-patches
+Comment: Built and published by PrivacySafe Foundation 501(c)(3) nonprofit
+ with the assistance of Ivy Cyber LLC (https://ivycyber.com). If this
+ software is helpful, please consider a donation to PrivacySafe Foundation:
+ https://privacysafe.foundation
+
+Files: *
+Copyright: 2026 Ivy Cyber LLC
+License: CC0-1.0
+Comment: Other projects named in the documentation, for example
+ php_uploadprogress_guard and kill-emudhra, are referenced by link only. No
+ third-party code is included. CC0 does not waive trademark or patent
+ rights. PrivacySafe and 3NWeb are registered trademarks. PrivacySafe
+ Foundation and Ivy Cyber are pending trademarks. This dedication does not
+ grant permission to use these marks in a manner that suggests sponsorship,
+ endorsement, affiliation, or origin.
+
+License: CC0-1.0
+ To the extent possible under law, Ivy Cyber LLC has waived all copyright
+ and related or neighboring rights to PrivacySafe Security Patches,
+ including its software and documentation, under the Creative Commons CC0
+ 1.0 Universal Public Domain Dedication.
+ .
+ On Debian systems, the complete text of the CC0 1.0 Universal license can
+ be found in /usr/share/common-licenses/CC0-1.0, and a copy is installed in
+ /usr/share/doc/psf-security-packages/LICENSE.

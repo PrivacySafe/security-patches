@@ -3,7 +3,7 @@
 # =============================================================================
 # PHP session audit - CVE-2026-115560 preconditions  (v1)
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # Read-only. Changes nothing; root is optional but sees more.
@@ -42,8 +42,13 @@
 # =============================================================================
 set -euo pipefail
 
-SCRIPT_VERSION="1.0.0"
-case "${1:-}" in -V|--version) echo "php-session-audit.sh ${SCRIPT_VERSION}"; exit 0 ;; esac
+SCRIPT_VERSION="1.0.1"
+case "${1:-}" in
+  -V|--version|version) echo "php-session-audit.sh ${SCRIPT_VERSION}"; exit 0 ;;
+  -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$0"; exit 0 ;;
+  "") ;;
+  *) echo "php-session-audit.sh: unknown argument: $1 (try --help)" >&2; exit 2 ;;
+esac
 
 WEB_ROOTS="${WEB_ROOTS:-/var/www /srv/www}"
 SCAN_DEPTH="${SCAN_DEPTH:-10}"

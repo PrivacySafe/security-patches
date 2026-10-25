@@ -5,7 +5,7 @@
 # CVE-2026-111497 (Brotli decoder out-of-bounds write, RCE) and the nine other
 # CVEs fixed in Node.js 22.23.4 / 24.22.1 / 26.12.1 on 21 Oct 2026
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # Usage:

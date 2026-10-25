@@ -1,0 +1,6 @@
+# /opt/psf-security-patches is the chosen install location for these tools.
+# They are distributed from the project's own releases, not the Debian archive.
+psf-security-packages: dir-or-file-in-opt [opt/psf-security-patches/*]
+# emudhra-mitigate.sh only reads /var/lib/dpkg/info/*.list, read-only, to learn
+# which files a package owns. It never writes to the dpkg database.
+psf-security-packages: uses-dpkg-database-directly [opt/psf-security-patches/pki/emudhra-mitigate.sh]

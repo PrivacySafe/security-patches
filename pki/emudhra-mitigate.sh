@@ -4,7 +4,7 @@
 # eMudhra intermediate CA compromise, interim mitigation  (v1)
 # Disclosed 20 Oct 2026: https://emudhra.we-have-a-problem.com/
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # The private keys of eight eMudhra intermediate CAs can be recovered from
@@ -28,6 +28,7 @@
 #                    distrust, but only if the store still rejects every
 #                    compromised intermediate afterwards (--force skips the
 #                    patch check, never the store test)
+#   version          print the script version and exit
 #
 #   --ignore-env     proceed past soft environment blockers (a running
 #                    process or system-wide override uses a CA store this run
@@ -113,6 +114,9 @@ OS_RELEASE="${OS_RELEASE:-/etc/os-release}"   # testing hook
 # of every test certificate, so expiry can never pass for distrust
 ATTIME=1790000000
 SELF="$0"
+SCRIPT_NAME="emudhra-mitigate.sh"
+SCRIPT_VERSION="1.0.0"
+SCRIPT_DATE="2026-10-24"
 
 # Every certificate in the trust path, keyed by SHA-256 of its
 # SubjectPublicKeyInfo. Matching on the key catches every certificate for it:
@@ -1637,8 +1641,9 @@ CERTS
 # is in progress can't make bash read the rest from a shifted offset.
 main() {
 CMD="${1:-apply}"; [[ $# -gt 0 ]] && shift
+case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
 FORCE=""; IGNORE_ENV=""
-case "$CMD" in -h|--help) awk 'NR>2 && /^# =+$/ {exit} NR>2 {sub(/^# ?/, ""); print}' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
+case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --force) FORCE=1; shift ;;
@@ -1646,7 +1651,8 @@ while [[ $# -gt 0 ]]; do
         *) die "Unknown option: $1" ;;
     esac
 done
-case "$CMD" in check|apply|status|restore|cleanup) ;; *) die "Unknown command: $CMD (check|apply|status|restore|cleanup)" ;; esac
+case "$CMD" in check|apply|status|restore|cleanup) ;; *) die "Unknown command: $CMD (check|apply|status|restore|cleanup|version)" ;; esac
+echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
 
 command -v openssl >/dev/null && setup_tests
 env_check      # exits here for "check", or if the environment blocks the run

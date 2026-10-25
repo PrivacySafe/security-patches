@@ -3,7 +3,7 @@
 # =============================================================================
 # libheif HEIF/AVIF decoder check  (v1)
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # A heap buffer overflow in libheif's HEIF decoding (reached through
@@ -60,7 +60,7 @@
 #
 # The real fix is to update libheif (and libde265) and rebuild anything that
 # bundles it (Discourse containers especially); this script does not run that
-# for you, because a package upgrade or a container rebuild is an operator's
+# for you, because a package upgrade or a container rebuild is an administrator's
 # call to make and time. The only change it will make is the ImageMagick coder
 # policy, and only when you ask for it with harden.
 #

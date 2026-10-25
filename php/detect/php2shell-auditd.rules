@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: CC0-1.0
+# =============================================================================
+# PHP2Shell: audit every program the web-server account starts  (v1)
+# CVE-2026-109618 / CVE-2026-109619
+#
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
+# https://privacysafe.foundation
+#
+# DETECTION, NOT PREVENTION, AND NOT A FIX. The only complete fix is a patched
+# PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35, or your distribution's backport).
+#
+# Report: https://github.com/0x4D31/honeypot-data/blob/main/reports/php2shell/2026-10-24-confirmed-rce.md
+#
+# The strongest evidence in the 24 October 2026 phpot honeypot report was process-level:
+# an Apache worker starting /bin/sh as uid 33. Logs only show the residue, and
+# the phpot report's final request never reached the access log because the worker
+# died. php2shell-watch.sh polls /proc once a second and can miss a shell that
+# starts and exits between samples. Auditing execve does not: the kernel
+# records every program the account starts, with its parent PID, executable
+# and arguments.
+#
+# Install (needs the auditd package):
+#   cp php2shell-auditd.rules /etc/audit/rules.d/60-php2shell.rules
+#   augenrules --load
+#   auditctl -l | grep php2shell_web_exec
+# Review:
+#   ausearch -k php2shell_web_exec -ts today -i
+#   php2shell-mitigate.sh hunt        (5.2.0 and later reads this key)
+# Remove: delete the file, then augenrules --load.
+#
+# Edit the uid. 33 is www-data on Debian, Ubuntu and Trisquel (id -u www-data).
+# A PHP-FPM pool that runs as another account needs its own line; read each
+# pool's "user =" setting. Containers: audit rules run on the host and match
+# the numeric uid, which is the same inside the container unless it uses user
+# namespaces.
+#
+# Expect some noise where the application legitimately runs programs
+# (ImageMagick, sendmail, git). Review a week of it first. To silence a known
+# harmless program, put a "never" rule for it BEFORE the rules below, for
+# example:
+#   -a never,exit -F arch=b64 -S execve -F euid=33 -F exe=/usr/bin/convert
+# =============================================================================
+
+# auid 4294967295 is "unset": a daemon, not a login session.
+-a always,exit -F arch=b64 -S execve -F euid=33 -F auid=4294967295 -k php2shell_web_exec
+
+# 32-bit programs, on systems that run them. Some kernels reject b32 rules, so
+# this one is off by default.
+#-a always,exit -F arch=b32 -S execve -F euid=33 -F auid=4294967295 -k php2shell_web_exec
+
+# Assisted-by: Claude Opus 5.5

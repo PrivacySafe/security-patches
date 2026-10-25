@@ -1,0 +1,24 @@
+Package: psf-security-packages
+Version: @FULL@
+Section: admin
+Priority: optional
+Architecture: all
+Maintainer: @MAINT@
+Installed-Size: @SIZE@
+Depends: bash (>= 4.0)
+Suggests: apparmor-utils, auditd
+Homepage: https://codeberg.org/PrivacySafe/security-patches
+Description: PrivacySafe security checks, hunts and interim mitigations
+ Free public domain tools for GNU/Linux servers: check whether you are
+ exposed, hunt for signs of exploitation, and apply interim mitigations where
+ the vendor fix is not enough. Covers PHP2Shell (CVE-2026-109618 and
+ CVE-2026-109619), Nextcloud Collabora, nginx, curl, Brotli, libheif, Ruby
+ and GitLab, Plex, LiteLLM, GhostAction and more.
+ .
+ Everything installs under /opt/psf-security-patches, plus the
+ php2shell-watch systemd unit, which is not enabled automatically. Patching
+ is the fix: these tools reduce risk while you patch and help you find out
+ whether you were hit.
+ .
+ Built and published by PrivacySafe Foundation 501(c)(3) nonprofit with the
+ assistance of Ivy Cyber LLC. CC0 1.0 Universal.

@@ -5,7 +5,7 @@
 # CVE-2026-109618 / CVE-2026-109619, and CVE-2026-115560 (session upload
 # progress, announced 23 Oct 2026, fix due in the next regular PHP release)
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # This script was released ahead of patches for two 0day vulns in php.
@@ -21,7 +21,15 @@
 #   complain         switch profile(s) back to complain
 #   status           mitigation state and recent AppArmor events
 #   hunt             read-only: scan logs for signs of exploitation or the
-#                    memory-corruption crashes these bugs cause. Changes
+#                    memory-corruption crashes these bugs cause, plus the
+#                    request, source-address, proof-file and live process
+#                    indicators from the 24 October 2026 phpot honeypot
+#                    report (https://github.com/0x4D31/honeypot-data/blob/main/reports/php2shell/2026-10-24-confirmed-rce.md):
+#                    both request fingerprint forms, leak-sized
+#                    responses, TCP peers of flagged processes, auditd events
+#                    (see php/detect/) and nginx's "upstream sent too big
+#                    header" error. It says so when pre-script OOM lines carry
+#                    no client address, so repeats cannot be counted. Changes
 #                    nothing, root optional. Exit 0 = clean, 1 = findings.
 #   cleanup          remove the ini drop-in once patched (--force to skip check).
 #                    Keeps session.upload_progress off until the build is
@@ -61,7 +69,33 @@
 #                                      changelog naming the CVE counts.
 #   GUARD_HINT=0                       don't point to the third-party extension
 #                                      for PHP this script can't cover
-#   WEB_ROOTS="/var/www /srv/www"      read-only docroots
+#   WEB_ROOTS="/var/www /srv/www"      read-only docroots; hunt also looks here
+#                                      for proof-style files
+#   HUNT_IPS="15.204.59.70 162.35.99.94"
+#                                      source addresses reported in confirmed
+#                                      exploitation (2026-10-24); hunt flags
+#                                      them in web logs. Aging indicator: a hit
+#                                      means the address touched you, not what
+#                                      it did. HUNT_IPS="" turns it off
+#   HUNT_ATTEMPT_IPS="104.28.208.84 144.48.4.242"
+#                                      addresses the same report names as
+#                                      sending exploit-shaped requests with no
+#                                      shell seen: attempt indicators, not
+#                                      confirmed RCE. Shared or proxy addresses
+#                                      are possible. HUNT_ATTEMPT_IPS="" off
+#   COOKIE_MAX=4096                    hunt flags a PHPSESSID value this many
+#                                      characters long in a log that records
+#                                      response cookies (0 = off). The leak in
+#                                      the phpot report was 819,200 bytes decoded
+#   RESP_BYTES_MAX=500000              hunt flags a POST whose logged response
+#                                      is this many bytes (0 = off). Only logs
+#                                      that count headers can show it: Apache
+#                                      %O, the Debian/Ubuntu default
+#   PROOF_SINCE=2026-10-01             hunt's proof-file scan ignores older files
+#   HUNT_PROC_ALLOW='rotatelogs|cronolog|logger'
+#                                      regex on the command line: hunt's live
+#                                      process check ignores matches (Apache
+#                                      piped-log helpers are normal)
 #   WRITABLE_PATHS="..."               rwk paths (uploads, cache)
 #
 # Debian/Ubuntu/Trisquel layout (distro packages, ondrej/sury PPA). Each version gets
@@ -77,8 +111,8 @@ set -euo pipefail
 # Printed at the top of every run and written into everything the script
 # installs, so any pasted output or file says which version produced it.
 SCRIPT_NAME="php2shell-mitigate.sh"
-SCRIPT_VERSION="5.0.2"
-SCRIPT_DATE="2026-10-23"
+SCRIPT_VERSION="5.2.5"
+SCRIPT_DATE="2026-10-24"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
@@ -131,6 +165,12 @@ FIXED_BUILDS="${FIXED_BUILDS:-}"
 MARKER="# managed-by: php2shell-mitigation"
 BACKUP_ROOT="/var/backups/php2shell/$(date +%Y%m%d-%H%M%S)"
 WEB_ROOTS="${WEB_ROOTS:-/var/www /srv/www}"
+HUNT_IPS="${HUNT_IPS-15.204.59.70 162.35.99.94}"
+HUNT_ATTEMPT_IPS="${HUNT_ATTEMPT_IPS-104.28.208.84 144.48.4.242}"
+COOKIE_MAX="${COOKIE_MAX:-4096}"
+RESP_BYTES_MAX="${RESP_BYTES_MAX:-500000}"
+PROOF_SINCE="${PROOF_SINCE:-2026-10-01}"
+HUNT_PROC_ALLOW="${HUNT_PROC_ALLOW:-rotatelogs|cronolog|logger}"
 WRITABLE_PATHS="${WRITABLE_PATHS:-}"
 START_TS="$(date '+%Y-%m-%d %H:%M:%S')"
 SELF="$0"
@@ -755,7 +795,13 @@ cmd_status() {
 # visible. A finding is a lead to investigate, never proof on its own: buggy
 # extensions crash workers too, and the upload-progress field is in legitimate
 # forms. The signatures were confirmed against real php-fpm 8.4 output.
-DISCLOSURE_DATE="2026-10-21"
+# 21 October is the patch date. Amazon Threat Intelligence reported an
+# exploitation attempt in its honeypot telemetry from 17 October, four days
+# earlier. It is the only source we know of for that date, so treat it as the
+# likely start, not a settled fact. Use it as the default baseline so a "quiet
+# before" period is more likely to be quiet; override with HUNT_SINCE if your
+# own logs show something earlier.
+DISCLOSURE_DATE="${HUNT_SINCE:-2026-10-17}"
 
 # Logs worth reading: every version's FPM error_log (from its own config),
 # the common defaults, the web servers, and the journal.
@@ -818,6 +864,185 @@ hunt_spike() {
     return 0
 }
 
+# Web access logs: request-level indicators live here, not in the error logs
+# hunt_logs() returns. Current and first-rotated files only (plain text).
+hunt_access_files() {
+    local g f
+    shopt -s nullglob
+    for g in /var/log/apache2/*access*.log /var/log/apache2/*access*.log.1 \
+             /var/log/httpd/access_log /var/log/httpd/access_log-* \
+             /var/log/nginx/access.log /var/log/nginx/access.log.1 /var/log/nginx/*access*.log; do
+        for f in $g; do [[ -r "$f" && -f "$f" ]] && echo "$f"; done
+    done | sort -u
+    shopt -u nullglob
+}
+
+# Clients with two or more pre-script out-of-memory errors ("... in Unknown on
+# line 0"): the memory-pressure stages of the confirmed chain. One is ordinary;
+# repeats from one client are not. Reads Apache "[client IP:port]" and nginx
+# "client: IP," forms.
+hunt_oom_clients() {   # files...
+    local top
+    top="$( { grep -hE '(Allowed memory size of [0-9]+ bytes exhausted|Out of memory).*in Unknown on line 0' "$@" 2>/dev/null || true; } \
+        | awk '
+            match($0,/\[client [0-9a-fA-F:.]+\]/) { s=substr($0,RSTART+8,RLENGTH-9); sub(/:[0-9]+$/,"",s); c[s]++; next }
+            match($0,/client: [0-9a-fA-F:.]+,/)   { s=substr($0,RSTART+8,RLENGTH-9); c[s]++ }
+            END { for (k in c) if (c[k] >= 2) print c[k], k }' \
+        | sort -rn | head -5)"
+    if [[ -n "$top" ]]; then
+        warn "Clients with 2+ pre-script out-of-memory errors (memory-pressure stages of the confirmed chain):"
+        sed 's/^/      /' <<<"$top"
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else
+        info "Clients with 2+ pre-script out-of-memory errors: none"
+    fi
+    local unattr
+    unattr="$( { grep -hE '(Allowed memory size of [0-9]+ bytes exhausted|Out of memory).*in Unknown on line 0' "$@" 2>/dev/null || true; } \
+        | { grep -vE '\[client [0-9a-fA-F:.]+\]|client: [0-9a-fA-F:.]+,' || true; } | wc -l | tr -d ' ')"
+    if [[ "${unattr:-0}" -gt 0 ]]; then
+        inf_hunt "${unattr} pre-script out-of-memory line(s) carry no client address (PHP's own error_log format has none), so repeats from one client cannot be counted for them. Under mod_php, leave error_log unset so PHP errors go to Apache's error log."
+    fi
+}
+
+# Files whose whole content is `id` output, left by the proof commands in the
+# confirmed chain (e.g. `id>/tmp/x1`, `id>/var/www/html/p1`). Looks in the temp
+# directories and the web roots, for small files newer than PROOF_SINCE. File
+# names are the attacker's choice, so the content is the signal.
+hunt_proof_files() {
+    local d depth f found=0 r
+    local -a dirs=(/tmp /var/tmp /dev/shm)
+    for r in $WEB_ROOTS; do [[ -d "$r" ]] && dirs+=("$r"); done
+    for d in "${dirs[@]}"; do
+        [[ -d "$d" ]] || continue
+        depth=1; [[ " $WEB_ROOTS " == *" $d "* ]] && depth=3
+        while IFS= read -r -d '' f; do
+            # The FIRST line must be a full id(1) record ("uid=N(name) gid=N(name)"),
+            # not merely any line that starts with uid=.
+            if head -n 1 "$f" 2>/dev/null | grep -qE '^uid=[0-9]+\([^)]*\) gid=[0-9]+\('; then
+                found=1
+                warn "File whose content is id(1) output: ${f}  ($(head -1 "$f" 2>/dev/null | cut -c1-80))"
+            fi
+        done < <(find "$d" -maxdepth "$depth" -type f -size -400c -newermt "$PROOF_SINCE" -print0 2>/dev/null)
+    done
+    if [[ $found -eq 1 ]]; then HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else info "Files containing id(1) output in temp dirs or web roots since ${PROOF_SINCE}: none"; fi
+}
+
+# Shells and tools running RIGHT NOW with a web server or PHP worker in their
+# ancestry (up to four levels). A one-shot look, so it only catches processes
+# that are still alive; the confirmed chain's shells were short-lived, and one
+# whose worker has died is re-parented to init and no longer links to it. Apps
+# that legitimately shell out (ImageMagick, sendmail) will show here too.
+hunt_procs() {
+    local WEB_RE='^(apache2|httpd|httpd\.(worker|event|prefork)|php-fpm[0-9.]*|php-cgi[0-9.]*|lsphp[0-9]*|frankenphp|nginx)$'
+    local SUSP_RE='^(sh|dash|bash|ash|zsh|ksh|busybox|curl|wget|nc|ncat|netcat|socat|php[0-9.]*|python[0-9.]*|perl|ruby|openssl|base64|mkfifo|whoami|uname|hostname|id)$'
+    local -A comm=() ppid=()
+    local d p c line rest pp a depth hit cmd uid peers found=0
+    for d in /proc/[0-9]*; do
+        p="${d#/proc/}"
+        { read -r c < "$d/comm"; } 2>/dev/null || continue
+        { read -r line < "$d/stat"; } 2>/dev/null || continue
+        rest="${line##*) }"; set -- $rest; pp="${2:-0}"
+        comm[$p]="$c"; ppid[$p]="$pp"
+    done
+    for p in "${!comm[@]}"; do
+        [[ "${comm[$p]}" =~ $SUSP_RE ]] || continue
+        a="${ppid[$p]}"; depth=0; hit=""
+        while [[ -n "$a" && "$a" != 0 && "$a" != 1 && $depth -lt 4 ]]; do
+            if [[ "${comm[$a]:-}" =~ $WEB_RE ]]; then hit="$a"; break; fi
+            a="${ppid[$a]:-0}"; depth=$((depth + 1))
+        done
+        [[ -n "$hit" ]] || continue
+        cmd="$(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | cut -c1-160)"
+        if [[ -n "$HUNT_PROC_ALLOW" && "$cmd" =~ $HUNT_PROC_ALLOW ]]; then continue; fi
+        uid="$(stat -c %u "/proc/$p" 2>/dev/null || echo '?')"
+        found=1
+        peers="$(proc_peers "$p")"
+        warn "Running now: ${comm[$p]} (pid ${p}, uid ${uid}) under ${comm[$hit]} (pid ${hit}): ${cmd:-(no cmdline)}${peers:+  [tcp: ${peers}]}"
+    done
+    if [[ $found -eq 1 ]]; then HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else info "Shells/tools running now under a web or PHP worker: none"; fi
+}
+
+# TCP peers of a pid as STATE->peer, e.g. "SYN-SENT->203.0.113.9:8080". Needs ss
+# and, for another user's process, root. Prints nothing when there are none; a
+# process that has exited is gone, so this only helps for live ones.
+proc_peers() {
+    command -v ss >/dev/null 2>&1 || return 0
+    { ss -tnapH 2>/dev/null || true; } | awk -v pat="pid=$1," 'index($0,pat) { print $1 "->" $5 }' | head -3 | paste -sd, - || true
+}
+
+# Leak-sized responses. The disclosure stage of the confirmed chain returned a
+# PHPSESSID of 819,200 bytes decoded (about 2 MB on the wire) in Set-Cookie. Two checks,
+# both leads: (1) one PHPSESSID value of COOKIE_MAX or more characters in any
+# log that records response cookies; (2) a POST whose logged response size is
+# RESP_BYTES_MAX or more. (2) needs a log that counts header bytes: Apache %O
+# (the Debian/Ubuntu default "combined" format) or nginx $bytes_sent. Body-only
+# formats (Apache %b, nginx's default $body_bytes_sent) cannot show it. The
+# cookie value is never printed: it may be leaked process memory.
+hunt_big_responses() {   # files...
+    local out head ck rs
+    out="$(awk -v cmax="$COOKIE_MAX" -v rmax="$RESP_BYTES_MAX" '
+        { line = $0
+          if (cmax > 0 && length(line) >= cmax) {
+              i = index(line, "PHPSESSID=")
+              if (i > 0) {
+                  v = substr(line, i + 10); j = match(v, /[;" ]/); l = (j > 0) ? j - 1 : length(v)
+                  if (l >= cmax) { ck++; if (ckn < 3) { ckn++; ckx[ckn] = FILENAME ":" FNR ": a PHPSESSID value of " l " characters" } }
+              }
+          }
+          if (rmax > 0 && index(line, "\"POST ") > 0 && match(line, /" [0-9][0-9][0-9] [0-9]+/)) {
+              m = substr(line, RSTART, RLENGTH); split(m, a, " "); sz = a[3] + 0
+              if (sz >= rmax) { rs++; if (rsn < 3) { rsn++; rsx[rsn] = FILENAME ":" FNR ": POST response of " sz " bytes: " substr(line, 1, 120) } }
+          }
+        }
+        END { print ck + 0, rs + 0
+              for (k = 1; k <= ckn; k++) print ckx[k]
+              for (k = 1; k <= rsn; k++) print rsx[k] }
+    ' "$@" 2>/dev/null || true)"
+    head="$(sed -n 1p <<<"$out")"; ck="${head%% *}"; rs="${head##* }"
+    if [[ "${ck:-0}" -gt 0 ]]; then
+        warn "PHPSESSID values of ${COOKIE_MAX}+ characters in logs (leak-sized; value not shown): ${ck}"
+        sed -n '2,$p' <<<"$out" | grep 'PHPSESSID value' | sed 's/^/      /' || true
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else
+        info "PHPSESSID values of ${COOKIE_MAX}+ characters in logs: none (only visible if a log records response cookies)"
+    fi
+    if [[ "${rs:-0}" -gt 0 ]]; then
+        warn "POST responses of ${RESP_BYTES_MAX}+ bytes in access logs (lead; legitimate large POST responses exist): ${rs}"
+        sed -n '2,$p' <<<"$out" | grep 'POST response' | sed 's/^/      /' || true
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else
+        info "POST responses of ${RESP_BYTES_MAX}+ bytes in access logs: none (needs a log that counts header bytes: Apache %O, nginx \$bytes_sent)"
+    fi
+}
+
+# auditd: program starts by the web-server account, if the rule from php/detect/
+# is loaded (key php2shell_web_exec). Execve auditing is the way to see a
+# short-lived shell that the process poll above misses.
+hunt_audit() {
+    if ! command -v ausearch >/dev/null 2>&1; then
+        inf_hunt "auditd is not installed, so program starts were not checked from the audit log (php/detect/ has a rule)."
+        return 0
+    fi
+    if [[ $EUID -ne 0 ]]; then inf_hunt "Reading the audit log needs root; skipped."; return 0; fi
+    local out n
+    # --input-logs and a closed stdin matter: without them ausearch reads an open
+    # pipe (as under "ssh host cmd") and blocks forever. The timeout is a backstop.
+    local tmo=""; command -v timeout >/dev/null 2>&1 && tmo="timeout 30"
+    out="$( { $tmo ausearch --input-logs -k php2shell_web_exec -ts this-week -i </dev/null 2>/dev/null || true; } )"
+    n="$(grep -c '^type=SYSCALL' <<<"$out" || true)"
+    if [[ "${n:-0}" -gt 0 ]]; then
+        warn "auditd: ${n} program start(s) by the web-server account this week (key php2shell_web_exec); check the parent and command:"
+        grep '^type=SYSCALL' <<<"$out" | sed -E 's/.*(ppid=[0-9]+).*(comm=[^ ]+).*(exe=[^ ]+).*/      \1 \2 \3/' | tail -5 || true
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    elif command -v auditctl >/dev/null 2>&1 && auditctl -l 2>/dev/null | grep -q php2shell_web_exec; then
+        info "auditd: rule loaded, no program starts by the web-server account this week"
+    else
+        inf_hunt "auditd is present but the php2shell_web_exec rule is not loaded; see php/detect/ to add it."
+    fi
+}
+
 HUNT_FINDINGS=0
 cmd_hunt() {
     step "Log triage (read-only)"
@@ -831,7 +1056,7 @@ cmd_hunt() {
     fi
     info "Reading ${#LOGS[@]} log file(s)"
 
-    step "1/3  Memory-corruption crashes"
+    step "1/4  Memory-corruption crashes"
     # FPM master logs a crashed worker as: "child N exited on signal 11 (SIGSEGV)".
     # SIGSEGV(11), SIGABRT(6), SIGBUS(7) are the ones memory corruption produces.
     hunt_grep "PHP-FPM worker crashes (SIGSEGV/SIGABRT/SIGBUS)" \
@@ -878,7 +1103,7 @@ cmd_hunt() {
         fi
     fi
 
-    step "2/3  Signs of the attack path"
+    step "2/4  Signs of the attack path"
     # php2shell's OOM producer: a flood of memory_limit fatals, or requests that
     # hit it. One is ordinary; a burst from one client around a crash is not.
     hunt_grep "Out-of-memory / memory_limit fatals" \
@@ -897,7 +1122,7 @@ cmd_hunt() {
     hunt_grep "PHP object injection / unserialize errors (session-deserialization path)" \
         'unserialize\(\): (Error|Function|Class|Extra)|__PHP_Incomplete_Class|session_decode\(\)|[Ff]ailed to decode session' "${LOGS[@]}"
 
-    step "3/3  Post-exploitation residue"
+    step "3/4  Post-exploitation residue"
     # FPM/Apache executing a shell or tool is what nearly every PHP intrusion
     # shows. If the AppArmor profile is loaded in complain or enforce mode, its
     # own log of exec attempts is the strongest local signal.
@@ -921,7 +1146,44 @@ cmd_hunt() {
     # A shell spawned by a worker that then errors: the broken p2s probe command
     # lands here, as does failed command injection generally.
     hunt_grep "Shell exec error from an FPM worker (failed command injection)" \
-        'said into stderr[^"]*"[^"]*(ba)?sh:|(ba)?sh:( [0-9]+:)? .*(cannot (open|create)|No such file|[Ss]yntax error|unexpected (token|end))' "${LOGS[@]}"
+        'said into stderr[^"]*"[^"]*(ba)?sh:|(ba)?sh:( [0-9]+:)? .*(cannot (open|create)|No such file|[Ss]yntax error|unexpected (token|end)|[Rr]ead-only file system)|(ba)?sh:[^"]*(wget|curl|ncat?|php[0-9.]*|python[0-9.]*|perl|whoami|uname|hostname|base64|busybox|mkfifo): (command )?not found' "${LOGS[@]}"
+
+    step "4/4  Indicators from the 2026-10-24 confirmed-exploitation report"
+    # A honeypot report (phpot) tied 35 Apache-parent /bin/sh starts to complete
+    # HTTP requests on single-worker Apache mod_php (PHP 8.4.26). Its chain was
+    # four multipart POSTs (the stages answered 200; the last never reached the
+    # access log because the worker died). The request fingerprint and the
+    # source addresses are weak, fast-aging leads; the proof files, the
+    # per-client OOM repeats and the process check are the stronger ones.
+    hunt_oom_clients "${LOGS[@]}"
+    mapfile -t ALOGS < <(hunt_access_files)
+    if [[ ${#ALOGS[@]} -gt 0 ]]; then
+        info "Reading ${#ALOGS[@]} access log file(s)"
+        hunt_grep "Request fingerprint q<N>=v&q<N>=v&q<N>=v, short or seven-digit form (public PoC family; weak, easily changed)" \
+            '[?&]q[0-9]{1,8}=v&q[0-9]{1,8}=v&q[0-9]{1,8}=v' "${ALOGS[@]}"
+        hunt_big_responses "${ALOGS[@]}" "${LOGS[@]}"
+        if [[ -n "$HUNT_IPS" ]]; then
+            local ipre="" ip
+            for ip in $HUNT_IPS; do ipre+="${ipre:+|}${ip//./\\.}"; done
+            hunt_grep "Traffic from addresses reported in confirmed exploitation (aging indicator)" \
+                "(^|[^0-9.:])(${ipre})([^0-9]|\$)" "${ALOGS[@]}" "${LOGS[@]}"
+        fi
+        if [[ -n "$HUNT_ATTEMPT_IPS" ]]; then
+            local aipre="" aip
+            for aip in $HUNT_ATTEMPT_IPS; do aipre+="${aipre:+|}${aip//./\\.}"; done
+            hunt_grep "Traffic from addresses that sent exploit-shaped requests (attempt indicators, not confirmed RCE; shared addresses possible)" \
+                "(^|[^0-9.:])(${aipre})([^0-9]|\$)" "${ALOGS[@]}" "${LOGS[@]}"
+        fi
+    else
+        inf_hunt "No readable web access logs found, so the request fingerprint and source-address checks were skipped."
+    fi
+    hunt_grep "Edge guard cut a leak-sized Set-Cookie (php/edge/ Apache cookie guard fired)" \
+        'php2shell-guard: oversized Set-Cookie' "${LOGS[@]}"
+    hunt_grep "nginx refused an oversized upstream response header (a leak-sized Set-Cookie does at default buffer sizes; large legitimate headers do too, so a lead only)" \
+        'upstream sent too big header' "${LOGS[@]}"
+    hunt_proof_files
+    hunt_procs
+    hunt_audit
 
     step "Hunt summary"
     if [[ $HUNT_FINDINGS -eq 0 ]]; then
@@ -930,10 +1192,12 @@ cmd_hunt() {
     fi
     warn "${HUNT_FINDINGS} signature group(s) matched. None is proof of compromise on its own."
     echo "  Next steps:"
-    echo "    - Compare counts against a quiet period before ${DISCLOSURE_DATE}; a spike is the real signal."
+    echo "    - Compare counts against a quiet period before ${DISCLOSURE_DATE}; a spike is the real signal. Amazon reported an exploitation attempt from 17 October, four days before the 21 October patch, so a quiet period needs to predate that."
     echo "    - Correlate crashes with memory_limit fatals and multipart POSTs from the same client IP."
     echo "    - Check the web root for new/modified files, and for new cron jobs, scheduled tasks and accounts."
     echo "    - Preserve web-server and PHP logs before they rotate."
+    echo "    - Apache mod_php hosts: this script's AppArmor profile applies to PHP-FPM only, and the ini drop-in is not a fix for CVE-2026-109618. Patching PHP and restarting Apache is the mitigation; php/edge/ holds optional request and response guards."
+    echo "    - A process poll misses a shell that starts and exits between samples. To record every program the web-server account starts, load the auditd rule in php/detect/ (or watch Tetragon process_exec events; the filter is there too)."
     echo "    - Patch: the only complete fix is an updated PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35) or your distro's backport."
     echo "    - Caveat (2026-10-22): an allocator double-free was reproduced on 8.5.12 via the CLI server; if you saw the sanitizer/CLI-server signatures above, 8.5.12 may not be the last word on the 8.5 branch. Keep the AppArmor layer enforced and watch for a follow-up release."
     return 1
@@ -1064,8 +1328,12 @@ check_os() {
         ok "$pretty (Debian-based: /etc/debian_version present, ID=$id)"
     else
         hard "$pretty is not Debian, Ubuntu, Trisquel or a derivative (ID=$id)" \
-             "This script assumes dpkg, /etc/php/X.Y and AppArmor. RHEL/Fedora/SUSE/Arch/Alpine need a different approach."
+             "This script assumes dpkg, /etc/php/X.Y and AppArmor. RHEL/Fedora/SUSE/Arch/Alpine need a different approach. On a cPanel server with EasyApache 4 PHP, use php2shell-cpanel-mitigate.sh instead."
         return 1
+    fi
+
+    if [[ -d /opt/cpanel ]]; then
+        caution "cPanel found: its EasyApache 4 PHP (/opt/cpanel/ea-php*) is not covered by this script. Use php2shell-cpanel-mitigate.sh for it."
     fi
 
     # Base release, used only to tell the user what PHP their distro ships
@@ -1211,7 +1479,7 @@ check_web() {
         [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: $(echo $refs)"
         [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
         for v in "${modphp[@]+"${modphp[@]}"}"; do
-            caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script (mod_php is a demonstrated exploitation surface, so upgrade it and restart Apache)"
+            caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script (mod_php is the configuration a 2026-10-24 honeypot report confirmed 35 shell executions on; the ini setting is not a fix for CVE-2026-109618 and the AppArmor layer here applies to PHP-FPM only, so upgrade PHP and restart Apache)"
             local mrc=0; report_patch "$v" "libapache2-mod-php${v}" apache2 || mrc=$?
             if [[ $mrc -eq 0 ]]; then
                 if grep -lsF "libphp${v}.so (deleted)" /proc/[0-9]*/maps >/dev/null 2>&1; then
@@ -1221,7 +1489,7 @@ check_web() {
                 local modphp_ini="'session.upload_progress.enabled = Off'"
                 dpkg --compare-versions "$v" ge 8.5 && modphp_ini+=" 'fatal_error_backtraces = Off'"
                 soft "Apache is running mod_php ${v}, which isn't patched and isn't covered by this script" \
-                     "Upgrade libapache2-mod-php${v} and restart Apache. Interim: printf '%s\\n' ${modphp_ini} > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2). To filter requests before they reach mod_php, see php/edge/"
+                     "Upgrade libapache2-mod-php${v} and restart Apache. Interim: printf '%s\\n' ${modphp_ini} > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2). To filter requests before they reach mod_php, see php/edge/ (optional, tested guards; not a fix)"
             fi
         done
     fi
@@ -1364,7 +1632,7 @@ main() {
 CMD="${1:-apply}"; [[ $# -gt 0 ]] && shift
 ONLY_VER="${PHP_VER:-}"; FORCE=""; IGNORE_ENV=""
 case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
-case "$CMD" in -h|--help) awk 'NR>2 && /^# =+$/ {exit} NR>2 {sub(/^# ?/, ""); print}' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
+case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --php)   ONLY_VER="${2:?--php needs a version, e.g. 8.2}"; shift 2 ;;

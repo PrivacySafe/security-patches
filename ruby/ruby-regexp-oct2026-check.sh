@@ -6,7 +6,7 @@
 # Fixed in Ruby 4.0.9, 3.4.12 and 3.3.13 (23 Oct 2026) and in GitLab
 # 18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1
 #
-# If this script was helpful, consider a donation to our 501c3 nonprofit:
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # Usage:
