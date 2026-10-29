@@ -795,12 +795,10 @@ cmd_status() {
 # visible. A finding is a lead to investigate, never proof on its own: buggy
 # extensions crash workers too, and the upload-progress field is in legitimate
 # forms. The signatures were confirmed against real php-fpm 8.4 output.
-# 21 October is the patch date. Amazon Threat Intelligence reported an
-# exploitation attempt in its honeypot telemetry from 17 October, four days
-# earlier. It is the only source we know of for that date, so treat it as the
-# likely start, not a settled fact. Use it as the default baseline so a "quiet
-# before" period is more likely to be quiet; override with HUNT_SINCE if your
-# own logs show something earlier.
+# 21 October is the patch date; the phpot report and Amazon both place
+# exploitation attempts from 17 October, four days earlier. Use the earlier
+# date as the default baseline so a "quiet before" period is actually quiet;
+# override with HUNT_SINCE if your own logs show something earlier still.
 DISCLOSURE_DATE="${HUNT_SINCE:-2026-10-17}"
 
 # Logs worth reading: every version's FPM error_log (from its own config),
@@ -1192,7 +1190,7 @@ cmd_hunt() {
     fi
     warn "${HUNT_FINDINGS} signature group(s) matched. None is proof of compromise on its own."
     echo "  Next steps:"
-    echo "    - Compare counts against a quiet period before ${DISCLOSURE_DATE}; a spike is the real signal. Amazon reported an exploitation attempt from 17 October, four days before the 21 October patch, so a quiet period needs to predate that."
+    echo "    - Compare counts against a quiet period before ${DISCLOSURE_DATE}; a spike is the real signal. Exploitation has been reported from 17 October, four days before the 21 October patch, so a quiet period needs to predate that."
     echo "    - Correlate crashes with memory_limit fatals and multipart POSTs from the same client IP."
     echo "    - Check the web root for new/modified files, and for new cron jobs, scheduled tasks and accounts."
     echo "    - Preserve web-server and PHP logs before they rotate."
@@ -1687,3 +1685,4 @@ fi
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

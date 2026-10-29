@@ -78,7 +78,7 @@
 # check prints the exact plan before apply makes any change, and restore reverts
 # a drop-in it wrote. Run check first and review the plan before apply.
 #
-# Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5
 # =============================================================================
 set -euo pipefail
 

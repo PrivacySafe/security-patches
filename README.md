@@ -15,7 +15,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 
 **16 scripts addressing 36 CVEs across 15 software projects and 6 programming languages, plus 4 other global security incidents.**
 
-> 💚 If this work is helpful, please consider [supporting PrivacySafe Foundation](https://privacysafe.foundation), a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, and public-interest privacy and security research.
+> 💚 If this work has been useful, please consider [supporting PrivacySafe Foundation](https://privacysafe.foundation), a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, and public-interest privacy and security research.
 
 ---
 
@@ -40,46 +40,6 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [LiteLLM supply-chain compromise](litellm/README.md#litellm-11070-supply-chain-compromise) | litellm in Python environments and containers on GNU/Linux | [incident](https://github.com/BerriAI/litellm/issues/47826) (litellm 1.107.0, no CVE) | Detect, hunt and contain |
 | [Plex Media Server Plex2Shell](plex/README.md#plex-media-server-plex2shell-rce-chain) | Plex Media Server on GNU/Linux | CVE-2026-96651, CVE-2026-96652, CVE-2026-96654, CVE-2026-96655, CVE-2026-96656 | Read-only check and hunt |
 | [GhostAction developer-machine stealer](ghostaction/README.md#ghostaction-developer-machine-stealer) | Git repositories and developer machines on GNU/Linux | [incident](https://opensourcemalware.com/blog/ghostaction-attack-escalates) (campaign, no CVE) | Scan, hunt and contain |
-
-## 📥 Install from a package
-
-Each release ships three files, all named `psf-security-packages` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.10.25-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
-
-| File | For |
-|---|---|
-| `psf-security-packages_26.10.25-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
-| `psf-security-packages-26.10.25-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
-| `psf-security-packages-26.10.25-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
-
-Check the files against the release's `SHA256SUMS-<version>.txt` before installing, then:
-
-```bash
-sha256sum -c SHA256SUMS-26.10.25-1.0.0.txt
-sudo apt install ./psf-security-packages_26.10.25-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-packages-26.10.25-1.0.0.noarch.rpm    # RPM family
-/opt/psf-security-patches/php/php2shell-mitigate.sh check             # read only
-```
-
-### Where things go
-
-- **`/opt/psf-security-patches/`** holds the whole tree: each tool in its own folder (`php/`, `nginx/`, `curl/` and so on) with its README, plus the governance documents and a `VERSION` file. Run the scripts from there.
-- **`/usr/lib/systemd/system/php2shell-watch.service`** is the live watcher's unit, pointed at the `/opt` path. It is installed but not enabled; see [Watching live](php/README.md#watching-live).
-- **License files:** `LICENSE` and `NOTICE` come with the package (`/usr/share/doc/psf-security-packages/` on Debian, `/usr/share/licenses/` on RPM systems), and the `.deb` carries a `copyright` file. Everything is CC0 1.0 Universal.
-
-Installing runs nothing: there are no install or removal scripts. The only dependencies are bash 4.0 or newer and coreutils.
-
-### Upgrading and removing
-
-Install a newer release the same way and it replaces the old one in place. To remove the tools:
-
-```bash
-sudo apt remove psf-security-packages     # Debian family
-sudo dnf remove psf-security-packages     # RPM family
-```
-
-Removing the package deletes only the files it installed. It does not undo what a tool did to your system when you ran it, such as an ini drop-in, an AppArmor profile or a distrusted certificate. Use each tool's own `cleanup`, `remove` or `restore` command, described in its README, before you remove the package.
-
-Each tool still targets the systems named in its own README: for example the PHP2Shell AppArmor mitigation is for Debian-family systems, and the cPanel variant is for EasyApache 4. See [`packaging/`](packaging/README.md) for how releases are built and verified.
 
 ## 🗓️ Updates
 
