@@ -51,7 +51,8 @@
 #   hunt             read-only: the app folders for planted web shells
 #                    (shx*.php and a known shell by hash) and the web server
 #                    access logs for the exploitation markers. Exit 0 = clean,
-#                    1 = findings.
+#                    1 = findings, 2 = no app folder and no readable log, so
+#                    nothing was searched.
 #   version          print the script version.
 #
 # Env overrides:
@@ -81,7 +82,7 @@ KNOWN_SHELL_SHA256="4b9fbd0663fbfd6028fc216ed18e0d6ef3ae498a7fdc97083e4b0ce3cec4
 KNOWN_IPS="139.28.18.122 89.38.98.50"
 SCRIPT_NAME="collabora-code-oct2026-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 ADVISORY="https://github.com/CollaboraOnline/online/security/advisories/GHSA-g3vx-3m76-fghh"
 FORCE=0
@@ -92,7 +93,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -277,7 +278,7 @@ cmd_hunt() {
         shopt -u nullglob
     done < <(find_apps)
     [[ $any -eq 1 ]] || inf "no app folder to scan"
-    [[ $found -eq 1 ]] || ok "no web-shell files found in the app folders"
+    if [[ $any -eq 1 && $found -eq 0 ]]; then ok "no web-shell files found in the app folders"; fi
 
     step "Exploitation markers in web server access logs since ${HUNT_SINCE}"
     local -a files=()
@@ -289,7 +290,8 @@ cmd_hunt() {
         for f in $g; do [[ -r "$f" && -f "$f" ]] && files+=("$f"); done
     done
     shopt -u nullglob
-    if [[ ${#files[@]} -eq 0 ]]; then warn "No readable access logs (try as root, or set HUNT_LOGS)"
+    local nolog=0
+    if [[ ${#files[@]} -eq 0 ]]; then warn "No readable access logs (try as root, or set HUNT_LOGS)"; nolog=1
     else
         inf "reading ${#files[@]} log file(s)"
         local name re n ip c
@@ -315,13 +317,16 @@ cmd_hunt() {
     echo "  treating as a compromise: anything the web server account could read may be"
     echo "  exposed (check for *.kdbx, wallet.dat, keystore.json and credential stores),"
     echo "  so rotate secrets, and delete any shx*.php under apps/richdocumentscode."
+    if [[ $any -eq 0 && $nolog -eq 1 ]]; then warn "No app folder and no readable access log: nothing was searched, which is not a clean result"; return 2; fi
     return "$found"
 }
 
 # ---------- dispatch ---------------------------------------------------------
 main() {
 CMD="${1:-check}"; [[ $# -gt 0 ]] && shift
-for a in "$@"; do case "$a" in --force) FORCE=1 ;; esac; done
+# only --force is a known option; anything else is refused, so a mistyped or invented flag can never
+# turn into a real apply or restore
+for a in "$@"; do case "$a" in --force) FORCE=1 ;; *) die "Unknown option: $a (the only option is --force, for apply)" ;; esac; done
 case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
 case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$SELF"; exit 0 ;; esac
 echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
@@ -334,3 +339,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

@@ -65,6 +65,8 @@ There is no CVE and no patch. This script is a detector and a containment tool. 
 - **`quarantine` is containment.** It stops the dropped files running; it does not clean a machine that already ran them or revoke what was stolen.
 - **Point `SCAN_PATHS` at your repositories.** It defaults to the current directory and your home, prunes `node_modules`, `.git` and similar, and scans for the artifacts.
 - **GNU/Linux only.**
+- **A scan that could not read its paths is not a clean scan.** If none of the scan paths can be read, `check` stops with exit `2` and says nothing was scanned; if some cannot be read and nothing is found in the rest, it exits `2` rather than `0`. A path that does not exist is skipped.
+- **The script does not report itself.** Its own file names the indicators it looks for, so it is left out of the content scan (the exact running file only; another file with the same text is still reported). If you cloned this repository inside a scanned path, its README and CHANGELOG also name the domains and will match: ignore those.
 
 ---
 

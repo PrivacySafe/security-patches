@@ -86,6 +86,8 @@ The fix is to update curl/libcurl and restart the programs that use it. Where yo
 - **A build without HTTP/2 is not a path.** The check reports HTTP/2 capability so you can tell, but HTTP/2 is built into most modern curl packages.
 - **Distribution backports read correctly.** A package can carry the fix under an older upstream number; if you know a build is fixed and its changelog doesn't name the CVE, add it to `FIXED_BUILDS`.
 - **Containers need their own fix.** Each image carries its own libcurl; rebuild on a fixed base. The script reads the library inside running containers but can't see one installed in an unusual way.
+- **A development build is not the release.** A curl built from git identifies itself as `8.20.2-DEV`, a build made before 8.20.2 shipped, so at a fix version the script reports it as unknown (it may or may not carry the fix) instead of fixed. A development build past the fix version is fixed.
+- **An unreadable `curl` is reported, not skipped.** A `curl` on `PATH` whose `--version` output cannot be read is listed as unknown, and the rest of the check still runs.
 - **GNU/Linux only.** Library discovery and container inspection assume it.
 
 ---

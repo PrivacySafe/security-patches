@@ -79,7 +79,7 @@ GA_NET='my-github\.com|my-gitlab\.com|193\.32\.204\.199'
 PRUNE=(node_modules .git .cache .venv venv site-packages .mypy_cache dist build .next)
 SCRIPT_NAME="ghostaction-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 REF="https://opensourcemalware.com/blog/ghostaction-attack-escalates"
 
@@ -89,7 +89,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -109,9 +109,30 @@ fscan() {   # <find-test-args...>
 
 magic4() { od -An -tx1 -N4 "$1" 2>/dev/null | tr -d ' \n'; }
 
+# This script's own text names the indicators it looks for, so a content scan that reaches
+# the script (run from the directory it was downloaded to, or saved under /tmp) would report
+# the script itself. The script's own file, and only that exact file, is left out.
+SELF_REAL="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+not_self() { local x; while IFS= read -r x; do [[ "$(readlink -f "$x" 2>/dev/null || echo "$x")" == "$SELF_REAL" ]] || echo "$x"; done; }
+
+# At least one scan path must be readable, or nothing was scanned and "clean" would be false.
+# A path that does not exist is skipped (the default $HOME may not exist for a service account);
+# a path that exists but cannot be read leaves the scan partial (exit 2 when nothing is found).
+SCAN_PARTIAL=0
+scan_roots() {
+    local p n=0
+    for p in $SCAN_PATHS; do
+        if [[ ! -e "$p" ]]; then inf "scan path does not exist, skipped: ${p}"
+        elif [[ ! -r "$p" || ( -d "$p" && ! -x "$p" ) ]]; then caution "scan path exists but is not readable: ${p}"; SCAN_PARTIAL=1
+        else n=$((n + 1)); fi
+    done
+    [[ $n -gt 0 ]] || die "none of the scan paths can be read (${SCAN_PATHS}): nothing was scanned"
+}
+
 # ---------- check ------------------------------------------------------------
 cmd_check() {
     local found=0 f m
+    scan_roots
 
     step "Fonts that are not fonts (the stealer vector)"
     local fx=0
@@ -160,13 +181,17 @@ cmd_check() {
     step "Campaign domains / IP anywhere in the scanned files"
     local gx=0 g
     while read -r g; do [[ -n "$g" ]] && { found=1; gx=1; bad "C2 indicator in: ${g}"; }; done \
-        < <(fscan -type f -print 2>/dev/null | head -20000 | xargs -r -d '\n' grep -lE "$GA_NET" 2>/dev/null | head -40 || true)
+        < <(fscan -type f -print 2>/dev/null | head -20000 | xargs -r -d '\n' grep -lE "$GA_NET" 2>/dev/null | not_self | head -40 || true)
     [[ $gx -eq 1 ]] || ok "no my-github.com / my-gitlab.com / 193.32.204.199 in the scanned files"
 
     step "Verdict"
     if [[ $found -eq 1 ]]; then
         warn "GhostAction stage-2 indicators found. Your credentials may be stolen: from a CLEAN device, revoke your GitHub tokens and authorized OAuth apps (Settings > Applications), change your password, and rotate every credential the repositories and workflows could reach (cloud keys, npm/PyPI tokens, SSH and signing keys, Kubernetes and AI provider keys). Run 'hunt', audit the repositories, and warn anyone who cloned them. Keep VS Code workspace trust on. Context: ${REF}"
         return 1
+    fi
+    if [[ $SCAN_PARTIAL -eq 1 ]]; then
+        caution "no indicators in the paths that could be read, but at least one path could not be read: this is not a clean result"
+        return 2
     fi
     info "No GhostAction stage-2 artifacts found in the scanned paths"
     return 0
@@ -178,7 +203,9 @@ cmd_hunt() {
 
     step "Cron jobs that fetch and run attacker code"
     local -a cronsrc=()
-    have crontab && { crontab -l >/tmp/.ga_cron 2>/dev/null && cronsrc+=(/tmp/.ga_cron); }
+    local cronf; cronf="$(mktemp)" || die "cannot create a temporary file"
+    trap 'rm -f "${cronf:-}"' EXIT
+    have crontab && { crontab -l >"$cronf" 2>/dev/null && cronsrc+=("$cronf"); }
     local g f
     shopt -s nullglob
     for g in /etc/crontab /etc/cron.d/* /var/spool/cron/crontabs/* /var/spool/cron/*; do
@@ -191,7 +218,7 @@ cmd_hunt() {
         if [[ "${n:-0}" -gt 0 ]]; then found=1; caution "suspicious cron entries: ${n}"; { grep -hE "$GA_NET|(curl|wget)[^|]*\|\s*(ba)?sh" "${cronsrc[@]}" 2>/dev/null || true; } | tail -4 | cut -c1-200 | sed 's/^/      /'
         else ok "no cron entry fetches and runs code or names the C2"; fi
     else inf "no readable crontabs (try as root, or check your user crontab)"; fi
-    rm -f /tmp/.ga_cron 2>/dev/null || true
+    rm -f "$cronf" 2>/dev/null || true
 
     step "Campaign domains / IP in shell history, git config and logs"
     local -a files=()
@@ -225,6 +252,7 @@ cmd_hunt() {
 # ---------- quarantine (containment) -----------------------------------------
 cmd_quarantine() {
     local f m bdir did=0
+    scan_roots
     step "Containment: quarantining confirmed GhostAction artifacts"
     _save() {   # <path>
         local p="$1"
@@ -276,3 +304,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

@@ -78,13 +78,14 @@
 # check prints the exact plan before apply makes any change, and restore reverts
 # a drop-in it wrote. Run check first and review the plan before apply.
 #
+# Assisted-by: Claude Opus 5.5
 # Assisted-by: Claude Sonnet 5.5
 # =============================================================================
 set -euo pipefail
 
 SCRIPT_NAME="php2shell-cpanel-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 
 EA_ROOT="${EA_ROOT:-/opt/cpanel}"
 HOME_ROOT="${HOME_ROOT:-/home}"
@@ -224,22 +225,34 @@ fixed_release_for() {   # <major.minor> -> first fixed upstream release
 version_at_least() { [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n 1)" == "$2" ]]; }   # <have> <want>
 PATCH_STATE=""; PATCH_WHY=""; PKG_NAME=""
 patch_state() {   # <php binary>   sets PATCH_STATE (patched|unpatched) and PATCH_WHY
-    local php="$1" ver branch fixed
+    local php="$1" ver branch fixed num rest pre=0
     PATCH_STATE="unpatched"; PATCH_WHY=""; PKG_NAME=""
     ver="$("$php" -r 'echo PHP_VERSION;' 2>/dev/null || true)"
     [[ -n "$ver" ]] || { PATCH_WHY="could not read the PHP version"; return 0; }
     branch="${ver%.*}"; fixed="$(fixed_release_for "$branch")"
-    if [[ -n "$fixed" ]] && version_at_least "$ver" "$fixed"; then
-        PATCH_STATE="patched"; PATCH_WHY="${ver} is at or above the upstream fix ${fixed}"; return 0
+    # A release candidate, beta, alpha or dev build of the fixed number (8.4.27RC1, 8.4.27-dev) comes
+    # BEFORE that release, but sort -V puts it after, so it would read as patched. Judge such a build
+    # by its numeric part, and only above the fixed number, never at it.
+    num="$(grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' <<<"$ver" || true)"; rest="${ver#"$num"}"
+    [[ -n "$num" && "$rest" =~ ^(-?dev|RC|rc|alpha|beta|a[0-9]|b[0-9]) ]] && pre=1
+    if [[ -n "$fixed" ]]; then
+        if [[ $pre -eq 1 ]]; then
+            if version_at_least "$num" "$fixed" && [[ "$num" != "$fixed" ]]; then
+                PATCH_STATE="patched"; PATCH_WHY="${ver} is a pre-release of a release above the upstream fix ${fixed}"; return 0
+            fi
+        elif version_at_least "$ver" "$fixed"; then
+            PATCH_STATE="patched"; PATCH_WHY="${ver} is at or above the upstream fix ${fixed}"; return 0
+        fi
     fi
     if command -v rpm >/dev/null 2>&1; then
         PKG_NAME="$(rpm -qf --qf '%{NAME}-%{VERSION}-%{RELEASE}' "$php" 2>/dev/null || true)"
-        if [[ -n "$PKG_NAME" ]] && rpm -q --changelog "$PKG_NAME" 2>/dev/null | grep -q "$CVE_A" \
-           && rpm -q --changelog "$PKG_NAME" 2>/dev/null | grep -q "$CVE_B"; then
+        if [[ -n "$PKG_NAME" ]] && rpm -q --changelog "$PKG_NAME" 2>/dev/null | grep "$CVE_A" >/dev/null \
+           && rpm -q --changelog "$PKG_NAME" 2>/dev/null | grep "$CVE_B" >/dev/null; then
             PATCH_STATE="patched"; PATCH_WHY="the package changelog of ${PKG_NAME} names both CVEs"; return 0
         fi
     fi
-    if [[ -n "$fixed" ]]; then PATCH_WHY="${ver} is below the upstream fix ${fixed} and no changelog names both CVEs"
+    if [[ -n "$fixed" && $pre -eq 1 && "$num" == "$fixed" ]]; then PATCH_WHY="${ver} is a pre-release of ${fixed}, not the fixed release itself, and no changelog names both CVEs"
+    elif [[ -n "$fixed" ]]; then PATCH_WHY="${ver} is below the upstream fix ${fixed} and no changelog names both CVEs"
     else PATCH_WHY="${ver} is an end-of-life branch with no upstream fix and no changelog names both CVEs"; fi
 }
 

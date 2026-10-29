@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# php2shell-watch - follow PHP and web server logs live and flag trouble  (v1)
+# php2shell-watch: follow PHP and web server logs live and flag trouble  (v1)
 # CVE-2026-109618 / CVE-2026-109619
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -125,7 +125,7 @@ shopt -u nullglob
 # AddressSanitizer and reproduced through the built-in CLI server (php -S) with a
 # crafted POST body. A sanitizer/debug build phrases the double-free differently
 # from the glibc/Zend panic line, and prints its backtrace to the process's
-# stderr - redirect php -S / FPM stderr into one of the watched files to see it.
+# stderr; redirect php -S / FPM stderr into one of the watched files to see it.
 # The CLI server is a dev tool, not the FPM path these CVEs target, and the
 # mitigate script's AppArmor profile does not confine the `php` binary; treat a
 # php-S hit as "a dev server is crashing / exposed", not as a contained event.
@@ -443,4 +443,3 @@ done
 cleanup
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

@@ -48,4 +48,4 @@
 # this one is off by default.
 #-a always,exit -F arch=b32 -S execve -F euid=33 -F auid=4294967295 -k php2shell_web_exec
 
-# Assisted-by: Claude Sonnet 5.5
+# Assisted-by: Claude Opus 5.5

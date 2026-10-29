@@ -75,7 +75,7 @@ HUNT_SINCE="${HUNT_SINCE:-2026-10-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="nginx-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 ADVISORY="https://nginx.org/en/security_advisories.html"
 
@@ -85,7 +85,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -150,7 +150,7 @@ nginx_pkg_state() {   # <X.Y.Z> <binary path> -> rc|why
 
 # ---------- discovery --------------------------------------------------------
 nginx_binaries() {
-    { command -v -a nginx 2>/dev/null || true
+    { type -a -P nginx 2>/dev/null || true
       shopt -s nullglob
       local c
       for c in /usr/sbin/nginx /usr/local/sbin/nginx /usr/local/nginx/sbin/nginx /opt/*/sbin/nginx; do echo "$c"; done
@@ -255,7 +255,7 @@ cmd_check() {
         if [[ -z "$v" ]]; then caution "njs present but version unreadable"; unknownz=1
         elif ver_ge "$v" "$NJS_FIXED"; then ok "njs ${v}  $(state_word 0)  (>= ${NJS_FIXED})"
         else bad "njs ${v}  $(state_word 1)  (< ${NJS_FIXED}; CVE-2026-101019 / CVE-2026-101025 in the XML module); upgrade njs to ${NJS_FIXED}"; exposed=1; fi
-    elif [[ -n "$primary" ]] && "$primary" -V 2>&1 | grep -q 'js_module\|njs'; then
+    elif [[ -n "$primary" ]] && "$primary" -V 2>&1 | grep 'js_module\|njs' >/dev/null; then
         caution "nginx is built with the njs module but the njs CLI is not on PATH; confirm njs >= ${NJS_FIXED} (CVE-2026-101019 / CVE-2026-101025)"; unknownz=1
     else inf "njs not detected"; fi
 
@@ -367,3 +367,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

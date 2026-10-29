@@ -59,6 +59,8 @@
 #   SAFE_PIN=1.106.2                  the last clean release to pin to
 #   BACKUP_ROOT=/var/backups/litellm-oct2026
 #   HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt's network check
+#   SCAN_CONTAINERS=1                 1 = also look inside running containers;
+#                                     0 = skip them
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -81,7 +83,7 @@ NET_MARKERS='litellm\.dev|letters9813|remote_code_loader|/codepy|pythonclient-te
 TMP_MARKERS=(/tmp/.pc_once_* /tmp/remote_code_loader.lock)
 SCRIPT_NAME="litellm-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 REF="https://github.com/BerriAI/litellm/issues/47826"
 
@@ -91,7 +93,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -145,9 +147,20 @@ tmp_markers_present() {
     return "$hit"
 }
 
+# A scan path that exists but cannot be read leaves the scan partial: with nothing found that is
+# exit 2, not a clean result. A path that does not exist is simply skipped.
+SCAN_PARTIAL=0
+scan_roots() {
+    local p
+    for p in $SCAN_PATHS; do
+        if [[ -e "$p" && ( ! -r "$p" || ( -d "$p" && ! -x "$p" ) ) ]]; then caution "scan path exists but is not readable: ${p}"; SCAN_PARTIAL=1; fi
+    done
+}
+
 # ---------- check ------------------------------------------------------------
 cmd_check() {
     local rc=0 found=0 sp v arts a any=0
+    scan_roots
     step "litellm in Python environments"
     while read -r sp; do
         [[ -n "$sp" ]] || continue
@@ -197,8 +210,10 @@ cmd_check() {
 
     step "Verdict"
     [[ $found -eq 1 ]] && rc=1
+    if [[ $rc -eq 0 && $SCAN_PARTIAL -eq 1 ]]; then rc=2; fi
     case $rc in
         0) info "No sign of the litellm 1.107.0 compromise where this could read" ;;
+        2) warn "No indicators in what could be read, but a scan path could not be read: this is not a clean result. Run it again as a user who can read that path" ;;
         1) warn "Compromise indicators found. TREAT THE HOST AS FULLY COMPROMISED: the stealer runs on every Python start. From a clean machine, revoke and rotate every credential this host could reach (cloud keys, API tokens, SSH and signing keys, browser sessions, the LiteLLM proxy's keys). Then rebuild, and reinstall litellm pinned to ${SAFE_PIN} by digest. Run 'quarantine' to stop the backdoor re-running in the meantime. Incident: ${REF}" ;;
     esac
     return "$rc"
@@ -283,3 +298,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

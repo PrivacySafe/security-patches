@@ -48,6 +48,12 @@
 #                                     where to look for Plex data directories
 #   SCAN_CONTAINERS=1                 1 = read the Plex version inside containers
 #   HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt
+#   SCAN_DEPTH=7                      how deep the search for Plex data directories goes
+#   CODECS_SINCE_DAYS=30              how far back hunt lists changed files in the
+#                                     Codecs directory
+#   HUNT_ROOTS="/tmp /var/tmp /dev/shm"
+#                                     scratch directories hunt searches for payload
+#                                     files and indicator strings
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -61,15 +67,15 @@ PLEX_DATA_PATHS="${PLEX_DATA_PATHS:-/var/lib/plexmediaserver /config /opt /srv /
 SCAN_CONTAINERS="${SCAN_CONTAINERS:-1}"
 SCAN_DEPTH="${SCAN_DEPTH:-7}"
 HUNT_LOGS="${HUNT_LOGS:-}"
+HUNT_ROOTS="${HUNT_ROOTS:-/tmp /var/tmp /dev/shm}"
 # Known indicators (attackers rotate these; see the caveat hunt prints).
 IOC_NAMES='x12345|mylovelyminer|myawesomeproxy'
 IOC_NET='proxystream\.st|217\.60\.194\.116|91\.92\.40\.202|176\.65\.139\.228|45\.194\.92\.222'
 IOC_BANNER='agree to the potential external use of your internet traffic'
 SCRIPT_NAME="plex2shell-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
-REF="https://github.com/code-zm/plex2shell/"
 
 # ---------- output -----------------------------------------------------------
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -77,7 +83,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -87,6 +93,11 @@ ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 state_word() { case "$1" in 0) echo -e "${GREEN}fixed${NC}" ;; 1) echo -e "${RED}vulnerable${NC}" ;; *) echo -e "${YELLOW}unknown${NC}" ;; esac; }
 
 # Plex versions look like 1.43.3.10861-xxxxxxxxx; compare the numeric part.
+# This script's own text names the indicators it looks for, so a content scan that reaches
+# the script (run from the directory it was downloaded to, or saved under /tmp) would report
+# the script itself. The script's own file, and only that exact file, is left out.
+SELF_REAL="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+not_self() { local x; while IFS= read -r x; do [[ "$(readlink -f "$x" 2>/dev/null || echo "$x")" == "$SELF_REAL" ]] || echo "$x"; done; }
 plex_num() { local v="${1%%-*}"; grep -oE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' <<<"$v" || grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' <<<"$v" || true; }
 plex_state() {   # <version> -> rc|why
     local v; v="$(plex_num "$1")"
@@ -156,7 +167,7 @@ cmd_check() {
     [[ $rc -eq 0 && $unknownz -eq 1 ]] && rc=2
     case $rc in
         0) info "No vulnerable Plex Media Server found where this could read a version" ;;
-        1) warn "A vulnerable Plex Media Server is present and Plex2Shell is exploited in the wild. Upgrade to ${PLEX_FIXED} or later (NAS, Docker and VM installs too) and restart. Until then, remove any router port-forwarding to Plex so it is not reachable from the internet. Then run 'hunt'. Advisory/PoC context: ${REF}" ;;
+        1) warn "A vulnerable Plex Media Server is present and Plex2Shell is exploited in the wild. Upgrade to ${PLEX_FIXED} or later (NAS, Docker and VM installs too) and restart. Until then, remove any router port-forwarding to Plex so it is not reachable from the internet. Then run 'hunt'." ;;
         *) warn "A Plex version couldn't be read. Confirm the running build is ${PLEX_FIXED} or later, especially on Docker and NAS" ;;
     esac
     return "$rc"
@@ -166,7 +177,8 @@ cmd_check() {
 cmd_hunt() {
     local found=0
     step "Known payload file names in Plex data, /tmp and scratch dirs"
-    local -a roots=(/tmp /var/tmp /dev/shm)
+    # shellcheck disable=SC2206
+    local -a roots=($HUNT_ROOTS)
     local d
     while read -r d; do [[ -n "$d" ]] && roots+=("$d"); done < <(plex_data_dirs)
     local f
@@ -199,7 +211,7 @@ cmd_hunt() {
     for d in "${roots[@]}"; do
         [[ -d "$d" ]] || continue
         while read -r f; do [[ -n "$f" ]] && { found=1; bn=1; bad "proxyware/mining indicator in: ${f}"; }; done \
-            < <(grep -rlaE "$IOC_BANNER|$IOC_NET" "$d" 2>/dev/null | head -20 || true)
+            < <(grep -rlaE "$IOC_BANNER|$IOC_NET" "$d" 2>/dev/null | not_self | head -20 || true)
     done
     [[ $bn -eq 1 ]] || ok "no proxyware banner or proxystream.st indicator in the scanned files"
 
@@ -242,7 +254,7 @@ case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${S
 case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$SELF"; exit 0 ;; esac
 [[ $# -eq 0 ]] || die "Unknown option: $1"
 echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
-echo "Plex2Shell: ${CVES}; context: ${REF}"
+echo "Plex2Shell: ${CVES}"
 case "$CMD" in
     check|hunt) "cmd_${CMD}" ;;
     *) die "Unknown command: $CMD (check|hunt|version)" ;;
@@ -251,3 +263,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

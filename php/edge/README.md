@@ -2,14 +2,14 @@
 
 Part of the [PHP docs](../README.md) in the [PrivacySafe Security Patches](../../README.md) collection. These are **compensating controls, not a fix**: the only complete fix is a patched PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35, or your distribution's backport). They narrow what a request can do on the way in and what a leak can do on the way out. They matter most for Apache `mod_php` hosts, which the [AppArmor layer](../README.md#php2shell-interim-mitigation) of `php2shell-mitigate.sh` does not reach (it confines PHP-FPM only). To see an attack rather than limit it, see [`php/detect/`](../detect/README.md).
 
-The behaviour described here was verified on real servers with real PHP handlers (Apache 2.4.58 with `mod_php`, nginx 1.24.0 with PHP-FPM, both PHP 8.3.6), using benign requests only. [Verification](#verification) lists the checks.
-
 ## What is here
 
 | File | Server | What it does |
 |---|---|---|
 | [`apache-php2shell-guard.conf`](apache-php2shell-guard.conf) | Apache httpd (`mod_php` or `proxy_fcgi`) | Multipart guard, cookie guard, and an optional body size limit (commented out) |
 | [`nginx-php2shell-guard-http.conf`](nginx-php2shell-guard-http.conf) and [`nginx-php2shell-guard-server.conf`](nginx-php2shell-guard-server.conf) | nginx | Multipart guard, plus notes on nginx's own body size and response header limits |
+| [`apache-php2shell-guard.htaccess`](apache-php2shell-guard.htaccess) | Apache 2.4, `.htaccess` only | The same multipart and cookie guards for a host where you cannot edit the server configuration. Ships as a dry run; see [below](#apache-without-server-access-the-htaccess-file) |
+| [`php2shell-edge-test.sh`](php2shell-edge-test.sh) | Any server | Sends benign requests and checks that a guard behaves as described. Needs only bash and curl; see [below](#testing-a-guard-php2shell-edge-testsh) |
 
 The two servers do not offer the same controls, and the differences matter:
 
@@ -82,7 +82,7 @@ The Apache allowlist tests the original request line, not `%{REQUEST_URI}`: a pe
 
 The disclosure stage of the chain returned a `PHPSESSID` of 819,200 bytes URL-decoded in `Set-Cookie`, which is about 2 MB on the wire once URL-encoded. A browser cannot store a cookie over 4096 bytes anyway, so the guard replaces the value of any `Set-Cookie` longer than that with a short marker. It needs `mod_headers`. It removes the leak from the response; it does not stop the memory read.
 
-Tested with a benign value of the leak's size: 819,200 random bytes, URL-encoded the way PHP encodes a session ID (2,034,988 bytes on the wire), emitted by PHP under `mod_php`. Without the guard the response headers were 2,035,615 bytes and carried the whole value; with it they were 228 bytes, the value was replaced by the marker, and the guard wrote one log line. A plain 819,200-byte value was cut the same way.
+For a benign value of the leak's size (819,200 random bytes, URL-encoded the way PHP encodes a session ID, 2,034,988 bytes on the wire) emitted by PHP under `mod_php`, the response headers are 2,035,615 bytes without the guard and carry the whole value; with it they are 228 bytes, the value is replaced by the marker, and the guard writes one log line. A plain 819,200-byte value is cut the same way.
 
 Two consequences to know about:
 
@@ -127,9 +127,54 @@ This is the one control here that **cannot run log-only**: a limit that is too l
 
 Limits: this is not a fix. The sizes the phpot report observed are not sizes the bug requires, an attacker can resize a request, and a site that must accept large bodies everywhere gets nothing from it. It refuses the observed, unmodified chain's large stages; it does not show the chain fails without them.
 
+## Apache without server access: the .htaccess file
+
+[`apache-php2shell-guard.htaccess`](apache-php2shell-guard.htaccess) is the same idea for a host where you can edit `.htaccess` but not the server configuration. Put it in the document root. It needs Apache 2.4, `mod_headers`, and an `AllowOverride` that includes `FileInfo` and `AuthConfig` (`AllowOverride All` does). Without `AuthConfig`, the `Require` line makes every request to the directory return `500` and Apache logs "not allowed here".
+
+**It has no log-only mode.** `LogMessage`, which the `.conf` uses to log what it would block, is refused in `.htaccess` ("not allowed here"), and `.htaccess` cannot change what the error log records. So the file ships as a dry run: it adds an `X-PHP2Shell-Guard: would-block` header to the requests it would refuse and refuses nothing. Use the site with the browser's network tab open, or run [the tester](#testing-a-guard-php2shell-edge-testsh), add each upload path that shows the header to the allowlist, and then enforce by uncommenting the three-line `<If>` block and deleting the dry-run line, so the guard does not announce itself.
+
+Two details shape it. A `Header` directive inside the `<If>` does not fire on a normal response (it only appears on the `403`), so the dry-run marker uses `Header`'s own `expr=` condition and the condition appears twice: keep the two copies identical when you edit the allowlist. And evaluating the condition once with `SetEnvIfExpr` and testing the variable in the `<If>` lets direct requests to a real file through, because the variable is not set yet when the `<If>` is evaluated; it only appears to work on `/`, through the directory index redirect. The shipped file puts the full condition in the `<If>`.
+
+On Apache 2.4.58 with static files and `AllowOverride FileInfo AuthConfig`, the dry run marks and passes; enforcing refuses a multipart POST to `/`, to a path that does not exist and to a look-alike of an allowlisted path, and passes the allowlisted path (with or without a query string), a urlencoded POST, a GET and `text/plain`; the optional `LimitRequestBody` answers `413` above the limit and a `<Files>` override raises it for one file; and the cookie rule cuts a 5,000 byte `Set-Cookie` and leaves a normal one alone.
+
+## Testing a guard: php2shell-edge-test.sh
+
+[`php2shell-edge-test.sh`](php2shell-edge-test.sh) checks that a guard behaves as described on a URL, with benign requests only (a form field named `a` with the value `b`). It needs bash and curl on the machine you run it from and nothing on the server.
+
+```bash
+# the .htaccess dry run
+./php2shell-edge-test.sh --expect dry-run https://your.site/
+# an enforcing guard, with your allowlist
+./php2shell-edge-test.sh --expect block --allow /wp-admin/async-upload.php https://your.site/
+# log-only on the server itself (the Apache .conf or the nginx snippets)
+./php2shell-edge-test.sh --expect log-only --log /var/log/nginx/php2shell-guard.log --host your.site http://127.0.0.1/
+```
+
+It sends a urlencoded POST (which must not be refused), then a multipart POST in the forms PHP parses: plain, upper case, comma separator, a space before the semicolon, and chunked. For an allowlisted path it also checks that the path passes and that look-alikes (`PATH.bak`, `PATH/extra`, the path in a query string) do not. It exits `0` if everything passed, `1` if a check failed and `2` if the server could not be reached.
+
+A pass shows the tested URL behaves as described. It does not show a server is safe, covers no other path or virtual host, and cannot tell which component refused a request.
+
+Run against Apache 2.4.58 and nginx 1.24.0: the `.htaccess` in dry run and enforcing, the Apache `.conf` log-only and enforcing, and the nginx snippets log-only and enforcing. It also fails when it should: it reports five failures and exits `1` when told to expect enforcement of the dry run file, exits `1` against a server with no guard, and exits `2` for an unreachable address.
+
+## Which Content-Type values matter
+
+Another published guard (an `.htaccess` that also matches leading whitespace) raised the question of which `Content-Type` variants a guard has to catch, so this section records what PHP actually parses, using `php-cgi` from PHP 8.3.6, which shares its multipart parser with PHP-FPM and `mod_php`, and a benign body with one field and one small file:
+
+| `Content-Type` value | PHP parses it as multipart | Apache guard | nginx guard |
+|---|---|---|---|
+| `multipart/form-data; boundary=x` | Yes | Refused | Refused |
+| `MULTIPART/FORM-DATA; boundary=x` | Yes | Refused | Refused |
+| `multipart/form-data, boundary=x` | Yes | Refused | Refused |
+| `multipart/form-data ; boundary=x` | Yes | Refused | Refused |
+| Leading spaces before `multipart/form-data` | No | Refused (Apache trims them first) | Refused (nginx trims them first) |
+| A leading tab before `multipart/form-data` | No | Refused (Apache trims it) | Not matched, and reaches the backend |
+| `text/plain, multipart/form-data; boundary=x` | No | Not relevant | Not relevant |
+
+Every value PHP parses as multipart begins with `multipart/form-data`, which both guards match case-insensitively as a prefix, so **the guards need no change**. The one gap in the table, a leading tab through nginx, is a value PHP does not treat as multipart. Matching leading whitespace as well would be harmless, but it would add nothing. The Apache and nginx columns are from Apache 2.4.58 and nginx 1.24.0; PHP was tested through `php-cgi`, not through FPM or `mod_php`.
+
 ## Verify on every virtual host
 
-A server-level setting can be overridden per host, so confirm the guard is live on each one. Send a multipart POST to each host and look for the guard's line:
+A server-level setting can be overridden per host, so confirm the guard is live on each one. [`php2shell-edge-test.sh`](#testing-a-guard-php2shell-edge-testsh) does this with `--host`. By hand, send a multipart POST to each host and look for the guard's line:
 
 ```bash
 # Apache (one request per virtual host; set the Host header)
@@ -142,31 +187,6 @@ tail -3 /var/log/nginx/php2shell-guard.log
 ```
 
 In log-only mode you get your site's normal response and one log line; once enforcing, a path not on the allowlist returns `403`. A plain form POST (`-d a=b`) should be unaffected in both modes. If a host logs nothing, its configuration overrides the guard.
-
-## Verification
-
-Ubuntu, benign requests only (small uploads, zero-filled bodies, and leak-sized headers of plain characters, never exploit content). Apache 2.4.58 ran PHP 8.3.6 as `mod_php` with a per-directory WordPress-style rewrite to `index.php`, and separately as `mod_proxy_fcgi` in front of PHP-FPM; nginx 1.24.0 ran PHP 8.3.6 through PHP-FPM with `try_files` falling back to `index.php`, and separately as a reverse proxy in front of the Apache `mod_php` backend. One check ran against the official WordPress codebase.
-
-| Check | Apache with `mod_php` | Apache with `proxy_fcgi` | nginx with PHP-FPM | nginx in front of Apache |
-|---|---|---|---|---|
-| Configuration test passes | Yes | Yes | Yes | Yes |
-| Log-only: a multipart POST passes and is logged; a urlencoded POST is ignored | Yes | Yes | Yes | Yes |
-| Enforcing: a multipart POST to a path not on the allowlist gets `403`; an allowlisted upload script gets `200` | Yes | Yes | Yes | Yes |
-| An allowlisted route handled through the `index.php` rewrite gets `200` | Yes | - | Yes | - |
-| Allowlist bypass attempts get `403` (an allowed path in the query string, an extra path segment, a look-alike suffix) | Yes | - | Yes | - |
-| A chunked-encoding multipart body is matched the same as a fixed-length one | Yes | - | Yes | - |
-| Real HTTP/2 (negotiated over TLS) | Falls back to HTTP/1.1; see below | - | Yes | - |
-| A normal PHP session cookie is left untouched | Yes | Yes | Yes | Yes |
-| 200 KB upload accepted, 1.1 MB upload refused with `413` | Yes, at `LimitRequestBody 1048576` | - | Yes, at the default `1m` | - |
-| A leak-sized `Set-Cookie` from PHP (819,200 bytes decoded, about 2 MB on the wire) | Cut to the marker, one log line | `500`: `mod_proxy_fcgi`'s own FastCGI header-size limit rejects it before the guard runs | `502` at default, 16k and 1m buffers; delivered at 4m buffers | Same as nginx with PHP-FPM (`proxy_buffer_size` behaves the same as `fastcgi_buffer_size`) |
-| A `Set-Cookie` that is not the first one in the response is still cut, but the log line does not fire | Yes (Apache's log expression reads only the first value) | - | - | - |
-| Apache's allowlist matches the project's own documented WordPress example (`/wp-admin/async-upload.php`, `/wp-admin/media-new.php`, `/wp-json/wp/v2/media`) against the real WordPress codebase; a non-matching path (`/wp-login.php`, `/xmlrpc.php`) gets `403` | Yes | - | Yes (nginx's allowlist map) | - |
-
-Also verified with simple handlers and zero-filled bodies: the full body-size matrix above (fixed-length and chunked), the per-path limit override on both servers, the Apache guard file's own `LimitRequestBody 1048576` example uncommented, and how nginx treats the directive: an `http`-level value is overridden by a server's own, a value in the server snippet applies, and a duplicate in the same block fails `nginx -t`.
-
-**HTTP/2 and `mod_php` do not go together.** Apache's own HTTP/2 module declines to operate under the `prefork` MPM that `mod_php` requires (Apache logs this itself: "the currently selected mpm will just not do"), so it silently serves such a connection over HTTP/1.1 regardless of what the client negotiates. A `mod_php` host therefore never actually serves HTTP/2, and the guard's behaviour there is the same HTTP/1.1 behaviour already covered above. `proxy_fcgi` and PHP-FPM have no such restriction, and nginx's HTTP/2 behaviour was verified directly.
-
-The nftables egress rule was loaded on a live system and generated a real DNS lookup and a real outbound TCP connection as the web account; both were recorded, and the same traffic run as a different user was not.
 
 ## Limits
 

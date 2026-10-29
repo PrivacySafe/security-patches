@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# PHP2Shell interim mitigation - PHP-FPM 7.0 through 8.5  (v5)
+# PHP2Shell interim mitigation for PHP-FPM 7.0 through 8.5  (v5)
 # CVE-2026-109618 / CVE-2026-109619, and CVE-2026-115560 (session upload
 # progress, announced 23 Oct 2026, fix due in the next regular PHP release)
 #
@@ -55,6 +55,8 @@
 # upstream version, known distro backport builds, and the package changelog.
 #
 # Env overrides:
+#   PHP_VER=X.Y                        same as --php X.Y (an exported PHP_VER therefore
+#                                      limits the run to that version)
 #   SUPPORTED_VERS="7.0 ... 8.5"       versions this script will touch
 #   FIXED_BUILDS="7.4.33-1+deb11u9"    extra fixed distro builds (backports)
 #   PATCHED_X_Y=<version>              first fixed upstream release for branch
@@ -112,13 +114,13 @@ set -euo pipefail
 # installs, so any pasted output or file says which version produced it.
 SCRIPT_NAME="php2shell-mitigate.sh"
 SCRIPT_VERSION="5.2.5"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
 # CAUTION (observed 2026-10-22): an ASan double-free in the Zend allocator
-# (free -> __zend_free -> _efree, zend_alloc.c) was reproduced on 8.5.12 - the
-# release listed below as fixed - via the built-in CLI server (php -S), with a
+# (free -> __zend_free -> _efree, zend_alloc.c) was reproduced on 8.5.12 (the
+# release listed below as fixed) via the built-in CLI server (php -S), with a
 # crafted POST body. Unconfirmed on a stock (non-ASan) release build, and it may
 # be a distinct bug rather than an incomplete fix for CVE-2026-109618/-109619.
 # The baseline is left as-is pending confirmation. If you want the script to stop
@@ -163,7 +165,8 @@ GUARD_HINT="${GUARD_HINT:-1}"; GUARD_HINT_SHOWN=0
 # Add fixed builds as they're published, e.g. a Debian LTS/ELTS 7.4 update
 FIXED_BUILDS="${FIXED_BUILDS:-}"
 MARKER="# managed-by: php2shell-mitigation"
-BACKUP_ROOT="/var/backups/php2shell/$(date +%Y%m%d-%H%M%S)"
+# the process id keeps two runs in the same second from sharing a directory and overwriting the first backup
+BACKUP_ROOT="/var/backups/php2shell/$(date +%Y%m%d-%H%M%S)-$$"
 WEB_ROOTS="${WEB_ROOTS:-/var/www /srv/www}"
 HUNT_IPS="${HUNT_IPS-15.204.59.70 162.35.99.94}"
 HUNT_ATTEMPT_IPS="${HUNT_ATTEMPT_IPS-104.28.208.84 144.48.4.242}"
@@ -193,7 +196,7 @@ svc_active() {
 }
 svc_enabled() {
     if have_systemd; then systemctl is-enabled --quiet "$1" 2>/dev/null; return; fi
-    if command -v rc-update >/dev/null; then rc-update show 2>/dev/null | grep -qE "^[[:space:]]*$1[[:space:]]"; return; fi
+    if command -v rc-update >/dev/null; then rc-update show 2>/dev/null | grep -E "^[[:space:]]*$1[[:space:]]" >/dev/null; return; fi
     compgen -G "/etc/rc[2-5].d/S*$1" >/dev/null
 }
 svc_do() {   # restart|reload <service>
@@ -240,10 +243,13 @@ detect_versions() {
 }
 
 # ---------- helpers ----------------------------------------------------------
-backup() {
+backup() {   # <file> [name in the backup directory]
+    # the profile, its local override and its disable link all share one base name, so remove
+    # passes distinct names; copying them under their own names overwrote each other
+    local name="${2:-$(basename "$1")}"
     mkdir -p "$BACKUP_DIR"
-    cp -a "$1" "$BACKUP_DIR/"
-    info "Backed up $1 -> $BACKUP_DIR/"
+    cp -a "$1" "$BACKUP_DIR/$name"
+    info "Backed up $1 -> $BACKUP_DIR/$name"
 }
 
 refresh_info() { FPM_INFO="$("$FPM_BIN" -i 2>/dev/null || true)"; }
@@ -517,7 +523,7 @@ write_profile() {   # $1 = output path, $2 = mode
 
     cat > "$out" <<AAEOF
 ${MARKER}
-# AppArmor profile - php-fpm ${PHP_VER} - PHP2Shell interim mitigation
+# AppArmor profile for php-fpm ${PHP_VER}: PHP2Shell interim mitigation
 # Generated $(date -u +%FT%TZ) by ${SCRIPT_NAME} ${SCRIPT_VERSION} (${SELF}). Regenerated on every run:
 # put site-specific rules in ${AA_LOCAL} (never overwritten).
 # Switch modes with: ${SELF} enforce ${HINT} | ${SELF} complain ${HINT}
@@ -590,7 +596,7 @@ ${FPM_BIN} flags=(${flags}) {
   /run/postgresql/.s.PGSQL.* rw,
   /run/redis/*.sock rw,
 
-  # Logs - derived from FPM config at generation time
+  # Logs, derived from FPM config at generation time
 ${log_rules}  /var/log/php${PHP_VER}-fpm*.log rw,
   /var/log/php/** rw,
 
@@ -658,7 +664,7 @@ cmd_apply() {
     ensure_local
     write_profile "$TMP_PROFILE" "$mode"
     apparmor_parser -QK "$TMP_PROFILE" 2>&1 \
-        || die "Generated profile failed to parse - nothing installed. Inspect: $TMP_PROFILE"
+        || die "Generated profile failed to parse - no AppArmor profile was installed or changed (the ini drop-in from step 1 stays in place). Inspect: $TMP_PROFILE"
     info "Profile syntax OK"
 
     [[ -f "$AA_PROFILE" ]] && backup "$AA_PROFILE"
@@ -795,10 +801,12 @@ cmd_status() {
 # visible. A finding is a lead to investigate, never proof on its own: buggy
 # extensions crash workers too, and the upload-progress field is in legitimate
 # forms. The signatures were confirmed against real php-fpm 8.4 output.
-# 21 October is the patch date; the phpot report and Amazon both place
-# exploitation attempts from 17 October, four days earlier. Use the earlier
-# date as the default baseline so a "quiet before" period is actually quiet;
-# override with HUNT_SINCE if your own logs show something earlier still.
+# 21 October is the patch date. Amazon Threat Intelligence reported an
+# exploitation attempt in its honeypot telemetry from 17 October, four days
+# earlier. It is the only source we know of for that date, so treat it as the
+# likely start, not a settled fact. Use it as the default baseline so a "quiet
+# before" period is more likely to be quiet; override with HUNT_SINCE if your
+# own logs show something earlier.
 DISCLOSURE_DATE="${HUNT_SINCE:-2026-10-17}"
 
 # Logs worth reading: every version's FPM error_log (from its own config),
@@ -845,7 +853,7 @@ hunt_grep() {
 }
 
 # Count matches before vs on/after the disclosure date, when lines are dated
-# "[DD-Mon-YYYY" (FPM) - a rough spike check, best-effort only.
+# "[DD-Mon-YYYY" (FPM). A rough spike check, best-effort only.
 hunt_spike() {
     local re="$1"; shift
     local d; d="$(date -d "$DISCLOSURE_DATE" +%s 2>/dev/null || echo 0)"
@@ -1034,7 +1042,7 @@ hunt_audit() {
         warn "auditd: ${n} program start(s) by the web-server account this week (key php2shell_web_exec); check the parent and command:"
         grep '^type=SYSCALL' <<<"$out" | sed -E 's/.*(ppid=[0-9]+).*(comm=[^ ]+).*(exe=[^ ]+).*/      \1 \2 \3/' | tail -5 || true
         HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
-    elif command -v auditctl >/dev/null 2>&1 && auditctl -l 2>/dev/null | grep -q php2shell_web_exec; then
+    elif command -v auditctl >/dev/null 2>&1 && auditctl -l 2>/dev/null | grep php2shell_web_exec >/dev/null; then
         info "auditd: rule loaded, no program starts by the web-server account this week"
     else
         inf_hunt "auditd is present but the php2shell_web_exec rule is not loaded; see php/detect/ to add it."
@@ -1190,7 +1198,7 @@ cmd_hunt() {
     fi
     warn "${HUNT_FINDINGS} signature group(s) matched. None is proof of compromise on its own."
     echo "  Next steps:"
-    echo "    - Compare counts against a quiet period before ${DISCLOSURE_DATE}; a spike is the real signal. Exploitation has been reported from 17 October, four days before the 21 October patch, so a quiet period needs to predate that."
+    echo "    - Compare counts against a quiet period before ${DISCLOSURE_DATE}; a spike is the real signal. Amazon reported an exploitation attempt from 17 October, four days before the 21 October patch, so a quiet period needs to predate that."
     echo "    - Correlate crashes with memory_limit fatals and multipart POSTs from the same client IP."
     echo "    - Check the web root for new/modified files, and for new cron jobs, scheduled tasks and accounts."
     echo "    - Preserve web-server and PHP logs before they rotate."
@@ -1250,9 +1258,10 @@ cmd_remove() {
             warn "apparmor_parser -R failed (profile may not have been loaded)"
         fi
     fi
-    local f
+    local f label
     for f in "$AA_PROFILE" "$AA_LOCAL" "$AA_DISABLE"; do
-        if [[ -e "$f" || -L "$f" ]]; then backup "$f" 2>/dev/null || true; rm -f "$f"; info "Removed $f"; fi
+        case "$f" in "$AA_PROFILE") label="$AA_NAME" ;; "$AA_LOCAL") label="local.${AA_NAME}" ;; *) label="disable.${AA_NAME}" ;; esac
+        if [[ -e "$f" || -L "$f" ]]; then backup "$f" "$label" 2>/dev/null || true; rm -f "$f"; info "Removed $f"; fi
     done
     # Verify the kernel no longer confines FPM. Running workers can keep a
     # profile reference until they recycle, so a leftover count isn't fatal:

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# PHP session audit - CVE-2026-115560 preconditions  (v1)
+# PHP session audit for the CVE-2026-115560 preconditions  (v1)
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
@@ -236,6 +236,8 @@ else
 fi
 
 step "Verdict"
+# a risky base serializer (condition 1) on its own is a partial match, as the usage says: exit 2
+[[ $RISKY_BASE -eq 1 ]] && flag_partial
 if [[ $RISKY_BASE -eq 1 && $SWITCH_TO_PHP -eq 1 && $PROGRESS_ON -eq 1 ]]; then
     RESULT=1
     bad "All three ${CVE} conditions are present on this server."

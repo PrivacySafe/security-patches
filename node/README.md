@@ -10,6 +10,14 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 Node.js 22.23.4, 24.22.1 and 26.12.1 (21 October 2026) fix ten CVEs. The serious one is **CVE-2026-111497**, an out-of-bounds write in the Brotli decoder that can lead to remote code execution. Any code that decodes attacker-controlled Brotli reaches it, and on an unfixed runtime that includes every `fetch()`, because fetch decodes `Content-Encoding: br` responses on its own. Node lines 25 and older are end of life and get no fix.
 
+CVE-2026-111497 is also known as Broccoli2Shell (it was first called Node2Shell). It is rated High by Node.js and 9.2 Critical by GitHub. Three kinds of code reach it on an unfixed runtime:
+
+- **Anything that fetches a URL.** Built-in `fetch()` decodes the response, so any server you talk to can send the payload.
+- **Anything that accepts request bodies.** Express 5.0.0 to 5.3.0 and body-parser 2.0.0 to 2.3.0 inflate Brotli request bodies in parsers such as `raw()` and `json()`. Express and body-parser do not contain the bug, so upgrading them does not help. A bare `node:http` server does not decode bodies by itself.
+- **Anything that calls the decoder directly:** `zlib.brotliDecompress*()` and `createBrotliDecompress()`, including libraries that use them on archives, caches or queue messages.
+
+Node.js bundles its own Brotli, so the system `libbrotli` does not matter for Node; only the Node.js version does. You can read the bundled version with `node -p "process.versions.brotli"`. The Imperva Red Team has run attacker-supplied code on the official, unmodified Node.js 24.22.0 arm64 GNU/Linux image, through both a fetched response and an Express request body, so treat this as exploitable. Node.js has published no workaround of its own: upgrading the runtime is the only complete fix, and the guard below is our interim measure for services you cannot upgrade yet. After upgrading, restart every process and rebuild every container image, because a running process keeps the old decoder until it restarts.
+
 We wrote these for the Node services we couldn't upgrade the same day. There are two parts:
 
 1. **`brotli-guard.cjs`** is a small file Node loads before your application, through `--require`. It makes Node's Brotli decoder refuse to run, for CommonJS and ES modules alike, and stops `fetch()` asking servers for `br`. Compression keeps working, and so do gzip and deflate. A blocked decode fails the way corrupt input does, so code that already copes with a bad compressed body copes with this too. On a fixed runtime it goes idle by itself.
@@ -174,6 +182,8 @@ A match is a lead, not proof. Buggy native addons crash Node too, and a segfault
 - **Containers get their own fix.** Each image carries its own Node. Rebuild on a fixed base image; `check` lists the images it can see.
 - **GNU/Linux only.** `check`, `scan` and `hunt` run on any GNU/Linux; `guard` and `unguard` need systemd.
 - **Drop-ins** go to `/etc/systemd/system/<unit>.d/50-privacysafe-brotli-guard.conf`, and each records the script version that wrote it.
+- **A pre-release is not the release.** `v24.22.1-pre`, `-rc.0` and `-nightly…` are builds made before 24.22.1, so at a fix version they are reported as unknown and the check exits `2`; one past the fix version is fixed. A runtime that cannot be read (including one the script declines to execute because of who owns it) is reported as unknown and no longer ends the run.
+- **Runtimes are found anywhere on `PATH`**, as well as in the usual install locations and the common version-manager directories.
 
 ---
 

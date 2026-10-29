@@ -58,7 +58,7 @@ This script does not run the update or removal for you, since that is an app-sto
 | `apply` | Neutralizes the exploited `proxy.php` on every vulnerable install, replacing it with a stub that returns HTTP 403 and builds no command. Backs the original up first, is idempotent, and is the one thing this script changes. Needs write access to the app (run as root or the web user). Refuses an already-fixed app unless `--force`. This disables the built-in CODE server until you update or remove the app |
 | `restore` | Puts the original `proxy.php` back where `apply` replaced it (the original is vulnerable, so update or remove the app instead) |
 | `status` | Shows which installs this script has neutralized |
-| `hunt` | Read-only. Scans the app folders for planted web shells (`shx*.php`, a known shell by SHA-256, and any file that runs commands from request input) and the web server access logs for the exploitation markers (`proxy.php` requests with `%2e%2e`, `$(` or `${IFS}`, and the known attacker IPs). Exits `0` if nothing matched, `1` if it found something |
+| `hunt` | Read-only. Scans the app folders for planted web shells (`shx*.php`, a known shell by SHA-256, and any file that runs commands from request input) and the web server access logs for the exploitation markers (`proxy.php` requests with `%2e%2e`, `$(` or `${IFS}`, and the known attacker IPs). Exits `0` if nothing matched, `1` if it found something, `2` if there was no app folder and no readable log (nothing was searched) |
 | `version` | Prints the script version. Every command prints it on its first line too |
 
 ### Why `apply` edits `proxy.php` rather than disabling the app
@@ -86,6 +86,7 @@ Because disabling the app does nothing: the web server serves `proxy.php` direct
 - **If you were already exploited, closing the hole is not enough.** Run `hunt`, delete any `shx*.php` under `apps/richdocumentscode/`, and treat anything the web server account could read as exposed: rotate credentials and check for access to credential stores and wallets.
 - **On Nextcloud 29 and older the fixed app cannot be installed.** Upgrade Nextcloud to 30+ or remove the app.
 - **GNU/Linux only**, and it finds installs under `NC_PATHS`; point `NC_PATHS` at an install kept elsewhere.
+- **Only `--force` is a recognised option.** Any other option is refused with exit `2`, so a mistyped or invented flag (for example `restore --dry-run`) can never turn into a real `apply` or `restore`.
 
 ---
 

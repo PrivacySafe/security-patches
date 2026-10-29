@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: CC0-1.0
+# =============================================================================
+# PHP2Shell edge guard as an .htaccess file, for Apache 2.4  (v1)
+# CVE-2026-109618 / CVE-2026-109619
+#
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
+# https://privacysafe.foundation
+#
+# A COMPENSATING CONTROL, NOT A FIX. The only complete fix is a patched PHP
+# (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35, or your distribution's backport).
+#
+# For hosts where you can edit .htaccess but not the server configuration. If
+# you can edit the server configuration, use apache-php2shell-guard.conf
+# instead: it has a log-only mode that this file cannot have (see below).
+#
+# What it does
+#   1. Refuses a multipart/form-data POST (403) unless its path is on your
+#      allowlist. The confirmed 2026-10-24 chain was four such POSTs to "/"
+#      and "/index.php".
+#   2. Replaces the value of any Set-Cookie longer than 4096 bytes with a short
+#      marker. The disclosure stage of that chain returned a session ID of
+#      about 2 MB in Set-Cookie. This removes the leak from the response only;
+#      it does not stop the memory read.
+#   3. Optionally caps the request body size (commented out at the end).
+#
+# Requirements
+#   - Apache 2.4 (the <If> section does not exist in 2.2).
+#   - AllowOverride that includes FileInfo and AuthConfig ("AllowOverride All"
+#     does). Without AuthConfig the "Require" line returns 500 on every request
+#     to the directory, and Apache logs "not allowed here". Tested on 2.4.58.
+#   - mod_headers.
+#   Put the file in the document root. It applies to that directory and below.
+#
+# Why there is no log-only mode here
+#   mod_log_debug's LogMessage, which the .conf version uses to log what it
+#   would block, is refused in .htaccess ("LogMessage not allowed here"), and
+#   .htaccess cannot change what the error log records. The substitute is a dry
+#   run: step 1 below ships in DRY RUN, where the guard adds an
+#   X-PHP2Shell-Guard header to the requests it would refuse and refuses
+#   nothing. Exercise every upload on your site with the browser's network tab
+#   open (or run php2shell-edge-test.sh), add the paths that show the header to
+#   the allowlist, and only then enforce.
+#
+# Limits: an attacker can send multipart to any path you allowlist, so keep the
+# list short; a header or encoding change defeats any request filter. A
+# request that never reaches Apache's .htaccess processing (another server, a
+# different virtual host) is not covered.
+#
+# Remove: delete this file's contents (or the file). Nothing else was changed.
+# =============================================================================
+
+# ---- 1. multipart guard ------------------------------------------------------
+# The allowlist is a regular expression on the ORIGINAL request line
+# (THE_REQUEST), not on %{REQUEST_URI}: a per-directory rewrite such as
+# WordPress's "RewriteRule . /index.php [L]" changes REQUEST_URI before this
+# test runs. The path must be followed by a space or "?", so a longer or
+# look-alike path cannot match. The default matches nothing, so once enforcing,
+# every multipart POST is refused. Example for a WordPress site that needs
+# media uploads:
+#   m#^POST (/wp-admin/(async-upload|media-new)\.php|/wp-json/wp/v2/media)( |\?)#
+#
+# The same condition appears twice below (DRY RUN and ENFORCE). Keep the two
+# identical when you edit the allowlist.
+#
+# DRY RUN (active): mark, do not refuse.
+Header always set X-PHP2Shell-Guard "would-block" "expr=%{REQUEST_METHOD} == 'POST' && %{HTTP:Content-Type} =~ m#^multipart/form-data#i && %{THE_REQUEST} !~ m#^POST /__php2shell_allow_nothing__( |\?)#"
+
+# ENFORCE: uncomment these three lines, and delete the DRY RUN line above so
+# the guard does not announce itself.
+#<If "%{REQUEST_METHOD} == 'POST' && %{HTTP:Content-Type} =~ m#^multipart/form-data#i && %{THE_REQUEST} !~ m#^POST /__php2shell_allow_nothing__( |\?)#">
+#    Require all denied
+#</If>
+
+# ---- 2. cookie guard ---------------------------------------------------------
+# "always" covers error responses too; the plain form covers successful ones.
+<IfModule headers_module>
+    Header always edit Set-Cookie "^([^=;]+=)[^;]{4096,}" "$1php2shell-oversize-cookie-removed"
+    Header edit Set-Cookie "^([^=;]+=)[^;]{4096,}" "$1php2shell-oversize-cookie-removed"
+</IfModule>
+
+# ---- 3. request body size limit (optional, OFF by default) --------------------
+# Apache has no body limit by default. See "Request body size limit" in
+# php/edge/README.md for what a limit did to the chain's stage sizes. Unlike the
+# guard above this cannot be dry-run: a value that is too low refuses
+# legitimate uploads with 413. A compensating control, not a fix.
+#LimitRequestBody 1048576
+#<Files "async-upload.php">
+#    LimitRequestBody 67108864
+#</Files>
+
+# Assisted-by: Claude Sonnet 5.5

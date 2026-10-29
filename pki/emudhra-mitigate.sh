@@ -107,7 +107,8 @@ JAVA_KS=/etc/ssl/certs/java/cacerts
 STATE_DIR=/var/lib/emudhra-mitigation
 STATE="${STATE_DIR}/state"
 BACKUP_BASE=/var/backups/emudhra-mitigation
-BACKUP_DIR="${BACKUP_BASE}/$(date +%Y%m%d-%H%M%S)"
+# the process id keeps two runs in the same second from sharing a directory and overwriting the first backup
+BACKUP_DIR="${BACKUP_BASE}/$(date +%Y%m%d-%H%M%S)-$$"
 MARKER="# managed-by: emudhra-mitigation"
 OS_RELEASE="${OS_RELEASE:-/etc/os-release}"   # testing hook
 # All verification runs at this instant (2026-09-21 UTC), inside the validity
@@ -116,7 +117,7 @@ ATTIME=1790000000
 SELF="$0"
 SCRIPT_NAME="emudhra-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 
 # Every certificate in the trust path, keyed by SHA-256 of its
 # SubjectPublicKeyInfo. Matching on the key catches every certificate for it:
@@ -205,7 +206,7 @@ setup_tests() {
         END { for (n in want) print n, want[n] > (d "/SHA256SUMS") }'
     local n want got
     while read -r n want; do
-        got="$(openssl x509 -in "$TDIR/test/$n.pem" -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1)"
+        got="$(openssl x509 -in "$TDIR/test/$n.pem" -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1 || true)"
         [[ "${got^^}" == "$want" ]] || SELFTEST_ERR+="$n "
     done < "$TDIR/test/SHA256SUMS"
     mv "$TDIR/test/cross.pem" "$TDIR/cross.pem"
@@ -225,12 +226,12 @@ prove_keys() {
     for n in "${TEST_NAMES[@]}"; do
         [[ "$n" == *.em ]] || continue
         spki="$(openssl x509 -in "$TDIR/test/$n.pem" -noout -pubkey 2>/dev/null \
-                | openssl pkey -pubin -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1)"
+                | openssl pkey -pubin -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1 || true)"
         d="${LEAKED_D[${spki^^}]:-}"
         [[ -n "$d" ]] || { PROOF_ERR+="${n%.em} "; continue; }
         hex="303e0201010430$(printf '%096x' "$d")a00706052b81040022"
         got="$(printf '%b' "$(sed 's/../\\x&/g' <<<"$hex")" \
-               | openssl ec -inform DER -pubout -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1)"
+               | openssl ec -inform DER -pubout -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1 || true)"
         if [[ "$got" == "$spki" ]]; then PROOF_OK=$((PROOF_OK + 1)); else PROOF_ERR+="${n%.em} "; fi
     done
 }
@@ -298,7 +299,7 @@ cert_ids() {   # <file>  ->  "<SHA256> <SPKI-SHA256>" of its first certificate
     out="$(openssl x509 -in "$1" -noout -fingerprint -sha256 -pubkey 2>/dev/null)" || return 1
     fp="$(sed -n 's/^.*Fingerprint=//p' <<<"$out" | tr -d ':')"
     spki="$(sed -n '/BEGIN PUBLIC KEY/,/END PUBLIC KEY/p' <<<"$out" \
-            | openssl pkey -pubin -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1)"
+            | openssl pkey -pubin -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1 || true)"
     echo "${fp^^} ${spki^^}"
 }
 
@@ -568,7 +569,7 @@ host_ok() {   # host[:port] -> 0 if it verifies against the system bundle
     [[ "$port" == "$1" ]] && port=443
     timeout 15 env SSL_CERT_DIR="$TDIR/empty" SSL_CERT_FILE="$TDIR/empty/none" \
         openssl s_client -connect "${h}:${port}" -servername "$h" -CAfile "$SYS_BUNDLE" \
-        -verify_return_error </dev/null 2>&1 | grep -q 'Verify return code: 0 (ok)'
+        -verify_return_error </dev/null 2>&1 | grep 'Verify return code: 0 (ok)' >/dev/null
 }
 
 # ---------- state ------------------------------------------------------------
@@ -690,15 +691,18 @@ cmd_apply() {
             state_add conf "$rel" "-" "$label"
             info "Distrusted ${label} (${rel})"
         done
-        local p kind
+        local p kind bn nmoved=0
         for e in "${M_LOCAL[@]+"${M_LOCAL[@]}"}" "${M_LOOSE[@]+"${M_LOOSE[@]}"}"; do
             [[ -n "$e" ]] || continue
             p="${e%%|*}"; kind=local
             [[ "$p" == "$CERTS_DIR"/* ]] && kind=loose
+            # numbered, because two files with the same name from different directories would
+            # overwrite each other, and restore would then put the wrong certificate back
+            nmoved=$((nmoved + 1)); bn="$(printf '%02d' "$nmoved")-${p##*/}"
             mkdir -p "$BACKUP_DIR/$kind"
-            mv "$p" "$BACKUP_DIR/$kind/"
-            state_add "$kind" "$p" "$BACKUP_DIR/$kind/${p##*/}" "${e#*|}"
-            warn "Moved hand-added ${e#*|} out of the store: $p -> $BACKUP_DIR/$kind/"
+            mv "$p" "$BACKUP_DIR/$kind/$bn"
+            state_add "$kind" "$p" "$BACKUP_DIR/$kind/$bn" "${e#*|}"
+            warn "Moved hand-added ${e#*|} out of the store: $p -> $BACKUP_DIR/$kind/$bn"
         done
     fi
 

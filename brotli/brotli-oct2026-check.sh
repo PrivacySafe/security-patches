@@ -7,17 +7,25 @@
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
-# The Brotli decoder (Google's libbrotli / libbrotlidec) does not propagate an
-# invalid block-switch when a stream declares only one block type, so a crafted
-# Brotli stream writes past the decoder's output buffer: a crash, a memory
-# disclosure, or remote code execution. The flaw is in the upstream C library,
-# and the same CVE has advisories across everything that bundles it: Node.js,
-# Bun, Envoy, Istio, the Python brotli and brotlicffi bindings, and OS
-# packages. Some people are calling the broadened picture "HTTP2Shell", since
-# any HTTP path that decodes untrusted Brotli can be a route to it.
+# Known as Broccoli2Shell (first called Node2Shell). Google's Brotli decoder
+# (libbrotli / libbrotlidec, 1.0.3 through 1.2.0) can be handed a block switch
+# that cannot happen. DecodeBlockTypeAndLength() returned a plain boolean, so
+# the caller could not tell a malformed stream from one that needed more input,
+# and the fast path ignored the result. The decoder kept appending attacker
+# bytes to an eight-byte internal buffer, writing past its end: a crash, a
+# memory disclosure, or remote code execution (CWE-252 and CWE-787). The flaw
+# is in the upstream C library, and the same CVE has advisories across
+# everything that bundles it: Node.js, Bun, Envoy, Istio, the Python brotli and
+# brotlicffi bindings, the Ruby and PHP extensions, and OS packages. Some
+# people are calling the broadened picture "HTTP2Shell", since any HTTP path
+# that decodes untrusted Brotli can be a route to it.
 #
-# Fixed upstream in Brotli 1.0.10, 1.1.1 and 1.2.1. Distributions backport the
+# Fixed upstream in Brotli 1.0.10, 1.1.1 and 1.2.1 (the decoder now returns
+# BROTLI_DECODER_ERROR_FORMAT_BLOCK_SWITCH, -17). Distributions backport the
 # fix into their own libbrotli builds, sometimes under an older version number.
+# A copy older than 1.0.3 is outside the advisory's affected range, but this
+# script still reports it as not fixed: it is unsupported and has no fixed
+# release to move to on its own branch.
 #
 # This is read-only: it finds what needs updating and judges each against the
 # fixes. It does NOT change anything. The fix is to update the library or the
@@ -34,13 +42,17 @@
 # Usage:
 #   ./brotli-oct2026-check.sh [command]
 #
-#   check (default)  every libbrotli on the host, the runtimes that bundle
-#                    their own Brotli (Node.js, Bun, Python's brotli and
-#                    brotlicffi, Envoy, Istio, cdxgen), and libbrotli inside
-#                    running containers, with whether each carries the fix.
-#                    Root optional. Exit 0 =
-#                    nothing exposed, 1 = a vulnerable Brotli is present, 2 =
-#                    something couldn't be read.
+#   check (default)  every libbrotli on the host, the running processes that
+#                    have libbrotlidec loaded (and any still running a library
+#                    that was replaced on disk), the runtimes that bundle their
+#                    own Brotli (Node.js, Bun, Python's brotli and brotlicffi,
+#                    the Ruby brotli gem, the PHP brotli extension, Envoy,
+#                    Istio, cdxgen), and libbrotli inside running containers,
+#                    with whether each carries the fix. It also lists other
+#                    software on PATH that bundles an unfixed copy (.NET,
+#                    DuckDB, ClickHouse); that list is informational. Root
+#                    optional. Exit 0 = nothing exposed, 1 = a vulnerable
+#                    Brotli is present, 2 = something couldn't be read.
 #   hunt             read-only: the journal and logs for process crashes that
 #                    look like a Brotli decoder overflow (segfaults with
 #                    brotli/BrotliDecoder frames, heap corruption aborts).
@@ -57,10 +69,20 @@
 #                                     not replace.
 #   BRANCH_FIXED="1.0:1.0.10 1.1:1.1.1 1.2:1.2.1"
 #                                     first fixed upstream release per branch
+#   RUBY_BROTLI_FIXED="0.9.1"         first fixed Ruby brotli gem
+#   PHP_BROTLI_FIXED="0.21.1"         first fixed PHP brotli extension
 #   SCAN_CONTAINERS=1                 1 = read libbrotli inside running
 #                                     containers (default 1; 0 to skip)
 #   HUNT_SINCE="2026-10-01"           how far back hunt reads the journal
 #   HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt
+#   NODE_FIXED="22.23.4 24.22.1 26.12.1"
+#                                     first fixed Node.js release per line
+#   BUN_FIXED=1.4.4                   first fixed Bun release
+#   PYBROTLICFFI_FIXED=1.2.1.0        first fixed pybrotlicffi release
+#   ENVOY_FIXED="1.40.0 1.39.3 1.38.6 1.37.8 1.36.12"
+#                                     first fixed Envoy release per line
+#   ISTIO_FIXED="1.29.9 1.30.6 1.31.2"  first fixed Istio release per line
+#   CDXGEN_FIXED="13.5.0 12.8.9"       first fixed cdxgen release per line
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -87,9 +109,13 @@ PYBROTLICFFI_FIXED="${PYBROTLICFFI_FIXED:-1.2.1.0}"
 ENVOY_FIXED="${ENVOY_FIXED:-1.40.0 1.39.3 1.38.6 1.37.8 1.36.12}"
 ISTIO_FIXED="${ISTIO_FIXED:-1.29.9 1.30.6 1.31.2}"
 CDXGEN_FIXED="${CDXGEN_FIXED:-13.5.0 12.8.9}"
+RUBY_BROTLI_FIXED="${RUBY_BROTLI_FIXED:-0.9.1}"
+PHP_BROTLI_FIXED="${PHP_BROTLI_FIXED:-0.21.1}"
+# Date the list of unfixed bundlers in cmd_check was last reviewed.
+BUNDLED_REVIEWED="2026-10-25"
 SCRIPT_NAME="brotli-oct2026-check.sh"
-SCRIPT_VERSION="1.2.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_VERSION="1.3.0"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 UPSTREAM="https://github.com/google/brotli"
 
@@ -99,7 +125,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -193,18 +219,30 @@ lib_state() {   # <X.Y.Z> <path>
 # per MAJOR.MINOR. Pass "major" or "minor" so the right fix is matched.
 line_key() { [[ "$2" == major ]] && echo "${1%%.*}" || echo "${1%.*}"; }
 line_state() {   # <ver> "<fixed...>" [major|minor]
-    local v="$1" list="$2" gran="${3:-minor}" key f
+    local v="$1" list="$2" gran="${3:-minor}" key f base pre=""
     [[ -n "$v" ]] || { echo "2|version unreadable"; return; }
-    key="$(line_key "$v" "$gran")"
+    # Text that does not start with a dotted number is unreadable, never "newer than the fix"
+    # (version sort ranks non-numeric text after every number)
+    [[ "$v" =~ ^([0-9]+(\.[0-9]+)+)(.*)$ ]] || { echo "2|'${v}' is not a version number"; return; }
+    base="${BASH_REMATCH[1]}"
+    # A pre-release (24.22.1-pre, -rc.0, -nightly..., dev, preview) is a build made before that
+    # release: at the fix version itself it may not carry the fix
+    [[ "${BASH_REMATCH[3]}" =~ ^[-+~._]?(pre|rc|alpha|beta|dev|nightly|canary|snapshot|preview) ]] && pre=1
+    key="$(line_key "$base" "$gran")"
     for f in $list; do
         if [[ "$(line_key "$f" "$gran")" == "$key" ]]; then
-            if ver_ge "$v" "$f"; then echo "0|${v} >= ${f}"; else echo "1|${v} < ${f}"; fi
+            if ver_ge "$base" "$f"; then
+                if [[ -n "$pre" && "$base" == "$f" ]]; then echo "2|${v} is a pre-release build made before ${f} was released: it may not carry the fix"
+                else echo "0|${v} >= ${f}"; fi
+            else echo "1|${v} < ${f}"; fi
             return
         fi
     done
     # Newer than every listed fix is fixed; otherwise no fix for this line.
     local newest; newest="$(printf '%s\n' $list | sort -V | tail -1)"
-    if ver_ge "$v" "$newest"; then echo "0|${v} is newer than ${newest}"
+    if ver_ge "$base" "$newest"; then
+        if [[ -n "$pre" && "$base" == "$newest" ]]; then echo "2|${v} is a pre-release build made before ${newest} was released: it may not carry the fix"
+        else echo "0|${v} is newer than ${newest}"; fi
     else echo "1|${v}: line ${key} has no fixed release in this list; move to a fixed line"; fi
 }
 
@@ -222,14 +260,14 @@ runtime_report() {   # <label> <version> "<fixed list>" <major|minor> <extra not
 
 node_versions() {   # prints each node binary's version, one per line
     local c
-    { command -v -a node 2>/dev/null || true
+    { type -a -P node 2>/dev/null || true
       shopt -s nullglob
       for c in /usr/bin/node /usr/local/bin/node /opt/*/bin/node \
                /root/.nvm/versions/node/*/bin/node /home/*/.nvm/versions/node/*/bin/node; do echo "$c"; done
       shopt -u nullglob
     } | while read -r c; do [[ -x "$c" ]] && readlink -f "$c"; done | sort -u | while read -r b; do
         [[ -n "$b" ]] || continue
-        v="$("$b" --version 2>/dev/null | tr -d 'v' || true)"
+        v="$("$b" --version 2>/dev/null | head -n1 | sed 's/^v//' || true)"
         [[ -n "$v" ]] && echo "$v"
     done | sort -uV
 }
@@ -259,6 +297,34 @@ for mod, dist in (("brotli", "Brotli"), ("brotlicffi", "brotlicffi")):
             v = ""
     sys.stdout.write("%s|%s\n" % (mod, str(v)))
 PY
+}
+
+ruby_brotli_versions() {   # prints each installed Ruby brotli gem version, one per line
+    have gem || return 0
+    { gem list --local '^brotli$' 2>/dev/null || true; } \
+        | sed -n -E 's/^brotli \((.*)\)$/\1/p' | tr ',' '\n' | grep -oE '[0-9]+(\.[0-9]+)+' | sort -uV || true
+}
+
+php_brotli_version() {   # prints the PHP CLI's brotli extension version, or nothing
+    have php || return 0
+    php -r '$v = phpversion("brotli"); if ($v !== false) { echo $v; }' 2>/dev/null || true
+}
+
+# Processes that have libbrotlidec mapped. A mapping marked (deleted) means the
+# library file was replaced after the process started, so the process still
+# runs the old code until it is restarted. Other users' maps need root.
+mapped_procs() {   # "pid|comm|user|live-or-deleted"
+    local m pid comm user st
+    shopt -s nullglob
+    for m in /proc/[0-9]*/maps; do
+        grep -aqE 'libbrotlidec\.so' "$m" 2>/dev/null || continue
+        pid="${m#/proc/}"; pid="${pid%/maps}"
+        comm="$(tr -d '\n' < "/proc/${pid}/comm" 2>/dev/null || echo '?')"
+        user="$(stat -c %U "/proc/${pid}" 2>/dev/null || echo '?')"
+        if grep -aE 'libbrotlidec\.so' "$m" 2>/dev/null | grep -a '(deleted)' >/dev/null; then st=deleted; else st=live; fi
+        echo "${pid}|${comm}|${user}|${st}"
+    done
+    shopt -u nullglob
 }
 
 # ---------- containers -------------------------------------------------------
@@ -301,6 +367,25 @@ cmd_check() {
         inf "the decoder (libbrotlidec) is the vulnerable path; libbrotlienc and libbrotlicommon ship from the same package and are shown for completeness"
     fi
 
+    step "Running processes that have libbrotlidec loaded"
+    local mpid mcomm muser mst nproc=0 nstale=0
+    while IFS='|' read -r mpid mcomm muser mst; do
+        [[ -n "$mpid" ]] || continue
+        nproc=$((nproc + 1))
+        if [[ "$mst" == deleted ]]; then
+            nstale=$((nstale + 1))
+            bad "${mcomm} (pid ${mpid}, ${muser})  still runs a libbrotlidec that was replaced on disk; restart it to load the new library"
+            exposed=1
+        elif [[ $nproc -le 15 ]]; then
+            inf "${mcomm} (pid ${mpid}, ${muser})  has libbrotlidec loaded"
+        fi
+    done < <(mapped_procs)
+    if [[ $nproc -eq 0 ]]; then inf "no readable process has libbrotlidec loaded"
+    elif [[ $nstale -eq 0 ]]; then ok "${nproc} process(es) with libbrotlidec loaded, none running a replaced library"
+    fi
+    [[ $EUID -eq 0 ]] || inf "not running as root, so other users' processes are not read"
+    inf "Node.js, Bun and Python wheels carry their own copy and do not show up here; statically linked programs do not either"
+
     step "Runtimes that bundle their own Brotli"
     local nv had_node=0
     while read -r nv; do
@@ -340,7 +425,33 @@ cmd_check() {
     if have istioctl; then runtime_report "Istio (istioctl)" "$(istioctl version --remote=false 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)" "$ISTIO_FIXED" minor || exposed=1; else inf "Istio (istioctl): not found"; fi
     if have cdxgen; then runtime_report "cdxgen" "$(cdxgen --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)" "$CDXGEN_FIXED" major "standalone binaries and images bundle Brotli; rebuild them, a version bump alone is not enough" || exposed=1; else inf "cdxgen: not found on PATH"; fi
 
+    local rbv had_rb=0 phpv
+    while read -r rbv; do
+        [[ -n "$rbv" ]] || continue
+        had_rb=1
+        runtime_report "Ruby brotli gem" "$rbv" "$RUBY_BROTLI_FIXED" minor "0.9.1 and later bundle Brotli 1.2.1; older releases may link the system libbrotli" || exposed=1
+    done < <(ruby_brotli_versions)
+    [[ $had_rb -eq 1 ]] || inf "Ruby brotli gem: not found"
+    phpv="$(php_brotli_version)"
+    if [[ -n "$phpv" ]]; then
+        runtime_report "PHP brotli extension (CLI)" "$phpv" "$PHP_BROTLI_FIXED" minor "0.21.1 and later bundle Brotli 1.2.1; restart PHP-FPM or Apache after updating, since the CLI and FPM can load different builds" || exposed=1
+    else
+        inf "PHP brotli extension: not loaded in the PHP CLI (or php not found)"
+    fi
+
     inf "Bun, Envoy, Istio and cdxgen bundle Brotli; upgrading the runtime is the fix. This script reads only the versions it can reach from the command line"
+
+    step "Other software that bundles its own Brotli (unfixed as of ${BUNDLED_REVIEWED})"
+    local bw bcmd bnote any_b=0
+    for bw in "dotnet|the .NET runtime bundles 1.1.0" \
+              "duckdb|DuckDB bundles an unpatched copy and decodes Brotli Parquet files" \
+              "clickhouse|ClickHouse bundles its own fork" \
+              "clickhouse-server|ClickHouse bundles its own fork"; do
+        bcmd="${bw%%|*}"; bnote="${bw#*|}"
+        if have "$bcmd"; then any_b=1; caution "${bcmd} found on PATH: ${bnote}. No fixed release yet; see brotli/README.md for current status"; fi
+    done
+    [[ $any_b -eq 1 ]] || inf "none of dotnet, duckdb or clickhouse found on PATH"
+    inf "This list is informational and does not change the exit code. Many more projects vendor a copy; brotli/README.md lists the ones known so far"
 
     step "libbrotli inside running containers"
     if [[ "$SCAN_CONTAINERS" != 1 ]]; then
@@ -435,3 +546,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

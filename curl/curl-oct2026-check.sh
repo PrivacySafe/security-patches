@@ -84,7 +84,7 @@ HUNT_SINCE="${HUNT_SINCE:-2026-10-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="curl-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-24"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 UPSTREAM="https://curl.se/docs/CVE-2026-92392.html"
 
@@ -94,7 +94,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -117,15 +117,19 @@ curl_segment_fix() {   # <X.Y.Z> -> fixed version for its branch
     echo "$best"
 }
 
-curl_upstream_state() {   # <X.Y.Z> -> rc|why  (rc 0 fixed or not-affected, 1 vuln, 2 unknown)
-    local v="$1" fx
+curl_upstream_state() {   # <X.Y.Z[-DEV]> -> rc|why  (rc 0 fixed or not-affected, 1 vuln, 2 unknown)
+    local v="$1" fx dev=""
     [[ -n "$v" ]] || { echo "2|version unreadable"; return; }
+    # a development build (8.20.2-DEV) is made after the previous release and before 8.20.2 ships
+    [[ "$v" == *-DEV ]] && { dev=1; v="${v%-DEV}"; }
     if ! ver_ge "$v" "$CURL_INTRODUCED"; then
         echo "0|${v} predates the flaw (introduced in ${CURL_INTRODUCED}); not affected"; return
     fi
     fx="$(curl_segment_fix "$v")"
     [[ -n "$fx" ]] || fx="$CURL_FIXED_MAIN"
-    if ver_ge "$v" "$fx"; then echo "0|${v} >= ${fx}"
+    if [[ -n "$dev" && "$v" == "$fx" ]]; then
+        echo "2|${v}-DEV is a development build made before ${fx} was released: it may or may not carry the fix. Use the ${fx} release"
+    elif ver_ge "$v" "$fx"; then echo "0|${v} >= ${fx}"
     else echo "1|${v} < ${fx} (affected ${CURL_INTRODUCED} through 8.22.0; fix for this branch is ${fx}, or move to ${CURL_FIXED_MAIN})"; fi
 }
 
@@ -169,7 +173,7 @@ curl_pkg_state() {   # <X.Y.Z> <path> -> rc|why
 
 # ---------- discovery --------------------------------------------------------
 curl_binaries() {
-    { command -v -a curl 2>/dev/null || true
+    { type -a -P curl 2>/dev/null || true
       shopt -s nullglob
       local c
       for c in /usr/bin/curl /usr/local/bin/curl /opt/*/bin/curl /snap/*/current/usr/bin/curl; do echo "$c"; done
@@ -191,12 +195,12 @@ find_libcurl() {   # resolved libcurl.so paths
 
 # libcurl's soname is fixed (libcurl.so.4), so the version is not in the file
 # name. Read the "libcurl/X.Y.Z" string the library carries for curl_version().
-lib_embedded_version() { grep -aoE 'libcurl/[0-9]+\.[0-9]+\.[0-9]+' "$1" 2>/dev/null | head -1 | cut -d/ -f2 || true; }
+lib_embedded_version() { grep -aoE 'libcurl/[0-9]+\.[0-9]+\.[0-9]+(-DEV)?' "$1" 2>/dev/null | head -1 | cut -d/ -f2 || true; }
 
 # Does this libcurl bring in HTTP/2 (nghttp2)? Informational only.
 lib_has_http2() {
     local p="$1"
-    { have ldd && ldd "$p" 2>/dev/null | grep -q 'libnghttp2'; } && return 0
+    { have ldd && ldd "$p" 2>/dev/null | grep 'libnghttp2' >/dev/null; } && return 0
     grep -aq 'nghttp2' "$p" 2>/dev/null && return 0
     return 1
 }
@@ -225,8 +229,8 @@ cmd_check() {
         [[ -n "$b" ]] || continue
         any=1
         out="$("$b" --version 2>/dev/null || true)"
-        cli="$(grep -oE '^curl [0-9]+\.[0-9]+\.[0-9]+' <<<"$out" | head -1 | awk '{print $2}')"
-        lib="$(grep -oE 'libcurl/[0-9]+\.[0-9]+\.[0-9]+' <<<"$out" | head -1 | cut -d/ -f2)"
+        cli="$(grep -oE '^curl [0-9]+\.[0-9]+\.[0-9]+(-DEV)?' <<<"$out" | head -1 | awk '{print $2}' || true)"
+        lib="$(grep -oE 'libcurl/[0-9]+\.[0-9]+\.[0-9]+(-DEV)?' <<<"$out" | head -1 | cut -d/ -f2 || true)"
         if grep -qiw 'HTTP2' <<<"$out"; then h2="HTTP/2 supported"; else h2="no HTTP/2 in this build, upload path unreachable"; fi
         IFS='|' read -r st how <<<"$(curl_pkg_state "$lib" "$b")"
         local label="${b} (curl ${cli:-?}, libcurl ${lib:-?})"
@@ -348,3 +352,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

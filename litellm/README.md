@@ -1,4 +1,4 @@
-# LiteLLM: the malicious 1.107.0 release
+# LiteLLM: October 2026
 
 Part of the [PrivacySafe Security Patches](../README.md) collection.
 
@@ -73,6 +73,54 @@ There is no safe in-place "clean." If 1.107.0 was installed from a wheel, or a L
 - **Only the malware files are touched.** `quarantine` removes `cook.pth` and `cook.py`, and a `sitecustomize.py` only if it carries the markers, so a legitimate `sitecustomize.py` is left alone. Forensic copies go to the backup directory.
 - **Containers carry their own copy.** Rebuild any image that pulled 1.107.0 (or the `latest` / `main-*` tags on 21 October) on a clean 1.106.2 digest.
 - **GNU/Linux only**, and it finds installs under the scanned paths; point `SCAN_PATHS` at an environment kept elsewhere.
+- **A path it could not read is not a clean result.** If a scan path exists but cannot be read, `check` exits `2` (when nothing else is found) instead of `0`; a path that does not exist is skipped. Directories inside a readable path that you cannot read are skipped, so run it as root for full coverage.
+- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container finds `litellm` metadata directories (and the `fastapi` and `uvicorn` ones beside them), proxy configuration files, lock and requirements files that mention litellm, and image tags in compose-style files, and copies only what the check reads into a private temporary directory: a one-line marker for each proxy config (the keys in it stay in the container), only the matched `berriai/litellm:TAG` strings from compose, Helm and `.env` files, and requirements lines with index URLs and credentials dropped. The script then runs once per container in isolation, so one container's proxy config never makes another container's copy look exposed. `/app`, where the official image keeps its configuration, is searched in containers. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME.
+
+<a name="litellm-proxy-admin-escalation"></a>
+
+## LiteLLM proxy admin escalation (CVE-2026-114612)
+
+**Script:** [`litellm/litellm-escalation-check.sh`](litellm-escalation-check.sh)
+
+This is a **different problem** from the malicious 1.107.0 release above: a genuine vulnerability in genuine releases. The LiteLLM proxy uses one cryptographic context for two purposes, sealing secrets at rest and minting session tokens. An authenticated user with `internal_user` privileges can request a new API key with a crafted metadata field that holds a forged administrator credential as the "secret"; the proxy encrypts it and returns it, and the user replays it as a bearer token to become `proxy_admin`, which reaches arbitrary commands through the MCP stdio endpoint.
+
+| | |
+|---|---|
+| CVE | CVE-2026-114612 (CWE-269, CWE-345, CWE-441, advisory GHSA-7hp6-4w63-5g45, published 22 October 2026) |
+| Severity | Critical, CVSS 3.1 9.9 (an authenticated, low-privilege user) |
+| Affected | 1.87.0 up to 1.100.4, 1.101.0 up to 1.101.3, 1.102.0 up to 1.102.2, 1.103.0 up to 1.103.1, and 1.104.0-rc.1 up to 1.104.0-rc.2 |
+| Fixed | **1.100.4, 1.101.3, 1.102.2, 1.103.1 and 1.104.0-rc.2** (all on PyPI), and every later release. 1.87.0 through 1.99.x have no fix of their own: move to 1.100.4 or newer |
+| Note | The vendor advisory lists 1.91.0 as the first exploitable version. A third-party reading says 1.87.0 to 1.90.x also need `EXPERIMENTAL_UI_LOGIN`. The tool treats the whole CVE range as affected |
+| Needs | **The proxy.** Using litellm only as a Python library (the SDK), with no proxy running, is not exposed. The tool reports which it found evidence of |
+
+**Do not confuse the two.** The last clean release before the malicious one is 1.106.2, which is above every fixed version here. If the new script meets 1.107.0 it says so and points to `litellm-oct2026-check.sh`.
+
+### Quick start
+
+```bash
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/litellm/litellm-escalation-check.sh
+less litellm-escalation-check.sh
+chmod +x litellm-escalation-check.sh
+./litellm-escalation-check.sh check
+```
+
+By default it searches `/usr/lib /usr/local/lib /opt /srv /var/lib /etc /home /root`; pass directories to narrow it. Exit `0` nothing exposed, `1` an affected proxy, a floating image tag or the malicious 1.107.0, `2` bad arguments. It is read-only.
+
+### How it decides
+
+- **Installed copies** (`litellm-*.dist-info`), **pins** (`requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock`, `Pipfile.lock`) and **container image tags** in compose, Helm, Kubernetes and Dockerfiles (`berriai/litellm` and `berriai/litellm-database`).
+- **Proxy evidence:** `fastapi` and `uvicorn` installed beside litellm, a `litellm[proxy]` extra or those packages in the same pin file, a LiteLLM proxy configuration file (`model_list` or `general_settings`), or any container image (the images are the proxy). An affected version with evidence is exposed; without it the tool warns and exits `0`, because SDK-only use is not exposed.
+- **Per release line:** a version on one line can be affected while a lower one on another line is fixed (1.100.4 is fixed, but 1.101.0 to 1.101.2 are affected), so each line has its own first fixed release. `1.104.0rc1` is affected and `1.104.0rc2` and the final `1.104.0` are fixed.
+- **Floating tags** such as `main-latest` or `main-stable` do not say which release is running, so the tool says it cannot tell and exits `1`. It does not open running containers.
+- **Look-alikes** such as `litellm_proxy_extras` and `litellm_enterprise` are different packages and are not matched, including when listed first in a lock file.
+
+### Fixing it
+
+Upgrade to 1.100.4, 1.101.3, 1.102.2, 1.103.1 or 1.104.0-rc.2 or newer, on the line you run. Never install 1.107.0. After upgrading, check the proxy's user list for administrators you did not create (our suggestion, not the vendor's).
+
+### Sources
+
+- [Advisory GHSA-7hp6-4w63-5g45](https://github.com/BerriAI/litellm/security/advisories/GHSA-7hp6-4w63-5g45)
 
 ---
 

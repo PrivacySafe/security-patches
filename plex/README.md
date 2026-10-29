@@ -62,6 +62,8 @@ Plex Media Server versions look like `1.43.3.10861-xxxxxxxxx`; the script reads 
 - **The Codecs listing is a review aid, not a verdict.** Plex's own codecs are ELF shared objects too, so the script lists what changed there recently rather than flagging every shared object as malware.
 - **Containers carry their own Plex.** Pull a fixed image and recreate the container; a restart alone does not change the build.
 - **GNU/Linux only**, and it finds data directories under the scanned paths; point `PLEX_DATA_PATHS` at a library kept elsewhere.
+- **`HUNT_ROOTS`** sets the scratch directories `hunt` searches for payload files and indicator strings (default `/tmp /var/tmp /dev/shm`, plus the Plex data directories it finds).
+- **The script does not report itself.** Its own file names the indicators, so the exact running file is left out of the content search; a different copy of the script saved under a scanned directory is still reported.
 
 ---
 

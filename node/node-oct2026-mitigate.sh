@@ -50,6 +50,8 @@
 #   SCAN_DEPTH=8                       how deep scan descends
 #   GUARD_DST=/usr/local/lib/privacysafe/brotli-guard.cjs
 #   HUNT_SINCE="2026-10-14"            how far back hunt reads the journal
+#   GUARD_SRC=./brotli-guard.cjs       the guard file to install (default: the copy
+#                                      next to this script)
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -68,7 +70,7 @@ SCAN_DEPTH="${SCAN_DEPTH:-8}"
 HUNT_SINCE="${HUNT_SINCE:-2026-10-14}"
 SCRIPT_NAME="node-oct2026-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-23"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 GUARD_SRC="${GUARD_SRC:-${SELF_DIR}/brotli-guard.cjs}"
@@ -83,12 +85,11 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
 caution() { echo -e "  ${YELLOW}!${NC} $*"; }
-section() { echo -e "\n  ${CYAN}$*${NC}"; }
 
 is_root() { [[ $EUID -eq 0 ]]; }
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -102,7 +103,7 @@ ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 static_version() {
     local v
     v="$(grep -aoE -m1 'node-v[0-9]+\.[0-9]+\.[0-9]+' "$1" 2>/dev/null | head -1 || true)"
-    [[ -n "$v" ]] && echo "${v#node-}"
+    if [[ -n "$v" ]]; then echo "${v#node-}"; fi
 }
 
 # Executing is the fallback, and only for a binary root could trust anyway.
@@ -123,13 +124,19 @@ node_version() {   # <binary> -> vX.Y.Z or empty
     if [[ -z "$v" ]] && { ! is_root || safe_to_exec "$1"; }; then
         v="$(timeout 5 "$1" --version 2>/dev/null | head -1 || true)"
     fi
-    [[ "$v" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]] && echo "${BASH_REMATCH[0]}"
+    # status 0 even when nothing matched: callers read this in "$(...)" under set -e, and an
+    # unreadable runtime must be reported as unknown, not end the whole check
+    # keep a pre-release suffix (v24.22.1-pre, -rc.0, -nightly...): patch_state needs to see it
+    if [[ "$v" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.+~]+)? ]]; then echo "${BASH_REMATCH[0]}"; fi
 }
 
 # "<rc>|<explanation>": rc 0 = fixed, 1 = not fixed, 2 = unknown
 patch_state() {   # <vX.Y.Z> [binary path]
-    local v="${1#v}" bin="${2:-}" major fixed pkg full cl
+    local v="${1#v}" bin="${2:-}" major fixed pkg full cl vb pre=""
     [[ -n "$v" ]] || { echo "2|version unreadable"; return; }
+    # a pre-release (24.22.1-pre, -rc.0, -nightly...) is a build made before that release
+    vb="${v%%[-+~]*}"
+    [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+[-+~._]?(pre|rc|alpha|beta|dev|nightly|canary|snapshot|preview) ]] && pre=1
     major="${v%%.*}"; fixed="$(fixed_for "$major")"
 
     # A distro package can carry the fix under the old upstream version, so a
@@ -157,7 +164,10 @@ patch_state() {   # <vX.Y.Z> [binary path]
         fi
     fi
     if [[ -n "$fixed" ]]; then
-        if ver_ge "$v" "$fixed"; then echo "0|v${v} >= ${fixed}"; else echo "1|v${v} < ${fixed}"; fi
+        if ver_ge "$vb" "$fixed"; then
+            if [[ -n "$pre" && "$vb" == "$fixed" ]]; then echo "2|v${v} is a pre-release build made before ${fixed} was released: it may not carry the fix"
+            else echo "0|v${v} >= ${fixed}"; fi
+        else echo "1|v${v} < ${fixed}"; fi
         return
     fi
     if [[ -n "${pkg:-}" ]]; then
@@ -175,7 +185,7 @@ state_word() { case "$1" in 0) echo -e "${GREEN}fixed${NC}" ;; 1) echo -e "${RED
 find_runtimes() {
     local c
     {
-        command -v -a node nodejs 2>/dev/null || true
+        type -a -P node nodejs 2>/dev/null || true
         shopt -s nullglob
         for c in /usr/bin/node /usr/bin/nodejs /usr/local/bin/node /opt/*/bin/node /opt/*/*/bin/node \
                  /usr/local/n/versions/node/*/bin/node /snap/node/current/bin/node \
@@ -245,7 +255,11 @@ cmd_check() {
             continue
         fi
         if [[ $ps -eq 0 ]]; then ok "${bin}  ${v}  $(state_word 0)  (${how})"
-        else bad "${bin}  ${v}  $(state_word "$ps")  (${how})"; disk_bad=$((disk_bad + 1)); fi
+        else
+            bad "${bin}  ${v}  $(state_word "$ps")  (${how})"; disk_bad=$((disk_bad + 1))
+            # a version that cannot be judged (a pre-release at the fix version) is exit 2, as for an unreadable one
+            if [[ "$ps" -eq 2 && $rc_all -eq 0 ]]; then rc_all=2; fi
+        fi
     done < <(find_runtimes)
     [[ $found -eq 1 ]] || inf "no Node.js runtime found in the usual places"
 
@@ -420,12 +434,12 @@ unit_node_bin() {   # best guess at the node binary the unit runs
 
 guard_live() {   # <unit> <since> : guard announced itself, or a process carries it
     local u="$1" since="$2" pid c
-    journalctl -u "$u" --since "$since" --no-pager -o cat 2>/dev/null | grep -qF '[brotli-guard] active' && return 0
-    journalctl -u "$u" --since "$since" --no-pager -o cat 2>/dev/null | grep -qF '[brotli-guard] Node' && return 0
+    journalctl -u "$u" --since "$since" --no-pager -o cat 2>/dev/null | grep -F '[brotli-guard] active' >/dev/null && return 0
+    journalctl -u "$u" --since "$since" --no-pager -o cat 2>/dev/null | grep -F '[brotli-guard] Node' >/dev/null && return 0
     pid="$(main_pid "$u")"
     for c in "$pid" $(pgrep -P "$pid" 2>/dev/null); do
         [[ "$c" != 0 ]] || continue
-        tr '\0' '\n' < "/proc/${c}/environ" 2>/dev/null | grep -qE '^NODE_OPTIONS=.*brotli-guard' && return 0
+        tr '\0' '\n' < "/proc/${c}/environ" 2>/dev/null | grep -E '^NODE_OPTIONS=.*brotli-guard' >/dev/null && return 0
     done
     return 1
 }
@@ -583,14 +597,14 @@ cmd_status() {
     [[ $any -eq 1 ]] || inf "no units guarded by this script"
     if [[ -f "$GUARD_DST" ]]; then
         inf "guard file: $GUARD_DST v$(grep -oE "GUARD_VERSION = '[^']+'" "$GUARD_DST" | cut -d"'" -f2)"
-        [[ -f "$GUARD_SRC" ]] && ! cmp -s "$GUARD_SRC" "$GUARD_DST" && caution "differs from ${GUARD_SRC}; rerun guard to update it"
+        if [[ -f "$GUARD_SRC" ]] && ! cmp -s "$GUARD_SRC" "$GUARD_DST"; then caution "differs from ${GUARD_SRC}; rerun guard to update it"; fi
     fi
 }
 
 # ---------- hunt -------------------------------------------------------------
 cmd_hunt() {
     step "Hunting for Node.js crashes and guard events since ${HUNT_SINCE}"
-    local tmp; tmp="$(mktemp)"; trap 'rm -f "$tmp"' RETURN
+    local tmp; tmp="$(mktemp)"; trap 'rm -f "${tmp:-}"; trap - RETURN' RETURN
     if have journalctl; then journalctl --since "$HUNT_SINCE" --no-pager -o short-iso 2>/dev/null >>"$tmp" || true; fi
     local f
     shopt -s nullglob
@@ -651,3 +665,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

@@ -25,11 +25,13 @@
 #                    Regexp.new / Regexp.compile / Regexp.union and
 #                    interpolated regexp literals, graded by whether the
 #                    pattern is a literal, escaped, or worth reviewing.
-#                    Exit 0 = nothing to review, 1 = findings.
+#                    Exit 0 = nothing to review, 1 = findings, 2 = none of the
+#                    scan paths exist, so nothing was scanned.
 #   hunt             the journal and Ruby and GitLab logs for Ruby crash
 #                    reports, Onigmo frames in backtraces, heap corruption
 #                    aborts and services killed by a crash signal.
-#                    Exit 0 = clean, 1 = findings.
+#                    Exit 0 = clean, 1 = findings, 2 = no journal or log could
+#                    be read, so nothing was searched.
 #   version          print the script version.
 #
 # Everything here is read-only. Ruby has no in-process switch that blocks
@@ -76,7 +78,7 @@ DISCOURSE_ROOT="${DISCOURSE_ROOT:-/var/discourse}"
 DISCOURSE_APP="${DISCOURSE_APP:-/var/www/discourse}"
 SCRIPT_NAME="ruby-regexp-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-23"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 RUBY_ADVISORY="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/"
 
@@ -86,7 +88,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -195,7 +197,7 @@ vendor_of() {
 find_runtimes() {
     local c
     {
-        command -v -a ruby 2>/dev/null || true
+        type -a -P ruby 2>/dev/null || true
         shopt -s nullglob
         for c in /usr/bin/ruby /usr/bin/ruby[0-9]* /usr/local/bin/ruby \
                  /opt/*/embedded/bin/ruby /opt/puppetlabs/puppet/bin/ruby \
@@ -292,7 +294,7 @@ discourse_installs() {
         f="${app}/lib/version.rb"
         [[ -r "$f" || -r "${app}/VERSION" ]] || continue
         v=""
-        [[ -r "$f" ]] && v="$(grep -oE 'STRING *= *"[0-9.]+(\.beta[0-9]*)?"' "$f" | grep -oE '[0-9][0-9.]*' | head -1 || true)"
+        [[ -r "$f" ]] && v="$(grep -oE 'STRING *= *"[0-9.]+(\.beta[0-9]*)?"' "$f" | sed -E 's/.*"([^"]+)".*/\1/' | head -1 || true)"
         [[ -z "$v" && -r "${app}/VERSION" ]] && v="$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "${app}/VERSION" | head -1 || true)"
         rv=""
         [[ -r "${app}/.ruby-version" ]] && rv="$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "${app}/.ruby-version" | head -1 || true)"
@@ -472,7 +474,7 @@ cmd_scan() {
     local -a roots=() prune=()
     local p
     for p in $SCAN_PATHS; do [[ -d "$p" ]] && roots+=("$p"); done
-    [[ ${#roots[@]} -gt 0 ]] || { warn "none of SCAN_PATHS exist (${SCAN_PATHS})"; return 0; }
+    [[ ${#roots[@]} -gt 0 ]] || { warn "none of SCAN_PATHS exist (${SCAN_PATHS}): nothing was scanned, which is not a clean result"; return 2; }
     # GitLab's own tree is judged by its version; gems are opt-in
     prune=( -path "${GITLAB_ROOT}" -o -name .git -o -name node_modules -o -name tmp -o -name log )
     [[ "$SCAN_GEMS" == 1 ]] || prune+=( -o -path '*/vendor/bundle' -o -path '*/gems/*' -o -path '*/.gem' -o -path '*/.rbenv' -o -path '*/.rvm' -o -path '*/.asdf' -o -path '*/.local/share/mise' )
@@ -536,7 +538,7 @@ cmd_hunt() {
         for f in $g; do [[ -r "$f" && -f "$f" ]] && files+=("$f"); done
     done
     shopt -u nullglob
-    [[ ${#files[@]} -gt 0 ]] || { warn "No readable journal or logs (try as root, or set HUNT_LOGS)"; return 0; }
+    [[ ${#files[@]} -gt 0 ]] || { warn "No readable journal or logs (try as root, or set HUNT_LOGS): nothing was read, which is not a clean result"; return 2; }
     inf "reading ${#files[@]} source(s)"
 
     local found=0 name re c n
@@ -584,3 +586,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

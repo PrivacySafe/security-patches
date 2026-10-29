@@ -67,8 +67,8 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/rub
 | Command | What it does |
 |---|---|
 | `check` (default) | Reports every GitLab and Discourse install, every Ruby runtime on disk and every running Ruby process, with whether each is fixed. Flags processes still running a Ruby that was replaced on disk since they started. Changes nothing, root optional. Exits `0` if nothing running is exposed, `1` if unfixed Ruby is running or a bundled app is unfixed, `2` if some version couldn't be read |
-| `scan` | Read-only. Finds application code that compiles regexps from strings, grouped by application, and grades each line (see [Ruby scan grades](#ruby-scan-grades)). Exits `0` if nothing needs review, `1` if something does |
-| `hunt` | Read-only log triage. Scans the journal, syslog, kernel log, GitLab's Puma, Sidekiq and Rails logs, and application logs under `/srv` and `/var/www`, for Ruby crash reports, Onigmo frames in backtraces, heap corruption aborts, services killed by a crash signal, and `RegexpError`. Exits `0` if nothing matched, `1` if it found something to look at |
+| `scan` | Read-only. Finds application code that compiles regexps from strings, grouped by application, and grades each line (see [Ruby scan grades](#ruby-scan-grades)). Exits `0` if nothing needs review, `1` if something does, `2` if none of the scan paths exist (nothing was scanned) |
+| `hunt` | Read-only log triage. Scans the journal, syslog, kernel log, GitLab's Puma, Sidekiq and Rails logs, and application logs under `/srv` and `/var/www`, for Ruby crash reports, Onigmo frames in backtraces, heap corruption aborts, services killed by a crash signal, and `RegexpError`. Exits `0` if nothing matched, `1` if it found something to look at, `2` if no journal or log could be read (nothing was searched) |
 | `version` | Prints the script version. Every other command prints it on its first line too |
 
 ### What the Ruby check looks at

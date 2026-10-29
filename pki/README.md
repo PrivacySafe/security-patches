@@ -134,7 +134,7 @@ A fixed store isn't enough on its own, because a long-running process keeps the 
 - **Containers get their own fix.** Each image carries its own `ca-certificates`. Rebuild images on patched bases; running this inside a container fixes that container only.
 - **The distrust survives package upgrades and `dpkg-reconfigure ca-certificates`.** Both keep `!` lines in `/etc/ca-certificates.conf`. Check with `status` after any upgrade anyway.
 - **Debian, Ubuntu, Trisquel and their derivatives only.** Fedora/RHEL, openSUSE, Arch, Alpine, NixOS, FreeBSD and macOS need a different approach. See the [disclosure page](https://emudhra.we-have-a-problem.com/#linux).
-- **Backups** of everything the script touches go to `/var/backups/emudhra-mitigation/<timestamp>/`. The record of what it changed is `/var/lib/emudhra-mitigation/state`.
+- **Backups** of everything the script touches go to `/var/backups/emudhra-mitigation/<timestamp>-<pid>/`, so two runs in the same second never share a directory. A certificate file the script moves out of `/usr/local/share/ca-certificates` or `/etc/ssl/certs` is kept under a numbered name (`01-root.crt`, `02-root.crt`), so two different files with the same name from different directories cannot overwrite each other, and `restore` puts each one back where it came from. The record of what it changed is `/var/lib/emudhra-mitigation/state`.
 
 ---
 
