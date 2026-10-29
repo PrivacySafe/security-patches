@@ -7,7 +7,7 @@
 # https://privacysafe.foundation
 #
 # Builds a release tarball, a .deb and an .rpm, all named psf-security-packages
-# and versioned by release date: YY.MM.DD-X.Y.Z, for example 26.10.25-1.0.0.
+# and versioned by release date: YY.MM.DD-X.Y.Z, for example 26.10.28-1.0.0.
 # In the deb the date is the upstream version and X.Y.Z the revision; in the
 # rpm the date is Version and X.Y.Z is Release. The packages install the whole
 # tree to /opt/psf-security-patches and the php2shell-watch systemd unit to

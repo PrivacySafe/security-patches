@@ -81,7 +81,7 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/hei
 | `unharden` | Removes the managed block and restores. Needs root. Only touches a block this script wrote; a block added by hand is left alone |
 | `mw-harden` | Blocks HEIF, HEIC and AVIF uploads in every MediaWiki found, by adding those MIME types to `$wgMimeTypeExclusions` in `LocalSettings.php`, so a crafted upload is rejected by its detected type before the scaler runs. Backs the file up first, is idempotent, checks the result still parses as PHP before saving, and is reversible. Needs root. Application-level defence, not a substitute for updating `libheif` |
 | `mw-unharden` | Removes the MediaWiki block and restores. Needs root. Only touches a block this script wrote |
-| `hunt` | Read-only log triage for image-processor crashes: ImageMagick, `libheif` and `libde265` segfaults, HEIF decoder frames in backtraces, services killed by a crash signal, and repeated HEIF decode errors. Exits `0` if nothing matched, `1` if it found something |
+| `hunt` | Read-only log triage for image-processor crashes: ImageMagick, `libheif` and `libde265` segfaults, HEIF decoder frames in backtraces, services killed by a crash signal, and repeated HEIF decode errors. Exits `0` if nothing matched, `1` if it found something, `2` if no journal or log could be read (nothing was searched) |
 | `version` | Prints the script version. Every other command prints it on its first line too |
 
 ### What the libheif check looks at
@@ -159,6 +159,7 @@ A match is a lead, not proof. Image decoders crash on genuinely broken files too
 - **`libde265` is reported, not judged.** It has its own fixed versions. Update it from your distribution.
 - **Containers need their own fix.** Each image carries its own `libheif`; rebuild on a fixed base. The script reads the library inside running containers but can't see one that was installed in an unusual way.
 - **GNU/Linux only.** Library discovery and container inspection assume it.
+- **Every backup has its own private directory.** `harden`, `unharden`, `mw-harden` and `mw-unharden` keep the file they are about to change in a new directory under `BACKUP_ROOT` (mode `0700`), so two runs in the same second cannot overwrite the original, and a `LocalSettings.php` backup, which holds database credentials, is not world-readable.
 
 ---
 

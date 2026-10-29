@@ -55,7 +55,8 @@
 #   hunt             read-only: the journal and logs for image-processor
 #                    crashes (ImageMagick/libheif/libde265 segfaults, HEIF
 #                    decoder frames, repeated convert/magick aborts).
-#                    Exit 0 = clean, 1 = findings.
+#                    Exit 0 = clean, 1 = findings, 2 = no journal or log could
+#                    be read, so nothing was searched.
 #   version          print the script version.
 #
 # The real fix is to update libheif (and libde265) and rebuild anything that
@@ -78,6 +79,9 @@
 #                                     where policy looks for policy.xml
 #   HUNT_SINCE="2026-07-01"           how far back hunt reads the journal
 #   HUNT_LOGS="/var/log/nginx/*.log"  extra log globs for hunt
+#   BACKUP_ROOT=/var/backups/libheif-oct2026
+#                                     where harden and mw-harden keep the backup
+#                                     of each config file they change
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -102,7 +106,7 @@ HUNT_SINCE="${HUNT_SINCE:-2026-07-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="libheif-oct2026-check.sh"
 SCRIPT_VERSION="1.1.0"
-SCRIPT_DATE="2026-10-23"
+SCRIPT_DATE="2026-10-28"
 SELF="$0"
 ADVISORY="https://www.hacktron.ai/blog/hacking-openai"
 MARKER="managed-by: libheif-oct2026-check"
@@ -118,7 +122,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
-die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
@@ -274,7 +278,7 @@ mw_profile() {   # <LocalSettings.php>
     a="$(mw_last "$f" wgImageMagickConvertCommand)"
     [[ -n "$a" && "$(mw_last "$f" wgUseImageMagick)" != *[Ff]alse* ]] && uses_im=1
     # HEIF reachable if any heif-family extension is in wgFileExtensions
-    if grep -oE '\$wgFileExtensions[^;]*' "$f" 2>/dev/null | grep -qiE "['\"](heif|heic|avif)['\"]"; then accepts=1; fi
+    if grep -oE '\$wgFileExtensions[^;]*' "$f" 2>/dev/null | grep -iE "['\"](heif|heic|avif)['\"]" >/dev/null; then accepts=1; fi
     # Version from the sibling install (RELEASE-NOTES or includes/Defines)
     dir="$(dirname "$f")"
     for rl in "${dir}/includes/Defines.php" "${dir}/RELEASE-NOTES-"*; do
@@ -405,8 +409,10 @@ cmd_check() {
 # not a parse of ImageMagick's effective policy, so it errs toward caution.
 coder_blocked() {   # <file> <CODER> -> 0 if a none-rights policy names it
     local f="$1" coder="$2"
-    grep -iE "<policy[^>]*domain=\"coder\"[^>]*rights=\"none\"[^>]*pattern=\"(\\{?(HEIC|HEIF|AVIF)[^\"]*|[*]|\\{[^\"]*(HEIC|HEIF|AVIF)[^\"]*)\"" "$f" 2>/dev/null \
-        | grep -iqE "pattern=\"([*]|[^\"]*${coder})" && return 0
+    # -o isolates each matching <policy> element, so one element's rights cannot vouch for another
+    # element's pattern when a policy file is written on a single line
+    grep -oiE "<policy[^>]*domain=\"coder\"[^>]*rights=\"none\"[^>]*pattern=\"(\\{?(HEIC|HEIF|AVIF)[^\"]*|[*]|\\{[^\"]*(HEIC|HEIF|AVIF)[^\"]*)\"" "$f" 2>/dev/null \
+        | grep -iE "pattern=\"([*]|[^\"]*${coder})" >/dev/null && return 0
     return 1
 }
 
@@ -462,9 +468,12 @@ cmd_policy() {
 need_root() { is_root || die "${1} needs root (it edits a config file owned by another user). Re-run with sudo"; }
 
 backup_file() {   # <path> -> prints backup path
+    # Every backup gets its own private directory (mode 0700): two runs in the same second must not
+    # share one, or the second copy would overwrite the true original, and a LocalSettings.php
+    # holds database credentials.
     local dst
-    dst="${BACKUP_ROOT}/$(date +%Y%m%d-%H%M%S)"
-    mkdir -p "$dst"
+    mkdir -p "$BACKUP_ROOT" || die "could not create ${BACKUP_ROOT}"
+    dst="$(mktemp -d "${BACKUP_ROOT}/$(date +%Y%m%d-%H%M%S).XXXXXX")" || die "could not create a backup directory under ${BACKUP_ROOT}"
     cp -a "$1" "$dst/" || die "could not back up $1"
     echo "${dst}/$(basename "$1")"
 }
@@ -701,7 +710,7 @@ cmd_hunt() {
         for f in $g; do [[ -r "$f" && -f "$f" ]] && files+=("$f"); done
     done
     shopt -u nullglob
-    [[ ${#files[@]} -gt 0 ]] || { warn "No readable journal or logs (try as root, or set HUNT_LOGS)"; return 0; }
+    [[ ${#files[@]} -gt 0 ]] || { warn "No readable journal or logs (try as root, or set HUNT_LOGS): nothing was read, which is not a clean result"; return 2; }
     inf "reading ${#files[@]} source(s)"
 
     local found=0 name re c n
@@ -750,3 +759,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5
