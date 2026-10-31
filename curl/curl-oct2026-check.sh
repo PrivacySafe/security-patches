@@ -24,7 +24,7 @@
 #
 # This is read-only: it finds what needs updating and judges each against the
 # fixes. It changes nothing. The fix is to update curl/libcurl and restart the
-# programs that use it. Where you cannot update, curl's interim advice is to
+# programs that use it. Where you cannot update, curl's advice is to
 # avoid HTTP/2: the command's --http1.1 option, or CURLOPT_HTTP_VERSION set to
 # CURL_HTTP_VERSION_1_1 in an application (a request, since an existing
 # connection may be reused). A libcurl built without HTTP/2 cannot reach the
@@ -84,7 +84,7 @@ HUNT_SINCE="${HUNT_SINCE:-2026-10-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="curl-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 UPSTREAM="https://curl.se/docs/CVE-2026-92392.html"
 
@@ -104,7 +104,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 state_word() { case "$1" in 0) echo -e "${GREEN}fixed${NC}" ;; 1) echo -e "${RED}vulnerable${NC}" ;; *) echo -e "${YELLOW}unknown${NC}" ;; esac; }
 
-# ---------- version judgement ------------------------------------------------
+# ---------- version judgment ------------------------------------------------
 # The fix for a given upstream version is the one whose "introduced" bound is
 # the highest at or below it: 8.12.0-8.14.2 -> 8.14.3, 8.15.0-8.16.1 -> 8.16.2,
 # 8.17.0-8.20.1 -> 8.20.2, 8.21.0-8.22.x -> 8.23.0.
@@ -329,7 +329,7 @@ cmd_hunt() {
         fi
     done
     echo
-    echo "  A hit is a lead, not proof: plenty of things segfault, and the libcurl-frame"
+    echo "  A hit tells you where to look: plenty of things segfault, and the libcurl-frame"
     echo "  pattern is broad. A crash in a program that was uploading over HTTP/2 to an"
     echo "  outside server, on a vulnerable build, is worth treating as an incident: check"
     echo "  what that process could reach (secrets, tokens, credentials) and rotate them."
@@ -352,4 +352,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

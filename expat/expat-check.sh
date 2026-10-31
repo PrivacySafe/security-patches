@@ -22,9 +22,9 @@
 #   Fix:      merged upstream on 23 October 2026 (pull request #1433) and
 #             milestoned for Expat 2.9.1
 #
-# As of 27 October 2026 no Expat release contains the fix. The script reports
-# every copy at 2.9.0 or older as affected and treats 2.9.1 or newer as fixed,
-# because upstream attached the fix to the 2.9.1 milestone. Distribution
+# Install Expat 2.9.1 or later when it reaches you: upstream attached the fix to
+# that milestone. The script reports every copy at 2.9.0 or older as affected and
+# 2.9.1 or newer as fixed. Distribution
 # packages usually backport fixes without changing the version, which the
 # script checks for.
 #
@@ -59,7 +59,7 @@ set -uo pipefail
 
 SCRIPT_NAME="expat-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 FIXED_VERSION="2.9.1"
 
@@ -319,7 +319,7 @@ cmd_check_host() {
     else
         warn "${AFFECTED} affected copy(ies) of ${CHECKED} checked. Upstream planned Expat ${FIXED_VERSION} for 26 October 2026."
         inf "Install your distribution's expat or libexpat update as soon as it ships, then restart the processes listed above."
-        inf "Until then, reduce exposure (not vendor documented): cap the size of XML bodies at the proxy, and run services that parse untrusted XML under CPU and memory limits (systemd CPUQuota and MemoryMax) so one request cannot starve the host."
+        inf "Until then, reduce exposure (PrivacySafe recommendation): cap the size of XML bodies at the proxy, and run services that parse untrusted XML under CPU and memory limits (systemd CPUQuota and MemoryMax) so one request cannot starve the host."
         inf "libexpat exposes tuning calls for its amplification protection, but the upstream notes do not say that tightening them avoids this flaw, so do not rely on that."
         inf "Upstream: https://github.com/libexpat/libexpat/pull/1433 and issue #1160"
     fi

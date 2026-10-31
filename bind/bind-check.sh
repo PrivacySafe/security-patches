@@ -17,8 +17,7 @@
 #   Affected: BIND 9.11.0 through 9.18.50, 9.20.0 through 9.20.29,
 #             9.21.0 through 9.21.26 (and matching -S1 Supported Preview builds)
 #   Fixed:    9.20.30 and 9.21.27 (9.20.30-S1 for the Preview Edition)
-#   No fix:   the 9.18 branch and everything older is end of life; ISC does not
-#             ship security fixes for it. Move to 9.20. Distributions that still
+#   Move to:   9.20. The 9.18 branch and everything older is end of life. Distributions that still
 #             support 9.18 may backport the fix: the script looks for that.
 #
 # The code is present in every build, but the vulnerable path needs GSS-TSIG,
@@ -56,7 +55,7 @@ set -uo pipefail
 
 SCRIPT_NAME="bind-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----

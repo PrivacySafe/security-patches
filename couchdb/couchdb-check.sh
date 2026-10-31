@@ -54,7 +54,7 @@ set -uo pipefail
 
 SCRIPT_NAME="couchdb-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -348,7 +348,7 @@ cmd_check_host() {
         info "No affected CouchDB found (${CHECKED} checked)"
     else
         warn "${AFFECTED} affected CouchDB instance(s) of ${CHECKED} checked. Upgrade to 3.5.3 or later."
-        inf "Interim (ours, not vendor documented): keep port 5984 off untrusted networks, give admins long unique passwords, and do not let applications hold admin credentials they do not need."
+        inf "PrivacySafe recommendation: keep port 5984 off untrusted networks, give admins long unique passwords, and do not let applications hold admin credentials they do not need."
         inf "After upgrading, rotate any admin password that may have been exposed."
         inf "Release information: https://couchdb.apache.org/"
     fi

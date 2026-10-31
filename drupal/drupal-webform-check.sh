@@ -52,7 +52,7 @@ set -uo pipefail
 
 SCRIPT_NAME="drupal-webform-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -223,7 +223,7 @@ cmd_check() {
         report "$f" "$v" || rc=1
     done < <(find "${existing[@]}" -maxdepth 9 -path '*/webform/webform.info.yml' -type f 2>/dev/null | sort -u)
 
-    step "Exported configuration: webforms with a custom multiple-value format (heuristic)"
+    step "Exported configuration: webforms with a custom multiple-value format"
     hits=0
     while IFS= read -r f; do
         [[ -n "$f" ]] || continue

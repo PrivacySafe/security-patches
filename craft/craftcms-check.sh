@@ -9,7 +9,7 @@
 #
 # Craft CMS restricts which classes the Twig create() function may instantiate
 # with a blocklist. The class-name checks are case-sensitive while PHP class
-# resolution is not, so a differently capitalised class name slips past the
+# resolution is not, so a differently capitalized class name slips past the
 # blocklist. The result is remote code execution, or reading secrets such as
 # the .env file, for someone who can get Twig to render attacker-controlled
 # template content. CVSS 8.7 (v4.0), 7.2 (v3.1). It is an authenticated flaw:
@@ -47,7 +47,7 @@ set -uo pipefail
 
 SCRIPT_NAME="craftcms-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -245,8 +245,8 @@ cmd_check() {
         info "No affected Craft CMS found (${found} checked)"
     else
         warn "Affected Craft CMS found. Update: composer update craftcms/cms  (4.18.8+ or 5.11.0+), then run php craft up."
-        inf "Meanwhile: review who holds admin or template-related permissions in the control panel, remove accounts you do not recognise, and set allowAdminChanges to false in production."
-        inf "Those measures narrow who can reach the flaw; they are not vendor documented for this specific bypass and do not replace the update."
+        inf "Meanwhile: review who holds admin or template-related permissions in the control panel, remove accounts you do not recognize, and set allowAdminChanges to false in production."
+        inf "Those measures narrow who can reach the flaw; they are PrivacySafe's recommendation and work alongside the update."
         inf "Advisory: https://github.com/craftcms/cms/security/advisories/GHSA-w643-x88w-6wcm"
     fi
     return "$rc"

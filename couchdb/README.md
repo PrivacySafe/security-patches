@@ -62,31 +62,35 @@ The `[admins]` section holds password hashes or passwords. The script **counts**
 
 ## How to read the result
 
-- **Affected version:** upgrade to 3.5.3. The script exits `1` for any affected version, because it cannot judge how well your admin credentials are protected.
-- **`bind_address` is `0.0.0.0` or `::`:** CouchDB listens on every interface. The unauthenticated `/_session` flaw fixed in the same release is then reachable by anyone who can connect. The script reads the last value across `default.ini`, `default.d`, `local.ini` and `local.d`, and ignores commented lines.
-- **`bind_address` is loopback:** reported as a good sign, not as a fix.
-- **Several sources:** the release files, the package and each live URL are reported separately. A running server that answers with a different version from the files on disk usually means it was upgraded but not restarted, or the reverse.
-- **Distribution packages:** the script reads the package changelog for a mention of the CVE.
-- **A server that requires a login for `GET /`** simply gives no version; the script says it got no answer.
+- Affected version: upgrade to 3.5.3. The script exits `1` for any affected version, because it cannot judge how well your admin credentials are protected.
+- `bind_address` is `0.0.0.0` or `::`: CouchDB listens on every interface. The unauthenticated `/_session` flaw fixed in the same release is then reachable by anyone who can connect. The script reads the last value across `default.ini`, `default.d`, `local.ini` and `local.d`, and ignores commented lines.
+- `bind_address` is loopback: reported as a good sign, not as a fix.
+- Several sources: the release files, the package and each live URL are reported separately. A running server that answers with a different version from the files on disk usually means it was upgraded but not restarted, or the reverse.
+- Distribution packages: the script reads the package changelog for a mention of the CVE.
+- A server that requires a login for `GET /` simply gives no version. The script says it got no answer.
 
 ## Fixing it
 
-Upgrade to CouchDB 3.5.3 or later and restart. Until you can, keep port 5984 off untrusted networks, give admins long unique passwords, and do not let applications hold admin credentials they do not need. Those steps are our reasoning, not vendor documented. After upgrading, rotate any admin password that may have been exposed.
+Upgrade to CouchDB 3.5.3 or later and restart. Until you can, keep port 5984 off untrusted networks, give admins long unique passwords, and do not let applications hold admin credentials they do not need. Those steps are PrivacySafe's recommendation. After upgrading, rotate any admin password that may have been exposed.
 
 ## Sources
 
 - [Apache CouchDB](https://couchdb.apache.org/)
 - [CVE record for CVE-2026-86471](https://www.cve.org/CVERecord?id=CVE-2026-86471)
 
-## CouchDB know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 3.5.3. The same release fixes a pre-authentication gzip decompression bomb on `POST /_session`, which needs no credentials, so whether the node listens beyond localhost matters.
-- **CVE-2026-86471 needs a server admin.** It is a privilege escalation from a CouchDB admin (a stolen or weak password, an exposed admin interface, or an application holding admin credentials) to the host. It is not usable by an anonymous visitor alone.
-- **Given URLs, it asks each server for its version.** With a URL argument it makes one unauthenticated `GET` of the server's root document; with none it asks only `http://127.0.0.1:5984/` and ignores a refusal.
-- **It never prints an `[admins]` value.** Those are password hashes or passwords. It reports only the bind address, `require_valid_user` and how many admin entries exist.
-- **It also reads running containers.** With no argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container captures `releases/start_erl.data` and the `.ini` files (with every value under `[admins]` redacted inside the container before it is copied) into a private temporary directory, and this script then runs once per container, in isolation, against that copy, so one container's configuration never changes another's result. A container run reads only those copied files: it does not ask the host package database or a live server. The copies are removed on exit. A path shown as `.../docker_NAME/...` is inside the container NAME. It is skipped when you name a binary or directory yourself.
+- The fix. Update to 3.5.3. The same release fixes a pre-authentication gzip decompression bomb on `POST /_session`, which needs no credentials, so whether the node listens beyond localhost matters.
+- CVE-2026-86471 needs a server admin. It is a privilege escalation from a CouchDB admin (a stolen or weak password, an exposed admin interface, or an application holding admin credentials) to the host. It is not usable by an anonymous visitor alone.
+- Given URLs, it asks each server for its version. With a URL argument it makes one unauthenticated `GET` of the server's root document. With none it asks only `http://127.0.0.1:5984/` and ignores a refusal.
+- It never prints an `[admins]` value. Those are password hashes or passwords. It reports only the bind address, `require_valid_user` and how many admin entries exist.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. A read-only probe inside each running docker and podman container captures `releases/start_erl.data` and the `.ini` files (with every value under `[admins]` redacted inside the container before it is copied) into a private temporary directory. The script then runs once per container, in isolation, against that copy, so one container's configuration never changes another's result. A container run reads only those copied files: it does not ask the host package database or a live server. The copies are removed on exit. A path shown as `.../docker_NAME/...` is inside the container NAME. It is skipped when you name a binary or directory yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

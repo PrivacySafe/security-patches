@@ -48,7 +48,7 @@ Forgejo is a separate project. This tool reads Gitea's version output and does n
    GITEA_INI=/etc/gitea/app.ini ./gitea-check.sh check
    ```
 
-   A running container is checked from the host (see the container note below); for an image that is not running, check its tag yourself.
+   A running container is checked from the host (see the container note below). For an image that is not running, check its tag yourself.
 
 ## Commands
 
@@ -67,30 +67,34 @@ Exit codes: `0` nothing exposed, `1` an affected version that trusts a user CA, 
 
 ## How to read the result
 
-- **Affected version, CA trusted, principals `anything`:** the worst case. Upgrade.
-- **Affected version, CA trusted, other principal policy:** still exposed to a holder of a CA-signed certificate. Upgrade.
-- **Affected version, no CA trusted:** per the advisory the flaw does not apply, so the script exits `0`, but it still tells you to update because the same release fixes eight other flaws and a CA may be added later.
-- **`app.ini` unreadable:** the script cannot tell whether a CA is trusted, so it treats the instance as exposed.
-- **Version numbers:** Gitea moved from 1.x to 28.x, so `1.27.3` is older than `28.2.0` and is affected. The comparison is numeric, so `28.10.0` is newer than `28.2.0`.
+- Affected version, CA trusted, principals `anything`: the worst case. Upgrade.
+- Affected version, CA trusted, other principal policy: still exposed to a holder of a CA-signed certificate. Upgrade.
+- Affected version, no CA trusted: per the advisory the flaw does not apply, so the script exits `0`, but it still tells you to update because the same release fixes eight other flaws and a CA may be added later.
+- `app.ini` unreadable: the script cannot tell whether a CA is trusted, so it treats the instance as exposed.
+- Version numbers: Gitea moved from 1.x to 28.x, so `1.27.3` is older than `28.2.0` and is affected. The comparison is numeric, so `28.10.0` is newer than `28.2.0`.
 
 ## Fixing it
 
-Upgrade to Gitea 28.2.0 or later and restart. If you do not need certificate login, emptying `SSH_TRUSTED_USER_CA_KEYS` takes the instance out of the affected configuration; that is our reasoning rather than the vendor's. Afterwards, review recent SSH and API signature logins.
+Upgrade to Gitea 28.2.0 or later and restart. If you do not need certificate login, emptying `SSH_TRUSTED_USER_CA_KEYS` takes the instance out of the affected configuration. This is PrivacySafe's recommendation. Afterwards, review recent SSH and API signature logins.
 
 ## Sources
 
 - [Gitea 28.2.0 release announcement](https://blog.gitea.com/release-of-28.2.0/)
 - [Gitea advisory GHSA-vcp6-2qc6-gvq3](https://github.com/go-gitea/gitea/security/advisories/GHSA-vcp6-2qc6-gvq3)
 
-## Gitea know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 28.2.0. The same release fixes eight other flaws that only the update fixes.
-- **It only applies to instances that trust a user certificate authority.** That means `SSH_TRUSTED_USER_CA_KEYS` is set in `app.ini`, together with a principals policy that lets someone list another user's key line. An instance that does not trust a user CA is not affected.
-- **Forgejo is a separate project.** The script reads Gitea's `--version` output and does not judge Forgejo.
-- **It never prints your CA keys.** From `app.ini` it reports whether a user CA is trusted and the principal policy word, and nothing else.
-- **It also reads running containers.** With no argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container captures the output of `gitea --version` and a reduced `app.ini` containing only the two `[server]` settings this check reads (`SSH_AUTHORIZED_PRINCIPALS_ALLOW`, and whether `SSH_TRUSTED_USER_CA_KEYS` is set, as a bare `x`) into a private temporary directory, and this script then runs once per container, in isolation, against that copy, so one container's configuration never changes another's result. The CA key, the database password and every other `app.ini` value stay in the container. The copies are removed on exit. A path shown as `.../docker_NAME/...` is inside the container NAME. It is skipped when you name a binary or directory yourself.
+- The fix. Update to 28.2.0. The same release fixes eight other flaws that only the update fixes.
+- It only applies to instances that trust a user certificate authority. That means `SSH_TRUSTED_USER_CA_KEYS` is set in `app.ini`, together with a principals policy that lets someone list another user's key line. An instance that does not trust a user CA is not affected.
+- Forgejo is a separate project. The script reads Gitea's `--version` output and does not judge Forgejo.
+- It never prints your CA keys. From `app.ini` it reports whether a user CA is trusted and the principal policy word, and nothing else.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. A read-only probe in each container captures the output of `gitea --version` and a reduced `app.ini` that holds only the two `[server]` settings this check reads (`SSH_AUTHORIZED_PRINCIPALS_ALLOW`, and whether `SSH_TRUSTED_USER_CA_KEYS` is set, as a bare `x`). The script then runs once per container, in isolation, against that copy, so one container's configuration never changes another's result. The CA key, the database password and every other `app.ini` value stay in the container. The copies are removed on exit. A path shown as `.../docker_NAME/...` is inside the container NAME. It is skipped when you name a binary or directory yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

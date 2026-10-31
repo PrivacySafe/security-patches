@@ -52,15 +52,15 @@ The flaw affects curl and libcurl 8.12.0 through 8.22.0 and is not present befor
 
 ### What the curl check looks at
 
-1. **The `curl` command.** Every `curl` on `PATH` and the usual locations. It reads `curl --version`, which reports both the tool version and the `libcurl/X.Y.Z` the tool links, and whether the build advertises `HTTP2`. The verdict is on the libcurl version, since that is where the flaw lives. A build with no HTTP/2 support cannot reach the upload path, and is reported as such rather than as exposed.
-2. **`libcurl` on the host.** Every `libcurl.so` on the standard library paths and in `ldconfig`'s cache. The soname is always `libcurl.so.4`, so the version is read from the package build (for a distribution library) or from the `libcurl/X.Y.Z` string the library carries, never by executing it. Each is noted for whether it links `nghttp2` (HTTP/2 capability).
-3. **`libcurl` inside running containers.** For each running Docker or Podman container, the `libcurl` the container actually carries, read from its embedded version string. A rebuild, not a restart, replaces it.
+1. The `curl` command. Every `curl` on `PATH` and the usual locations. It reads `curl --version`, which reports both the tool version and the `libcurl/X.Y.Z` the tool links, and whether the build advertises `HTTP2`. The verdict is on the libcurl version, since that is where the flaw lives. A build with no HTTP/2 support cannot reach the upload path, and is reported as such rather than as exposed.
+2. `libcurl` on the host. Every `libcurl.so` on the standard library paths and in `ldconfig`'s cache. The soname is always `libcurl.so.4`, so the version is read from the package build (for a distribution library) or from the `libcurl/X.Y.Z` string the library carries, never by executing it. Each is noted for whether it links `nghttp2` (HTTP/2 capability).
+3. `libcurl` inside running containers. For each running Docker or Podman container, the `libcurl` the container actually carries, read from its embedded version string. A rebuild, not a restart, replaces it.
 
 ### curl patch detection
 
-For a curl or libcurl installed from a Debian or Ubuntu package, the script judges it by the package build first (a built-in list of known fixed builds plus any you add with `FIXED_BUILDS`, then the package changelog naming `CVE-2026-92392` or `DSA-6558-1`), because a distribution backports the fix under an older-looking upstream number. The built-in list already carries Debian 13's `8.14.1-2+deb13u7`, so a patched trixie host reads as fixed without configuration. For a self-built or bundled library it uses the upstream fix for the version's branch: 8.14.3 for 8.12.0 through 8.14.2, 8.16.2 for 8.15.0 through 8.16.1, 8.20.2 for 8.17.0 through 8.20.1, and 8.23.0 for 8.21.0 through 8.22.x. Anything below 8.12.0 is reported as not affected.
+For a curl or libcurl installed from a Debian or Ubuntu package, the script judges the package build first. It uses a built-in list of known fixed builds plus any you add with `FIXED_BUILDS`, then the package changelog naming `CVE-2026-92392` or `DSA-6558-1`, because a distribution backports the fix under an older-looking upstream number. The built-in list already carries Debian 13's `8.14.1-2+deb13u7`, so a patched trixie host reads as fixed without configuration. For a self-built or bundled library it uses the upstream fix for the version's branch. Builds from 8.12.0 through 8.14.2 need 8.14.3, 8.15.0 through 8.16.1 need 8.16.2, 8.17.0 through 8.20.1 need 8.20.2, and 8.21.0 through 8.22.x need 8.23.0. Anything below 8.12.0 is reported as not affected.
 
-### curl interim mitigation
+### curl mitigation
 
 The fix is to update curl/libcurl and restart the programs that use it. Where you cannot update yet, curl's advice is to avoid HTTP/2 for uploads, because the vulnerable path is HTTP/2 only:
 
@@ -79,18 +79,22 @@ The fix is to update curl/libcurl and restart the programs that use it. Where yo
 | `HUNT_SINCE` | `2026-10-01` | How far back `hunt` reads the journal |
 | `HUNT_LOGS` | *(empty)* | Extra log globs for `hunt` |
 
-### curl know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 8.23.0 (or the 8.14.3 / 8.16.2 / 8.20.2 branch build, or your distribution's fixed build), rebuild anything that bundles libcurl, and restart the programs that use it, since a running process keeps the old library until it restarts.
-- **The risk is an outbound HTTP/2 upload to a server you don't control.** A program on this host that uploads over HTTP/2 to an attacker-controlled HTTPS server is the exposure; a plain server that only receives requests is not the target here.
-- **A build without HTTP/2 is not a path.** The check reports HTTP/2 capability so you can tell, but HTTP/2 is built into most modern curl packages.
-- **Distribution backports read correctly.** A package can carry the fix under an older upstream number; if you know a build is fixed and its changelog doesn't name the CVE, add it to `FIXED_BUILDS`.
-- **Containers need their own fix.** Each image carries its own libcurl; rebuild on a fixed base. The script reads the library inside running containers but can't see one installed in an unusual way.
-- **A development build is not the release.** A curl built from git identifies itself as `8.20.2-DEV`, a build made before 8.20.2 shipped, so at a fix version the script reports it as unknown (it may or may not carry the fix) instead of fixed. A development build past the fix version is fixed.
-- **An unreadable `curl` is reported, not skipped.** A `curl` on `PATH` whose `--version` output cannot be read is listed as unknown, and the rest of the check still runs.
-- **GNU/Linux only.** Library discovery and container inspection assume it.
+- The fix. Update to 8.23.0 (or the 8.14.3 / 8.16.2 / 8.20.2 branch build, or your distribution's fixed build), rebuild anything that bundles libcurl, and restart the programs that use it, since a running process keeps the old library until it restarts.
+- The risk is an outbound HTTP/2 upload to a server you don't control. A program on this host that uploads over HTTP/2 to an attacker-controlled HTTPS server is the exposure. A plain server that only receives requests is not the target here.
+- A build without HTTP/2 is not a path. The check reports HTTP/2 capability so you can tell, but HTTP/2 is built into most modern curl packages.
+- Distribution backports read correctly. A package can carry the fix under an older upstream number, if you know a build is fixed and its changelog doesn't name the CVE, add it to `FIXED_BUILDS`.
+- Containers need their own fix. Each image carries its own libcurl. Rebuild on a fixed base. The script reads the library inside running containers but can't see one installed in an unusual way.
+- A development build is not the release. A curl built from git identifies itself as `8.20.2-DEV`, a build made before 8.20.2 shipped, so at a fix version the script reports it as unknown (it may or may not carry the fix) instead of fixed. A development build past the fix version is fixed.
+- An unreadable `curl` is reported, not skipped. A `curl` on `PATH` whose `--version` output cannot be read is listed as unknown, and the rest of the check still runs.
+- GNU/Linux only. Library discovery and container inspection assume it.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

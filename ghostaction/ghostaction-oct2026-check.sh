@@ -11,7 +11,7 @@
 # workflows into compromised repositories, added a second stage in October 2026
 # that persists on a developer's own machine. In 94 repositories it committed
 # three things:
-#   .vscode/tasks.json  a task (seen labelled "eslint-check") with
+#   .vscode/tasks.json  a task (seen labeled "eslint-check") with
 #                       "runOn": "folderOpen" and hidden output, which runs
 #                       automatically when the folder is opened in VS Code and
 #                       executes the fake font with Node.
@@ -29,7 +29,8 @@
 # GitHub OAuth device flow for repo, workflow and read:org scopes and steal a
 # token. Exfiltration and C2 are at 193.32.204[.]199 (TCP 8443 and 8080).
 #
-# There is no CVE and no patch. This script is a detector: it scans your
+# GhostAction is a supply-chain compromise, so the remedy is detection,
+# containment and credential rotation. This script is a detector: it scans your
 # repositories for the dropped artifacts (a "font" that is not a valid font, a
 # folder-open task, a workflow carrying the C2), hunts the machine for the cron
 # job and the network indicators, and can quarantine the confirmed artifacts.
@@ -52,7 +53,7 @@
 #                    the domains/IP in shell history, git config and logs, and a
 #                    stealer/miner-style process running. Exit 0 = clean, 1 =
 #                    findings.
-#   quarantine       CONTAINMENT, not a fix: back up (for forensics) and remove
+#   quarantine       CONTAINMENT: back up (for forensics) and remove
 #                    the confirmed artifacts (a fake font, a tasks.json that
 #                    executes it, a workflow carrying the C2). Needs write
 #                    access. Your tokens are still stolen: revoke and rotate.
@@ -79,7 +80,7 @@ GA_NET='my-github\.com|my-gitlab\.com|193\.32\.204\.199'
 PRUNE=(node_modules .git .cache .venv venv site-packages .mypy_cache dist build .next)
 SCRIPT_NAME="ghostaction-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 REF="https://opensourcemalware.com/blog/ghostaction-attack-escalates"
 
@@ -304,4 +305,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

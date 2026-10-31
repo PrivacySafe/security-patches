@@ -16,7 +16,7 @@ Replaying a GSS-TSIG signed UDP message can corrupt memory in `named`, the BIND 
 | Severity | High, CVSS 8.1 |
 | Affected | BIND 9.11.0 through 9.18.50, 9.20.0 through 9.20.29, 9.21.0 through 9.21.26, and matching `-S1` Supported Preview builds |
 | Fixed | **9.20.30 and 9.21.27** (9.20.30-S1 for the Preview Edition) |
-| No fix | **9.18 and older are end of life.** ISC does not ship security fixes for them; move to 9.20. A distribution that still supports 9.18 may backport the fix, and the script looks for that |
+| Move to | **9.20.** 9.18 and older are end of life. A distribution that still supports 9.18 may backport the fix, and the script looks for that |
 | Workaround | ISC lists none |
 | Exploited | ISC says it is not aware of any active exploitation |
 | Same release | The same BIND releases fix three other denial of service flaws that only the update fixes |
@@ -61,11 +61,11 @@ Exit codes: `0` nothing exposed, `1` an affected version is exposed or its confi
 
 ## How to read the result
 
-- **Affected version and GSS-TSIG configured:** exposed. Upgrade.
-- **Affected version, no GSS-TSIG setting found:** exit `0` with a warning that you should update anyway. A text search can miss a setting generated elsewhere.
-- **End-of-life branch (9.18 and older, or the 9.19 development line):** always reported as affected with no upstream fix. If your distribution supports it, watch its security tracker; the script reads the package changelog for a mention of the CVE and treats a mention as a likely backport. At the time of writing, Debian 13 had shipped the fix in `bind9 1:9.20.30-1~deb13u1`, while the 9.18 packages were still shown as vulnerable.
-- **Config unreadable:** the script cannot tell, so it treats the host as exposed.
-- **Preview Edition (`-S1`) and distribution suffixes** such as `9.20.30-1~deb13u1` or `9.18.39-0ubuntu0.24.04.8-Ubuntu` are read correctly.
+- Affected version and GSS-TSIG configured: exposed. Upgrade.
+- Affected version, no GSS-TSIG setting found: exit `0` with a warning that you should update anyway. A text search can miss a setting generated elsewhere.
+- End-of-life branch (9.18 and older, or the 9.19 development line): always reported as affected with no upstream fix. If your distribution supports it, watch its security tracker. The script reads the package changelog for a mention of the CVE and treats a mention as a likely backport. At the time of writing, Debian 13 had shipped the fix in `bind9 1:9.20.30-1~deb13u1`, while the 9.18 packages were still shown as vulnerable.
+- Config unreadable: the script cannot tell, so it treats the host as exposed.
+- Preview Edition (`-S1`) and distribution suffixes such as `9.20.30-1~deb13u1` or `9.18.39-0ubuntu0.24.04.8-Ubuntu` are read correctly.
 
 ## Fixing it
 
@@ -76,15 +76,19 @@ Upgrade to 9.20.30 or 9.21.27, or to a distribution build that carries the fix, 
 - [ISC advisory CVE-2026-94300](https://kb.isc.org/docs/cve-2026-94300)
 - [BIND 9.20.30 download](https://downloads.isc.org/isc/bind9/9.20.30)
 
-## BIND know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 9.20.30 or 9.21.27 (9.20.30-S1 for the Preview Edition). ISC lists no workaround. The 9.18 branch and older are end of life and get no upstream fix; a distribution that still supports 9.18 may backport it, which the script looks for.
-- **GSS-TSIG is a hint, not a verdict.** The vulnerable path needs GSS-TSIG (used for secure dynamic updates against Kerberos or Active Directory), but ISC does not spell out which configuration is required. The script reports whether GSS-TSIG is configured and tells you to update either way.
-- **It never reloads named.** It finds `named` in `PATH`, the usual locations and running processes, reads the version from `named -v` and reads `named.conf` and its include files.
-- **Other flaws ride along.** The same releases fix three denial of service flaws that only the update fixes.
-- **It also reads running containers.** With no argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container captures the output of `named -v` and `named -V` and the configuration files (with every `secret "..."` value redacted inside the container before it is copied) into a private temporary directory, and this script then runs once per container, in isolation, against that copy, so one container's configuration never changes another's result. `include` paths are resolved inside the container's copy, not on the host. The copies are removed on exit. A path shown as `.../docker_NAME/...` is inside the container NAME. It is skipped when you name a binary or directory yourself.
+- The fix. Update to 9.20.30 or 9.21.27 (9.20.30-S1 for the Preview Edition). ISC lists no workaround. The 9.18 branch and older are end of life and get no upstream fix. A distribution that still supports 9.18 may backport it, which the script looks for.
+- GSS-TSIG is a hint, not a verdict. The vulnerable path needs GSS-TSIG (used for secure dynamic updates against Kerberos or Active Directory), but ISC does not spell out which configuration is required. The script reports whether GSS-TSIG is configured and tells you to update either way.
+- It never reloads named. It finds `named` in `PATH`, the usual locations and running processes, reads the version from `named -v` and reads `named.conf` and its include files.
+- Other flaws ride along. The same releases fix three denial of service flaws that only the update fixes.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. A read-only probe inside each running docker and podman container captures the output of `named -v` and `named -V` and the configuration files (with every `secret "..."` value redacted inside the container before it is copied) into a private temporary directory. The script then runs once per container, in isolation, against that copy, so one container's configuration never changes another's result. `include` paths are resolved inside the container's copy, not on the host. The copies are removed on exit. A path shown as `.../docker_NAME/...` is inside the container NAME. It is skipped when you name a binary or directory yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

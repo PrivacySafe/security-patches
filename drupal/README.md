@@ -55,11 +55,11 @@ Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arg
 
 ## How to read the result
 
-- **Affected version:** update, even if the configuration scan finds nothing. The configuration condition is how the advisory limits the code execution path, not a reason to leave the module unpatched.
-- **A 6.3.0 pre-release** (for example `6.3.0-rc2`) belongs to the 6.3 branch and is reported as affected.
-- **Development versions** (`dev-6.x`) and **legacy numbering** (`8.x-5.x`, `7.x-4.x`) cannot be compared mechanically. The script prints a warning and points you at the advisory.
-- **Configuration findings are a heuristic.** The script looks for `format_items: custom` in exported configuration. It reports the webform and how many elements use it, and it does not decide whether the custom format contains submission-value tokens, so open the flagged webforms and look.
-- **Configuration stored only in the database is not visible to a file scan.** On a live site, run this from the Drupal root to list webforms with a custom format:
+- Affected version: update, even if the configuration scan finds nothing. The configuration condition is how the advisory limits the code execution path, not a reason to leave the module unpatched.
+- A 6.3.0 pre-release (for example `6.3.0-rc2`) belongs to the 6.3 branch and is reported as affected.
+- Development versions (`dev-6.x`) and **legacy numbering** (`8.x-5.x`, `7.x-4.x`) cannot be compared mechanically. The script prints a warning and points you at the advisory.
+- Configuration findings come from exported configuration. The script looks for `format_items: custom` in exported configuration. It reports the webform and how many elements use it, and it does not decide whether the custom format contains submission-value tokens, so open the flagged webforms and look.
+- Configuration stored only in the database is not visible to a file scan. On a live site, run this from the Drupal root to list webforms with a custom format:
 
   ```bash
   drush config:list --prefix=webform.webform. --format=list | while read -r c; do
@@ -95,7 +95,7 @@ The Field UI module in Drupal core does not properly validate PHP callbacks whil
 | Severity | Critical, 19/25 by Drupal's scale; reported as roughly 9.8 by CVSS-style trackers |
 | Affected | Drupal core 8.9.0 up to 10.6.19, 11.0.0 up to 11.3.19, 11.4.0 up to 11.4.10, and Drupal 12 before 12.0.0-beta2 |
 | Fixed | **10.6.19, 11.3.19, 11.4.10** and 12.0.0-beta2 |
-| No fix | **10.5.x and earlier, 11.2.x and earlier, 9.x and 8.9.x are end of life.** They are affected and will not be patched; the only route is to upgrade to a supported branch |
+| Move to | **A supported branch.** 10.5.x and earlier, 11.2.x and earlier, 9.x and 8.9.x are end of life |
 | Workaround | Drupal's own: uninstall the core Field UI module (`drush pm:uninstall field_ui`). It covers only this advisory. The same release fixes two other core issues that only the update fixes |
 | Exploit | At disclosure, no public exploit for real sites existed. A research write-up with laboratory artifacts has been published, so treat "no public exploit" as a statement about that moment |
 | Related | The contributed Entity List module has its own critical flaw, CVE-2026-108099, described below. **Updating core does not fix it** |
@@ -112,7 +112,7 @@ The contributed Entity List module (project `entity_list`) builds lists of entit
 | Fixed | **Entity List 3.0.10** |
 | Needs its own update | Updating Drupal core does not replace the module's vulnerable code |
 
-The script checks Entity List on **every site it finds, whatever the core version is**, because a fully patched core with an old Entity List is still exposed. It reads the version from the module's `info.yml` (the drupal.org packaging format, with or without an `8.x-` prefix) and falls back to `composer.lock`. Anything before 3.0.10, including older majors, fails; 3.0.10 and later (compared numerically, so `3.0.100` is newer) passes; a development version or an unreadable version is reported for manual review.
+The script checks Entity List on **every site it finds, whatever the core version is**, because a fully patched core with an old Entity List is still exposed. It reads the version from the module's `info.yml` (the drupal.org packaging format, with or without an `8.x-` prefix) and falls back to `composer.lock`. Anything before 3.0.10, including older majors, fails. 3.0.10 and later (compared numerically, so `3.0.100` is newer) passes. A development version or an unreadable version is reported for manual review.
 
 ## Quick start
 
@@ -143,6 +143,8 @@ The script checks Entity List on **every site it finds, whatever the core versio
 
 | Command | What it does |
 |---|---|
+| `mitigate [--dir DIR] [--dry-run] [--force]` | **Changes the host (root).** Drupal's own published workaround for CVE-2026-108097: runs `drush pm:uninstall field_ui` on every site whose core is affected and where the **live** site (not only exported configuration) still has Field UI enabled. drush runs as the owner of the site, never as root, and is looked up in the project's `vendor/bin`, then `PATH`. The field management screens are unavailable until you reinstall Field UI. It covers this advisory only; update core as well. `--force` uninstalls on a core outside the affected range |
+| `rollback [--dry-run]` | Reinstalls Field UI (`drush pm:install field_ui`) on the sites `mitigate` changed |
 | `check [DIR ...]` (default) | Finds `core/lib/Drupal.php` (so it works whether the docroot is `web/`, `docroot/` or the project root), reads `VERSION`, compares it with the fixed releases, reads exported configuration (`core.extension.yml`) to see whether `field_ui` is enabled, and looks for the contributed Entity List module |
 | `version` | Prints the script version |
 
@@ -150,13 +152,13 @@ Exit codes: `0` nothing exposed, `1` an affected site is exposed, unverifiable, 
 
 ### How to read the result
 
-- **Affected version and Field UI enabled:** exposed. Update now.
-- **Affected version and Field UI not enabled in exported configuration:** the script reports Drupal's workaround as in effect and exits `0`, but still says to update, because the workaround covers only this advisory.
-- **Affected version and no exported configuration:** the script cannot tell whether Field UI is on (configuration may live only in the database), so it treats the site as exposed and prints the `drush` command to check on the live site.
-- **End-of-life branches (11.2 and earlier, 10.5 and earlier, 9, 8.9):** always exit `1`, whatever Field UI says. There is no patch to wait for.
-- **Entity List before 3.0.10, or with an unreadable or development version:** exits `1`, even when core is fully patched. Update the module with `composer update drupal/entity_list`.
-- **Drupal 7** is outside this advisory's range and has its own long-term-support path; the script warns and does not judge it. A Drupal 7 site has no `core/lib/Drupal.php`, so it is not found at all.
-- **A `composer.lock` that disagrees with the installed core:** the installed copy wins, and the script says so.
+- Affected version and Field UI enabled: exposed. Update now.
+- Affected version and Field UI not enabled in exported configuration: the script reports Drupal's workaround as in effect and exits `0`, but still says to update, because the workaround covers only this advisory.
+- Affected version and no exported configuration: the script cannot tell whether Field UI is on (configuration may live only in the database), so it treats the site as exposed and prints the `drush` command to check on the live site.
+- End-of-life branches (11.2 and earlier, 10.5 and earlier, 9, 8.9): always exit `1`, whatever Field UI says. Upgrade to a supported branch.
+- Entity List before 3.0.10, or with an unreadable or development version: exits `1`, even when core is fully patched. Update the module with `composer update drupal/entity_list`.
+- Drupal 7 is outside this advisory's range and has its own long-term-support path. The script warns and does not judge it. A Drupal 7 site has no `core/lib/Drupal.php`, so it is not found at all.
+- A `composer.lock` that disagrees with the installed core: the installed copy wins, and the script says so.
 
 ### Fixing it
 
@@ -172,15 +174,19 @@ If you cannot update today, uninstall Field UI (`drush pm:uninstall field_ui`). 
 - [Drupal security advisory SA-CORE-2026-014](https://www.drupal.org/sa-core-2026-014)
 - [Pantheon: Drupal core security update](https://docs.pantheon.io/release-notes/2026/10/drupal-core-security-update)
 
-## Drupal know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** For core, update to 10.6.19, 11.3.19, 11.4.10 or Drupal 12.0.0-beta2. For Entity List, update to 3.0.10; for Webform, to 6.2.12 or 6.3.1. Drupal 10.5.x and earlier, 11.2.x and earlier, 9.x and 8.9.x are end of life: affected and never patched.
-- **Core alone is not directly exploitable.** The Field UI callbacks must be reachable from data an attacker controls, which happens through contributed modules or custom code; at least one such path needs no authentication. Drupal's published workaround is to uninstall the core Field UI module, and it covers only that advisory.
-- **Webform needs a specific condition.** An affected webform must define a custom multiple-value item format that includes submission-value tokens. The Webform script reads `composer.lock` and `webform.info.yml` and scans exported configuration; configuration stored only in the database is not visible to a file scan.
-- **Updating covers more.** The same releases fix other core and Webform advisories that only the update fixes.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself. For Entity List, which sits under a module path, and for configuration stored in the database, only the host is read.
+- The fix. For core, update to 10.6.19, 11.3.19, 11.4.10 or Drupal 12.0.0-beta2. For Entity List, update to 3.0.10. For Webform, to 6.2.12 or 6.3.1. Drupal 10.5.x and earlier, 11.2.x and earlier, 9.x and 8.9.x are end of life: affected and never patched.
+- Core alone is not directly exploitable. The Field UI callbacks must be reachable from data an attacker controls, which happens through contributed modules or custom code. At least one such path needs no authentication. Drupal's published workaround is to uninstall the core Field UI module, and it covers only that advisory.
+- Webform needs a specific condition. An affected webform must define a custom multiple-value item format that includes submission-value tokens. The Webform script reads `composer.lock` and `webform.info.yml` and scans exported configuration. Configuration stored only in the database is not visible to a file scan.
+- Updating covers more. The same releases fix other core and Webform advisories that only the update fixes.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself. For Entity List, which sits under a module path, and for configuration stored in the database, only the host is read.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

@@ -8,9 +8,9 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`ghostaction/ghostaction-oct2026-check.sh`](ghostaction-oct2026-check.sh)
 
-The GhostAction campaign, which injects credential-stealing GitHub Actions workflows into compromised repositories, added a second stage in October 2026 that persists on a developer's own machine. Across 94 repositories it committed a VS Code `.vscode/tasks.json` with `"runOn": "folderOpen"` and hidden output (seen labelled `eslint-check`), which runs automatically when the folder is opened in VS Code and executes a file named `public/fonts/fa-solid-400.woff2`. That file is named like a normal Font Awesome asset but is not a font: it is a Node.js credential stealer that harvests AWS keys, npm and PyPI tokens, Git logins, Kubernetes credentials, SSH private keys and Anthropic Claude and Google Gemini keys, installs a cron job that runs attacker code every five minutes, and exfiltrates over plain HTTP. A backup Actions workflow runs if the stealer never does. Related phishing uses `my-github[.]com` (and `my-gitlab[.]com`) to complete a GitHub OAuth device flow for `repo`, `workflow` and `read:org` scopes; exfiltration and C2 are at `193.32.204[.]199`.
+The GhostAction campaign, which injects credential-stealing GitHub Actions workflows into compromised repositories, added a second stage in October 2026 that persists on a developer's own machine. Across 94 repositories it committed a VS Code `.vscode/tasks.json` with `"runOn": "folderOpen"` and hidden output (seen labeled `eslint-check`), which runs automatically when the folder is opened in VS Code and executes a file named `public/fonts/fa-solid-400.woff2`. That file is named like a normal Font Awesome asset but is not a font. It is a Node.js credential stealer that harvests AWS keys, npm and PyPI tokens, Git logins, Kubernetes credentials, SSH private keys and Anthropic Claude and Google Gemini keys. It installs a cron job that runs attacker code every five minutes and exfiltrates over plain HTTP. A backup Actions workflow runs if the stealer never does. Related phishing uses `my-github[.]com` (and `my-gitlab[.]com`) to complete a GitHub OAuth device flow for `repo`, `workflow` and `read:org` scopes. Exfiltration and C2 are at `193.32.204[.]199`.
 
-There is no CVE and no patch. This script is a detector and a containment tool. The detection is deliberately content-based, to avoid false positives: the fake font is flagged by its WOFF2 magic bytes (a real font starts with `wOF2`; the stealer does not), not by its name, which is a legitimate Font Awesome file name; and the malicious workflows are flagged by the C2 they carry, not by their names, which are common (`ci-check.yml`, `audit.yml` and the like). None of this undoes a stolen token: if anything matches, from a **clean device** revoke your GitHub tokens and authorized OAuth apps, change your password, rotate every credential the repositories and workflows could reach, audit the repositories, and warn anyone who cloned them. Keep VS Code workspace trust on, so opening a cloned folder does not run its tasks.
+GhostAction is a supply-chain compromise, so the remedy is detection, containment and credential rotation. This script is a detector and a containment tool. The detection is deliberately content-based, to avoid false positives. The fake font is flagged by its WOFF2 magic bytes (a real font starts with `wOF2`; the stealer does not), not by its name, which is a legitimate Font Awesome file name. The malicious workflows are flagged by the C2 they carry, not by their names, which are common (`ci-check.yml`, `audit.yml` and the like). None of this undoes a stolen token: if anything matches, from a **clean device** revoke your GitHub tokens and authorized OAuth apps, change your password, rotate every credential the repositories and workflows could reach, audit the repositories, and warn anyone who cloned them. Keep VS Code workspace trust on, so opening a cloned folder does not run its tasks.
 
 ### GhostAction quick start
 
@@ -54,21 +54,25 @@ There is no CVE and no patch. This script is a detector and a containment tool. 
 |---|---|
 | `check` (default) | Scans the paths for the dropped artifacts: a `.woff2`/`.woff` whose magic bytes are not a real font, a `.vscode/tasks.json` that runs on `folderOpen`, a workflow carrying the C2, npm lifecycle hooks that pipe a download into a shell, and the campaign's domains or IP in files. Read-only. Exits `0` if clean, `1` if indicators are found, `2` if something couldn't be read |
 | `hunt` | Read-only, machine-level: cron jobs that fetch and run code, the domains/IP in shell history, git config and logs, and a stealer-style process (Node running a font file). Exits `0` if clean, `1` if it found something |
-| `quarantine` | Containment, not a fix. Backs up (for forensics) and removes the confirmed artifacts (a fake font, a `tasks.json` that executes it, a workflow carrying the C2). Needs write access. Your tokens are still stolen: revoke and rotate |
+| `quarantine` | Containment. Backs up (for forensics) and removes the confirmed artifacts (a fake font, a `tasks.json` that executes it, a workflow carrying the C2). Needs write access. Your tokens are still stolen: revoke and rotate |
 | `version` | Prints the script version. Every command prints it on its first line too |
 
-### GhostAction know before you run it
+## Before you run it
 
-- **A stolen token is the real damage, and this cannot undo it.** If anything matches, from a clean device revoke GitHub tokens and authorized OAuth apps (Settings then Applications), change your password, and rotate every credential the repositories and workflows could reach: cloud keys, npm and PyPI tokens, SSH and signing keys, Kubernetes and AI provider keys.
-- **Detection is content-based to avoid false positives.** `fa-solid-400.woff2` is a real Font Awesome file name and workflow names like `ci-check.yml` are everywhere, so the script judges fonts by their magic bytes and workflows by the C2 they carry, not by name. A folder-open task that only runs a genuine script is listed for review, not auto-removed.
-- **Keep VS Code workspace trust on.** The stealer runs only when a folder's tasks are allowed to run on open; workspace trust is what stops a freshly cloned folder from executing them.
-- **`quarantine` is containment.** It stops the dropped files running; it does not clean a machine that already ran them or revoke what was stolen.
-- **Point `SCAN_PATHS` at your repositories.** It defaults to the current directory and your home, prunes `node_modules`, `.git` and similar, and scans for the artifacts.
-- **GNU/Linux only.**
-- **A scan that could not read its paths is not a clean scan.** If none of the scan paths can be read, `check` stops with exit `2` and says nothing was scanned; if some cannot be read and nothing is found in the rest, it exits `2` rather than `0`. A path that does not exist is skipped.
-- **The script does not report itself.** Its own file names the indicators it looks for, so it is left out of the content scan (the exact running file only; another file with the same text is still reported). If you cloned this repository inside a scanned path, its README and CHANGELOG also name the domains and will match: ignore those.
+- A stolen token is the real damage, and this cannot undo it. If anything matches, from a clean device revoke GitHub tokens and authorized OAuth apps (Settings then Applications), change your password, and rotate every credential the repositories and workflows could reach: cloud keys, npm and PyPI tokens, SSH and signing keys, Kubernetes and AI provider keys.
+- Detection is content-based to avoid false positives. `fa-solid-400.woff2` is a real Font Awesome file name and workflow names like `ci-check.yml` are everywhere, so the script judges fonts by their magic bytes and workflows by the C2 they carry, not by name. A folder-open task that only runs a genuine script is listed for review, not auto-removed.
+- Keep VS Code workspace trust on. The stealer runs only when a folder's tasks are allowed to run on open. Workspace trust is what stops a freshly cloned folder from executing them.
+- `quarantine` is containment. It stops the dropped files running. It does not clean a machine that already ran them or revoke what was stolen.
+- Point `SCAN_PATHS` at your repositories. It defaults to the current directory and your home, prunes `node_modules`, `.git` and similar, and scans for the artifacts.
+- GNU/Linux only.
+- A scan that could not read its paths is not a clean scan. If none of the scan paths can be read, `check` stops with exit `2` and says nothing was scanned, if some cannot be read and nothing is found in the rest, it exits `2` rather than `0`. A path that does not exist is skipped.
+- The script does not report itself. Its own file names the indicators it looks for, so it is left out of the content scan (the exact running file only; another file with the same text is still reported). If you cloned this repository inside a scanned path, its README and CHANGELOG also name the domains and will match: ignore those.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

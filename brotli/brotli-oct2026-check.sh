@@ -24,18 +24,18 @@
 # BROTLI_DECODER_ERROR_FORMAT_BLOCK_SWITCH, -17). Distributions backport the
 # fix into their own libbrotli builds, sometimes under an older version number.
 # A copy older than 1.0.3 is outside the advisory's affected range, but this
-# script still reports it as not fixed: it is unsupported and has no fixed
-# release to move to on its own branch.
+# script still reports it as not fixed: it is unsupported, so it moves to 1.0.10,
+# 1.1.1 or 1.2.1.
 #
 # This is read-only: it finds what needs updating and judges each against the
 # fixes. It does NOT change anything. The fix is to update the library or the
-# runtime. There is no host-wide switch to turn Brotli off; where no fix is
-# available yet, disabling Brotli decoding is application-specific (reject
+# runtime. There is no host-wide switch to turn Brotli off; disabling Brotli
+# decoding is application-specific (reject
 # Content-Encoding: br before it is decompressed, turn off automatic Brotli in
 # HTTP clients, disable the Brotli decompressor filter in Envoy/Istio). See
 # the repository README and https://patchtheplanet.org/brotli
 #
-# For the Node.js interim guard (loading a require-hook that refuses to decode),
+# For the Node.js guard (loading a require-hook that refuses to decode),
 # use node/node-oct2026-mitigate.sh and node/brotli-guard.cjs instead. This
 # script only reports Node's version.
 #
@@ -115,7 +115,7 @@ PHP_BROTLI_FIXED="${PHP_BROTLI_FIXED:-0.21.1}"
 BUNDLED_REVIEWED="2026-10-25"
 SCRIPT_NAME="brotli-oct2026-check.sh"
 SCRIPT_VERSION="1.3.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 UPSTREAM="https://github.com/google/brotli"
 
@@ -176,7 +176,7 @@ upstream_state() {   # <X.Y.Z>
     fi
     # A branch newer than 1.2 shipped after the fixes; older than 1.0 predates them.
     if ver_ge "$v" "1.3.0"; then echo "0|${v} is newer than the fixed releases"
-    else echo "1|${v}: branch ${mm} has no fixed release in this list; treat as vulnerable and move to 1.0.10, 1.1.1 or 1.2.1"; fi
+    else echo "1|${v}: branch ${mm} moves to 1.0.10, 1.1.1 or 1.2.1"; fi
 }
 
 # A distro package can carry the fix under an older upstream number, so judge a
@@ -243,7 +243,7 @@ line_state() {   # <ver> "<fixed...>" [major|minor]
     if ver_ge "$base" "$newest"; then
         if [[ -n "$pre" && "$base" == "$newest" ]]; then echo "2|${v} is a pre-release build made before ${newest} was released: it may not carry the fix"
         else echo "0|${v} is newer than ${newest}"; fi
-    else echo "1|${v}: line ${key} has no fixed release in this list; move to a fixed line"; fi
+    else echo "1|${v}: line ${key} moves to a fixed line"; fi
 }
 
 runtime_report() {   # <label> <version> "<fixed list>" <major|minor> <extra note>
@@ -391,7 +391,7 @@ cmd_check() {
     while read -r nv; do
         [[ -n "$nv" ]] || continue
         had_node=1
-        runtime_report "Node.js" "$nv" "$NODE_FIXED" major "interim guard available: see node/node-oct2026-mitigate.sh in this repo" || exposed=1
+        runtime_report "Node.js" "$nv" "$NODE_FIXED" major "guard available: see node/node-oct2026-mitigate.sh in this repo" || exposed=1
     done < <(node_versions)
     [[ $had_node -eq 1 ]] || inf "Node.js: not found"
 
@@ -448,7 +448,7 @@ cmd_check() {
               "clickhouse|ClickHouse bundles its own fork" \
               "clickhouse-server|ClickHouse bundles its own fork"; do
         bcmd="${bw%%|*}"; bnote="${bw#*|}"
-        if have "$bcmd"; then any_b=1; caution "${bcmd} found on PATH: ${bnote}. No fixed release yet; see brotli/README.md for current status"; fi
+        if have "$bcmd"; then any_b=1; caution "${bcmd} found on PATH: ${bnote}; see brotli/README.md for the fixed releases"; fi
     done
     [[ $any_b -eq 1 ]] || inf "none of dotnet, duckdb or clickhouse found on PATH"
     inf "This list is informational and does not change the exit code. Many more projects vendor a copy; brotli/README.md lists the ones known so far"
@@ -478,7 +478,7 @@ cmd_check() {
     [[ $rc -eq 0 && $unknownz -eq 1 ]] && rc=2
     case $rc in
         0) info "No vulnerable Brotli found where this could read one" ;;
-        1) warn "A vulnerable Brotli is present. Update libbrotli (and the runtimes that bundle it), rebuild anything that bundles it, and restart. Upstream: ${UPSTREAM} (update your distro/package, don't vendor it). Where no fix is available yet, disable Brotli decoding of untrusted data" ;;
+        1) warn "A vulnerable Brotli is present. Update libbrotli (and the runtimes that bundle it), rebuild anything that bundles it, and restart. Upstream: ${UPSTREAM} (update your distro/package, don't vendor it). Until a fixed build reaches you, disable Brotli decoding of untrusted data" ;;
         *) warn "Some builds couldn't be judged. For a dpkg build, confirm against the distro advisory and add it to FIXED_BUILDS. Rerun as root to read more" ;;
     esac
     return "$rc"
@@ -523,7 +523,7 @@ cmd_hunt() {
         fi
     done
     echo
-    echo "  A hit is a lead, not proof: plenty of things segfault. A crash with Brotli decoder frames"
+    echo "  A hit tells you where to look: plenty of things segfault. A crash with Brotli decoder frames"
     echo "  on a vulnerable build, especially on a service that decompresses untrusted Brotli, is worth"
     echo "  treating as an incident: check what the process could reach (secrets, database credentials,"
     echo "  tokens) and rotate them."
@@ -546,4 +546,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

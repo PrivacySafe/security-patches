@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`craft/craftcms-check.sh`](craftcms-check.sh)
 
-Craft CMS limits which classes the Twig `create()` function may instantiate with a blocklist of class names. The checks are case-sensitive while PHP class resolution is not, so a differently capitalised class name gets past the blocklist. The result is remote code execution, or reading secrets such as the `.env` file, for someone who can make Twig render attacker-controlled template content.
+Craft CMS limits which classes the Twig `create()` function may instantiate with a blocklist of class names. The checks are case-sensitive while PHP class resolution is not, so a differently capitalized class name gets past the blocklist. The result is remote code execution, or reading secrets such as the `.env` file, for someone who can make Twig render attacker-controlled template content.
 
 | | |
 |---|---|
@@ -56,11 +56,11 @@ Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arg
 
 ## How to read the result
 
-- **Affected version:** update. The configuration lines tell you how reachable the flaw is, they do not make an affected version safe.
-- **`allowAdminChanges`:** Craft recommends turning it off in production. If it is on, any admin account can change configuration that feeds Twig. The script reads both the array style (`'allowAdminChanges' => false`) and the fluent style (`->allowAdminChanges(false)`).
-- **`enableTwigSandbox`:** reported as information. The advisory does not say whether the sandbox stops this specific bypass, so do not treat it as a mitigation.
-- **Craft 3 and older** are end of life and the advisory covers 4.x and 5.x, so the script warns and does not call them affected by this CVE.
-- **6.x pre-releases and dev checkouts** cannot be compared mechanically; the script warns and points you at the advisory.
+- Affected version: update. The configuration lines tell you how reachable the flaw is, they do not make an affected version safe.
+- `allowAdminChanges`: Craft recommends turning it off in production. If it is on, any admin account can change configuration that feeds Twig. The script reads both the array style (`'allowAdminChanges' => false`) and the fluent style (`->allowAdminChanges(false)`).
+- `enableTwigSandbox`: reported as information. The advisory does not say whether the sandbox stops this specific bypass, so do not treat it as a mitigation.
+- Craft 3 and older are end of life and the advisory covers 4.x and 5.x, so the script warns and does not call them affected by this CVE.
+- 6.x pre-releases and dev checkouts cannot be compared mechanically. The script warns and points you at the advisory.
 
 ## Fixing it
 
@@ -69,22 +69,26 @@ composer update craftcms/cms        # 4.18.8 or later on 4.x, 5.11.0 or later on
 php craft up
 ```
 
-While you prepare the update, review who holds admin or template-related permissions in the control panel, remove accounts you do not recognise, and set `allowAdminChanges` to `false` in production. Those steps narrow who can reach the flaw. They are our reasoning, not vendor documented for this bypass, and they do not replace the update.
+While you prepare the update, review who holds admin or template-related permissions in the control panel, remove accounts you do not recognize, and set `allowAdminChanges` to `false` in production. Those steps narrow who can reach the flaw. They are PrivacySafe's recommendation and work alongside the update.
 
 ## Sources
 
 - [GitHub advisory GHSA-w643-x88w-6wcm](https://github.com/craftcms/cms/security/advisories/GHSA-w643-x88w-6wcm)
-- [Canadian Centre for Cyber Security AV26-1067: Craft CMS](https://cyber.gc.ca/en/alerts-advisories/craft-cms-security-advisory-av26-1067)
+- [Canadian Center for Cyber Security AV26-1067: Craft CMS](https://cyber.gc.ca/en/alerts-advisories/craft-cms-security-advisory-av26-1067)
 
-## Craft CMS know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 4.18.8 or 5.11.0. The same two releases fix several related Twig sandbox flaws, so updating covers more than this one issue.
-- **The flaw is authenticated.** It needs template-execution rights, so the realistic attackers are a compromised or malicious control panel account, or any setup that lets untrusted users supply template code.
-- **It reads the install, not the site.** The version comes from `vendor/craftcms/cms` and `composer.lock`; from `config/general.php` it reports whether `allowAdminChanges` is off and whether the Twig sandbox is on.
-- **There is no hunt.** No indicators of exploitation have been published for this flaw.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
+- The fix. Update to 4.18.8 or 5.11.0. The same two releases fix several related Twig sandbox flaws, so updating covers more than this one issue.
+- The flaw is authenticated. It needs template-execution rights, so the realistic attackers are a compromised or malicious control panel account, or any setup that lets untrusted users supply template code.
+- It reads the install, not the site. The version comes from `vendor/craftcms/cms` and `composer.lock`. From `config/general.php` it reports whether `allowAdminChanges` is off and whether the Twig sandbox is on.
+- There is no hunt. No indicators of exploitation have been published for this flaw.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

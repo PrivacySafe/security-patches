@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# Django REST framework October 2026: read-only checker  (v1)
+# Django REST framework October 2026: checker with mitigation  (v1)
 # CVE-2026-114138 (Accept header CPU exhaustion)
 # CVE-2026-114137 (TokenProxy.delete() revokes nothing)
 #
@@ -33,7 +33,8 @@
 #                  affected. Revocation done with Token.objects (not TokenProxy)
 #                  works on every version.
 #
-# This script is read-only. It finds installed copies (dist-info and egg-info
+# "check" is read-only; "mitigate" and "rollback" are the only commands that change
+# anything. "check" finds installed copies (dist-info and egg-info
 # metadata) and declared pins (requirements, poetry.lock, uv.lock, pdm.lock,
 # Pipfile.lock), notes where rest_framework.authtoken and TokenProxy appear in
 # project source, and for installed copies compares the neighbouring Django.
@@ -44,6 +45,19 @@
 #   check (default)  scan DIR (default /usr/lib /usr/local/lib /opt /srv /var/www
 #                    /var/lib /home /root). Exit 0 = nothing affected, 1 = an
 #                    affected copy or pin was found.
+#   mitigate [options]   (root) changes the host. PrivacySafe protection: real Accept headers are far shorter than 1 KB, so
+#                    nginx answers 406 to an Accept header of 1024 characters or more,
+#                    which bounds the cost of the attack. Only when an affected copy is
+#                    found (--force overrides). Adds a map block right after "http {" and
+#                    an include as the first line of every server block that proxies
+#                    (proxy_pass, uwsgi_pass or scgi_pass), then checks with nginx -t; if
+#                    nginx rejects the result everything is undone at once. nginx only.
+#                      --server-name NAME  only the server block that lists NAME (repeat)
+#                      --dir DIR           where to look for Django REST framework (repeat)
+#                      --dry-run           show the changes, change nothing
+#                      --reload            graceful reload afterwards (systemd)
+#                      --force             apply even if no affected copy is found
+#   rollback [--dry-run] [--reload]   remove what mitigate added and restore the files it edited.
 #   version          print the script version.
 # Containers: with no directory argument the check also reads the project files it needs from
 # running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
@@ -57,8 +71,9 @@ set -uo pipefail
 
 SCRIPT_NAME="drf-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/drf}"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -307,7 +322,7 @@ cmd_check() {
         info "No affected Django REST framework found (${found} copy or pin checked)"
     else
         warn "Affected Django REST framework found. Upgrade: pip install --upgrade 'djangorestframework>=3.18.2'  (check that your Django version is supported by 3.18.x)"
-        inf "Interim for the Accept header flaw (ours, not vendor documented): reject unusually long Accept headers at the reverse proxy. In nginx, define map \$http_accept \$psf_bad_accept { default 0; \"~^.{1024,}\$\" 1; } in http{} and add if (\$psf_bad_accept) { return 406; } in the server block. Real Accept headers are far shorter."
+        inf "PrivacySafe recommendation for the Accept header flaw: reject unusually long Accept headers at the reverse proxy. In nginx, define map \$http_accept \$psf_bad_accept { default 0; \"~^.{1024,}\$\" 1; } in http{} and add if (\$psf_bad_accept) { return 406; } in the server block. Real Accept headers are far shorter."
         if [[ $TOKEN_REMEDIATE -eq 1 ]]; then
             inf "After upgrading, tokens you believed revoked through TokenProxy may still work. Tokens of deactivated users can be cleared with Token, not TokenProxy:"
             inf "  python manage.py shell -c \"from rest_framework.authtoken.models import Token; print(Token.objects.filter(user__is_active=False).delete())\""
@@ -319,6 +334,208 @@ cmd_check() {
 }
 
 # ---------- dispatch ---------------------------------------------------------
+
+# ---------- mitigate and rollback --------------------------------------------
+DJ_MANIFEST=""; DJ_DRY=0
+dj_run() { if [[ "$DJ_DRY" -eq 1 ]]; then echo "  would run: $*"; return 0; fi; "$@"; }
+dj_note() { [[ "$DJ_DRY" -eq 1 ]] || echo "$1" >>"$DJ_MANIFEST"; }
+dj_backup() {
+    local f="$1" b
+    grep -qF "conf|${f}|" "$DJ_MANIFEST" 2>/dev/null && return 0
+    b="${STATE_DIR}/$(printf '%s' "$f" | sed 's#/#_#g').orig"
+    cp -p "$f" "$b" || return 1
+    echo "conf|${f}|${b}" >>"$DJ_MANIFEST"
+}
+dj_restore_all() {
+    local line f
+    while IFS= read -r line; do
+        [[ "$line" == conf\|* ]] || continue
+        f="${line#conf|}"; f="${f%%|*}"; cat "${line##*|}" >"$f"
+    done <"$DJ_MANIFEST"
+}
+dj_nginx_files() {
+    local f
+    if [[ -n "${NGINX_CONF_FILES:-}" ]]; then for f in $NGINX_CONF_FILES; do [[ -r "$f" ]] && echo "$f"; done; return 0; fi
+    { nginx -T 2>/dev/null | sed -n 's/^# configuration file \(.*\):$/\1/p'
+      echo /etc/nginx/nginx.conf; ls /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* 2>/dev/null; } | while IFS= read -r f; do [[ -f "$f" && -r "$f" ]] && echo "$f"; done | awk '!s[$0]++'
+}
+read -r -d '' DJ_AWK_SERVER <<'AWKEOF'
+function chk(code,    t) {
+    if (code ~ trig) hit = 1
+    if (only != "" && code ~ /server_name/) {
+        t = code; sub(/;.*/, "", t); sub(/^[ \t]*server_name[ \t]+/, "", t)
+        if (index(" " t " ", " " only " ") > 0) sn = 1
+    }
+}
+function flush(   i) {
+    for (i = 1; i <= n; i++) {
+        print buf[i]
+        if (i == 1 && hit && (only == "" || sn) && !has) print "    include " snip ";"
+    }
+    n = 0; hit = 0; has = 0; sn = 0
+}
+{
+    raw = $0; code = raw; sub(/#.*/, "", code)
+    o = gsub(/\{/, "{", code); c = gsub(/\}/, "}", code)
+    if (!inserv) {
+        if (raw ~ /^[ \t]*server[ \t]*\{/) {
+            inserv = 1; sdepth = depth; buf[++n] = raw; chk(code); depth += o - c
+            if (depth <= sdepth) { flush(); inserv = 0 }
+        } else { print raw; depth += o - c }
+    } else {
+        buf[++n] = raw; chk(code)
+        if (index(raw, snip)) has = 1
+        depth += o - c
+        if (depth <= sdepth) { flush(); inserv = 0 }
+    }
+}
+END { if (n > 0) flush() }
+AWKEOF
+read -r -d '' DJ_AWK_HTTP <<'AWKEOF'
+{
+    print $0
+    if (!done && $0 !~ /^[ \t]*#/ && $0 ~ /^[ \t]*http[ \t]*\{/) {
+        if (!already) print "    include " snip ";"
+        done = 1
+    }
+}
+AWKEOF
+dj_nginx_test() {
+    if [[ -n "${NGINX_MAIN_CONF:-}" ]]; then nginx -t -c "$NGINX_MAIN_CONF" >/dev/null 2>&1; else nginx -t >/dev/null 2>&1; fi
+}
+# dj_nginx_apply HTTP_TEXT SERVER_TEXT TRIGGER_REGEX ONLY_SERVER_NAME -> 0 ok, 1 failed (undone), 2 no nginx
+dj_nginx_apply() {
+    local http_text="$1" server_text="$2" trig="$3" only="$4"
+    local snipdir sh ss f tmp n changed=0 already files=() hdr
+    have nginx || return 2
+    snipdir="${NGINX_SNIPPET_DIR:-/etc/nginx/snippets}"; sh="${snipdir}/psf-drf-accept-http.conf"; ss="${snipdir}/psf-drf-accept-server.conf"
+    hdr='# psf-security-patches: Django REST framework Accept header protective measure (drf-check.sh mitigate). Remove with: rollback'
+    while IFS= read -r f; do [[ -n "$f" ]] && files+=("$f"); done < <(dj_nginx_files)
+    if [[ ${#files[@]} -eq 0 ]]; then caution "nginx found but no readable configuration file: add the rule by hand (see the README)"; return 1; fi
+    if [[ "$DJ_DRY" -eq 0 ]]; then
+        mkdir -p "$snipdir" || return 1
+        printf '%s\n%s\n' "$hdr" "$http_text" >"$sh" || return 1
+        printf '%s\n%s\n' "$hdr" "$server_text" >"$ss" || return 1
+        dj_note "file|${sh}"; dj_note "file|${ss}"
+    else
+        echo "  would write ${sh}:"; printf '%s\n' "$http_text" | sed 's/^/      /'
+        echo "  would write ${ss}:"; printf '%s\n' "$server_text" | sed 's/^/      /'
+    fi
+    tmp="$(mktemp "${TMPDIR:-/tmp}/psfng.XXXXXX")" || return 1
+    for f in "${files[@]}"; do
+        already=0; grep -qF "$sh" "$f" && already=1
+        awk -v snip="$sh" -v already="$already" "$DJ_AWK_HTTP" "$f" >"$tmp" || continue
+        if ! cmp -s "$f" "$tmp"; then
+            if [[ "$DJ_DRY" -eq 1 ]]; then echo "  would add the http include to ${f}"
+            elif dj_backup "$f" && cat "$tmp" >"$f"; then ok "nginx: added the http-level include to ${f}"; changed=1; fi
+        fi
+        awk -v snip="$ss" -v trig="$trig" -v only="$only" "$DJ_AWK_SERVER" "$f" >"$tmp" || continue
+        if ! cmp -s "$f" "$tmp"; then
+            n=$(diff "$f" "$tmp" | grep -c '^>')
+            if [[ "$DJ_DRY" -eq 1 ]]; then echo "  would add the include to ${n} server block(s) in ${f}"
+            elif dj_backup "$f" && cat "$tmp" >"$f"; then ok "nginx: added the include to ${n} server block(s) in ${f}"; changed=1; fi
+        fi
+    done
+    rm -f "$tmp"
+    if [[ "$DJ_DRY" -eq 1 ]]; then echo "  would run: nginx -t"; return 0; fi
+    [[ $changed -eq 1 ]] || inf "nginx: no matching server block needed the include"
+    if dj_nginx_test; then ok "nginx: nginx -t accepts the new configuration"; return 0; fi
+    bad "nginx: nginx -t REJECTS the new configuration: restoring the originals now"
+    dj_restore_all; rm -f "$sh" "$ss"; : >"$DJ_MANIFEST"; return 1
+}
+dj_reload() {
+    [[ "${DJ_RELOAD:-0}" -eq 1 ]] || return 0
+    local u did=0
+    for u in "$@"; do
+        if have systemctl && grep -q "^${u}" <<<"$(systemctl list-unit-files 2>/dev/null)"; then dj_run systemctl reload "$u" && inf "reloaded ${u} (graceful)"; did=1; fi
+    done
+    [[ $did -eq 1 ]] || caution "--reload given but no matching systemd unit found: reload the web server yourself"
+}
+dj_rollback_core() {   # shared rollback loop
+    local line f b kind rc=0 name enabled
+    while IFS= read -r line; do
+        kind="${line%%|*}"
+        case "$kind" in
+            conf) f="${line#conf|}"; f="${f%%|*}"; b="${line##*|}"
+                  if [[ ! -r "$b" ]]; then bad "${f}: backup ${b} is missing, left alone"; rc=1; continue; fi
+                  if [[ $DJ_DRY -eq 1 ]]; then echo "  would restore ${f} from ${b}"; else cat "$b" >"$f" && ok "restored ${f}"; fi ;;
+            a2conf) name="${line#a2conf|}"; enabled="${name#*|}"; name="${name%%|*}"
+                  if [[ $DJ_DRY -eq 1 ]]; then echo "  would disable ${name}"; else { have a2disconf && a2disconf "$name" >/dev/null 2>&1; rm -f "${enabled}/${name}.conf"; } || true; ok "disabled ${name}"; fi ;;
+            file) f="${line#file|}"
+                  if [[ $DJ_DRY -eq 1 ]]; then echo "  would remove ${f}"; else rm -f "$f" && ok "removed ${f}"; fi ;;
+        esac
+    done <"$DJ_MANIFEST"
+    return $rc
+}
+
+cmd_mitigate() {
+    local force=0 rc=0 r any_web=0 name
+    local -a dirs=() names=()
+    DJ_DRY=0; DJ_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run) DJ_DRY=1 ;; --reload) DJ_RELOAD=1 ;; --force) force=1 ;;
+            --dir) shift; [[ -n "${1:-}" ]] || die "--dir needs a directory"; dirs+=("$1") ;;
+            --server-name) shift; [[ -n "${1:-}" ]] || die "--server-name needs a name"; names+=("$1") ;;
+            *) die "Unknown mitigate option: $1 (--server-name NAME --dir DIR --dry-run --reload --force)" ;;
+        esac
+        shift
+    done
+    [[ $DJ_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    [[ ${#dirs[@]} -gt 0 ]] || dirs=(/usr/lib /usr/local/lib /opt /srv /var/www /var/lib /home /root)
+    step "Is there an affected Django REST framework?"
+    if cmd_check "${dirs[@]}" >/dev/null 2>&1; then
+        if [[ $force -eq 0 ]]; then info "No affected copy found: nothing to do (use --force to apply the rule anyway)"; return 0; fi
+        caution "no affected copy found, applying anyway because of --force"
+    else bad "an affected Django REST framework was found: rejecting Accept headers of 1024 characters or more at nginx"; fi
+    if [[ $DJ_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        DJ_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$DJ_MANIFEST"
+    else DJ_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
+    step "nginx rule"
+    local http_text='map $http_accept $psf_bad_accept { default 0; "~^.{1024,}$" 1; }'
+    local server_text='if ($psf_bad_accept) { return 406; }'
+    local trig='proxy_pass|uwsgi_pass|scgi_pass'
+    if [[ ${#names[@]} -eq 0 ]]; then
+        dj_nginx_apply "$http_text" "$server_text" "$trig" ""; r=$?
+    else
+        for name in "${names[@]}"; do dj_nginx_apply "$http_text" "$server_text" "$trig" "$name"; r=$?; [[ $r -eq 0 ]] || break; done
+    fi
+    case $r in 0) any_web=1 ;; 1) rc=1 ;; 2) caution "no nginx found: this measure is an nginx rule (see the README for the idea in other proxies)"; rc=1 ;; esac
+    [[ $any_web -eq 1 && $DJ_DRY -eq 0 ]] && dj_reload nginx
+    step "Result"
+    if [[ $DJ_DRY -eq 1 ]]; then
+        info "Dry run finished: nothing was changed"
+        [[ ${#names[@]} -gt 0 ]] || inf "without --server-name the include goes into EVERY server block that proxies (proxy_pass, uwsgi_pass or scgi_pass)"
+    elif [[ $any_web -eq 1 ]]; then
+        info "Requests with an Accept header of 1024 characters or more now get 406. Backups and manifest: ${STATE_DIR}. Undo with: $0 rollback"
+        [[ $DJ_RELOAD -eq 1 ]] || inf "reload nginx for it to take effect (or re-run with --reload)"
+        [[ ${#names[@]} -gt 0 ]] || inf "it was added to EVERY server block that proxies (proxy_pass, uwsgi_pass or scgi_pass): use --server-name to limit it to your API"
+    fi
+    inf "PrivacySafe recommendation: it bounds the cost of the attack. Update Django REST framework."
+    return "$rc"
+}
+
+cmd_rollback() {
+    local rc=0
+    DJ_DRY=0; DJ_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) DJ_DRY=1 ;; --reload) DJ_RELOAD=1 ;; *) die "Unknown rollback option: $1 (--dry-run --reload)" ;; esac
+        shift
+    done
+    DJ_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$DJ_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $DJ_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    step "Rolling back"
+    dj_rollback_core || rc=1
+    if [[ $DJ_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$DJ_MANIFEST" "${DJ_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back. Reload nginx for it to take effect."
+    fi
+    dj_reload nginx
+    return "$rc"
+}
+
 main() {
     CMD="${1:-check}"; [[ $# -gt 0 ]] && shift
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
@@ -327,7 +544,9 @@ main() {
     echo "CVE-2026-114138, CVE-2026-114137; fixed in Django REST framework 3.18.2"
     case "$CMD" in
         check) cmd_check "$@" ;;
-        *) die "Unknown command: ${CMD} (check|version)" ;;
+        mitigate) cmd_mitigate "$@" ;;
+        rollback) cmd_rollback "$@" ;;
+        *) die "Unknown command: ${CMD} (check|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

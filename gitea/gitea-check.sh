@@ -56,7 +56,7 @@ set -uo pipefail
 
 SCRIPT_NAME="gitea-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -295,7 +295,7 @@ cmd_check_host() {
         info "No exposed Gitea found (${found} checked)"
     else
         warn "Exposed or unverifiable Gitea found. Upgrade to Gitea 28.2.0 or later, then restart."
-        inf "Until then (ours, not vendor documented): if you do not need certificate login, empty SSH_TRUSTED_USER_CA_KEYS, which takes the instance out of the affected configuration. Then review recent SSH and API signature logins."
+        inf "Until then (PrivacySafe recommendation): if you do not need certificate login, empty SSH_TRUSTED_USER_CA_KEYS, which takes the instance out of the affected configuration. Then review recent SSH and API signature logins."
         inf "Release notes: https://blog.gitea.com/release-of-28.2.0/"
     fi
     return "$rc"

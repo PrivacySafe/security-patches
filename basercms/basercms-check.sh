@@ -25,8 +25,7 @@
 #                              dependency set reach proc_open() and run commands as the web
 #                              server user. Affected: 5.0.0 before 5.3.2, and 5.4.0 before 5.4.2.
 #
-#   Fixed: 5.3.2 and 5.4.2. Releases 5.0 to 5.2 are affected and have no fixed release of
-#          their own: move to 5.3.2, 5.4.2 or later.
+#   Fixed: 5.3.2 and 5.4.2. Sites on 5.0 to 5.2 move to 5.3.2 or 5.4.2.
 #
 # How this script reads a site. The version is the first line of
 # plugins/baser-core/VERSION.txt. Each flaw is judged on its own range. The script also reads
@@ -59,7 +58,7 @@ set -uo pipefail
 
 SCRIPT_NAME="basercms-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -237,7 +236,7 @@ cmd_check() {
             case "$st" in
                 fixed|notaffected) continue ;;
                 affected) bad "${id} (CVSS ${cvss}): ${what}. Fixed in $(bc_fix_for "$ver")"; nbad=$((nbad+1)); rc=1 ;;
-                nofix)    bad "${id} (CVSS ${cvss}): ${what}. No fix for the ${ver%.*} line: move to 5.3.2 or 5.4.2 or later"; nbad=$((nbad+1)); rc=1 ;;
+                nofix)    bad "${id} (CVSS ${cvss}): ${what}. The ${ver%.*} line moves to 5.3.2 or 5.4.2 or later"; nbad=$((nbad+1)); rc=1 ;;
                 *)        caution "cannot compare version '${ver}': check it against 5.3.2 and 5.4.2"; nbad=$((nbad+1)); rc=1; break ;;
             esac
         done
@@ -255,7 +254,7 @@ cmd_check() {
         warn "Exposed or unverifiable baserCMS found. Update to 5.3.2 or 5.4.2 or later."
         inf "CVE-2026-114621 can read password hashes: after exposure, rotate administrator passwords and review administrator accounts"
         inf "CVE-2026-114624 plants an object graph through widgets: review the widget areas for entries you did not create"
-        inf "Interim, ours and not vendor guidance: restrict the admin area (/baser/admin and the admin API) to trusted addresses, and remove accounts you do not need"
+        inf "PrivacySafe recommendation: restrict the admin area (/baser/admin and the admin API) to trusted addresses, and remove accounts you do not need"
         inf "Advisory: https://github.com/baserproject/basercms/security/advisories/GHSA-2w6g-wp3r-26m3"
     fi
     return "$rc"

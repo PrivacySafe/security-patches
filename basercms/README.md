@@ -19,13 +19,13 @@ baserCMS is a website development framework and CMS written in PHP. Its security
 | | |
 |---|---|
 | Fixed | **5.3.2 and 5.4.2** |
-| No fix on the line | 5.0 to 5.2 are affected and have no fixed release of their own: move to 5.3.2, 5.4.2 or later |
+| Fixed releases | 5.3.2 and 5.4.2. Sites on 5.0 to 5.2 move to one of them |
 | Needs | A logged-in account for CVE-2026-114621; an administrator or widget-write access for CVE-2026-114624. None of the three is reachable by a visitor with no account, except that the planted object of CVE-2026-114624 fires on unauthenticated page requests |
 | Exploitation | None reported in the sources used |
 
 ## How the script reads a site
 
-The version is the first line of `plugins/baser-core/VERSION.txt` (the file continues with a banner, which is ignored). Each flaw is judged on its own range. The script also reads the two things the fix for CVE-2026-114621 adds: the `removeOrmStructureFromRequest()` method in `plugins/baser-core/src/Controller/AppController.php`, and `'order'` in the list of ORM structure keys that `plugins/baser-core/src/Service/BcQueryParameterTrait.php` strips. Both present means that fix is there, whatever the version string says; a fixed version whose files lack it is a failed update; one of the two is a partial update. These signatures cover CVE-2026-114621 only, so the other two flaws are always judged by version. A pre-release of a fixed release (`5.3.2-rc1`) is below it.
+The version is the first line of `plugins/baser-core/VERSION.txt` (the file continues with a banner, which is ignored). Each flaw is judged on its own range. The script also reads the two things the fix for CVE-2026-114621 adds: the `removeOrmStructureFromRequest()` method in `plugins/baser-core/src/Controller/AppController.php`, and `'order'` in the list of ORM structure keys that `plugins/baser-core/src/Service/BcQueryParameterTrait.php` strips. Both present means that fix is there, whatever the version string says. A fixed version whose files lack it is a failed update. One of the two is a partial update. These signatures cover CVE-2026-114621 only, so the other two flaws are always judged by version. A pre-release of a fixed release (`5.3.2-rc1`) is below it.
 
 ```bash
 curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/basercms/basercms-check.sh
@@ -34,7 +34,7 @@ chmod +x basercms-check.sh
 ./basercms-check.sh check
 ```
 
-By default it searches `/var/www /srv /opt /home`; pass directories to narrow it. Everything is read-only.
+By default it searches `/var/www /srv /opt /home`. Pass directories to narrow it. Everything is read-only.
 
 | Command | What it does |
 |---|---|
@@ -47,7 +47,7 @@ No indicators of exploitation have been published for these flaws, so the script
 
 ## Update
 
-Update to 5.3.2 or 5.4.2 or later. Until you can, the project suggests restricting the admin area and the admin API to trusted addresses and removing accounts you do not need. That is not vendor guidance.
+Update to 5.3.2 or 5.4.2 or later. Until you can, the project suggests restricting the admin area and the admin API to trusted addresses and removing accounts you do not need. This is PrivacySafe's recommendation.
 
 ## If a site was exposed
 
@@ -59,15 +59,19 @@ CVE-2026-114621 can read password hashes: rotate administrator passwords and rev
 - [baserCMS 5.3.2 release](https://github.com/baserproject/basercms/releases/tag/5.3.2)
 - [baserCMS 5.4.2 release](https://github.com/baserproject/basercms/releases/tag/5.4.2)
 
-## baserCMS know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 5.3.2 or 5.4.2. There is no fix for 5.0 to 5.2: move to a fixed branch.
-- **It reads the code as well as the version.** The version comes from the first line of `plugins/baser-core/VERSION.txt`, and for CVE-2026-114621 the script also looks for the two fix signatures in the source, so a backport under an older version number is recognised.
-- **Not everything in the release is covered.** baserCMS 5.3.1 lists unauthenticated SQL injections that are identified only by an advisory ID; they are not checked here.
-- **There is no hunt.** No indicators of exploitation have been published for these flaws.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
+- The fix. Update to 5.3.2 or 5.4.2. Sites on 5.0 to 5.2 move to 5.3.2 or 5.4.2.
+- It reads the code as well as the version. The version comes from the first line of `plugins/baser-core/VERSION.txt`, and for CVE-2026-114621 the script also looks for the two fix signatures in the source, so a backport under an older version number is recognized.
+- Not everything in the release is covered. baserCMS 5.3.1 lists unauthenticated SQL injections that are identified only by an advisory ID; they are not checked here.
+- There is no hunt. No indicators of exploitation have been published for these flaws.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 
