@@ -52,7 +52,7 @@ set -uo pipefail
 
 SCRIPT_NAME="grav-login-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -237,7 +237,7 @@ cmd_check() {
         info "No affected Login plugin found (${found} checked)"
     else
         warn "Affected or unverifiable Grav Login plugin found. Update the Login plugin to 3.9.13 or later."
-        inf "Interim (ours, not vendor documented): remove or disable any page that declares an invitation form, and restrict who can create or edit pages. An update does not delete accounts already created."
+        inf "PrivacySafe recommendation: remove or disable any page that declares an invitation form, and restrict who can create or edit pages. An update does not delete accounts already created."
         inf "Advisory: https://github.com/getgrav/grav/security/advisories/GHSA-j8jx-ccrg-m7h2"
     fi
     return "$rc"
@@ -300,7 +300,7 @@ cmd_hunt() {
         hunt_site "$site" || rc=1
     done
     step "Verdict"
-    if [[ $rc -eq 0 ]]; then info "No indicator found. This is not proof of a clean site."
+    if [[ $rc -eq 0 ]]; then info "No indicator found: none of the published indicators were found."
     else
         warn "An affected version or an indicator was found."
         inf "Remove any super-user account or pending invitation you did not create, update the Login plugin, and reset the passwords of real super users."

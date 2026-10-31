@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`magento/magento-check.sh`](magento-check.sh)
 
-CVE-2026-103849 ("BlockStrap") is an unauthenticated remote code execution flaw in the email template engine, rated CVSS 10.0 (CVSS 3.1). It is a second-pass directive injection: a directive hidden in a child email template is signed, passes the check, and is processed again by the parent template. Researchers found four attack paths within a day of disclosure and expect exploitation; none was confirmed in the sources used for this document.
+CVE-2026-103849 ("BlockStrap") is an unauthenticated remote code execution flaw in the email template engine, rated CVSS 10.0 (CVSS 3.1). It is a second-pass directive injection: a directive hidden in a child email template is signed, passes the check, and is processed again by the parent template. Researchers found four attack paths within a day of disclosure and expect exploitation. None was confirmed in the sources used for this document.
 
 | | |
 |---|---|
@@ -21,7 +21,7 @@ CVE-2026-103849 ("BlockStrap") is an unauthenticated remote code execution flaw 
 
 ## What a version number can and cannot show
 
-Adobe ships this fix as an isolated patch, and applying it does not change the version string, so a store on `2.4.8-p5` or `2.4.9` may or may not be fixed. The script therefore does **not** guess for Magento and Adobe Commerce: it reports "cannot confirm" and tells you what to verify. It gives a firm answer where the version can carry one:
+Adobe ships this fix as an isolated patch, and applying it does not change the version string, so a store on `2.4.8-p5` or `2.4.9` may or may not be fixed. The script therefore does **not** guess for Magento and Adobe Commerce: it tells you which patch to confirm. It gives a firm answer where the version can carry one:
 
 | Install | How it is judged |
 |---|---|
@@ -42,7 +42,7 @@ chmod +x magento-check.sh
 ./magento-check.sh check
 ```
 
-By default it looks for `bin/magento` under `/var/www /srv /home /opt`; pass directories to narrow it. Everything is read-only.
+By default it looks for `bin/magento` under `/var/www /srv /home /opt`. Pass directories to narrow it. Everything is read-only.
 
 | Command | What it does |
 |---|---|
@@ -67,15 +67,19 @@ Review your email templates for directives you did not add. That suggestion is t
 - [BleepingComputer: BlockStrap](https://www.bleepingcomputer.com/news/security/critical-blockstrap-flaw-lets-hackers-run-code-on-magento-servers/)
 - Adobe security bulletin APSB26-153
 
-## Magento and Adobe Commerce know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Apply Adobe's APSB26-153 fix or move to the October 2026 release for your line, or to Mage-OS 3.6.0. Adobe documents no workaround.
-- **A version number cannot show this fix.** Adobe ships it as an isolated patch that does not change the version string, so for Magento and Adobe Commerce the script reports "cannot confirm" and says what to check. It gives a firm answer for Mage-OS and for a dated release string such as `2.4.9-2026-oct`.
-- **A Mage-OS pre-release is not the release.** `3.6.0-beta1` and `3.6.0-rc2` are reported with a warning, not as fixed.
-- **There is no hunt.** No indicators of exploitation have been published for this flaw.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
+- The fix. Apply Adobe's APSB26-153 fix or move to the October 2026 release for your line, or to Mage-OS 3.6.0. Adobe documents no workaround.
+- A version number cannot show this fix. Adobe ships it as an isolated patch that does not change the version string, so for Magento and Adobe Commerce the script tells you which patch to confirm. It gives a firm answer for Mage-OS and for a dated release string such as `2.4.9-2026-oct`.
+- A Mage-OS pre-release is not the release. `3.6.0-beta1` and `3.6.0-rc2` are reported with a warning, not as fixed.
+- There is no hunt. No indicators of exploitation have been published for this flaw.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

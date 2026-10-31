@@ -1,0 +1,115 @@
+.TH PSF-NGINX-UI-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-nginx-ui-check \- nginx-ui restricted-directive bypass (authenticated RCE): read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:nginx\-ui/\:\:nginx\-ui\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-84316, CVE-2026-84317, CVE-2026-84318, CVE-2026-84319
+.PP
+nginx-ui is a web interface for managing nginx. It has a security control,
+ValidateConfigFile, that refuses configuration containing directives that can run
+code or raise privileges (load_module of the njs or Perl modules, js_import,
+js_content, perl_*, user root). Four advisories published 12 October 2026 describe
+ways around that control for a logged-in user. Where nginx loads the njs, Perl or
+Lua module (the official Docker image does), the injected configuration runs code
+in the nginx worker.
+.RS 2
+.PP
+CVE-2026-84316  CVSS 8.8  The validator split the configuration on newlines and
+looked only at the first token of each line. nginx separates
+directives with ";", so a harmless directive first and a
+restricted one after a semicolon on the same line passed.
+CVE-2026-84317  CVSS 8.8  The MCP tool nginx_config_add wrote the caller's
+CVE-2026-84318  CVSS 8.8  configuration to disk and reloaded nginx without calling
+ValidateConfigFile at all. The REST paths do call it. Two IDs
+describe this one gap, with different affected ranges.
+CVE-2026-84319  CVSS 8.3  The MCP configuration interface let a secondary
+authenticated user write and apply the restricted directives the
+regular API refuses (load_module of the njs module, js_import),
+which executes njs in the nginx worker.
+.RE
+.RS 2
+.nf
+Affected: nginx-ui below 2.4.1 (84318 from 2.0.0-rc.6).
+Fixed:    nginx-ui 2.4.1.
+.fi
+.RE
+.PP
+How this script reads an install. The nginx-ui binary has no version flag, and its
+version endpoint needs a login, so a read-only check cannot ask it. Instead:
+.RS 2
+.PP
+0. The official container image, uozi/nginx\-ui, is judged by its tag when the tag names a
+version (a tag such as latest does not, and is a warning). With no binary and no image
+on the host, a version you supply in NGINX_UI_VERSION is judged on its own.
+1. NGINX_UI_VERSION (you set it) or the package version, when there is one;
+2. a string inside the binary. The 2.4.1 validator adds the restricted names
+lua_package_cpath and lua_package_path, which 2.4.0 does not contain. A binary
+without them is the older validator (strong finding). A binary with them is
+consistent with 2.4.1 or later; it is a string match, so confirm the version
+shown in the web interface.
+.RE
+.PP
+This script is read-only.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+find nginx-ui, read its version and the binary signature, report.
+Exit 0 = nothing exposed, 1 = exposed or unclear.
+.TP
+\fBhunt\fR
+.ad l
+read nginx configuration for the semicolon bypass shape and list
+restricted directives present, for review. Exit 0 = nothing found,
+1 = a strong lead. A clean hunt means none of the published indicators were found.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: NGINX_UI_BIN      path to the nginx-ui binary
+.RS 2
+.PP
+NGINX_UI_VERSION  the version, from the web interface, if you know it
+NGINX_UI_CONF_DIRS  space separated nginx configuration directories for hunt
+(default /etc/nginx /etc/angie /usr/local/etc/nginx /usr/local/nginx/conf)
+.RE
+.PP
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe runs the two signature tests
+this check applies to the binary (lua_package_cpath and lua_package_path) inside the container
+and copies only a small file recording the answer, so the binary itself is never copied. The
+version is not read by running nginx-ui, so a container is judged by that signature alone. Paths
+shown as .../docker_NAME/... are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:nginx\-ui/\:\:nginx\-ui\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

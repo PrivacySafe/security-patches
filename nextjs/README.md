@@ -16,7 +16,7 @@ Crafted requests aimed at a Next.js App Router application that has at least one
 | Severity | High: 7.5 (CVSS 3), 8.2 (CVSS 4.0) |
 | Affected | `next` 13.0.0 up to 15.5.28, and 16.0.0 up to 16.4.1 |
 | Fixed | 15.5.28 and 16.4.1 |
-| No patched release on its own branch | 13.x and 14.x. Those apps have to move to 15.5.28 or later |
+| Move to | 15.5.28 or later: 13.x and 14.x apps upgrade to it |
 | Not affected | Pages Router applications, and App Router applications with no Server Action |
 
 ## Quick start
@@ -55,11 +55,11 @@ Exit codes: `0` nothing exposed, `1` an affected project with Server Actions was
 
 ## How to read the result
 
-- **Affected version with Server Actions:** exposed. Upgrade, rebuild and restart.
-- **Affected version, no Server Action found:** a warning and exit `0`. The advisory defines the exposed population as App Router apps with at least one Server Action, so this project is outside it. A source search can miss built-only deployments, so the script also reads the build manifest; if you ship only a build output and no sources, confirm by reading that manifest.
-- **Pre-release and canary versions** are compared by their release number, so a canary built before the fix can look fixed.
-- **Several versions in one project** (a monorepo, or a nested dependency) are each reported.
-- **Packages that merely contain the name** (`next-auth`, `next-intl`) are not matched.
+- Affected version with Server Actions: exposed. Upgrade, rebuild and restart.
+- Affected version, no Server Action found: a warning and exit `0`. The advisory defines the exposed population as App Router apps with at least one Server Action, so this project is outside it. A source search can miss built-only deployments, so the script also reads the build manifest, if you ship only a build output and no sources, confirm by reading that manifest.
+- Pre-release and canary versions are compared by their release number, so a canary built before the fix can look fixed.
+- Several versions in one project (a monorepo, or a nested dependency) are each reported.
+- Packages that merely contain the name (`next-auth`, `next-intl`) are not matched.
 
 ## Fixing it
 
@@ -87,21 +87,25 @@ limit_req_status 429;
 limit_req zone=next_actions burst=20 nodelay;
 ```
 
-We checked this on nginx 1.24.0 at a deliberately low rate: requests with a `Next-Action` header got a short burst of 200 responses and then 429, requests without it were never limited, and the limit recovered after a pause. Pick a rate that suits your real traffic. nginx does not limit requests whose key is empty, which is what makes the header-only behaviour work.
+We checked this on nginx 1.24.0 at a deliberately low rate: requests with a `Next-Action` header got a short burst of 200 responses and then 429, requests without it were never limited, and the limit recovered after a pause. Pick a rate that suits your real traffic. nginx does not limit requests whose key is empty, which is what makes the header-only behavior work.
 
 ## Sources
 
 - [GitHub advisory GHSA-p3m5-59mp-jv5r](https://github.com/advisories/GHSA-p3m5-59mp-jv5r)
 - [Tenable plugin 476833 for CVE-2026-94482](https://www.tenable.com/plugins/cloud-security/476833)
 
-## Next.js know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 15.5.28 or 16.4.1. Next.js 13.x and 14.x have no patched release on their own branch, so those apps move to 15.5.28 or later.
-- **Only some apps are exposed.** Pages Router applications, and App Router applications with no Server Action, are not affected. The script reads the version from `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`, `pnpm-lock.yaml` and installed `node_modules/next`, then checks for the App Router and for Server Actions (`"use server"`, or a populated `.next/server/server-reference-manifest.json` for built-only deployments).
-- **There is no hunt.** The flaw is a denial of service, and no indicators have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container lists the project files this check needs (lockfiles, `package.json`, route directory names, the few source files that contain `'use server'`, `config/auth.php`, and similar), and only those are copied into a private temporary directory that the normal check then judges like a host directory. The App Router and Server Action checks work on the copied lockfile, the build manifest, the existence of `app/` or `src/app/`, and the source files that contain `'use server'`, so a container project is judged by the same rules as a host project. A staged symlink is never kept, paths the container reports are validated, and nothing is run in a container beyond `find`, `grep` and `test`. The copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
+- The fix. Update to 15.5.28 or 16.4.1. Next.js 13.x and 14.x apps move to 15.5.28 or later.
+- Only some apps are exposed. Pages Router applications, and App Router applications with no Server Action, are not affected. The script reads the version from `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`, `pnpm-lock.yaml` and installed `node_modules/next`, then checks for the App Router and for Server Actions (`"use server"`, or a populated `.next/server/server-reference-manifest.json` for built-only deployments).
+- There is no hunt. The flaw is a denial of service, and no indicators have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe lists the project files this check needs: lockfiles, `package.json`, route directory names, the few source files that contain `'use server'`, `config/auth.php` and similar. Only those files are copied into a private temporary folder, and the normal check judges that folder like a host directory. The App Router and Server Action checks work on the copied lockfile, the build manifest, the existence of `app/` or `src/app/`, and the source files that contain `'use server'`, so a container project is judged by the same rules as a host project. A staged symlink is never kept, paths the container reports are validated, and nothing is run in a container beyond `find`, `grep` and `test`. The copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

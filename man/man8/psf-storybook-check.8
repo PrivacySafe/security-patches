@@ -1,0 +1,87 @@
+.TH PSF-STORYBOOK-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-storybook-check \- Storybook dev server code injection from the local network: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:storybook/\:\:storybook\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-114126 (GHSA-px85-f4q5-jh77)
+.PP
+The Storybook dev server exposes its WebSocket authentication token to any client
+that can load its HTML pages. Any host on the same network can open the Storybook
+by IP address, obtain the token, and call the WebSocket-backed file-writing and
+testing features. Weak validation of the "write story" feature lets that code land
+in story files. If the Storybook Vitest addon is installed with an old version of
+Vitest, the payload can use Vitest's API to write more files or run commands, which
+can end in code execution with the developer's privileges. CVSS 8.7.
+.RS 2
+.nf
+Affected: storybook 8.0.0 up to 8.6.19, 9.0.0 up to 9.1.21, 10.0.0
+  up to 10.6.2,
+          and 11.0.0-alpha.0 up to 11.0.0-alpha.6
+Fixed:    8.6.19, 9.1.21, 10.6.2, 11.0.0-alpha.6 (all exist on the npm registry)
+          The fixed releases also bind the dev server to 127.0.0.1
+            by default.
+If you cannot upgrade: do not run an affected dev server (the
+  vendor's advice).
+.fi
+.RE
+.PP
+Affected versions listen on ALL network interfaces by default, so simply running
+"storybook dev" on a shared network is the exposure. A Storybook that is built and
+served as static files has no dev server and is not reachable this way.
+.PP
+A second Storybook advisory (a malicious website interacting with the preview of a
+running dev server) is fixed by the same releases; it is not counted separately here.
+.PP
+This script is read-only. It finds the storybook package in package-lock.json,
+npm-shrinkwrap.json, yarn.lock, pnpm-lock.yaml, bun.lock and installed
+node_modules, notes whether the Vitest addon is present and whether a project's
+scripts bind the dev server to a host, and checks whether a Storybook dev server is
+running right now and listening beyond loopback.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /opt /home). Exit 0 = nothing
+exposed, 1 = an affected version while a dev server is running
+beyond loopback or started with \-\-host.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no directory argument the check also reads the project files it needs from
+running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
+read-only probe, and judges them like host projects. The copies are temporary: a path shown as
+\&.../docker_NAME/PATH is the PATH inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:storybook/\:\:storybook\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

@@ -51,7 +51,7 @@
 #                    Exit 0 = nothing exposed, 1 = exposed or unclear.
 #   hunt             read nginx configuration for the semicolon bypass shape and list
 #                    restricted directives present, for review. Exit 0 = nothing found,
-#                    1 = a strong lead. A clean hunt is not proof.
+#                    1 = a strong lead. A clean hunt means none of the published indicators were found.
 #   version          print the script version.
 #
 # Env: NGINX_UI_BIN      path to the nginx-ui binary
@@ -72,7 +72,7 @@ set -uo pipefail
 
 SCRIPT_NAME="nginx-ui-check.sh"
 SCRIPT_VERSION="2.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -362,7 +362,7 @@ cmd_hunt() {
         fi
     done
     [[ $nread -gt 0 ]] && inf "read ${nread} configuration file(s)"
-    # restricted directives in plain form: review, not proof (administrators use njs too)
+    # restricted directives in plain form: review (administrators use njs too)
     local review=0
     for f in "${confs[@]:-}"; do
         [[ -r "$f" ]] || continue

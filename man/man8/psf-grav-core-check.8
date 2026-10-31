@@ -1,0 +1,91 @@
+.TH PSF-GRAV-CORE-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-grav-core-check \- Grav CMS core allowlist bypass through Flex form overrides: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:grav/\:\:grav\-core\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-116019
+.PP
+Grav 2.0.15 before 2.2.13 lets a user who may edit pages run arbitrary public static
+methods. Grav marks the dynamic directives in a blueprint (the data-*@ fields that name a
+PHP method to call) as trusted only where the blueprint file itself defines them, and
+checks the ones that arrive from page frontmatter against an allowlist. The merge that
+combines the two could relocate a directive away from the path it was checked at: the
+vendor deepMerge() honors the unset-name@ merge action as well as replace-name@, and it
+renumbers an integer key the base does not have. A relocated directive was then trusted as
+if the blueprint file had defined it, so the allowlist was skipped. A page editor can embed
+crafted fields in the Flex form overrides of a page's frontmatter and call methods such as
+Folder::delete or Utils::download, which deletes directories, overwrites files, or reads
+files outside the page tree. CVSS 8.8 (v3.1), 8.7 (v4.0). No exploitation was reported at
+the time of the sources used. Found through a GitHub security advisory
+(GHSA-47gg-mh38-9rr7), published 24 October 2026.
+.RS 2
+.nf
+Affected: Grav 2.0.15 up to and including 2.2.12
+Fixed:    2.2.13 (24 October 2026)
+.fi
+.RE
+.PP
+How this script reads a site. The version is the GRAV_VERSION constant in
+system/defines.php. The script also reads system/\:src/\:Grav/\:Common/\:Data/\:Blueprint.php for
+the two things the fix adds: the dynamicOf() helper that compares the directives before and
+after the merge, and the extension of the stripping from replace-name@ to unset-name@. Both
+present means the fix is there, whatever the version string says; neither present on a
+version in the affected range means exposed; one of the two is a partial patch.
+.PP
+This script is read-only. "hunt" also looks in the site's pages for what an attack needs:
+a relocation merge action (unset-name@, replace-name@) or a static method call in page
+frontmatter. Those are indicators to investigate: a relocation directive together with a static
+method call in the same page is a strong lead, either one alone is only listed for review.
+A clean hunt means none of the published indicators were found.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /opt /home) for Grav sites. Exit 0 =
+nothing exposed, 1 = an exposed or unverifiable site.
+.TP
+\fBhunt\fR
+.ad l
+check, then look in the pages for the indicators above. Exit 0 =
+nothing found, 1 = an exposed site or a strong lead.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no directory argument the check also copies the files it reads from running
+docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them) and judges them like
+host installs. The copies are temporary: a path shown as .../docker_NAME_PATH is the PATH inside
+the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:grav/\:\:grav\-core\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-grav-login-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

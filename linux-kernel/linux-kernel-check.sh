@@ -27,7 +27,7 @@
 # SUSE and Amazon Linux backport fixes under release strings that do not say which
 # fixes they carry (for example 6.8.0-45-generic, 5.14.0-503.el9), so a number from
 # them cannot be compared with the table above. For those the vendor changelog is the
-# evidence: the script looks in it for CVE-2026-53266, and says "cannot confirm" when
+# evidence: the script looks in it for CVE-2026-53266, and points you to the vendor's tracker when
 # it is absent.
 #
 # What the exposure lines mean. The CVE needs an ebtables SNAT rule that rewrites the
@@ -36,7 +36,7 @@
 # may be able to create one in their own network namespace. The script therefore
 # reports the rules, whether the ebt_snat module is loaded or loadable, and whether
 # unprivileged user namespaces are allowed, as information for you to weigh. That
-# reading is the project's, not the vendor's.
+# reading is the project's.
 #
 # This script is read-only.
 #
@@ -57,7 +57,7 @@ set -uo pipefail
 
 SCRIPT_NAME="linux-kernel-check.sh"
 SCRIPT_VERSION="2.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -212,7 +212,7 @@ cmd_check() {
             ok "the vendor changelog names CVE-2026-53266: this kernel carries a backport, so its version number understates its state"
             rc=0
         else
-            [[ -z "$up" ]] && { caution "cannot confirm: the vendor changelog does not name CVE-2026-53266 (or is not readable), and this release string cannot be compared with upstream. Check your vendor's security tracker for the kernel package you run"; rc=1; } \
+            [[ -z "$up" ]] && { caution "the vendor changelog does not name CVE-2026-53266 (or is not readable), and this release string cannot be compared with upstream. Check your vendor's security tracker for the kernel package you run"; rc=1; } \
                            || inf "the vendor changelog does not name CVE-2026-53266, so no backport was found"
         fi
     fi

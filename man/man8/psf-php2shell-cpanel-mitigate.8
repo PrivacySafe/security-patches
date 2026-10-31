@@ -1,0 +1,153 @@
+.TH PSF-PHP2SHELL-CPANEL-MITIGATE 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-php2shell-cpanel-mitigate \- PHP2Shell mitigation for cPanel EasyApache 4
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:php2shell\-cpanel\-mitigate.sh\fR [command] [options]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-109618 and CVE-2026-109619 ("PHP2Shell") are fixed by updating PHP
+(8.5.12 / 8.4.27 / 8.3.36 / 8.2.35, or a vendor build that names both CVEs in
+its changelog). Nothing here replaces that. This script covers the hosts the
+Debian tool (php2shell-mitigate.sh) refuses: cPanel servers running
+EasyApache 4 PHP (ea-php74 ... ea-php85) under any handler.
+.PP
+It writes ONE drop-in per ea-php version into that version's php.d directory,
+named so it sorts after every other file there and therefore wins over
+php.ini and the MultiPHP INI Editor. It never edits php.ini. A file in php.d
+is read when the process starts, so the web server and any FPM pools must be
+restarted; apply does that unless told not to.
+.PP
+What the drop-in sets:
+.RS 2
+.nf
+session.upload_progress.enabled = 0     every version, patched or not:
+                                        CVE-2026-115560 is not
+                                          fixed by the
+                                        21 October releases
+fatal_error_backtraces = 0              PHP 8.5, unpatched builds only
+memory_limit = \-1                       only with \-\-memory\-unlimited, and
+                                        only on unpatched builds
+                                          (PHP's own
+                                        protective measure; it
+                                          trades the RCE
+                                        for denial of service, so
+                                          pair it
+                                        with a request body cap)
+post_max_size / upload_max_filesize     only with \-\-post\-max / \-\-upload\-max;
+                                        capped to the smaller of
+                                          the current
+                                        value and your ceiling,
+                                          never raised
+.fi
+.RE
+.PP
+What check reports, besides the above:
+.RS 2
+.nf
+* the PHP handler of each version (from WHM, when whmapi1 is
+  present)
+* whether each version is patched: by version, or because the
+  package
+  changelog names both CVEs
+* settings elsewhere that can undo the drop-in: FPM pool entries,
+  .user.ini and .htaccess php_value / php_flag lines
+* Apache RLimitMEM / RLimitCPU, which cap processes Apache itself
+  forks
+  (CGI, suEXEC, suPHP) and which PHP's advisory warns against as a
+    memory
+  limit, because a failed allocation sends PHP down the vulnerable
+    path
+* web server and FPM processes that started before the drop-in
+  changed
+.fi
+.RE
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+read-only report, and the file apply would write
+.TP
+\fBapply\fR
+.ad l
+write the drop-in for every version, verify it, restart
+.TP
+\fBstatus\fR
+.ad l
+what is in place now, and whether workers need a restart
+.TP
+\fBrestore\fR
+.ad l
+remove the drop-ins this script wrote
+.TP
+\fBcleanup\fR
+.ad l
+once a version is patched, reduce its drop-in to the one
+line CVE-2026-115560 still needs (\-\-force to do it for an
+unpatched version too)
+.PP
+Options:
+.RS 2
+.nf
+\-\-post\-max SIZE       cap post_max_size (for example 32M; never raises it)
+\-\-upload\-max SIZE     cap upload_max_filesize (default: same as \-\-post\-max)
+\-\-memory\-unlimited    memory_limit = \-1 on unpatched versions (see above)
+\-\-no\-restart          write files only; you restart Apache and FPM
+\-\-no\-scan             skip the per-directory scan under the home directories
+\-\-force               with cleanup, also reduce unpatched versions
+\-h, \-\-help            this text
+\-V, \-\-version, version
+.fi
+.RE
+.PP
+Exit: check: 0 = every version patched and nothing to review,
+.RS 2
+.PP
+1 = an unpatched version is present, 2 = patched but something to review.
+Other commands: 0 = done, 1 = failed.
+.RE
+.PP
+Env overrides:
+.RS 2
+.nf
+EA_ROOT=/opt/cpanel                where the ea-php* directories live
+HOME_ROOT=/home                    where per-directory settings are scanned
+CPANEL_SCRIPTS=/scripts            where restartsrv_httpd lives
+APACHE_CONF_DIRS="/etc/apache2/conf /etc/apache2/conf.d"
+SCAN_DEPTH=12                      how deep the home scan looks
+.fi
+.RE
+.PP
+check prints the exact plan before apply makes any change, and restore reverts
+a drop-in it wrote. Run check first and review the plan before apply.
+.PP
+Assisted-by: Claude Opus 5.5
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:php2shell\-cpanel\-mitigate.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-php-session-audit(8), psf-php2shell-mitigate(8), psf-php2shell-watch(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

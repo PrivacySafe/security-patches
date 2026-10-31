@@ -1,0 +1,113 @@
+.TH PSF-CURL-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-curl-oct2026-check \- curl HTTP/2 upload use-after-free, October 2026: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:curl/\:\:curl\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-92392
+.PP
+A use-after-free in libcurl's HTTP/2 upload handling lets a malicious server
+that receives an upload corrupt the client's memory, and the reporter turned
+it into code execution on the uploading machine. The attack runs from the
+server side: the client uploads roughly 135KB over HTTP/2 to an attacker's
+HTTPS server (certificate must validate), the server stalls and resets the
+stream, and curl reuses a freed handle. Taking over a client needs exact
+knowledge of its build and heap, so curl expects most attempts to end in a
+crash and rates the flaw High, not Critical. Because libcurl is linked by
+many other programs, the exposure is not limited to the curl command.
+.PP
+Affected: curl and libcurl 8.12.0 through 8.22.0. Not present before 8.12.0.
+Fixed upstream in 8.23.0, with branch backports 8.14.3, 8.16.2 and 8.20.2.
+Distributions backport the fix into their own builds under older numbers
+(Debian 13 trixie: 8.14.1-2+deb13u7, DSA-6558-1; Debian 12 is not affected).
+.PP
+This is read-only: it finds what needs updating and judges each against the
+fixes. It changes nothing. The fix is to update curl/libcurl and restart the
+programs that use it. Where you cannot update, curl's advice is to
+avoid HTTP/2: the command's \-\-http1.1 option, or CURLOPT_HTTP_VERSION set to
+CURL_HTTP_VERSION_1_1 in an application (a request, since an existing
+connection may be reused). A libcurl built without HTTP/2 cannot reach the
+path at all.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+every curl command and libcurl on the host, and libcurl
+inside running containers, with whether each carries the
+fix and whether the build supports HTTP/2. Root optional.
+Exit 0 = nothing exposed, 1 = a vulnerable curl/libcurl is
+present, 2 = something couldn't be read.
+.TP
+\fBhunt\fR
+.ad l
+read-only: the journal and logs for process crashes that
+look like this bug: curl segfaults, use-after-free aborts,
+programs killed by a crash signal. A failed attack is most
+likely a crash, so a crash on an outbound HTTP/2 upload is
+the signal. Exit 0 = clean, 1 = findings.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+FIXED_BUILDS="8.14.1\-2+deb13u7 8.5.0-2ubuntu10.6"
+                                  extra distro curl/libcurl builds
+                                    known to
+                                  carry the fix, space-separated
+                                    full
+                                  versions. Checked alongside a
+                                    built-in
+                                  list (Debian 13's
+                                    8.14.1-2+deb13u7),
+                                  which a value here does not
+                                    replace.
+CURL_SEGMENTS="8.12.0:8.14.3 8.15.0:8.16.2 8.17.0:8.20.2
+  8.21.0:8.23.0"
+                                  "<introduced>:<fixed>" per
+                                    maintained
+                                  branch; the fix for a version is
+                                    the one
+                                  whose introduced bound is
+                                    highest at or
+                                  below it
+CURL_INTRODUCED=8.12.0            below this the flaw is not present
+SCAN_CONTAINERS=1                 1 = read libcurl inside running containers
+                                  (default 1; 0 to skip)
+HUNT_SINCE="2026\-10\-01"           how far back hunt reads the journal
+HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:curl/\:\:curl\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

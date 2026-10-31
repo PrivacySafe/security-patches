@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`jenkins/jenkins-check.sh`](jenkins-check.sh)
 
-Jenkins published a security advisory on 16 September 2026 covering 20 vulnerabilities in 13 widely deployed plugins. Eight are High-severity flaws in Script Security, the plugin that sandboxes Groovy for Pipelines and is installed on nearly every Jenkins server. They are ways around the sandbox (interface coercion, calls on a null receiver, collection casts, AST transformations, `@Builder` at compile time, dynamic methods, a classpath approval bypass, and a time-of-check to time-of-use race on approved remote JARs) that let a user who may define Pipeline scripts run code in the controller's JVM.
+Jenkins published a security advisory on 16 September 2026 covering 20 vulnerabilities in 13 widely deployed plugins. Eight are High-severity flaws in Script Security, the plugin that sandboxes Groovy for Pipelines and is installed on nearly every Jenkins server. They are ways around the sandbox that let a user who may define Pipeline scripts run code in the controller's JVM. The techniques include interface coercion, calls on a null receiver, collection casts, AST transformations, `@Builder` at compile time, dynamic methods, a classpath approval bypass, and a time-of-check to time-of-use race on approved remote JARs.
 
 | Plugin (short name) | Fixed in | CVE | Severity | What |
 |---|---|---|---|---|
@@ -30,7 +30,7 @@ The eight Script Security identifiers are CVE-2026-92122, CVE-2026-92123, CVE-20
 
 ## How the script reads an install
 
-A plugin's version is the `Plugin-Version` line of its `META-INF/MANIFEST.MF`, either in the expanded plugin directory or inside the `.jpi` or `.hpi` file under `$JENKINS_HOME/plugins`. A manifest wraps long lines, and a line that starts with one space continues the line before; the script joins them and handles Windows line endings. The 13 short names were checked against each plugin's own project file.
+A plugin's version is the `Plugin-Version` line of its `META-INF/MANIFEST.MF`, either in the expanded plugin directory or inside the `.jpi` or `.hpi` file under `$JENKINS_HOME/plugins`. A manifest wraps long lines, and a line that starts with one space continues the line before. The script joins them and handles Windows line endings. The 13 short names were checked against each plugin's own project file.
 
 Versions are compared by their leading dotted number, as numbers (so `5.6.10` is newer than `5.6.5`). Two builds with the same number but different build hashes cannot be ordered, and are reported as such. A plugin that is disabled does not run and is reported as such: update or remove it anyway. A listed plugin that is installed but whose version cannot be read (a manifest with no `Plugin-Version`, or no manifest) is never skipped: it is reported as a warning, exit `1`, with the fixed version to confirm in the Plugin Manager.
 
@@ -43,7 +43,7 @@ chmod +x jenkins-check.sh
 ./jenkins-check.sh check
 ```
 
-It looks in `$JENKINS_HOME`, `/var/lib/jenkins` and `/var/jenkins_home`; pass one or more Jenkins home directories to name them. Everything is read-only.
+It looks in `$JENKINS_HOME`, `/var/lib/jenkins` and `/var/jenkins_home`. Pass one or more Jenkins home directories to name them. Everything is read-only.
 
 ## Commands
 
@@ -58,21 +58,25 @@ Update the plugins in Manage Jenkins, Plugins, then restart Jenkins. Until you c
 
 ## After an update
 
-If an affected Script Security, GitLab, Gradle or Bitbucket plugin was installed while users you do not fully trust could define Pipelines or edit jobs, treat the credentials those plugins could reach (GitLab, Bitbucket, Develocity and OAuth credentials, and Jenkins credentials) as possibly exposed and rotate them.
+If an affected Script Security, GitLab, Gradle or Bitbucket plugin was installed while users you do not fully trust could define Pipelines or edit jobs, treat the credentials those plugins could reach as possibly exposed and rotate them. That means GitLab, Bitbucket, Develocity and OAuth credentials, and Jenkins credentials.
 
 ## Sources
 
 - [Jenkins security advisory, 2026-09-16](https://www.jenkins.io/security/advisory/2026-09-16/)
 - [Cyber Security News: Jenkins fixes 20 plugin vulnerabilities](https://cyberpress.org/jenkins-fixes-20-plugin-vulnerabilities/)
 
-## Jenkins plugins know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update the listed plugins in Manage Jenkins, Plugins, then restart Jenkins.
-- **It reads manifests, not the update center.** Each plugin's `Plugin-Version` is read from its expanded directory first, then its `.jpi` or `.hpi` archive. A plugin that is installed but whose version cannot be read is reported, not skipped, and a plugin that is disabled is noted as not running (update or remove it anyway). Two builds with the same leading number but different hashes cannot be ordered, and are reported that way.
-- **It also reads running containers.** With `SCAN_CONTAINERS=1` (the default) it reads the advisory plugins' manifests inside running docker and podman containers (`JENKINS_HOME` there, default `/var/jenkins_home`), judged by the same rules. It is skipped when you name the home directories yourself.
-- **The interim measure is the project's, not Jenkins's.** Limiting who holds Pipeline authoring and Item/Configure permissions reduces the exposure to the High flaws. There is no hunt.
+- The fix. Update the listed plugins in Manage Jenkins, Plugins, then restart Jenkins.
+- It reads manifests, not the update center. Each plugin's `Plugin-Version` is read from its expanded directory first, then its `.jpi` or `.hpi` archive. A plugin that is installed but whose version cannot be read is reported, not skipped, and a plugin that is disabled is noted as not running (update or remove it anyway). Two builds with the same leading number but different hashes cannot be ordered, and are reported that way.
+- It also reads running containers. With `SCAN_CONTAINERS=1` (the default) it reads the advisory plugins' manifests inside running docker and podman containers (`JENKINS_HOME` there, default `/var/jenkins_home`), judged by the same rules. It is skipped when you name the home directories yourself.
+- The protective measure is the project's, not Jenkins's. Limiting who holds Pipeline authoring and Item/Configure permissions reduces the exposure to the High flaws. There is no hunt.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

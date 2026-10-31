@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`grav/grav-login-check.sh`](grav-login-check.sh)
 
-The Login plugin's invitation task (`login.invite`) sends an invitation without checking who submitted the form, and takes the new account's access straight from the page's frontmatter (`form: meta: invite: account:`) with no cap on what it grants. A page author can define an invitation form that grants **super user** access, submit it, and register the invited address for full control of the site. VulnCheck describes the submission as possible without authentication.
+The Grav Login plugin has a flaw in its invitation feature (CVE-2026-114658). The `login.invite` task sends an invitation without checking who submitted the form, and it takes the new account's permissions from the page's frontmatter (`form: meta: invite: account:`) with no limit on what it grants. A page author can write an invitation form that grants **super user** access, submit it, and register the invited address to take over the site. VulnCheck says the submission can be made without authentication.
 
 | | |
 |---|---|
@@ -16,7 +16,7 @@ The Login plugin's invitation task (`login.invite`) sends an invitation without 
 | Severity | High: CVSS 8.7 (v4.0), 8.8 (v3.1) |
 | Affected | Grav Login plugin 3.6.0 through 3.9.12, on Grav 1.7 and 2.x |
 | Fixed | **3.9.13**. Only a super user can then invite someone into super access or into groups; for anyone else those are removed from the invitation |
-| Behaviour change | A page restricted with `access: admin.login` now needs an account management permission to send invitations |
+| Behavior change | A page restricted with `access: admin.login` now needs an account management permission to send invitations |
 | Needs | A page that can carry an invitation form. Per the advisory the page author defines it; VulnCheck says the submission itself needs no login |
 
 ## Quick start
@@ -72,10 +72,10 @@ The keys of `invites.yaml` are **registration tokens**: anyone holding one can r
 
 ## How to read the result
 
-- **3.6.0 through 3.9.12:** affected. Update (`bin/gpm update login`, or through the Admin plugin), then run the hunt. An update does not delete accounts or invitations already created.
-- **Before 3.6.0:** outside the advisory's range, but far out of date: update anyway.
-- **A page that grants super access through an invitation, or a pending super invitation:** treat it as an attack in progress or already done. Remove it, remove any account you did not create, and reset the passwords of real super users.
-- **Version unreadable:** the script cannot judge, so it exits `1`.
+- 3.6.0 through 3.9.12: affected. Update (`bin/gpm update login`, or through the Admin plugin), then run the hunt. An update does not delete accounts or invitations already created.
+- Before 3.6.0: outside the advisory's range, but far out of date: update anyway.
+- A page that grants super access through an invitation, or a pending super invitation: treat it as an attack in progress or already done. Remove it, remove any account you did not create, and reset the passwords of real super users.
+- Version unreadable: the script cannot judge, so it exits `1`.
 
 ## Sources
 
@@ -88,7 +88,7 @@ The keys of `invites.yaml` are **registration tokens**: anyone holding one can r
 
 **Script:** [`grav/grav-core-check.sh`](grav-core-check.sh)
 
-Grav 2.0.15 up to and including 2.2.12 lets a user who may edit pages run arbitrary public static methods. Grav trusts the dynamic directives of a blueprint (the `data-*@` fields that name a PHP method) only where the blueprint file itself defines them, and checks the ones that arrive from page frontmatter against an allowlist. The merge that combines the two could relocate a directive away from the path it was checked at: the vendor `deepMerge()` honours the `unset-name@` merge action as well as `replace-name@`, and it renumbers an integer key the base does not have. A relocated directive was then trusted as if the blueprint file had defined it, so the allowlist was skipped. A page editor can embed crafted fields in the Flex form overrides of a page's frontmatter and call methods such as `Folder::delete` or `Utils::download`, which deletes directories, overwrites files, or reads files outside the page tree.
+Grav 2.0.15 up to and including 2.2.12 lets a user who may edit pages run arbitrary public static methods. Grav trusts the dynamic directives of a blueprint (the `data-*@` fields that name a PHP method) only where the blueprint file itself defines them, and checks the ones that arrive from page frontmatter against an allowlist. The merge that combines the two could relocate a directive away from the path it was checked at: the vendor `deepMerge()` honors the `unset-name@` merge action as well as `replace-name@`, and it renumbers an integer key the base does not have. A relocated directive was then trusted as if the blueprint file had defined it, so the allowlist was skipped. A page editor can embed crafted fields in the Flex form overrides of a page's frontmatter and call methods such as `Folder::delete` or `Utils::download`, which deletes directories, overwrites files, or reads files outside the page tree.
 
 | | |
 |---|---|
@@ -111,7 +111,7 @@ chmod +x grav-core-check.sh
 ./grav-core-check.sh hunt
 ```
 
-By default it searches `/var/www /srv /opt /home`; pass directories to narrow it. Everything is read-only.
+By default it searches `/var/www /srv /opt /home`. Pass directories to narrow it. Everything is read-only.
 
 | Command | What it does |
 |---|---|
@@ -125,7 +125,7 @@ A relocation merge action (`unset-name@`, `replace-name@`) and a static method c
 
 ### Update
 
-Update to 2.2.13 or later (`bin/gpm selfupgrade`). Until you can, the project suggests restricting who can edit pages and who has Admin access. That is not vendor guidance.
+Update to 2.2.13 or later (`bin/gpm selfupgrade`). Until you can, the project suggests restricting who can edit pages and who has Admin access. This is PrivacySafe's recommendation.
 
 ### Sources
 
@@ -133,15 +133,19 @@ Update to 2.2.13 or later (`bin/gpm selfupgrade`). Until you can, the project su
 - [Advisory GHSA-47gg-mh38-9rr7](https://github.com/getgrav/grav/security/advisories/GHSA-47gg-mh38-9rr7)
 - [`Blueprint.php` at 2.2.12](https://github.com/getgrav/grav/blob/2.2.12/system/src/Grav/Common/Data/Blueprint.php)
 
-## Grav know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** For the core flaw (CVE-2026-116019, Grav 2.0.15 to 2.2.12) update to 2.2.13. For the Login plugin flaw (CVE-2026-114658, 3.6.0 to 3.9.12) update the plugin to 3.9.13.
-- **The core check reads the code as well as the version.** The version is `GRAV_VERSION` in `system/defines.php`; the script also looks in `Blueprint.php` for the two things the fix adds. Both present means the fix is there whatever the version string says; neither on an affected version means exposed; one of the two is a partial patch.
-- **The login flaw needs a page author.** A page author can define an invitation form that grants super user access. The check lists pages that declare an invitation form.
-- **`hunt` is read-only and never prints a secret.** For the Login plugin it looks for pending invitations, page frontmatter that grants super access and recently changed super-user accounts, and reports file names, invitation email addresses and times, never invitation tokens or password hashes.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself. The Login plugin's check of page frontmatter and its `hunt` read the host only.
+- The fix. For the core flaw (CVE-2026-116019, Grav 2.0.15 to 2.2.12) update to 2.2.13. For the Login plugin flaw (CVE-2026-114658, 3.6.0 to 3.9.12) update the plugin to 3.9.13.
+- The core check reads the code as well as the version. The version is `GRAV_VERSION` in `system/defines.php`. The script also looks in `Blueprint.php` for the two things the fix adds. Both present means the fix is there whatever the version string says. Neither on an affected version means exposed. One of the two is a partial patch.
+- The login flaw needs a page author. A page author can define an invitation form that grants super user access. The check lists pages that declare an invitation form.
+- `hunt` is read-only and never prints a secret. For the Login plugin it looks for pending invitations, page frontmatter that grants super access and recently changed super-user accounts, and reports file names, invitation email addresses and times, never invitation tokens or password hashes.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself. The Login plugin's check of page frontmatter and its `hunt` read the host only.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

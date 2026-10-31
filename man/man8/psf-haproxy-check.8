@@ -1,0 +1,150 @@
+.TH PSF-HAPROXY-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-haproxy-check \- HAProxy truncated HTTP/2 PING frame denial of service: checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:haproxy/\:\:haproxy\-check.sh\fR [command] [PATH-TO-haproxy ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-110353
+.PP
+HAProxy's HTTP/2 multiplexer did not treat a truncated PING frame as a short
+read. A PING frame cannot be consumed until it is complete, but its presence
+was enough to wake the connection up, so the worker thread never went back to
+idle. A remote, unauthenticated client that opens a connection and keeps a
+partial PING frame pending can hold a thread at 100% CPU for as long as the
+connection stays open (or until "timeout http-request" expires, when one is
+set). The impact is moderate and grows with the share of such connections
+among all concurrent connections.
+.PP
+AFFECTED RANGE: two sources disagree.
+.RS 2
+.nf
+The CVE description says "3.2 before 3.4.6". HAProxy's own release
+  notes say
+the bug was introduced in 3.1 (the short-read handling was fixed
+  in 2.5 but
+PING was missed, and it only became a problem in 3.1 when the
+  wake-up logic
+changed), and that the fixes shipped on 14 October 2026 in 3.4.7,
+  3.3.17 and
+3.2.26. 3.4.6 is therefore NOT fixed. This script follows the
+  vendor:
+  3.1.x       affected, branch is end of life: move to a supported branch
+  3.2.x       affected before 3.2.26
+  3.3.x       affected before 3.3.17
+  3.4.x       affected before 3.4.7
+  3.0 and older   outside this CVE's range (the vendor says 3.1 introduced it)
+  3.5-dev     development builds: check the commit yourself
+The same releases fix a second CPU-exhaustion flaw in the HTTP/1
+  parser (a
+chunked request with a chunk-size line longer than the buffer).
+  The vendor
+does not state its affected range in the release notes, so this
+  script does
+not rule any HTTP-mode HAProxy out because of it.
+.fi
+.RE
+.PP
+Vendor workaround (documented for the PING flaw): setting "timeout http-request"
+to a low value such as 1 to 5 seconds limits the CPU consumption.
+.PP
+HTTP/2 reachability, which decides exposure: TLS listeners offer HTTP/2 only
+when the bind line has "alpn h2". Clear-text HTTP listeners accept the HTTP/2
+connection preface by default and upgrade the connection, unless the frontend
+has "option disable-h2-upgrade". "proto h2" on a bind line forces HTTP/2.
+.PP
+"check" is read-only; "mitigate" and "rollback" are the only commands that change
+anything. "check" finds HAProxy binaries (PATH, usual locations and
+running processes), reads the version from "haproxy \-v", reads the
+configuration files the running process was started with (or the defaults) and
+reports HTTP/2 reachability and the http-request timeout. It never reloads or
+restarts HAProxy.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+read-only. Exit 0 = nothing exposed, 1 = an affected version
+is exposed or its configuration could not be read.
+.TP
+\fBmitigate [options]\fR
+.ad l
+(root) changes the host. Applies the vendor's workaround
+for the PING flaw: adds "timeout http-request 5s" to every
+"defaults" section that has no such line (it never lowers or
+changes a value you set). It limits CPU use; it does NOT fix
+the bug, so upgrade as well. The configuration is checked with
+"haproxy \-c" before and after, every file is copied first, and
+if HAProxy rejects the result the originals are put back at
+once. Nothing is reloaded unless you add \-\-reload. Options:
+.RS 2
+.TP 10
+\fB\-\-timeout SECONDS\fR
+.ad l
+value to add, 1 to 60 (default 5)
+.TP 10
+\fB\-\-disable\-h2\-upgrade\fR
+.ad l
+also add "option disable-h2-upgrade" to those sections, so clear-text connections cannot be upgraded to HTTP/2. Leaves "alpn h2" on TLS binds alone. Breaks only clients that use HTTP/2 over clear text (h2c).
+.TP 10
+\fB\-\-dry\-run\fR
+.ad l
+show the changes, change nothing
+.TP 10
+\fB\-\-reload\fR
+.ad l
+graceful reload afterwards (systemd)
+.TP 10
+\fB\-\-force\fR
+.ad l
+apply even if this version is outside the affected range (3.1 to 3.4 before the fixed releases)
+.RE
+.TP
+\fBrollback [\-\-dry\-run] [\-\-reload]\fR
+.ad l
+put back every file mitigate changed.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+STATE_DIR=/\:var/\:lib/\:psf\-security\-patches/\:haproxy holds the backups and manifest.
+HAPROXY_CFG (space separated files or directories) replaces configuration discovery.
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe captures the daemon's version
+output and its configuration (secrets are redacted inside the container before anything is
+copied) into a private temporary directory, and this script then runs once per container, in
+isolation, against that copy. Paths shown as .../docker_NAME/... are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:haproxy/\:\:haproxy\-check.sh\fR
+.ad l
+The script.
+.TP
+\fB/var/lib/psf\-security\-patches/haproxy\fR
+.ad l
+Backups and the record that rollback uses.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

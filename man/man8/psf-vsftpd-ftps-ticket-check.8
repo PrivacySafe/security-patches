@@ -1,0 +1,230 @@
+.TH PSF-VSFTPD-FTPS-TICKET-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-vsftpd-ftps-ticket-check \- vsftpd FTPS data channel hijack (require_ssl_reuse bypass): checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:vsftpd/\:\:vsftpd\-ftps\-ticket\-check.sh\fR [command] [PATH-TO-vsftpd ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-119568
+.PP
+vsftpd through 3.0.5, built with SSL support and run with ssl_enable=YES,
+decides that an FTPS data connection belongs to the logged-in user by asking
+OpenSSL one question: was a session ticket resumed (SSL_session_reused)? It
+does not compare the data session with the control session. A client that
+shares the victim's source IP address can run AUTH TLS on its own control
+connection (no USER or PASS needed), keep the ticket it receives, connect to
+the victim's passive (PASV) port first and resume that ticket. The server then
+serves or accepts the victim's transfer on the attacker's TLS session.
+Impact: the file the victim downloads can be read, or an upload can be
+supplied, by someone who is not the user. It is not a login bypass and not
+code execution.
+.PP
+SOURCES AND WHAT IS NOT SETTLED.
+.RS 2
+.nf
+\- CVE-2026-119568 was published on 30 October 2026. The VulnCheck
+  advisory
+  scores it 9.1 Critical (CVSS v4, attack complexity high). The
+    researcher
+  (Abraxas Labs, 12 October 2026) scored it 7.4 High (CVSS v3.1)
+    and reproduced
+  it on the official 3.0.5 tarball in a lab. The CVE text names
+  ssl_data_accept(); the researcher's write-up names ssl_accept()
+    in ssl.c.
+  They describe the same missing check.
+\- The affected
+  range given is "through 3.0.5". A version above 3.0.5 is
+    reported as
+  outside that range, with a reminder to confirm against the
+    vendor page.
+\- The researcher's conditions for exposure are: SSL compiled in
+  (the stock
+  tarball has it off, most distribution packages turn it on),
+    ssl_enable=YES,
+  a standalone listener (listen=YES, or listen_ipv6=YES), and the
+    default
+  require_ssl_reuse=YES. The attacker must share the victim's
+    source IP
+  (shared NAT, the same host) because passive connections must
+    come from the
+  control connection's address unless pasv_promiscuous=YES.
+\- The researcher reports that require_cert=YES, with clients that
+  present a
+  certificate, binds the data connection to the control connection
+    and
+  closes this path, and that a per-connection (inetd or xinetd)
+    server does
+  not share ticket keys between connections. Those two points come
+    from the
+  write-up's reading of the code.
+\- require_ssl_reuse=NO removes the ticket requirement altogether.
+  It is a
+  documented setting and not the vulnerable default, but a data
+    connection
+  is then not tied to the control connection at all. It is
+    reported as
+  exposed for that reason (our reading, not the advisory's).
+.fi
+.RE
+.PP
+"check" is read-only; "mitigate" and "rollback" are the only commands that change
+anything. "check" finds vsftpd binaries (PATH, usual locations and
+running processes), reads the version from "vsftpd \-v" (falling back to the
+package manager), checks whether the binary links OpenSSL, reads each
+configuration file and reports exposure for each one. It sends no network
+traffic and never starts, reloads or restarts anything.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+read-only. Exit 0 = nothing exposed, 1 = an exposed vsftpd (or
+one that cannot be judged) was found, 2 = bad usage.
+.TP
+\fBmitigate [options]\fR
+.ad l
+(root) changes the host. Protective measures only: there is
+no vendor fix. Every file it edits is copied first and
+"rollback" puts it back. Nothing is restarted unless you add
+\-\-restart (vsftpd reads its configuration at start, and a
+restart ends transfers in progress). Options:
+.RS 2
+.TP 10
+\fB(no option)\fR
+.ad l
+sets pasv_promiscuous=NO in each FTPS configuration that has it on. That setting removes the same-IP precondition of the attack, and turning it off is safe unless you rely on FXP transfers.
+.TP 10
+\fB\-\-require\-cert\fR
+.ad l
+also sets require_cert=YES and ssl_request_cert=YES: every client must present a certificate, and the data connection is matched against it. The researcher reports this closes the path It REFUSES clients that have no certificate, which is most FTPS clients, so use it only if yours have one.
+.TP 10
+\fB\-\-allow LIST\fR
+.ad l
+firewall (nftables, else iptables): only the comma separated addresses or CIDRs in LIST, plus loopback, may reach the FTP control port (listen_port, default 21) and the passive range if pasv_min_port and pasv_max_port are set. Does not survive a reboot. It cannot stop an attacker who shares an allowed address.
+.TP 10
+\fB\-\-dry\-run\fR
+.ad l
+print what would change and change nothing
+.TP 10
+\fB\-\-restart\fR
+.ad l
+restart vsftpd afterwards (systemd)
+.RE
+.TP
+\fBharden [options]\fR
+.ad l
+(root) OPTIONAL baseline hardening, separate from the two CVEs.
+Nothing is hardened unless you choose
+it, because every item can break something. Each directive is
+set only if the installed vsftpd build knows it (an unknown
+directive stops vsftpd from starting), limits are never
+loosened, and every file is copied first (rollback restores it).
+Options (the first six come from the common vsftpd hardening
+guides):
+.RS 2
+.TP 10
+\fB\-\-baseline\fR
+.ad l
+\-\-logging, \-\-limits and \-\-tls together
+.TP 10
+\fB\-\-logging\fR
+.ad l
+xferlog_enable=YES
+.TP 10
+\fB\-\-limits\fR
+.ad l
+standalone only: max_clients=50 and max_per_ip=5 (a generic suggestion from a third-party summary of CVE-2025-14242, not Red Hat's: it caps how many sessions one address can hold, it does not remove the bug, and max_per_ip can lock out many users behind one NAT address); everywhere: idle_session_timeout=300 and data_connection_timeout=120
+.TP 10
+\fB\-\-tls\fR
+.ad l
+where ssl_enable=YES: ssl_ciphers=HIGH, SSLv2, SSLv3, TLSv1 and TLSv1.1 off, TLSv1.2 on
+.TP 10
+\fB\-\-force\-tls\fR
+.ad l
+where ssl_enable=YES: force_local_logins_ssl and force_local_data_ssl (vsftpd's default is already YES for both, so this makes it explicit), and, where allow_anon_ssl=YES, force_anon_logins_ssl and force_anon_data_ssl, so plain FTP is refused for anonymous users too (breaks clients without FTPS)
+.TP 10
+\fB\-\-no\-anon\fR
+.ad l
+anonymous_enable=NO (vsftpd's default is YES)
+.TP 10
+\fB\-\-chroot\fR
+.ad l
+where local_enable=YES: chroot_local_user=YES. vsftpd then refuses logins for users whose home directory is writable; this script does not set allow_writeable_chroot
+.TP 10
+\fB\-\-pasv\-range A-B pasv_min_port and pasv_max_port. Your firewall\fR
+.ad l
+must allow the range (mitigate \-\-allow does)
+.TP 10
+\fB\-\-dry\-run\fR
+.ad l
+print what would change and change nothing
+.TP 10
+\fB\-\-restart\fR
+.ad l
+restart vsftpd afterwards (systemd)
+.RE
+.TP
+\fBrollback [\-\-dry\-run] [\-\-restart]\fR
+.ad l
+put back every file mitigate or harden changed
+and remove the firewall rules.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+VSFTPD_CONF="/etc/vsftpd.conf /etc/vsftpd/other.conf"   configuration files
+                 (space separated) instead of discovery
+STATE_DIR=/\:var/\:lib/\:psf\-security\-patches/\:vsftpd           where mitigate keeps its
+                 backups and manifest
+.fi
+.RE
+.PP
+Two CVEs are covered. CVE-2026-119568 (FTPS data channel hijack, through 3.0.5, no
+fixed upstream release; CISA SSVC on 30 October 2026: exploitation none, automatable
+no, technical impact total; not in the KEV catalog). CVE-2025-14242 (authenticated
+denial of service, integer overflow in ls parameter parsing reached through STAT,
+CVSS 6.5): Red Hat lists its own vsftpd packages as affected and fixed them in
+RHSA-2026:0605, 0606 and 0608 and later errata (for example 3.0.3-36.el8_10.3 on
+RHEL 8, 3.0.5-6.el9_7.2 on RHEL 9, 3.0.5-10.el10_1.1 on RHEL 10). A Red Hat Bugzilla
+comment asks whether it comes from a Red Hat-only patch; that is not confirmed, so
+the check reports it only for Red Hat family packages whose changelog does not name
+the CVE, and says plainly that other builds are not listed.
+Containers are not scanned. Run the script inside a container, or pass the
+binary and set VSFTPD_CONF to a copy of its configuration.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:vsftpd/\:\:vsftpd\-ftps\-ticket\-check.sh\fR
+.ad l
+The script.
+.TP
+\fB/var/lib/psf\-security\-patches/vsftpd\fR
+.ad l
+Backups and the record that rollback uses.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

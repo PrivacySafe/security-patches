@@ -24,7 +24,7 @@
 # reads a domain from a GitHub dead drop (letters9813) and runs code from it.
 # The last clean release before it is 1.106.2.
 #
-# There is no patch and no safe in-place "clean": if 1.107.0 was installed from
+# The remedy is to rebuild, not to clean in place: if 1.107.0 was installed from
 # a wheel, or a LiteLLM container pulled on 21 October 2026 ran, treat the host
 # as FULLY COMPROMISED. The stealer already ran. Rebuild the host, and from a
 # clean machine revoke and rotate every credential it could reach (cloud keys,
@@ -45,7 +45,7 @@
 #                    the /tmp markers it leaves, and logs for its network
 #                    indicators (litellm.dev, the GitHub dead drop). Exit 0 =
 #                    clean, 1 = findings.
-#   quarantine       CONTAINMENT, not a fix: back up (for forensics) and remove
+#   quarantine       CONTAINMENT: back up (for forensics) and remove
 #                    cook.pth and cook.py, and sitecustomize.py when it carries
 #                    the malware markers, so they stop running at Python start.
 #                    Needs write access. The host is still compromised: rebuild
@@ -83,7 +83,7 @@ NET_MARKERS='litellm\.dev|letters9813|remote_code_loader|/codepy|pythonclient-te
 TMP_MARKERS=(/tmp/.pc_once_* /tmp/remote_code_loader.lock)
 SCRIPT_NAME="litellm-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 REF="https://github.com/BerriAI/litellm/issues/47826"
 
@@ -298,4 +298,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

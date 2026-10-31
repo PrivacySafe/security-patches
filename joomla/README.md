@@ -27,12 +27,12 @@ The release also fixes issues that the sources used here describe without an ide
 |---|---|
 | Affected | Joomla 6.0.0 to 6.1.3, and 4.0.0 to 5.4.8. The SSRF flaw reaches back to 3.0.0, one XSS flaw to 1.5.0 |
 | Fixed | 5.4.9 and 6.1.4 |
-| No fix | 3.x, 4.x and 5.0 to 5.3 are past security support. Move to 5.4.9 or later, or to 6.1.4 or later |
+| Move to | 5.4.9 or later, or 6.1.4 or later. 3.x, 4.x and 5.0 to 5.3 are past security support |
 | Exploited | No exploitation reported in the sources used. Most of the flaws need a logged-in account |
 
 ## How the script reads an install
 
-`libraries/src/Version.php` holds the version as constants (`MAJOR_VERSION`, `MINOR_VERSION`, `PATCH_VERSION`). The script also reads one file the fix changed, `libraries/src/Cache/Storage/FileStorage.php`: the cache-purge fix adds `Path::check($dir, $this->_root)`. That signature confirms the High cache flaw and catches a partial update, a fixed version number on a file that still has the old code, or the reverse. It cannot confirm the other fifteen fixes, so the version decides.
+`libraries/src/Version.php` holds the version as constants (`MAJOR_VERSION`, `MINOR_VERSION`, `PATCH_VERSION`). The script also reads one file the fix changed, `libraries/src/Cache/Storage/FileStorage.php`: the cache-purge fix adds `Path::check($dir, $this->_root)`. That signature confirms the High cache flaw and catches a partial update, a fixed version number on a file that still has the old code, or the reverse. The other fifteen fixes are judged by the version.
 
 ## Quick start
 
@@ -43,14 +43,22 @@ chmod +x joomla-check.sh
 ./joomla-check.sh check
 ```
 
-By default it searches `/var/www /srv /home /opt /usr/share`; pass directories to narrow it. Everything is read-only.
+By default it searches `/var/www /srv /home /opt /usr/share`. Pass directories to narrow it. Everything is read-only.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `check` (default) | Finds each Joomla by `libraries/src/Version.php`, reads the version and the cache-purge signature, and reports. Exit `0` nothing exposed, `1` exposed or unclear |
+| `mitigate --allow LIST [--web auto\|apache\|nginx] [--dir DIR] [--server-name NAME] [--dry-run] [--reload] [--force]` | **Changes the host (root).** The project's suggestion, not Joomla's: restricts `/administrator` to the addresses or CIDRs in `LIST` (comma separated) plus loopback; every other address gets a 403. Acts only when an exposed Joomla is found. `--allow` is mandatory, because without it everyone would be locked out. Apache: `psf-joomla-admin-allow.conf` with `Require ip`, checked with a configtest. nginx: a `geo` and `map` block included right after `http {` and an include at the top of every PHP-serving server block, checked with `nginx -t`. If the web server rejects the result, everything is undone at once. Reloads nothing unless you add `--reload` |
+| `rollback [--dry-run] [--reload]` | Removes what `mitigate` added and restores the files it edited |
 | `version` | Prints the script version |
+
+## Mitigation: restrict the administrator path
+
+Most of these flaws need a logged-in account, so limiting who can reach the login reduces the exposure. Run `./joomla-check.sh mitigate --allow 203.0.113.0/24 --dry-run`, then again without `--dry-run` and with `--reload`. Verified on nginx 1.24: from an address outside the list, `/administrator/index.php`, `/administrator/` and `/ADMINISTRATOR/index.php` get 403. From loopback the request still reaches the PHP handler. `/index.php` and static files are unaffected; `rollback` restores the original behavior. On Apache 2.4.58 the same restriction answered 403 from a non-allowed address and 200 from loopback on every virtual host.
+
+If a proxy or CDN sits in front of the server, the address the web server sees is the proxy's, so the rule would lock everyone out or let everyone in. Make sure real client addresses reach the web server first, and keep a second way in, such as a second session or console access. This is PrivacySafe's recommendation. The fix is to update to 5.4.9 or 6.1.4 or newer.
 
 ## Update
 
@@ -58,19 +66,23 @@ Update from the administrator (System, Update, Joomla) or with the update packag
 
 ## Sources
 
-- [Joomla security centre](https://developer.joomla.org/security-centre.html)
+- [Joomla security center](https://developer.joomla.org/security-centre.html)
 - [mySites.guru: Joomla 5.4.9 and 6.1.4 security release](https://mysites.guru/blog/joomla-5-4-9-and-6-1-4-security-release/)
 - [Joomla 5.4.9 release](https://github.com/joomla/joomla-cms/releases/tag/5.4.9)
 
-## Joomla know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 5.4.9 or later in 5.x, or to 6.1.4 or later. There is no fixed release for 3.x, 4.x or 5.0 to 5.3: those branches are past security support.
-- **Two flaws are rated High.** CVE-2026-90915 (arbitrary directory deletion through the cache purge action) and CVE-2026-92222 (server-side request forgery, which needs a Manager account or above). The SSRF flaw reaches back to 3.0.0.
-- **The release is broader than the CVE list.** 5.4.9 and 6.1.4 fix 16 core issues; the script names the ones in its README, and the same update fixes the rest.
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
+- The fix. Update to 5.4.9 or later in 5.x, or to 6.1.4 or later. Sites on 3.x, 4.x or 5.0 to 5.3 move to 5.4.9 or 6.1.4 or later: those branches are past security support.
+- Two flaws are rated High. CVE-2026-90915 (arbitrary directory deletion through the cache purge action) and CVE-2026-92222 (server-side request forgery, which needs a Manager account or above). The SSRF flaw reaches back to 3.0.0.
+- The release is broader than the CVE list. 5.4.9 and 6.1.4 fix 16 core issues. The script names the ones in its README, and the same update fixes the rest.
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

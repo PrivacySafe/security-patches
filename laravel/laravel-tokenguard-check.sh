@@ -15,8 +15,7 @@
 #
 # Fixed in laravel/framework 12.68.0 and 13.29.0, both released 25 August 2026,
 # two months before the advisory was published on 19 October 2026. The 11.x
-# branch carries the same is_string() check from v11.56.1. As of 21 October
-# 2026 the 10.x and 9.x branches were reported to have no fix. Apps that use
+# branch carries the same is_string() check from v11.56.1. 10.x and 9.x apps upgrade to a fixed branch. Apps that use
 # Laravel Sanctum or Laravel Passport register their own guard drivers and are
 # not the target of this bug.
 #
@@ -29,13 +28,12 @@
 #
 #   check (default)  scan DIR (default /var/www /srv /home /opt) for Laravel
 #                    projects. Exit 0 = nothing exposed, 1 = an affected
-#                    project looks exposed or is on a branch with no fix.
-#   middleware       print a stopgap PHP middleware that rejects non-string
+#                    project looks exposed or is on a branch that needs an upgrade.
+#   middleware       print a protective PHP middleware that rejects non-string
 #                    api_token values. It prints to stdout only.
 #   version          print the script version.
 #
-# The stopgap middleware is for apps that cannot upgrade today. It is not a
-# replacement for the fix, and 9.x and 10.x apps should plan an upgrade.
+# The protective middleware is for apps that cannot upgrade today. 9.x and 10.x apps should plan an upgrade.
 # Containers: with no directory argument the check also reads the project files it needs from
 # running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
 # read-only probe, and judges them like host projects. The copies are temporary: a path shown as
@@ -48,7 +46,7 @@ set -uo pipefail
 
 SCRIPT_NAME="laravel-tokenguard-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -253,7 +251,7 @@ cmd_check() {
             fixed)      ok "laravel/framework ${ver} has the TokenGuard fix"; continue ;;
             unknown)    caution "could not parse version '${ver}'"; continue ;;
             vulnerable) bad "laravel/framework ${ver} is affected by CVE-2026-114509 (fixed in 12.68.0 / 13.29.0, 11.x from 11.56.1)" ;;
-            unfixed)    bad "laravel/framework ${ver} is affected by CVE-2026-114509 and this branch had no upstream fix as of 21 October 2026" ;;
+            unfixed)    bad "laravel/framework ${ver} is affected by CVE-2026-114509: upgrade to 12.68.0, 13.29.0 or, on 11.x, 11.56.1 or later" ;;
         esac
         auth="${dir}/config/auth.php"
         guards=""
@@ -277,7 +275,7 @@ cmd_check() {
             if [[ -n "$routes" ]]; then
                 bad "guard '${g}' uses the token driver and is referenced in: ${routes}"; exposed=1
             else
-                caution "guard '${g}' uses the token driver but no route or code references it (heuristic)"
+                caution "guard '${g}' uses the token driver but no route or code references it"
             fi
         done
         case "$db" in
@@ -306,7 +304,7 @@ cmd_check() {
 cmd_middleware() {
     cat <<'PHP'
 <?php
-// RejectNonStringApiToken: stopgap for CVE-2026-114509 (Laravel TokenGuard).
+// RejectNonStringApiToken: protection for CVE-2026-114509 (Laravel TokenGuard).
 // Save as app/Http/Middleware/RejectNonStringApiToken.php and register it as
 // GLOBAL middleware that runs before authentication:
 //   Laravel 11 and newer, in bootstrap/app.php:

@@ -1,0 +1,113 @@
+.TH PSF-GHOSTACTION-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-ghostaction-oct2026-check \- GhostAction stage-2 developer-machine stealer: scan, hunt and contain
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:ghostaction/\:\:ghostaction\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+No CVE (supply-chain campaign targeting GitHub repositories and developers)
+.PP
+The GhostAction campaign, which injects credential-stealing GitHub Actions
+workflows into compromised repositories, added a second stage in October 2026
+that persists on a developer's own machine. In 94 repositories it committed
+three things:
+.RS 2
+.PP
+\&.vscode/tasks.json  a task (seen labeled "eslint-check") with
+"runOn": "folderOpen" and hidden output, which runs
+automatically when the folder is opened in VS Code and
+executes the fake font with Node.
+public/fonts/fa\-solid\-400.woff2
+named like a normal Font Awesome asset, but it is not a
+font: it is a Node.js credential stealer. It harvests
+AWS keys, PyPI and npm tokens, Git logins, Kubernetes
+credentials, SSH private keys, and Anthropic Claude and
+Google Gemini keys, installs a cron job that runs
+attacker code every five minutes, and exfiltrates over
+plain HTTP. The same file name was used in North Korea's
+Fake Font / PolinRider campaign.
+a second Actions workflow  a backup that runs if the stealer never does.
+.RE
+.PP
+Related phishing uses my-github[.]com (and my-gitlab[.]com) to complete a
+GitHub OAuth device flow for repo, workflow and read:org scopes and steal a
+token. Exfiltration and C2 are at 193.32.204[.]199 (TCP 8443 and 8080).
+.PP
+GhostAction is a supply-chain compromise, so the remedy is detection,
+containment and credential rotation. This script is a detector: it scans your
+repositories for the dropped artifacts (a "font" that is not a valid font, a
+folder-open task, a workflow carrying the C2), hunts the machine for the cron
+job and the network indicators, and can quarantine the confirmed artifacts.
+None of that undoes a stolen token. If anything here matches, from a CLEAN
+device revoke your GitHub tokens and authorized OAuth apps, change your
+password, rotate every credential the repositories and workflows could reach,
+audit your repositories, and warn anyone who cloned them. Keep VS Code
+workspace trust on, so opening a cloned folder does not run its tasks.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan the paths for the dropped artifacts: a .woff2/.woff
+whose magic bytes are not a real font, a .vscode/tasks.json
+that runs on folderOpen, a workflow carrying the C2, npm
+lifecycle hooks that pipe a download to a shell, and the
+campaign's domains/IP in files. Read-only. Exit 0 = clean,
+1 = indicators found, 2 = couldn't read something.
+.TP
+\fBhunt\fR
+.ad l
+read-only, machine-level: cron jobs that run attacker code,
+the domains/IP in shell history, git config and logs, and a
+stealer/miner\-style process running. Exit 0 = clean, 1 =
+findings.
+.TP
+\fBquarantine\fR
+.ad l
+CONTAINMENT: back up (for forensics) and remove
+the confirmed artifacts (a fake font, a tasks.json that
+executes it, a workflow carrying the C2). Needs write
+access. Your tokens are still stolen: revoke and rotate.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+SCAN_PATHS="$PWD $HOME"           where to scan for repositories
+SCAN_DEPTH=12                     how deep to search
+BACKUP_ROOT=/\:var/\:backups/\:ghostaction\-oct2026
+HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:ghostaction/\:\:ghostaction\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

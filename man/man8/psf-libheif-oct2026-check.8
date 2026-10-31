@@ -1,0 +1,144 @@
+.TH PSF-LIBHEIF-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-libheif-oct2026-check \- libheif HEIF/AVIF decoder check
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:heif/\:\:libheif\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+A heap buffer overflow in libheif's HEIF decoding (reached through
+ImageMagick on an attacker-supplied image) was used to get remote code
+execution on a Discourse forum and pivot further. The bug class spans many
+libheif CVEs with no single CVE for the Discourse case; the upstream commit
+shipped without one. Debian fixed a batch in DSA-6417-1 (libheif
+1.19.8-1+deb13u1, trixie, 8 Aug 2026); other distributions backport under
+their own version strings, and some stable branches stayed vulnerable for a
+while. Upstream security releases have continued (1.21.0, 1.22.0, 1.22.1,
+1.23.x). See https:/\:/\:www.hacktron.ai/\:blog/\:hacking\-openai
+.PP
+This is NOT the Ruby Regexp issue. For Ruby/GitLab, use
+ruby/ruby\-regexp\-oct2026\-check.sh instead.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+read-only: every libheif and libde265 on the host, the
+ImageMagick and libvips that reach them, every Discourse
+install (whose image-upload path runs an attacker-supplied
+file through ImageMagick into libheif), and container
+images, with whether each libheif carries the fixes. For
+a Discourse container it says whether a rebuild is needed
+rather than a restart. Root optional. Exit 0 = nothing
+exposed, 1 = a vulnerable libheif is reachable, 2 =
+something couldn't be read.
+.TP
+\fBpolicy\fR
+.ad l
+read-only: whether ImageMagick's policy.xml still lets
+HEIC/HEIF/AVIF through. Disabling those coders protects the system until
+you can patch libheif. Exit 0 =
+HEIF is blocked everywhere a policy was found, 1 = HEIF
+is still allowed, 2 = no policy found.
+.TP
+\fBharden\fR
+.ad l
+write a managed block into ImageMagick's policy.xml that
+refuses the HEIC/HEIF/AVIF coders, so a crafted upload
+never reaches libheif through ImageMagick. Backs the file
+up first, is reversible with unharden, and is the one
+thing this script changes. Needs root. This is defense in
+depth, NOT a substitute for updating libheif.
+.TP
+\fBunharden\fR
+.ad l
+remove that managed block and restore. Needs root. Only
+touches a block this script wrote.
+.TP
+\fBmw-harden\fR
+.ad l
+block HEIF/HEIC/AVIF uploads in every MediaWiki found, by
+adding those MIME types to wgMimeTypeExclusions in
+LocalSettings.php, so a crafted upload is rejected by its
+detected type before the scaler runs. Backs up first,
+checks the result still parses as PHP, reversible with
+mw-unharden. Needs root. Application-level defense; the
+host libheif still needs updating.
+.TP
+\fBmw-unharden\fR
+.ad l
+remove that MediaWiki block and restore. Needs root.
+.TP
+\fBhunt\fR
+.ad l
+read-only: the journal and logs for image-processor
+crashes (ImageMagick/libheif/libde265 segfaults, HEIF
+decoder frames, repeated convert/magick aborts).
+Exit 0 = clean, 1 = findings, 2 = no journal or log could
+be read, so nothing was searched.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+The real fix is to update libheif (and libde265) and rebuild anything that
+bundles it (Discourse containers especially); this script does not run that
+for you, because a package upgrade or a container rebuild is an administrator's
+call to make and time. The only change it will make is the ImageMagick coder
+policy, and only when you ask for it with harden.
+.PP
+Env overrides:
+.RS 2
+.nf
+HEIF_FIXED_UPSTREAM=1.22.0        upstream floor the heap-write class is
+                                  fixed at (coarse: distro
+                                    backports under
+                                  older numbers are judged by
+                                    FIXED_BUILDS
+                                  and the package changelog first)
+FIXED_BUILDS="1.19.8\-1+deb13u1 1.17.6-1ubuntu4.6"
+                                  distro builds known to carry the
+                                    fixes,
+                                  space-separated full versions
+DISCOURSE_ROOT="/var/discourse"   where the Docker launcher lives
+DISCOURSE_APP="/var/www/discourse"  where a bare-metal checkout
+  lives
+POLICY_PATHS="/etc/ImageMagick\-6 /etc/ImageMagick\-7 ..."
+                                  where policy looks for
+                                    policy.xml
+HUNT_SINCE="2026\-07\-01"           how far back hunt reads the journal
+HUNT_LOGS="/var/log/nginx/*.log"  extra log globs for hunt
+BACKUP_ROOT=/\:var/\:backups/\:libheif\-oct2026
+                                  where harden and mw-harden keep
+                                    the backup
+                                  of each config file they change
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:heif/\:\:libheif\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

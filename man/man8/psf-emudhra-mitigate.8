@@ -1,0 +1,111 @@
+.TH PSF-EMUDHRA-MITIGATE 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-emudhra-mitigate \- eMudhra intermediate CA compromise, mitigation
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:pki/\:\:emudhra\-mitigate.sh\fR [command] [\-\-force] [\-\-ignore\-env]
+.SH DESCRIPTION
+.ad l
+.PP
+Disclosed 20 Oct 2026: https:/\:/\:emudhra.we\-have\-a\-problem.com/\:
+.PP
+The private keys of eight eMudhra intermediate CAs can be recovered from
+their certificates. Browsers block them through OneCRL, CRLite and CRLSets,
+but the system CA store, and everything that reads it (OpenSSL, GnuTLS, curl,
+wget, apt, git, Python, PHP, Go, Ruby, Java via ca-certificates-java), keeps
+trusting them until ca-certificates is updated. This script distrusts the
+roots that anchor them and then proves the store rejects all of them.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck\fR
+.ad l
+environment report only; changes nothing, root optional
+(exit 0 = ok, 1 = hard blocker, 2 = needs \-\-ignore\-env)
+.TP
+\fBapply (default)\fR
+.ad l
+distrust the affected certificates in the system store,
+rebuild it, fix the Java keystore, and verify
+.TP
+\fBstatus\fR
+.ad l
+mitigation state, store tests and stale processes
+.TP
+\fBrestore\fR
+.ad l
+undo everything this script distrusted (re-exposes you
+if ca-certificates isn't patched)
+.TP
+\fBcleanup\fR
+.ad l
+once ca-certificates is patched: remove this script's
+distrust, but only if the store still rejects every
+compromised intermediate afterwards (\-\-force skips the
+patch check, never the store test)
+.TP
+\fBversion\fR
+.ad l
+print the script version and exit
+.TP
+\fB\-\-ignore\-env\fR
+.ad l
+proceed past soft environment blockers (a running
+process or system-wide override uses a CA store this run
+can't fix). Hard blockers (non-Debian, no
+update-ca-certificates, no openssl, not root) can't be
+overridden.
+.PP
+Every command first checks, in order: OS (Debian, Ubuntu, Trisquel and
+popular derivatives), the system CA store and its package, other CA stores
+(Java, Python certifi and other bundles, Node.js, NSS, overrides), then system
+(root, container, tools). The system store's patch state is reported from
+three signals: the fixed build for your release, extra FIXED_BUILDS, and the
+package changelog. The verdict that matters is functional: every command
+tests each store against the 16 published intermediate certificates, which
+are embedded below and checked against their published SHA-256 fingerprints.
+.PP
+Env overrides:
+.RS 2
+.nf
+FIXED_BUILDS="20250419~deb12u2"   extra fixed ca-certificates builds
+SCAN_PATHS="/opt /srv ..."         where to look for bundled CA files;
+                                   empty disables the scan
+SCAN_DEPTH=9                       find \-maxdepth for that scan
+TEST_HOSTS="api.example.com:443"   hosts to TLS-test before and after
+                                   apply, to catch collateral
+                                     breakage
+JAVA_STOREPASS=changeit            Java keystore password
+.fi
+.RE
+.PP
+Debian/Ubuntu/Trisquel layout: /etc/ca\-certificates.conf and
+update-ca-certificates. A "!" line in that file survives package upgrades
+(the ca-certificates postinst and debconf config keep deselected entries).
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:pki/\:\:emudhra\-mitigate.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

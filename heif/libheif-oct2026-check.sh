@@ -32,15 +32,15 @@
 #                    exposed, 1 = a vulnerable libheif is reachable, 2 =
 #                    something couldn't be read.
 #   policy           read-only: whether ImageMagick's policy.xml still lets
-#                    HEIC/HEIF/AVIF through. Disabling those coders is the
-#                    interim fix when you can't patch libheif yet. Exit 0 =
+#                    HEIC/HEIF/AVIF through. Disabling those coders protects the system until
+#                    you can patch libheif. Exit 0 =
 #                    HEIF is blocked everywhere a policy was found, 1 = HEIF
 #                    is still allowed, 2 = no policy found.
 #   harden           write a managed block into ImageMagick's policy.xml that
 #                    refuses the HEIC/HEIF/AVIF coders, so a crafted upload
 #                    never reaches libheif through ImageMagick. Backs the file
 #                    up first, is reversible with unharden, and is the one
-#                    thing this script changes. Needs root. This is defence in
+#                    thing this script changes. Needs root. This is defense in
 #                    depth, NOT a substitute for updating libheif.
 #   unharden         remove that managed block and restore. Needs root. Only
 #                    touches a block this script wrote.
@@ -49,7 +49,7 @@
 #                    LocalSettings.php, so a crafted upload is rejected by its
 #                    detected type before the scaler runs. Backs up first,
 #                    checks the result still parses as PHP, reversible with
-#                    mw-unharden. Needs root. Application-level defence; the
+#                    mw-unharden. Needs root. Application-level defense; the
 #                    host libheif still needs updating.
 #   mw-unharden      remove that MediaWiki block and restore. Needs root.
 #   hunt             read-only: the journal and logs for image-processor
@@ -106,12 +106,12 @@ HUNT_SINCE="${HUNT_SINCE:-2026-07-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="libheif-oct2026-check.sh"
 SCRIPT_VERSION="1.1.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 ADVISORY="https://www.hacktron.ai/blog/hacking-openai"
 MARKER="managed-by: libheif-oct2026-check"
 # Begin carries the version for humans; detection and stripping key on the
-# version-independent MARKER so a block written by any version is recognised.
+# version-independent MARKER so a block written by any version is recognized.
 BLOCK_BEGIN="<!-- BEGIN ${MARKER} (v${SCRIPT_VERSION}) -->"
 BLOCK_END="<!-- END ${MARKER} -->"
 BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/libheif-oct2026}"
@@ -220,7 +220,7 @@ tool_report() {
         v="$("$magick" -version 2>/dev/null | grep -oE 'ImageMagick [0-9][^ ]*' | head -1 || true)"
         heif="$("$magick" -list format 2>/dev/null | grep -iE '^\s*HEIC|^\s*HEIF|^\s*AVIF' | tr -s ' ' | head -3 || true)"
         if [[ -n "$heif" ]]; then
-            caution "${magick}: ${v:-present}, HEIF/AVIF decoding ENABLED (reaches libheif). Disable it in policy.xml as defence in depth: ${SELF} policy"
+            caution "${magick}: ${v:-present}, HEIF/AVIF decoding ENABLED (reaches libheif). Disable it in policy.xml as defense in depth: ${SELF} policy"
         else
             ok "${magick}: ${v:-present}, no HEIF/AVIF delegate (doesn't reach libheif)"
         fi
@@ -453,7 +453,7 @@ cmd_policy() {
         fi
     done
     echo
-    echo "  To block the decode path as defence in depth, add inside <policymap> in policy.xml:"
+    echo "  To block the decode path as defense in depth, add inside <policymap> in policy.xml:"
     echo '      <policy domain="coder" rights="none" pattern="HEIC" />'
     echo '      <policy domain="coder" rights="none" pattern="HEIF" />'
     echo '      <policy domain="coder" rights="none" pattern="AVIF" />'
@@ -559,7 +559,7 @@ cmd_harden() {
     echo
     if [[ $changed -eq 1 ]]; then
         info "ImageMagick will now refuse HEIC/HEIF/AVIF. Verify with: ${SELF} policy"
-        inf "This is defence in depth. Still update libheif and rebuild anything that bundles it"
+        inf "This is defense in depth. Still update libheif and rebuild anything that bundles it"
         inf "Reverse with: sudo ${SELF} unharden"
     else
         warn "nothing was changed (no writable policy.xml)"
@@ -609,7 +609,7 @@ mw_managed_block() {
     printf '\t( $wgMimeTypeExclusions ?? [] ),\n\t[\n'
     for m in "${MW_HEIF_MIMES[@]}"; do printf "\t\t'%s',\n" "$m"; done
     printf '\t]\n) ) );\n'
-    # Pre-1.37 fallback name, honoured when the new one is absent
+    # Pre-1.37 fallback name, honored when the new one is absent
     printf 'if ( isset( $wgMimeTypeBlacklist ) ) {\n'
     printf '\t$wgMimeTypeBlacklist = $wgMimeTypeExclusions;\n}\n'
     # Drop the extensions from the allow-list if they were added
@@ -733,7 +733,7 @@ cmd_hunt() {
         fi
     done
     echo
-    echo "  A hit is a lead, not proof: image decoders crash on genuinely broken files too. A"
+    echo "  A hit tells you where to look: image decoders crash on genuinely broken files too. A"
     echo "  crash with libheif or libde265 frames on a vulnerable build, or a burst of HEIF"
     echo "  decode errors from one source before a worker died, is worth treating as an incident:"
     echo "  check what the process could reach (secrets, database credentials, tokens, and for a"
@@ -759,4 +759,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

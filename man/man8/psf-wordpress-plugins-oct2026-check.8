@@ -1,0 +1,236 @@
+.TH PSF-WORDPRESS-PLUGINS-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-wordpress-plugins-oct2026-check \- WordPress plugin checks, October 2026: LiteSpeed Cache, Rank Math PRO, OttoKit, SureCart,
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress/\:\:wordpress\-plugins\-oct2026\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+LatePoint, Amelia, Profile Builder, Bricksforge  (v6)
+.PP
+CVE-2026-113500 (LiteSpeed Cache before 7.9.2, unauthenticated stored XSS)
+CVE-2026-111862 (Rank Math SEO PRO 3.0.123, supply-chain malware, CVSS 9.8)
+CVE-2026-110372 (OttoKit 1.1.40 and earlier, unauthenticated privilege escalation, CVSS 9.8)
+CVE-2026-112241 (SureCart 4.9.5 and earlier, authentication bypass by spoofing, CVSS 9.8)
+CVE-2026-110653 (LatePoint 5.7.4 and earlier, unauthenticated OTP authentication bypass, CVSS 9.1)
+CVE-2026-112327 (Amelia 2.4.11 and earlier, SQL injection, CVSS 9.3)
+CVE-2026-112242 (Profile Builder 4.0.4 and earlier, privilege escalation, CVSS 8.8)
+CVE-2026-85097 (Bricksforge 3.1.8.9 and earlier, unauthenticated file upload to code execution,
+.RS 2
+.PP
+CVSS 10.0, exploited since 7 October 2026)
+.RE
+.PP
+CVE-2026-113500  The LiteSpeed Cache plugin before 7.9.2 has an HTML
+.RS 2
+.PP
+optimization routine that is not limited to stylesheet
+content. It can delete the markup that closes an attribute in
+the rendered page. Combined with unescaped comment author
+output, an unauthenticated visitor whose comment is published
+can inject event-handler attributes that run JavaScript for
+any visitor, including a logged-in administrator.
+Fixed: 7.9.2.
+.RE
+.PP
+CVE-2026-111862  Some copies of Rank Math SEO PRO 3.0.123 contained malware.
+.RS 2
+.PP
+Per Rank Math, the affected copies were downloaded or
+updated between 15 October 2026 20:02 UTC and 16 October 2026
+07:12 UTC. The genuine 3.0.123 is dated 7 October. Rank Math
+removed the files and shipped 3.0.124. The free Rank Math SEO
+plugin from WordPress.org is not part of the incident. The
+malware reportedly does nothing until the plugin is activated,
+then contacts a command server, plants PHP backdoors that
+rebuild themselves, creates administrator accounts, adds cron
+jobs and can add SSH keys. Updating to 3.0.124 does not
+remove any of that. Treat an activated tainted copy as a
+full compromise.
+.RE
+.PP
+CVE-2026-110372  OttoKit (the plugin formerly called SureTriggers, folder
+.RS 2
+.PP
+suretriggers) up to and including 1.1.40 assigns privileges
+incorrectly, which lets an unauthenticated visitor escalate
+privileges (CWE-266), in practice to administrator. A Nuclei
+template for it exists and is tagged as known-exploited by
+VulnCheck's list; another tracker says no public proof of
+concept exists, so treat exploitation as plausible.
+Fixed: 1.1.41.
+.RE
+.PP
+CVE-2026-112241  SureCart (the e-commerce plugin from the same vendor, folder
+.RS 2
+.PP
+surecart) up to and including 4.9.5 has an authentication
+bypass by spoofing (CWE-290): an attacker can present identity
+markers that the plugin trusts and be treated as another user,
+with no valid credentials. CVSS 9.8. Patchstack rates it high
+priority and expects mass exploitation; we found no report of
+exploitation. SureCart has had a run of authentication and
+account-takeover fixes this autumn, so keep it current.
+Fixed: 4.9.6.
+.RE
+.PP
+CVE-2026-110653  LatePoint (appointment booking, folder latepoint) up to and
+.RS 2
+.PP
+including 5.7.4. The one-time-password check increments its
+attempts counter with a stale value and no conditional guard
+or row lock, so concurrent requests slip past the 10-attempt
+lockout and an unauthenticated visitor can brute-force the
+code and log in as a customer. CVSS 9.1. No exploitation has
+been reported. The advisory references the 5.7.5 code for the
+fixed helper, so 5.7.5 is the first fixed release; the advisory
+does not say "fixed in" in so many words.
+.RE
+.PP
+CVE-2026-112327  Amelia (booking, folder ameliabooking) up to and including
+.RS 2
+.PP
+2.4.11: SQL injection, CVSS 9.3 (a score that implies no
+privileges are needed; the advisory does not state the
+required role). Patchstack's solution: 2.4.12 or later.
+.RE
+.PP
+CVE-2026-112242  Profile Builder (user registration forms and profiles, folder
+.RS 2
+.PP
+profile-builder) up to and including 4.0.4: incorrect
+privilege assignment (CWE-266), CVSS 8.8. The score implies a
+low-privilege account is enough (privileges required: low), so a
+registered user may be able to gain a higher role, in the worst
+case administrator. Fixed: 4.0.5. Only the free plugin folder
+profile-builder is checked; the paid add-on ships separately.
+.RE
+.PP
+"check" and "hunt" are read-only. "mitigate" and "rollback" are the only commands that change a site.
+.PP
+CVE-2026-85097   Bricksforge (an add-on for the Bricks site builder, about 6,000 sites)
+.RS 2
+.PP
+up to and including 3.1.8.9 trusts file metadata that arrives with a
+form submission. An unauthenticated visitor gets a form nonce, uploads
+a file that passes the image type check but also holds PHP code, then
+submits the form naming a .php file, and the code runs. Patchstack saw
+the first attempts on 7 October 2026 at 21:47 UTC, before the advisory
+of 8 October, from 63 addresses within days. Attackers used the route
+/wp\-json/bricksforge/v1/form_submit and filenames matching
+login_admin_*.php, sometimes placed straight in the uploads directories.
+Sites with Pro Forms active are affected even when no form has an upload
+field. CVSS 10.0 (9.8 in one report). Fixed: 3.1.8.10 for the 3.x line.
+The vendor changelog says 4.0.0 also has the fix; Patchstack names 4.0.1,
+so this script treats 4.0.0 as unconfirmed and 4.0.1 or later as fixed.
+.RE
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /home /opt
+/usr/share/wordpress) for WordPress installs and report the
+version of LiteSpeed Cache, Rank Math PRO, OttoKit, SureCart, LatePoint,
+Amelia, Profile Builder and Bricksforge. For
+Rank Math PRO 3.0.123 it compares file change times with the
+incident window. Exit 0 = nothing affected, 1 = affected or
+to review.
+.TP
+\fBmitigate (\-\-plugin SLUG[,SLUG] | \-\-all\-affected) [\-\-dry\-run] [DIR ...]\fR
+.ad l
+(root, or the
+site's own user) changes the site. Deactivates a plugin that is
+below its fixed version with WP-CLI, as the owner of the site and
+with \-\-skip\-plugins and \-\-skip\-themes so the vulnerable code is not
+loaded to switch it off. An inactive plugin registers no routes. You
+must choose, because deactivating turns the plugin's features off
+(forms, bookings, checkout, login pages). Plugins it will act on:
+OttoKit (suretriggers) below 1.1.41, SureCart (surecart) below
+4.9.6, LatePoint (latepoint) below 5.7.5, Amelia (ameliabooking)
+below 2.4.12, Profile Builder (profile-builder) below 4.0.5 and
+Bricksforge below 3.1.8.10 (found by its Plugin Name, whatever its
+folder is called; Patchstack reports deactivation as the
+mitigation). A plugin at or above its fixed version, one that is
+already inactive and one that is network-activated are left alone.
+LiteSpeed Cache (the measure there is to hold comments for
+moderation) and Rank Math PRO (follow the vendor notice) are not
+touched. It needs wp (WP-CLI) on PATH, or WP_CLI=/path/to/wp.
+The fix is to update the plugin. An update does not remove
+accounts or files an attacker already created: run hunt.
+.TP
+\fBrollback [\-\-dry\-run]\fR
+.ad l
+reactivate the plugins mitigate deactivated.
+.TP
+\fBhunt\fR
+.ad l
+search each WordPress install, and this server, for the
+published indicators of the Rank Math PRO malware, and for
+signs of OttoKit abuse (new administrator accounts and
+requests to its REST routes), for LatePoint OTP requests, and for
+Bricksforge upload attacks (login_admin_*.php files, PHP files in the
+uploads directories, requests to its form route). Exit 0 = none found,
+1 = at least one indicator found.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+The hunt reads database credentials from wp-config.php and runs two SELECT
+queries with the mysql client. It does not use wp-cli, because wp-cli would
+load the site's PHP, and a backdoor could run when it does. If the mysql
+client is missing, the queries are printed for you to run by hand.
+.PP
+Indicators come from public reports of the incident (Rank Math, Wordfence and
+Patchstack, as relayed by several write-ups). A clean hunt does not prove a
+site is clean. If a tainted copy was activated, restore from a backup taken
+before 15 October 2026 20:02 UTC and rotate every credential the server held.
+.PP
+Environment (for testing or unusual layouts):
+.RS 2
+.nf
+HUNT_CRON_PATHS  default: /var/spool/cron /etc/cron.d /etc/crontab
+HUNT_LOG_DIRS    default: /var/log
+HUNT_SSH_DIRS    default: /root/.ssh /home
+HUNT_WEB_LOGS    extra web server access log paths for the OttoKit request count
+HUNT_ADMIN_SINCE default: 2026-10-01, administrators created since
+  then are listed
+.fi
+.RE
+.PP
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe copies only the Plugin Name and
+Version header lines of each covered plugin's main file, and its modification time, into a private
+temporary directory, and this script runs once per container in isolation against that copy. For
+Rank Math PRO 3.0.123 only the modification time is available inside a container, and the output
+says so. The hunt command does not look inside containers. Paths shown as .../docker_NAME/... are
+inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress/\:\:wordpress\-plugins\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-wordpress-wp2shell-check(8), psf-wordpress-xss2shell-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

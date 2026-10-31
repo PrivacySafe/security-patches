@@ -1,0 +1,97 @@
+.TH PSF-JENKINS-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-jenkins-check \- Jenkins plugin security advisory of 16 September 2026 (20 CVEs): read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:jenkins/\:\:jenkins\-check.sh\fR [command] [JENKINS_HOME ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-92122 to CVE-2026-92141
+.PP
+Jenkins published a security advisory on 16 September 2026 covering 20 vulnerabilities
+in 13 widely deployed plugins. Eight are High-severity flaws in Script Security, the
+plugin that sandboxes Groovy for Pipelines and is present on nearly every Jenkins
+server: ways around the sandbox (interface coercion, calls on a null receiver,
+collection casts, AST transformations, @Builder at compile time, dynamic methods, a
+classpath approval bypass, and a time-of-check to time-of-use race on approved remote
+JARs) that let a user who may define Pipeline scripts run code in the controller's JVM.
+.RS 2
+.nf
+Plugin (short name)                 Fixed in                   CVE          Severity
+script-security                     1422.v06869826dd9b_        92122-92129  High (8 issues)
+workflow-multibranch                842.v3a_b_59b_57b_e6e      92130        Low
+pipeline-groovy-lib                 806.v408277b_33d1d         92131        Medium
+gradle                              2.20.1253.vc116f0763a_eb_  92132        Medium
+gitlab-plugin                       1.2152.veec0897048b_0      92133        Medium
+warnings-ng                         13.10259.v80f407cb_03a_e   92134        High
+coverage                            3.3361.v0626103a_67e6      92135        High
+dependency-check-jenkins-plugin     5.6.5                      92136        High
+robot                               6.3.0                      92137        High
+atlassian-bitbucket-server-integration  6.0.2                  92138        Medium
+bitbucket-push-and-pull-request     4.1.0                      92139        Medium
+gitee                               1304.v2702f1d71cde         92140        High
+keycloak                            2.4.2                      92141        Medium
+.fi
+.RE
+.PP
+What the High ones allow: Script Security, sandbox bypass and code execution in the
+controller JVM; Robot Framework (92137), arbitrary file creation or replacement on the
+controller, which can lead to code execution; Warnings, Coverage, Dependency-Check and
+Gitee, stored cross-site scripting. Credentials can leak through Pipeline: Multibranch
+(System-scoped credentials), GitLab (API tokens), Gradle (the Develocity access key),
+and Bitbucket Push and Pull Request (Bitbucket credentials, by SSRF).
+.PP
+How this script reads an install. A plugin's version is the Plugin-Version line of its
+META\-INF/MANIFEST.MF, in the expanded plugin directory or inside the .jpi or .hpi file
+under $JENKINS_HOME/plugins. Versions are compared by their leading dotted number; two
+builds with the same number but different build hashes cannot be ordered, and are
+reported as such. A plugin that is disabled does not run and is reported as such.
+The 13 short names were checked against each plugin's own project file.
+.PP
+This script is read-only.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = nothing exposed, 1 = a plugin below its fixed version.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: JENKINS_HOME  the Jenkins home directory (default /var/lib/jenkins, /var/jenkins_home)
+.RS 2
+.PP
+SCAN_CONTAINERS=1 (the default) also reads the advisory plugins' manifests inside running
+docker and podman containers (JENKINS_HOME there, default /var/jenkins_home); 0 skips them.
+It is skipped when you name the home directories yourself.
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:jenkins/\:\:jenkins\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

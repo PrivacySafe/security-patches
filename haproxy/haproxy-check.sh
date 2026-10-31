@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# HAProxy truncated HTTP/2 PING frame denial of service: read-only checker  (v1)
+# HAProxy truncated HTTP/2 PING frame denial of service: checker  (v1)
 # CVE-2026-110353
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -16,13 +16,13 @@
 # set). The impact is moderate and grows with the share of such connections
 # among all concurrent connections.
 #
-# AFFECTED RANGE: read this part carefully, because two sources disagree.
+# AFFECTED RANGE: two sources disagree.
 #   The CVE description says "3.2 before 3.4.6". HAProxy's own release notes say
 #   the bug was introduced in 3.1 (the short-read handling was fixed in 2.5 but
 #   PING was missed, and it only became a problem in 3.1 when the wake-up logic
 #   changed), and that the fixes shipped on 14 October 2026 in 3.4.7, 3.3.17 and
 #   3.2.26. 3.4.6 is therefore NOT fixed. This script follows the vendor:
-#     3.1.x       affected, branch is end of life, no fix: move to a supported branch
+#     3.1.x       affected, branch is end of life: move to a supported branch
 #     3.2.x       affected before 3.2.26
 #     3.3.x       affected before 3.3.17
 #     3.4.x       affected before 3.4.7
@@ -41,7 +41,8 @@
 # connection preface by default and upgrade the connection, unless the frontend
 # has "option disable-h2-upgrade". "proto h2" on a bind line forces HTTP/2.
 #
-# This script is read-only. It finds HAProxy binaries (PATH, usual locations and
+# "check" is read-only; "mitigate" and "rollback" are the only commands that change
+# anything. "check" finds HAProxy binaries (PATH, usual locations and
 # running processes), reads the version from "haproxy -v", reads the
 # configuration files the running process was started with (or the defaults) and
 # reports HTTP/2 reachability and the http-request timeout. It never reloads or
@@ -50,10 +51,31 @@
 # Usage:
 #   ./haproxy-check.sh [command] [PATH-TO-haproxy ...]
 #
-#   check (default)  Exit 0 = nothing exposed, 1 = an affected version is
-#                    exposed or its configuration could not be read.
+#   check (default)  read-only. Exit 0 = nothing exposed, 1 = an affected version
+#                    is exposed or its configuration could not be read.
+#   mitigate [options]   (root) changes the host. Applies the vendor's workaround
+#                    for the PING flaw: adds "timeout http-request 5s" to every
+#                    "defaults" section that has no such line (it never lowers or
+#                    changes a value you set). It limits CPU use; it does NOT fix
+#                    the bug, so upgrade as well. The configuration is checked with
+#                    "haproxy -c" before and after, every file is copied first, and
+#                    if HAProxy rejects the result the originals are put back at
+#                    once. Nothing is reloaded unless you add --reload. Options:
+#                      --timeout SECONDS     value to add, 1 to 60 (default 5)
+#                      --disable-h2-upgrade  also add "option disable-h2-upgrade"
+#                                            to those sections, so clear-text
+#                                            connections cannot be upgraded to
+#                                            HTTP/2. Leaves "alpn h2" on TLS binds
+#                                            alone. Breaks only clients that use
+#                                            HTTP/2 over clear text (h2c).
+#                      --dry-run             show the changes, change nothing
+#                      --reload              graceful reload afterwards (systemd)
+#                      --force               apply even if this version is outside the affected
+#                                            range (3.1 to 3.4 before the fixed releases)
+#   rollback [--dry-run] [--reload]   put back every file mitigate changed.
 #   version          print the script version.
 #
+# STATE_DIR=/var/lib/psf-security-patches/haproxy holds the backups and manifest.
 # HAPROXY_CFG (space separated files or directories) replaces configuration discovery.
 # Containers: with no argument the check also looks in running docker and podman containers
 # (SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe captures the daemon's version
@@ -68,8 +90,9 @@ set -uo pipefail
 
 SCRIPT_NAME="haproxy-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/haproxy}"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -327,7 +350,7 @@ cmd_check_host() {
             fixed)       ok "HAProxy ${raw} has the fix (3.2.26, 3.3.17, 3.4.7 or newer)" ;;
             dev)         caution "HAProxy ${raw} is a 3.5 development build: check that it includes the fix 'properly handle short reads on PING frames'"; continue ;;
             unknown)     caution "cannot parse version '${raw}'"; continue ;;
-            eol)         bad "HAProxy ${raw} is on 3.1, which is affected, end of life and has no fix: move to 3.2.26, 3.3.17 or 3.4.7 or newer"; rc=1 ;;
+            eol)         bad "HAProxy ${raw} is on 3.1, which is affected and end of life: move to 3.2.26, 3.3.17 or 3.4.7 or newer"; rc=1 ;;
             vulnerable)  bad "HAProxy ${raw} is affected by CVE-2026-110353 (fixed in 3.2.26, 3.3.17 and 3.4.7)" ;;
         esac
         # running processes: are they on the fixed binary?
@@ -360,7 +383,7 @@ cmd_check_host() {
         elif [[ $HTTP_MODE -eq 1 && $CLEAR_BIND -eq 1 && $H2_UPGRADE_OFF -eq 0 ]]; then
             bad "a clear-text HTTP listener accepts the HTTP/2 preface by default (no 'option disable-h2-upgrade'): exposed to CVE-2026-110353"; h2exposed=1
         elif [[ $HTTP_MODE -eq 1 ]]; then
-            ok "no HTTP/2 path found: no 'alpn h2' or 'proto h2', and no clear-text HTTP listener without 'option disable-h2-upgrade' (heuristic)"
+            ok "no HTTP/2 path found: no 'alpn h2' or 'proto h2', and no clear-text HTTP listener without 'option disable-h2-upgrade'"
         else
             ok "no 'mode http' found in the configuration: the HTTP/2 multiplexer is not in use"
         fi
@@ -384,10 +407,173 @@ cmd_check_host() {
         info "No exposed HAProxy found (${found} checked)"
     else
         warn "Exposed or unverifiable HAProxy found. Upgrade to 3.2.26, 3.3.17 or 3.4.7 (or newer), then reload."
-        inf "Interim, vendor documented for the PING flaw: set 'timeout http-request' to 1-5s in the defaults or frontend. It limits CPU consumption and does not fix the bug."
-        inf "Interim, ours: if you do not need clear-text HTTP/2, add 'option disable-h2-upgrade' to HTTP frontends and drop 'h2' from alpn lists."
+        inf "Vendor workaround for the PING flaw: apply it with  $0 mitigate --dry-run  (then without --dry-run). It sets 'timeout http-request 5s' in each defaults section that has none, checks the result with haproxy -c, and keeps backups. It limits CPU consumption and does not fix the bug."
+        inf "PrivacySafe recommendation: if you do not need clear-text HTTP/2, add 'option disable-h2-upgrade' to HTTP frontends and drop 'h2' from alpn lists."
         inf "Release notes: https://www.mail-archive.com/haproxy@formilux.org/msg47598.html (3.4.7)"
     fi
+    return "$rc"
+}
+
+
+# ---------- mitigate and rollback --------------------------------------------
+HM_MANIFEST=""
+hm_run() { if [[ "${HM_DRY:-0}" -eq 1 ]]; then echo "  would run: $*"; return 0; fi; "$@"; }
+
+hm_validate() {   # binary file...  -> 0 when "haproxy -c" accepts them all
+    local bin="$1" f; shift
+    local -a args=()
+    for f in "$@"; do args+=(-f "$f"); done
+    "$bin" -c "${args[@]}" >/dev/null 2>&1
+}
+
+# hm_rewrite FILE SECONDS H2FLAG -> prints the new content on stdout
+hm_rewrite() {
+    awk -v ts="$2" -v h2="$3" '
+    function flush(   i) {
+        if (n == 0) return
+        for (i = 1; i <= n; i++) {
+            print buf[i]
+            if (i == 1 && indef) {
+                if (!has_to) print "    timeout http-request " ts "s"
+                if (h2 == 1 && !has_h2) print "    option disable-h2-upgrade"
+            }
+        }
+        n = 0; indef = 0; has_to = 0; has_h2 = 0
+    }
+    {
+        line = $0
+        if (line ~ /^[ \t]*(global|defaults|frontend|backend|listen|userlist|peers|resolvers|cache|program|mailers|http-errors|ring|log-forward|fcgi-app|crt-store|traces)([ \t]|$)/) {
+            flush(); buf[++n] = line
+            indef = (line ~ /^[ \t]*defaults([ \t]|$)/)
+            next
+        }
+        if (n == 0) { print line; next }
+        buf[++n] = line
+        if (line ~ /^[ \t]*timeout[ \t]+http-request([ \t]|$)/) has_to = 1
+        if (line ~ /^[ \t]*(no[ \t]+)?option[ \t]+disable-h2-upgrade([ \t]|$)/) has_h2 = 1
+    }
+    END { flush() }' "$1"
+}
+
+hm_backup() {
+    local f="$1" b
+    grep -qF "conf|${f}|" "$HM_MANIFEST" 2>/dev/null && return 0
+    b="${STATE_DIR}/$(printf '%s' "$f" | sed 's#/#_#g').orig"
+    cp -p "$f" "$b" || return 1
+    echo "conf|${f}|${b}" >>"$HM_MANIFEST"
+}
+
+hm_reload() {
+    [[ "${HM_RELOAD:-0}" -eq 1 ]] || return 0
+    if have systemctl && grep -q '^haproxy' <<<"$(systemctl list-unit-files 2>/dev/null)"; then
+        hm_run systemctl reload haproxy && inf "reloaded haproxy (graceful)"
+    else
+        caution "--reload given but no haproxy systemd unit found: reload it yourself"
+    fi
+}
+
+cmd_mitigate() {
+    local secs=5 h2=0 f bin tmp rc=0 changed=0 nfiles=0 sections force=0 raw st
+    local -a files=() touched=()
+    HM_DRY=0; HM_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run) HM_DRY=1 ;;
+            --reload) HM_RELOAD=1 ;;
+            --disable-h2-upgrade) h2=1 ;;
+            --force) force=1 ;;
+            --timeout) shift; secs="${1:-}"; [[ "$secs" =~ ^[0-9]+$ && "$secs" -ge 1 && "$secs" -le 60 ]] || die "--timeout needs a number of seconds from 1 to 60" ;;
+            *) die "Unknown mitigate option: $1 (--timeout N --disable-h2-upgrade --dry-run --reload --force)" ;;
+        esac
+        shift
+    done
+    [[ $HM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    bin="$(discover_bins | head -n1)"
+    if [[ -z "$bin" ]]; then info "No HAProxy found on this host: nothing to do"; return 0; fi
+    raw="$(bin_version "$bin")"; st="$(haproxy_status "$raw")"
+    if [[ $force -eq 0 ]]; then
+        case "$st" in
+            notaffected) info "HAProxy ${raw} is older than 3.1, outside the range of CVE-2026-110353: nothing to do (use --force to apply the workaround anyway)"; return 0 ;;
+            fixed) info "HAProxy ${raw} has the fix: nothing to do (use --force to apply the workaround anyway)"; return 0 ;;
+        esac
+    fi
+    while IFS= read -r f; do [[ -n "$f" ]] && files+=("$f"); done < <(config_files)
+    if [[ ${#files[@]} -eq 0 ]]; then caution "no readable HAProxy configuration found: set HAPROXY_CFG"; return 1; fi
+    step "Checking the current configuration"
+    if ! hm_validate "$bin" "${files[@]}"; then
+        bad "haproxy -c rejects the configuration as it is now: not touching it (fix that first)"
+        return 1
+    fi
+    ok "haproxy -c accepts the current configuration (${#files[@]} file(s))"
+    if [[ $HM_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        HM_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$HM_MANIFEST"
+    else
+        HM_MANIFEST=/dev/null; step "Dry run: nothing will be changed"
+    fi
+    step "Configuration changes"
+    for f in "${files[@]}"; do
+        nfiles=$((nfiles+1))
+        tmp="$(mktemp "${TMPDIR:-/tmp}/haproxy-psf.XXXXXX")" || { bad "no temp file"; return 1; }
+        hm_rewrite "$f" "$secs" "$h2" >"$tmp"
+        if cmp -s "$f" "$tmp"; then inf "${f}: nothing to add"; rm -f "$tmp"; continue; fi
+        sections=$(diff <(cat "$f") "$tmp" | grep -c '^>')
+        if [[ $HM_DRY -eq 1 ]]; then
+            echo "  would add ${sections} line(s) to ${f}:"; diff "$f" "$tmp" | grep '^>' | sed 's/^/      /'
+        else
+            if ! hm_backup "$f"; then bad "${f}: could not back it up, left alone"; rm -f "$tmp"; rc=1; continue; fi
+            cat "$tmp" >"$f" && { ok "${f}: added ${sections} line(s)"; touched+=("$f"); changed=1; }
+        fi
+        rm -f "$tmp"
+    done
+    if [[ $HM_DRY -eq 0 && $changed -eq 1 ]]; then
+        step "Checking the new configuration"
+        if hm_validate "$bin" "${files[@]}"; then
+            ok "haproxy -c accepts the new configuration"
+        else
+            bad "haproxy -c REJECTS the new configuration: restoring the originals now"
+            while IFS= read -r line; do
+                [[ "$line" == conf\|* ]] || continue
+                f="${line#conf|}"; f="${f%%|*}"; cat "${line##*|}" >"$f"
+            done <"$HM_MANIFEST"
+            : >"$HM_MANIFEST"
+            bad "originals restored, nothing was changed"
+            return 1
+        fi
+    fi
+    hm_reload
+    step "Result"
+    if [[ $HM_DRY -eq 1 ]]; then info "Dry run finished: nothing was changed"
+    elif [[ $changed -eq 1 ]]; then
+        info "Workaround applied to ${#touched[@]} file(s). Backups are in ${STATE_DIR}. Undo with: $0 rollback"
+        [[ $HM_RELOAD -eq 1 ]] || inf "reload HAProxy for it to take effect (or re-run with --reload)"
+    else info "Nothing needed changing"; fi
+    inf "This limits CPU use while a partial PING frame is pending. It is not the fix: upgrade to 3.2.26, 3.3.17 or 3.4.7 or newer."
+    return "$rc"
+}
+
+cmd_rollback() {
+    local line f b rc=0
+    HM_DRY=0; HM_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) HM_DRY=1 ;; --reload) HM_RELOAD=1 ;; *) die "Unknown rollback option: $1 (--dry-run --reload)" ;; esac
+        shift
+    done
+    HM_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$HM_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $HM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    step "Rolling back"
+    while IFS= read -r line; do
+        [[ "$line" == conf\|* ]] || continue
+        f="${line#conf|}"; f="${f%%|*}"; b="${line##*|}"
+        if [[ ! -r "$b" ]]; then bad "${f}: backup ${b} is missing, left alone"; rc=1; continue; fi
+        if [[ $HM_DRY -eq 1 ]]; then echo "  would restore ${f} from ${b}"; else cat "$b" >"$f" && ok "restored ${f}"; fi
+    done <"$HM_MANIFEST"
+    if [[ $HM_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$HM_MANIFEST" "${HM_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back. Reload HAProxy for the restored configuration to take effect."
+    fi
+    hm_reload
     return "$rc"
 }
 
@@ -400,7 +586,9 @@ main() {
     echo "CVE-2026-110353; fixed in HAProxy 3.4.7, 3.3.17 and 3.2.26"
     case "$CMD" in
         check) cmd_check "$@" ;;
-        *) die "Unknown command: ${CMD} (check|version)" ;;
+        mitigate) cmd_mitigate "$@" ;;
+        rollback) cmd_rollback "$@" ;;
+        *) die "Unknown command: ${CMD} (check|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

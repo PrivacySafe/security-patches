@@ -1,0 +1,92 @@
+.TH PSF-EXPAT-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-expat-check \- libexpat billion laughs detection delay: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:expat/\:\:expat\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-115506
+.PP
+libexpat is the XML parser inside Python (pyexpat), Apache httpd, many PHP and
+Perl builds, Subversion, Mercurial, D-Bus, fontconfig, Firefox and a very long
+list of other programs. Its protection against "billion laughs" entity
+amplification works by tracking how much a parse expands. In
+accountingDiffTolerated() in xmlparse.c that check detects the amplification
+too late, so a moderately sized crafted XML document can still make the parser
+consume a large amount of CPU and memory before the protection stops it. The
+result is denial of service. Rated High (CVSS 7.5 v3; the CVE list shows 8.7 on
+the v4 scale). No authentication is needed wherever a service parses XML from
+an untrusted source. Reported through Google; the upstream issue is #1160.
+.RS 2
+.nf
+Affected: libexpat through 2.9.0, that is every release so far
+Fix:      merged upstream on 23 October 2026 (pull request #1433) and
+          milestoned for Expat 2.9.1
+.fi
+.RE
+.PP
+Install Expat 2.9.1 or later when it reaches you: upstream attached the fix to
+that milestone. The script reports every copy at 2.9.0 or older as affected and
+2.9.1 or newer as fixed. Distribution
+packages usually backport fixes without changing the version, which the
+script checks for.
+.PP
+This script is read-only. It finds libexpat shared libraries, reads the version
+string compiled into each, asks installed Python interpreters for
+pyexpat.EXPAT_VERSION, lists running processes that have libexpat mapped
+(and flags those still running a replaced copy), and can scan directories for
+programs that carry their own copy.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+system libraries, Python interpreters and running processes.
+Exit 0 = every copy found is fixed, 1 = an affected copy found.
+.TP
+\fBdeep [DIR ...]\fR
+.ad l
+also scan DIR (default /usr/local /opt /srv /var/www /home)
+for executables and libraries that embed their own expat,
+such as vendored or statically linked copies.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+EXPAT_LIB_DIRS (space separated) replaces the default library search directories.
+EXPAT_PY_DIRS (space separated) replaces the directories searched for Python interpreters.
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe captures the daemon's version
+output and its configuration (secrets are redacted inside the container before anything is
+copied) into a private temporary directory, and this script then runs once per container, in
+isolation, against that copy. Paths shown as .../docker_NAME/... are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:expat/\:\:expat\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

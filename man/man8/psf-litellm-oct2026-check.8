@@ -1,0 +1,111 @@
+.TH PSF-LITELLM-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-litellm-oct2026-check \- LiteLLM 1.107.0 supply-chain compromise: detect, hunt and contain
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:litellm/\:\:litellm\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+No CVE (malicious package release, PyPI and Docker)
+.PP
+On 21 October 2026 a malicious release of litellm, version 1.107.0, was
+published to PyPI (all seven wheels, plus an sdist with a tampered
+pyproject.toml) and to the project's Docker images (tags v1.107.0, latest,
+main-latest, main-stable), after attacker-controlled GitHub accounts
+triggered a release. Each wheel drops three files into the ROOT of
+site-packages, beside litellm/ rather than inside it:
+.RS 2
+.nf
+cook.pth           one line, "import cook"
+cook.py            a zlib+base64 blob; a credential stealer ("privcollect")
+sitecustomize.py   an hourly backdoor that fetches and runs attacker code
+.fi
+.RE
+.PP
+Python runs .pth files and sitecustomize.py at interpreter startup, so the
+malware runs on every Python start on the host, even if litellm is never
+imported. The stealer targets cloud tokens, developer and private keys, AI
+tooling credentials, browser data, environment variables, and a LiteLLM
+proxy's saved credentials, and exfiltrates to litellm[.]dev; the backdoor
+reads a domain from a GitHub dead drop (letters9813) and runs code from it.
+The last clean release before it is 1.106.2.
+.PP
+The remedy is to rebuild, not to clean in place: if 1.107.0 was installed from
+a wheel, or a LiteLLM container pulled on 21 October 2026 ran, treat the host
+as FULLY COMPROMISED. The stealer already ran. Rebuild the host, and from a
+clean machine revoke and rotate every credential it could reach (cloud keys,
+API tokens, SSH and signing keys, browser sessions, the LiteLLM proxy's
+keys), then reinstall litellm pinned to 1.106.2 by digest. This script finds
+the compromise, hunts the indicators, and can contain the auto-executing
+backdoor (quarantine) so it stops running while you rebuild; containment is
+not remediation.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+find litellm in every Python environment (and running
+containers) and flag 1.107.0, and report the dropped
+malware files in site-packages. Read-only. Exit 0 = nothing
+found, 1 = compromise indicators present, 2 = couldn't read.
+.TP
+\fBhunt\fR
+.ad l
+read-only, deeper: the malware files across site-packages,
+the /tmp markers it leaves, and logs for its network
+indicators (litellm.dev, the GitHub dead drop). Exit 0 =
+clean, 1 = findings.
+.TP
+\fBquarantine\fR
+.ad l
+CONTAINMENT: back up (for forensics) and remove
+cook.pth and cook.py, and sitecustomize.py when it carries
+the malware markers, so they stop running at Python start.
+Needs write access. The host is still compromised: rebuild
+and rotate credentials.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+SCAN_PATHS="/usr /opt /srv /home /root /var/www"
+                                  where to look for site-packages
+SCAN_DEPTH=9                      how deep the search goes
+SAFE_PIN=1.106.2                  the last clean release to pin to
+BACKUP_ROOT=/\:var/\:backups/\:litellm\-oct2026
+HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt's network check
+SCAN_CONTAINERS=1                 1 = also look inside running containers;
+                                  0 = skip them
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:litellm/\:\:litellm\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-litellm-escalation-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

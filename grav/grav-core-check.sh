@@ -12,7 +12,7 @@
 # PHP method to call) as trusted only where the blueprint file itself defines them, and
 # checks the ones that arrive from page frontmatter against an allowlist. The merge that
 # combines the two could relocate a directive away from the path it was checked at: the
-# vendor deepMerge() honours the unset-name@ merge action as well as replace-name@, and it
+# vendor deepMerge() honors the unset-name@ merge action as well as replace-name@, and it
 # renumbers an integer key the base does not have. A relocated directive was then trusted as
 # if the blueprint file had defined it, so the allowlist was skipped. A page editor can embed
 # crafted fields in the Flex form overrides of a page's frontmatter and call methods such as
@@ -33,9 +33,9 @@
 #
 # This script is read-only. "hunt" also looks in the site's pages for what an attack needs:
 # a relocation merge action (unset-name@, replace-name@) or a static method call in page
-# frontmatter. Those are leads, not proof: a relocation directive together with a static
+# frontmatter. Those are indicators to investigate: a relocation directive together with a static
 # method call in the same page is a strong lead, either one alone is only listed for review.
-# A clean hunt is not proof that no page was edited maliciously.
+# A clean hunt means none of the published indicators were found.
 #
 # Usage:
 #   ./grav-core-check.sh [command] [DIR ...]
@@ -57,7 +57,7 @@ set -uo pipefail
 
 SCRIPT_NAME="grav-core-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -241,7 +241,7 @@ cmd_check() {
     elif [[ $rc -eq 0 ]]; then info "No exposed Grav found (${found} checked)"
     else
         warn "Exposed or unverifiable Grav found. Update to 2.2.13 or later."
-        inf "Exposure needs an account that can edit pages (or a form that accepts page frontmatter). Interim, ours and not vendor guidance: restrict who can edit pages and who has Admin access until you update"
+        inf "Exposure needs an account that can edit pages (or a form that accepts page frontmatter). PrivacySafe recommendation: restrict who can edit pages and who has Admin access until you update"
         inf "Advisory: https://github.com/getgrav/grav/security/advisories/GHSA-47gg-mh38-9rr7"
     fi
     return "$rc"
@@ -285,7 +285,7 @@ cmd_hunt() {
         hunt_site "$site" || rc=1
     done
     step "Verdict"
-    if [[ $rc -eq 0 ]]; then info "No exposed site and no strong lead found. This is not proof that no page was edited maliciously."
+    if [[ $rc -eq 0 ]]; then info "No exposed site and no strong lead found: none of the published indicators were found."
     else
         warn "An exposed site or a strong lead was found."
         inf "Review recent edits to pages and Flex form overrides, check for deleted directories and changed files outside the page tree, and review who can edit pages."

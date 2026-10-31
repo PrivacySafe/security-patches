@@ -1,0 +1,81 @@
+.TH PSF-MAGENTO-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-magento-check \- Magento, Adobe Commerce and Mage-OS email-template RCE (BlockStrap): read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:magento/\:\:magento\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-103849
+.PP
+CVE-2026-103849 (BlockStrap) is an unauthenticated remote code execution flaw in the email
+template engine, CVSS 10.0 (CVSS 3.1). It is a second-pass directive injection: a directive
+hidden in a child email template is signed, passes the check, and is processed again by the
+parent template. Adobe's fix is in APSB26-153 (13 October 2026). Researchers found four attack
+paths within a day and expect exploitation; none was confirmed at the time of the sources
+used here.
+.RS 2
+.nf
+Affected: Adobe Commerce 2.4.4 to 2.4.9, Adobe Commerce B2B 1.3.3
+  to 1.5.3 and Magento
+          Open Source (sources give 2.4.6 or 2.4.7 as the first)
+            to 2.4.9, in builds
+          before APSB26-153. Mage-OS up to and including 3.5.0.
+Fixed:    Adobe's October 2026 releases (APSB26-153); Mage-OS 3.6.0 (14 October 2026).
+.fi
+.RE
+.PP
+What a version number can and cannot show. Adobe ships this fix as an isolated patch, and
+applying it does not change the version string. So for Magento and Adobe Commerce the script
+tells you what to check rather than guessing. It can give a
+firm answer for Mage-OS (the fix arrives as a release) and for a dated release string if your
+build uses one (for example 2.4.9-2026-oct).
+.PP
+No indicators of exploitation have been published for this flaw, so there is no hunt.
+.PP
+This script is read-only.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+find installs by bin/magento (default /var/www /srv /home /opt),
+read the distribution and version from composer.lock. Exit 0 = nothing
+exposed, 1 = exposed or unconfirmed.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no directory argument the check also copies the files it reads from running
+docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them) and judges them like
+host installs. The copies are temporary: a path shown as .../docker_NAME_PATH is the PATH inside
+the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:magento/\:\:magento\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

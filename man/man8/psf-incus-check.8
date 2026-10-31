@@ -1,0 +1,95 @@
+.TH PSF-INCUS-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-incus-check \- Incus October 2026 host-compromise flaws: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:incus/\:\:incus\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-115375 (instance backup path traversal, CVSS 4.0 9.4)
+.PP
+CVE-2026-115377 (migration stream symlink, CVSS 4.0 9.4)
+CVE-2026-115372 (restricted project mkfs argument injection, 8.5)
+.PP
+Incus is a system container and virtual machine manager. All three flaws let a client
+the daemon is meant to confine (a user restricted to a project) act as root on the
+HOST. A full administrator is already as powerful as host root, so these matter where
+you have restricted projects, restricted client certificates, or members of the
+unprivileged `incus` unix group, or where an instance can be migrated in from a server
+you do not control.
+.RS 2
+.PP
+CVE-2026-115375  7.0.0 before 7.0.2, and 7.1.0 before 7.5.0. Importing an instance
+backup validates the instance and snapshot names but not the names
+of the dependent custom volumes in the backup's index.yaml, which
+become path segments on the host. Any client allowed to create
+instances in a project can make the daemon create root-owned
+directories with attacker-controlled content at arbitrary host
+paths. 6.x is not affected.
+CVE-2026-115377  before 6.0.7, 6.1.0 before 7.0.2, and 7.1.0 before 7.5.0. When
+receiving an instance or volume by migration (copy, move, refresh,
+push or pull) through rsync or an optimized btrfs transfer, a
+malicious source can plant a symlink (rootfs pointing at /) and
+write through it as root. Any client allowed to create an instance
+or custom volume, or any server a target is told to copy or move
+from, can exploit it. Optimized ZFS transfers are NOT affected.
+CVE-2026-115372  7.3.0 before 7.5.0. A user of a restricted project can set
+block.create_options through volume update, copy and move
+operations and inject arguments into mkfs, which runs as root.
+.RE
+.RS 2
+.PP
+Fixed: 6.0.7 (the 6.0 LTS, for CVE-2026-115377 only), 7.0.2 (the 7.0 LTS) and
+7.5.0 (feature release).
+.RE
+.PP
+The project's own release notes list many other critical project-escape advisories in
+earlier releases this year; moving to a current release fixes those too. Treat a
+restricted project as a security boundary only on a release that has these fixes.
+.PP
+This script is read-only. It reads the version (the daemon's, if it answers, else the
+package's, else the client's), looks in a package changelog for a backport of these
+fixes, and asks the daemon read-only questions: restricted projects, the network
+listener, trusted client certificates, configured remotes, plus the members of the
+unix group `incus`. It never changes anything.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = nothing exposed, 1 = an affected version that cannot be
+shown to be admin-only, or one that could not be verified.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: INCUS_BIN to name the incus client; INCUS_CHANGELOG to name a changelog file.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:incus/\:\:incus\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

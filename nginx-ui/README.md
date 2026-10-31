@@ -28,12 +28,12 @@ nginx-ui is a web interface for managing nginx. Its security control, `ValidateC
 The nginx-ui binary has no version flag, and its version endpoint needs a login, so a read-only check cannot ask it. The script uses what it can read:
 
 1. `NGINX_UI_VERSION`, if you set it from the web interface, or the package version if there is one.
-2. A string inside the binary. The 2.4.1 validator adds the names `lua_package_cpath` and `lua_package_path` to its restricted list; 2.4.0 does not contain them. A binary without them has the older validator, which is a strong finding. A binary with them is consistent with 2.4.1 or later, but it is a string match, so confirm the version in the web interface.
+2. A string inside the binary. The 2.4.1 validator adds the names `lua_package_cpath` and `lua_package_path` to its restricted list. 2.4.0 does not contain them. A binary without them has the older validator, which is a strong finding. A binary with them is consistent with 2.4.1 or later, but it is a string match, so confirm the version in the web interface.
 3. When the two disagree (a version of 2.4.1 or later on a binary without the names, or the reverse) the script says so rather than choosing.
 
 The binary is found through `NGINX_UI_BIN`, the usual install paths, the `ExecStart` of the `nginx-ui` systemd unit, and running processes.
 
-The official container image, `uozi/nginx-ui`, is checked too, by its tag in docker or podman. A tag that names a version (`2.4.0`, `v2.4.1`) is judged; a tag such as `latest` does not name a version and the version inside an image cannot be read from outside, so it is a warning that says so. An image on disk is not necessarily a running container. If no binary or image is found on the host but you have set `NGINX_UI_VERSION` (for an instance elsewhere), that version is judged on its own.
+The official container image, `uozi/nginx-ui`, is checked too, by its tag in docker or podman. A tag that names a version (`2.4.0`, `v2.4.1`) is judged. A tag such as `latest` does not name a version and the version inside an image cannot be read from outside, so it is a warning that says so. An image on disk is not necessarily a running container. If no binary or image is found on the host but you have set `NGINX_UI_VERSION` (for an instance elsewhere), that version is judged on its own.
 
 ## Quick start
 
@@ -61,7 +61,7 @@ A restricted directive appearing after a semicolon on a line that already holds 
 
 ## Update
 
-Update nginx-ui to 2.4.1 or later and restart it. Until then the project suggests limiting who has an nginx-ui account, keeping it off untrusted networks, and not giving secondary users write access. That is not vendor guidance.
+Update nginx-ui to 2.4.1 or later and restart it. Until then the project suggests limiting who has an nginx-ui account, keeping it off untrusted networks, and not giving secondary users write access. This is PrivacySafe's recommendation.
 
 ## If it was exposed
 
@@ -74,15 +74,19 @@ Review nginx configuration written since the exposure for restricted directives 
 - [GHSA-76pm-mq2q-9gcr (CVE-2026-84317)](https://github.com/0xJacky/nginx-ui/security/advisories/GHSA-76pm-mq2q-9gcr)
 - [GHSA-9jww-cxg5-rj9m (CVE-2026-84318)](https://github.com/0xJacky/nginx-ui/security/advisories/GHSA-9jww-cxg5-rj9m)
 
-## nginx-ui know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to nginx-ui 2.4.1. All four flaws need a logged-in user, and they matter most where nginx loads the njs, Perl or Lua module, as the official Docker image does.
-- **A read-only check cannot ask the program its version.** The binary has no version flag and its version endpoint needs a login. The script judges the container image `uozi/nginx-ui` by its tag when the tag names a version (a tag such as `latest` does not, and is a warning), a version you supply in `NGINX_UI_VERSION`, the package version, and a string inside the binary that the 2.4.1 validator adds.
-- **The binary check is a string match.** It looks for names the fixed validator adds; it does not run the program.
-- **CVE-2026-84317 and CVE-2026-84318 describe one gap with different affected ranges,** and 84318 starts at 2.0.0-rc.6.
-- **It also reads running containers.** With no argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container runs the same two signature tests this check applies to the binary (`lua_package_cpath` and `lua_package_path`) and copies only a small file recording the answer; the binary itself is never copied and nginx-ui is never run. A container is therefore judged by the signature alone (no version is read): a binary without the 2.4.1 validator names is reported as affected. The script runs once per container in isolation and does not repeat the host's discovery.
+- The fix. Update to nginx-ui 2.4.1. All four flaws need a logged-in user, and they matter most where nginx loads the njs, Perl or Lua module, as the official Docker image does.
+- A read-only check cannot ask the program its version. The binary has no version flag and its version endpoint needs a login. The script judges the container image `uozi/nginx-ui` by its tag when the tag names a version; a tag such as `latest` does not, and is a warning. It also uses a version you supply in `NGINX_UI_VERSION`, the package version, and a string inside the binary that the 2.4.1 validator adds.
+- The binary check is a string match. It looks for names the fixed validator adds. It does not run the program.
+- CVE-2026-84317 and CVE-2026-84318 describe one gap with different affected ranges, and 84318 starts at 2.0.0-rc.6.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. A read-only probe inside each running docker and podman container runs the same two signature tests this check applies to the binary (`lua_package_cpath` and `lua_package_path`) and copies only a small file recording the answer. The binary itself is never copied and nginx-ui is never run. A container is therefore judged by the signature alone (no version is read): a binary without the 2.4.1 validator names is reported as affected. The script runs once per container in isolation and does not repeat the host's discovery.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

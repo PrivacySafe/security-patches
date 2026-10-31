@@ -1,0 +1,193 @@
+.TH PSF-PHP2SHELL-MITIGATE 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-php2shell-mitigate \- PHP2Shell mitigation for PHP-FPM 7.0 through 8.5
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:php2shell\-mitigate.sh\fR [command] [\-\-php X.Y] [\-\-force] [\-\-ignore\-env]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-109618 / CVE-2026-109619, and CVE-2026-115560 (session upload
+.PP
+progress, announced 23 Oct 2026, fix due in the next regular PHP release)
+.PP
+This script was released ahead of patches for two 0day vulns in php.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck\fR
+.ad l
+environment report only; changes nothing, root optional
+(exit 0 = ok, 1 = hard blocker, 2 = needs \-\-ignore\-env)
+.TP
+\fBapply (default)\fR
+.ad l
+drop-in + AppArmor profile, safe-load, per FPM version
+.TP
+\fBenforce\fR
+.ad l
+switch profile(s) to enforce; refuses if complain mode
+logged unhandled accesses (override with \-\-force)
+.TP
+\fBcomplain\fR
+.ad l
+switch profile(s) back to complain
+.TP
+\fBstatus\fR
+.ad l
+mitigation state and recent AppArmor events
+.TP
+\fBhunt\fR
+.ad l
+read-only: scan logs for signs of exploitation or the
+memory-corruption crashes these bugs cause, plus the
+request, source-address, proof-file and live process
+indicators from the 24 October 2026 phpot honeypot
+report (https:/\:/\:github.com/\:0x4D31/\:honeypot\-data/\:blob/\:main/\:reports/\:php2shell/\:2026\-10\-24\-confirmed\-rce.md):
+both request fingerprint forms, leak-sized
+responses, TCP peers of flagged processes, auditd events
+(see php/detect/) and nginx's "upstream sent too big
+header" error. It says so when pre-script OOM lines carry
+no client address, so repeats cannot be counted. Changes
+nothing, root optional. Exit 0 = clean, 1 = findings.
+.TP
+\fBcleanup\fR
+.ad l
+remove the ini drop-in once patched (\-\-force to skip check).
+Keeps session.upload_progress off until the build is
+also fixed for CVE-2026-115560 (\-\-force drops that too)
+.TP
+\fBversion\fR
+.ad l
+print the script version and exit
+.TP
+\fBremove\fR
+.ad l
+remove the AppArmor profile entirely: unload it, delete
+the profile, local override and disable symlink, verify.
+Leaves the ini drop-in (that's cleanup). No patch needed.
+.TP
+\fB\-\-php X.Y\fR
+.ad l
+act on one version only (default: every installed
+version in SUPPORTED_VERS)
+.TP
+\fB\-\-ignore\-env\fR
+.ad l
+proceed past soft environment blockers (live unpatched
+mod_php, live sites only on skipped versions). Hard
+blockers (non-Debian, no service manager, no AppArmor,
+not root, no supported FPM) can't be overridden.
+.PP
+Every command first checks, in order: OS (Debian, Ubuntu, Trisquel and
+popular derivatives), PHP-FPM versions and their package source, web
+servers (Apache/nginx and what PHP they use), then system (root, init
+system, container, AppArmor, tools). It reports, then refuses to start only
+if it can't work safely. Derivatives and non-systemd init (sysvinit/OpenRC)
+are supported. Each version's patch state is reported from three signals:
+upstream version, known distro backport builds, and the package changelog.
+.PP
+Env overrides:
+.RS 2
+.nf
+PHP_VER=X.Y                        same as \-\-php X.Y (an exported PHP_VER therefore
+                                   limits the run to that version)
+SUPPORTED_VERS="7.0 ... 8.5"       versions this script will touch
+FIXED_BUILDS="7.4.33\-1+deb11u9"    extra fixed distro builds (backports)
+PATCHED_X_Y=<version>              first fixed upstream release for branch
+                                   X.Y, e.g. PATCHED_8_4=8.4.27.
+                                     Defaults:
+                                   8.2.35 8.3.36 8.4.27 8.5.12 (21
+                                     Oct 2026).
+                                   7.0-8.1 get no upstream fix:
+                                     only a
+                                   distro/PPA changelog listing
+                                     both CVEs
+                                   counts as patched.
+PATCHED_115560_X_Y=<version>       first release fixing CVE-2026-115560 for
+                                   branch X.Y, e.g.
+                                     PATCHED_115560_8_4=8.4.28.
+                                   No defaults yet: until PHP
+                                     ships it, only a
+                                   changelog naming the CVE
+                                     counts.
+GUARD_HINT=0                       don't point to the third-party extension
+                                   for PHP this script can't cover
+WEB_ROOTS="/var/www /srv/www"      read-only docroots; hunt also looks here
+                                   for proof-style files
+HUNT_IPS="15.204.59.70 162.35.99.94"
+                                   source addresses reported in
+                                     confirmed
+                                   exploitation (2026-10-24); hunt
+                                     flags
+                                   them in web logs. Aging
+                                     indicator: a hit
+                                   means the address touched you,
+                                     not what
+                                   it did. HUNT_IPS="" turns it
+                                     off
+HUNT_ATTEMPT_IPS="104.28.208.84 144.48.4.242"
+                                   addresses the same report names
+                                     as
+                                   sending exploit-shaped requests
+                                     with no
+                                   shell seen: attempt indicators,
+                                     not
+                                   confirmed RCE. Shared or proxy
+                                     addresses
+                                   are possible.
+                                     HUNT_ATTEMPT_IPS="" off
+COOKIE_MAX=4096                    hunt flags a PHPSESSID value this many
+                                   characters long in a log that
+                                     records
+                                   response cookies (0 = off). The
+                                     leak in
+                                   the phpot report was 819,200
+                                     bytes decoded
+RESP_BYTES_MAX=500000              hunt flags a POST whose logged response
+                                   is this many bytes (0 = off).
+                                     Only logs
+                                   that count headers can show it:
+                                     Apache
+                                   %O, the Debian/Ubuntu default
+PROOF_SINCE=2026\-10\-01             hunt's proof-file scan ignores older files
+HUNT_PROC_ALLOW='rotatelogs|cronolog|logger'
+                                   regex on the command line:
+                                     hunt's live
+                                   process check ignores matches
+                                     (Apache
+                                   piped-log helpers are normal)
+WRITABLE_PATHS="..."               rwk paths (uploads, cache)
+.fi
+.RE
+.PP
+Debian/Ubuntu/Trisquel layout (distro packages, ondrej/sury PPA). Each version gets
+its own drop-in, profile, local override and backups; a failure on one
+version doesn't stop the others.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:php2shell\-mitigate.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-php-session-audit(8), psf-php2shell-cpanel-mitigate(8), psf-php2shell-watch(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

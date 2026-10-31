@@ -1,0 +1,102 @@
+.TH PSF-WORDPRESS-PT-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-wordpress-pt-check \- WordPress core page-template path traversal: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress\-pt/\:\:wordpress\-pt\-check.sh\fR [check] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-87902
+.PP
+Disclosed and fixed on 22 September 2026. CVSS 9.2 (Critical). Unauthenticated
+path traversal in WordPress core's page-template resolver, present in every
+release from 4.7.0 through 7.1.1, roughly a decade. Exploitation was
+observed on the same day as disclosure. CISA added CVE-2026-87902 to its
+Known Exploited Vulnerabilities catalog on 25 September 2026.
+.PP
+Root cause: get_page_template() in wp\-includes/template.php calls urldecode()
+on the pagename query variable after sanitization has run. A double-encoded
+traversal sequence (%252E%252E%252F) passes the first decode as a percent
+literal, survives sanitize_title_with_dashes(), and is decoded a second time
+by WordPress into ../, which escapes the theme directory. WordPress then builds
+a candidate template name and, on servers where a PHP file exists at the
+traversed path, includes it.
+.PP
+The fix (7.1.2 and the matching branch releases) changes one file, wp\-includes/template.php,
+in two places: the decoded pagename is used only if validate_file() accepts it, and a
+template found by locate_template() is loaded only if the new function
+_wp_is_template_path_allowed() accepts it. This script reads both from the source, so
+a distribution backport under an older version number is recognized.
+.RS 2
+.nf
+Affected: WordPress 4.7.0 through 7.1.1, across every supported
+  branch.
+          WordPress before 4.7.0 is not affected.
+Fixed:    7.1.2, 7.0.6, 6.9.9, 6.8.10, 6.7.9, 6.6.9 and backports down
+          to 4.7.37 (released September 22, 2026). WordPress 4.6
+            and
+          earlier move to a supported branch.
+.fi
+.RE
+.PP
+WordPress releases a fixed version for every branch on the same day, so
+updating within your branch is always safe. On 7.1: update to 7.1.2. On
+7.0: update to 7.0.6. And so on. Use `wp core update` or the admin panel.
+There is no official workaround.
+.PP
+Discovered by Robert Ressl.
+Advisory: GHSA-7hp8-65ch-5whp
+.PP
+This script is read-only. It finds WordPress installs by wp\-includes/version.php.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+find WordPress under DIR, read each version, and read template.php
+for the two fixes. Exit 0 = nothing exposed, 1 = an install
+without the fix, or one whose state is unclear.
+.TP
+\fBhunt\fR
+.ad l
+look in web server logs for an encoded traversal in the pagename
+parameter and for the scanner user agents seen in the attacks.
+Exit 0 = nothing found, 1 = a strong lead. A clean hunt means none of the published indicators were found.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: WPT_LOGS (space separated paths or globs) to name web server logs.
+Containers: with no directory argument the check also copies the files it reads from running
+docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them) and judges them like
+host installs. The copies are temporary: a path shown as .../docker_NAME_PATH is the PATH inside
+the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress\-pt/\:\:wordpress\-pt\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

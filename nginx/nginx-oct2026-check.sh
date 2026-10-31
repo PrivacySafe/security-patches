@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# nginx October 2026 security release: read-only checker  (v1)
+# nginx October 2026 security release: checker with optional workarounds  (v1)
 # CVE-2026-15176 CVE-2026-93479 CVE-2026-97205 CVE-2026-95101 CVE-2026-97629
 # njs: CVE-2026-101019 CVE-2026-101025
 #
@@ -21,13 +21,14 @@
 # the JavaScript module (CVE-2026-101019, CVE-2026-101025).
 #
 # Each flaw needs a specific directive in your configuration, so a vulnerable
-# nginx version is not necessarily reachable. This is read-only: it reports the
-# nginx and njs versions on the host (and in containers), and audits the
+# nginx version is not necessarily reachable. "check" and "hunt" are read-only: "check"
+# reports the nginx and njs versions on the host (and in containers), and audits the
 # running configuration (nginx -T) for the directive combination each flaw
-# needs, with F5's interim workaround for the ones you are exposed to. It
+# needs, with F5's workaround for the ones you are exposed to; it
 # changes nothing. The fix is to upgrade to 1.30.6 / 1.31.7 (or your distro's
-# backport) and reload; editing nginx.conf to apply a workaround is an
-# administrator's change this script will not make for you.
+# backport) and reload. "mitigate" is the only command that edits nginx.conf, and only
+# for the three simple workarounds you choose, with a copy of every file and an
+# automatic undo if nginx rejects the result; the others need an administrator.
 #
 # Usage:
 #   ./nginx-oct2026-check.sh [command]
@@ -38,6 +39,33 @@
 #                    usually needs root to read the full config. Exit 0 =
 #                    nothing exposed, 1 = a vulnerable nginx/njs is present,
 #                    2 = something couldn't be read.
+#   mitigate [options]   (root) changes the host. Applies F5's own workarounds for
+#                    the flaws your running configuration is exposed to (the same audit as
+#                    check, so a patched build or an unexposed flaw is left alone). You must
+#                    choose among these; with no option it applies --tickets-off and --aio-off,
+#                    the two low-impact measures. Options:
+#                      --tickets-off          CVE-2026-97629: where ssl_session_cache is
+#                                             shared, adds ssl_session_tickets off (TLS
+#                                             session resumption through the shared cache
+#                                             still works; ticket resumption stops)
+#                      --aio-off              CVE-2026-97205: replaces "aio on" and "aio
+#                                             threads" with "aio off" (slower file serving
+#                                             under load; nothing breaks)
+#                      --proxy-buffering-off  CVE-2026-95101: sets proxy_request_buffering
+#                                             off at the http level (request bodies are
+#                                             streamed to the upstream: retries stop, and
+#                                             an upstream that needs Content-Length may
+#                                             fail), only when the config sets it nowhere
+#                      --force                apply a chosen measure even if the audit does
+#                                             not report that flaw as exposed
+#                      --dry-run, --reload    show only; graceful reload afterwards
+#                    Every file is copied first and checked with nginx -t before and after;
+#                    if nginx rejects the result the originals are put back at once. Not
+#                    automated, because they need a person to read the configuration:
+#                    CVE-2026-15176 (alias with a rewrite and $request_filename) and
+#                    CVE-2026-93479 (a regex map whose captures feed root or log_format).
+#                    These are F5's workarounds; the permanent fix is to upgrade.
+#   rollback [--dry-run] [--reload]   put back every file mitigate changed.
 #   hunt             read-only: the journal and logs for nginx worker crashes
 #                    (segfaults, aborts), the likely symptom of the memory
 #                    bugs. Exit 0 = clean, 1 = findings.
@@ -51,6 +79,9 @@
 #   NGINX_MAINLINE_FIXED=1.31.7       first fixed mainline release
 #   NJS_FIXED=1.0.2                   first fixed njs release
 #   SCAN_CONTAINERS=1                 1 = read nginx inside running containers
+#   STATE_DIR (default /var/lib/psf-security-patches/nginx) holds the backups and manifest
+#   NGINX_BIN, NGINX_MAIN_CONF, NGINX_CONF_FILES   for mitigate: the binary, a non-default
+#                                     main configuration file, and the files to edit
 #   NGINX_T=1                         1 = run "nginx -T" for the config audit
 #                                     (0 to skip it)
 #   HUNT_SINCE="2026-10-01"           how far back hunt reads the journal
@@ -75,8 +106,9 @@ HUNT_SINCE="${HUNT_SINCE:-2026-10-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="nginx-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/nginx}"
 ADVISORY="https://nginx.org/en/security_advisories.html"
 
 # ---------- output -----------------------------------------------------------
@@ -96,10 +128,10 @@ ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 in_range() { ver_ge "$1" "$2" && ver_ge "$3" "$1"; }   # lo <= v <= hi
 state_word() { case "$1" in 0) echo -e "${GREEN}fixed${NC}" ;; 1) echo -e "${RED}vulnerable${NC}" ;; *) echo -e "${YELLOW}unknown${NC}" ;; esac; }
 
-# ---------- version judgement ------------------------------------------------
+# ---------- version judgment ------------------------------------------------
 # nginx fixes land on the two current branches only: 1.30.6 (stable) and
-# 1.31.7 (mainline). Older branches (1.28, 1.26, ...) get no fix and need an
-# upgrade or a distro backport.
+# 1.31.7 (mainline). Older branches (1.28, 1.26, ...) upgrade to a current
+# branch or take a distro backport.
 nginx_upstream_state() {   # <X.Y.Z> -> rc|why
     local v="$1"
     [[ -n "$v" ]] || { echo "2|version unreadable"; return; }
@@ -111,7 +143,7 @@ nginx_upstream_state() {   # <X.Y.Z> -> rc|why
     fi
     if ver_ge "$v" "$NGINX_STABLE_FIXED"; then echo "0|${v} >= ${NGINX_STABLE_FIXED} (stable)"; return; fi
     if ver_ge "$v" "1.30.0"; then echo "1|${v} < ${NGINX_STABLE_FIXED} (stable fix)"; return; fi
-    echo "1|${v}: branch is older than 1.30 and gets no fix; upgrade to ${NGINX_STABLE_FIXED} or ${NGINX_MAINLINE_FIXED}"
+    echo "1|${v}: branch is older than 1.30; upgrade to ${NGINX_STABLE_FIXED} or ${NGINX_MAINLINE_FIXED}"
 }
 
 owner_pkg() { have dpkg-query || return 0; dpkg -S "$(readlink -f "$1")" 2>/dev/null | head -1 | cut -d: -f1 || true; }
@@ -160,7 +192,7 @@ nginx_binaries() {
 nginx_version_of() { "$1" -v 2>&1 | grep -oE 'nginx/[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d/ -f2 || true; }
 
 # ---------- config audit -----------------------------------------------------
-# Each flaw needs a directive combination. These are heuristic greps over the
+# Each flaw needs a directive combination. These are greps over the
 # dumped config (nginx -T); they report the ingredients, not a guarantee.
 audit_config() {   # <version> <vfixed 0/1> <config-text-file>
     local v="$1" vfixed="$2" cfg="$3" exposed_local=0
@@ -273,7 +305,7 @@ cmd_check() {
             [[ "$pst" == 0 ]] && vfixed=1
             inf "auditing the running config of ${primary} (nginx ${v:-?}$([[ $vfixed -eq 1 ]] && echo ', patched'))"
             if audit_config "$v" "$vfixed" "$cfg"; then :; else exposed=1; fi
-            inf "these are heuristic matches over the whole config; confirm the directives share a server/location before acting"
+            inf "these matches cover the whole config; confirm the directives share a server/location before acting"
         else
             caution "could not run 'nginx -T' (needs root and a valid config); skipping the config audit"
             unknownz=1
@@ -345,26 +377,212 @@ cmd_hunt() {
         else ok "${name}: none"; fi
     done
     echo
-    echo "  A hit is a lead, not proof: workers crash for many reasons. Repeated worker"
+    echo "  A hit tells you where to look: workers crash for many reasons. Repeated worker"
     echo "  crashes on a vulnerable build, on a server whose config reaches one of these"
     echo "  flaws, are worth treating as an incident while you upgrade."
     return "$found"
 }
 
 # ---------- dispatch ---------------------------------------------------------
+
+# ---------- mitigate and rollback --------------------------------------------
+NG_MANIFEST=""; NG_DRY=0; NG_RELOAD=0; NGB=""
+ng_nginx() { "$NGB" ${NGINX_MAIN_CONF:+-c "$NGINX_MAIN_CONF"} "$@"; }
+ng_note() { [[ "$NG_DRY" -eq 1 ]] || echo "$1" >>"$NG_MANIFEST"; }
+ng_backup() {
+    local f="$1" b
+    grep -qF "conf|${f}|" "$NG_MANIFEST" 2>/dev/null && return 0
+    b="${STATE_DIR}/$(printf '%s' "$f" | sed 's#/#_#g').orig"
+    cp -p "$f" "$b" || return 1
+    echo "conf|${f}|${b}" >>"$NG_MANIFEST"
+}
+ng_restore_all() {
+    local line f
+    while IFS= read -r line; do
+        [[ "$line" == conf\|* ]] || continue
+        f="${line#conf|}"; f="${f%%|*}"; cat "${line##*|}" >"$f"
+    done <"$NG_MANIFEST"
+}
+ng_files() {
+    local f
+    if [[ -n "${NGINX_CONF_FILES:-}" ]]; then for f in $NGINX_CONF_FILES; do [[ -r "$f" ]] && echo "$f"; done; return 0; fi
+    ng_nginx -T 2>/dev/null | sed -n 's/^# configuration file \(.*\):$/\1/p' | awk '!s[$0]++' | while IFS= read -r f; do [[ -f "$f" && -r "$f" ]] && echo "$f"; done
+}
+# prints the CVE ids this nginx is exposed to, using the same audit as "check"
+ng_exposed() {
+    local cfg v pst vfixed=0
+    cfg="$(mktemp)" || return 1
+    if ! ng_nginx -T >"$cfg" 2>/dev/null || [[ ! -s "$cfg" ]]; then rm -f "$cfg"; return 1; fi
+    v="$(nginx_version_of "$NGB")"
+    IFS='|' read -r pst _ <<<"$(nginx_pkg_state "$v" "$NGB")"
+    [[ "$pst" == 0 ]] && vfixed=1
+    audit_config "$v" "$vfixed" "$cfg" 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -F '[exposed]' | grep -oE 'CVE-[0-9]+-[0-9]+' | sort -u
+    rm -f "$cfg"
+}
+read -r -d '' NG_AWK_TICKETS <<'AWKEOF' || true
+{
+    line = $0; code = line; sub(/#.*/, "", code)
+    if (code ~ /^[ \t]*ssl_session_tickets[ \t]+on[ \t]*;/) { sub(/ssl_session_tickets[ \t]+on/, "ssl_session_tickets off", line); print line; next }
+    print line
+    if (!hastick && code ~ /^[ \t]*ssl_session_cache[ \t]+shared/) { match(line, /^[ \t]*/); print substr(line, 1, RLENGTH) "ssl_session_tickets off;" }
+}
+AWKEOF
+read -r -d '' NG_AWK_AIO <<'AWKEOF' || true
+{
+    line = $0; code = line; sub(/#.*/, "", code)
+    if (code ~ /^[ \t]*aio[ \t]+(on|threads)/) { match(line, /^[ \t]*/); print substr(line, 1, RLENGTH) "aio off;"; next }
+    print line
+}
+AWKEOF
+read -r -d '' NG_AWK_PBUF <<'AWKEOF' || true
+{
+    line = $0; code = line; sub(/#.*/, "", code)
+    if (code ~ /^[ \t]*proxy_request_buffering[ \t]+on[ \t]*;/) { sub(/proxy_request_buffering[ \t]+on/, "proxy_request_buffering off", line); print line; next }
+    print line
+    if (ins && !done && code ~ /^[ \t]*http[ \t]*\{/) { print "    proxy_request_buffering off;"; done = 1 }
+}
+AWKEOF
+# ng_apply LABEL FILE AWK [awk -v args...]  -> 0 changed, 1 unchanged, 2 failed
+ng_apply() {
+    local label="$1" f="$2" prog="$3" tmp n; shift 3
+    tmp="$(mktemp "${TMPDIR:-/tmp}/ngmit.XXXXXX")" || return 2
+    awk "$@" "$prog" "$f" >"$tmp" || { rm -f "$tmp"; return 2; }
+    if cmp -s "$f" "$tmp"; then rm -f "$tmp"; return 1; fi
+    n=$(diff "$f" "$tmp" | grep -c '^>')
+    if [[ "$NG_DRY" -eq 1 ]]; then echo "  would change ${n} line(s) in ${f} (${label})"; diff "$f" "$tmp" | grep '^>' | sed 's/^/      /' | cut -c1-120
+    else
+        if ! ng_backup "$f"; then bad "${f}: could not back it up, left alone"; rm -f "$tmp"; return 2; fi
+        cat "$tmp" >"$f" || { rm -f "$tmp"; return 2; }
+        ok "${f}: ${label} (${n} line(s))"
+    fi
+    rm -f "$tmp"; return 0
+}
+
+cmd_mitigate() {
+    local tickets=0 aio=0 pbuf=0 force=0 rc=0 changed=0 f exposed anyp=0 r hastick ins
+    local -a files=()
+    set +e   # this script runs with -e; several normal steps below return non-zero (for example "nothing to change")
+    NG_DRY=0; NG_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --tickets-off) tickets=1 ;; --aio-off) aio=1 ;; --proxy-buffering-off) pbuf=1 ;;
+            --force) force=1 ;; --dry-run) NG_DRY=1 ;; --reload) NG_RELOAD=1 ;;
+            *) die "Unknown mitigate option: $1 (--tickets-off --aio-off --proxy-buffering-off --force --dry-run --reload)" ;;
+        esac
+        shift
+    done
+    local defaulted=0
+    if [[ $tickets -eq 0 && $aio -eq 0 && $pbuf -eq 0 ]]; then tickets=1; aio=1; defaulted=1; fi
+    [[ $NG_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    NGB="${NGINX_BIN:-$(nginx_binaries | head -n1)}"
+    if [[ -z "$NGB" || ! -x "$NGB" ]]; then info "No nginx found on this host: nothing to do"; return 0; fi
+    [[ $defaulted -eq 0 ]] || info "No option given: applying the two low-impact measures, --tickets-off and --aio-off. Add --proxy-buffering-off for HTTP/3 request buffering."
+    step "Which flaws is this nginx exposed to?"
+    exposed="$(ng_exposed)" || { bad "could not run nginx -T (needs root and a valid configuration): not touching anything"; return 1; }
+    if [[ -n "$exposed" ]]; then inf "exposed: $(tr '\n' ' ' <<<"$exposed")"; else ok "the audit reports no exposed flaw"; fi
+    while IFS= read -r f; do [[ -n "$f" ]] && files+=("$f"); done < <(ng_files)
+    [[ ${#files[@]} -gt 0 ]] || { caution "no readable configuration file found"; return 1; }
+    if ! ng_nginx -t >/dev/null 2>&1; then bad "nginx -t rejects the configuration as it is now: not touching it (fix that first)"; return 1; fi
+    ok "nginx -t accepts the current configuration (${#files[@]} file(s))"
+    if [[ $NG_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        NG_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$NG_MANIFEST"
+    else NG_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
+    step "Configuration changes"
+    hit() { [[ $force -eq 1 ]] || grep -qxF "$1" <<<"$exposed"; }
+    if [[ $tickets -eq 1 ]]; then
+        if hit CVE-2026-97629; then
+            for f in "${files[@]}"; do
+                hastick=0; grep -qE '^[[:space:]]*ssl_session_tickets' "$f" && hastick=1
+                ng_apply "CVE-2026-97629: ssl_session_tickets off" "$f" "$NG_AWK_TICKETS" -v hastick="$hastick"; r=$?
+                [[ $r -eq 0 ]] && changed=1; [[ $r -eq 2 ]] && rc=1
+            done
+        else ok "CVE-2026-97629 is not reported as exposed: --tickets-off left alone (--force overrides)"; fi
+    fi
+    if [[ $aio -eq 1 ]]; then
+        if hit CVE-2026-97205; then
+            for f in "${files[@]}"; do
+                ng_apply "CVE-2026-97205: aio off" "$f" "$NG_AWK_AIO"; r=$?
+                [[ $r -eq 0 ]] && changed=1; [[ $r -eq 2 ]] && rc=1
+            done
+        else ok "CVE-2026-97205 is not reported as exposed: --aio-off left alone (--force overrides)"; fi
+    fi
+    if [[ $pbuf -eq 1 ]]; then
+        if hit CVE-2026-95101; then
+            for f in "${files[@]}"; do grep -qE '^[[:space:]]*proxy_request_buffering' "$f" && anyp=1; done
+            for f in "${files[@]}"; do
+                ins=0
+                if [[ $anyp -eq 0 ]] && grep -qE '^[[:space:]]*http[[:space:]]*\{' "$f"; then ins=1; anyp=1; fi
+                ng_apply "CVE-2026-95101: proxy_request_buffering off" "$f" "$NG_AWK_PBUF" -v ins="$ins"; r=$?
+                [[ $r -eq 0 ]] && changed=1; [[ $r -eq 2 ]] && rc=1
+            done
+        else ok "CVE-2026-95101 is not reported as exposed: --proxy-buffering-off left alone (--force overrides)"; fi
+    fi
+    if [[ $NG_DRY -eq 0 && $changed -eq 1 ]]; then
+        step "Checking the new configuration"
+        if ng_nginx -t >/dev/null 2>&1; then ok "nginx -t accepts the new configuration"
+        else
+            bad "nginx -t REJECTS the new configuration: restoring the originals now"
+            ng_restore_all; : >"$NG_MANIFEST"; bad "originals restored, nothing was changed"; return 1
+        fi
+        if [[ $NG_RELOAD -eq 1 ]]; then
+            if grep -q '^nginx' <<<"$(systemctl list-unit-files 2>/dev/null)"; then systemctl reload nginx && inf "reloaded nginx (graceful)"
+            else caution "--reload given but no nginx systemd unit found: reload it yourself"; fi
+        fi
+        exposed="$(ng_exposed || true)"
+        if [[ -n "$exposed" ]]; then inf "still exposed after the change: $(tr '\n' ' ' <<<"$exposed")"; else ok "the audit now reports no exposed flaw"; fi
+    fi
+    if grep -qxF CVE-2026-15176 <<<"$exposed"; then inf "CVE-2026-15176 is not automated: do not use alias in that location, or do not read \$request_filename there"; fi
+    if grep -qxF CVE-2026-93479 <<<"$exposed"; then inf "CVE-2026-93479 is not automated: use named captures, only inside the block with the regex match"; fi
+    step "Result"
+    if [[ $NG_DRY -eq 1 ]]; then info "Dry run finished: nothing was changed"
+    elif [[ $changed -eq 1 ]]; then
+        info "Applied. Backups and manifest: ${STATE_DIR}. Undo with: $0 rollback"
+        [[ $NG_RELOAD -eq 1 ]] || inf "reload nginx for it to take effect (or re-run with --reload)"
+    else info "Nothing needed changing"; fi
+    inf "These are F5's workarounds; the permanent fix is to upgrade to 1.30.6 (stable) or 1.31.7 (mainline) or your distribution's backport."
+    return "$rc"
+}
+
+cmd_rollback() {
+    local line f b rc=0
+    set +e
+    NG_DRY=0; NG_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) NG_DRY=1 ;; --reload) NG_RELOAD=1 ;; *) die "Unknown rollback option: $1 (--dry-run --reload)" ;; esac
+        shift
+    done
+    NG_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$NG_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $NG_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    step "Rolling back"
+    while IFS= read -r line; do
+        [[ "$line" == conf\|* ]] || continue
+        f="${line#conf|}"; f="${f%%|*}"; b="${line##*|}"
+        if [[ ! -r "$b" ]]; then bad "${f}: backup ${b} is missing, left alone"; rc=1; continue; fi
+        if [[ $NG_DRY -eq 1 ]]; then echo "  would restore ${f} from ${b}"; else cat "$b" >"$f" && ok "restored ${f}"; fi
+    done <"$NG_MANIFEST"
+    if [[ $NG_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$NG_MANIFEST" "${NG_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back. Reload nginx for the restored configuration to take effect."
+        if [[ $NG_RELOAD -eq 1 ]] && grep -q '^nginx' <<<"$(systemctl list-unit-files 2>/dev/null)"; then systemctl reload nginx && inf "reloaded nginx (graceful)"; fi
+    fi
+    return "$rc"
+}
+
 main() {
 CMD="${1:-check}"; [[ $# -gt 0 ]] && shift
 case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
 case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$SELF"; exit 0 ;; esac
-[[ $# -eq 0 ]] || die "Unknown option: $1"
+case "$CMD" in mitigate|rollback) ;; *) [[ $# -eq 0 ]] || die "Unknown option: $1" ;; esac
 echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
 echo "nginx: ${CVES}; njs: CVE-2026-101019 CVE-2026-101025; advisory: ${ADVISORY}"
 case "$CMD" in
     check|hunt) "cmd_${CMD}" ;;
-    *) die "Unknown command: $CMD (check|hunt|version)" ;;
+    mitigate|rollback) "cmd_${CMD}" "$@" ;;
+    *) die "Unknown command: $CMD (check|hunt|mitigate|rollback|version)" ;;
 esac
 }
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

@@ -1,0 +1,150 @@
+.TH PSF-NGINX-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-nginx-oct2026-check \- nginx October 2026 security release: checker with optional workarounds
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:nginx/\:\:nginx\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-15176 CVE-2026-93479 CVE-2026-97205 CVE-2026-95101 CVE-2026-97629
+.PP
+njs: CVE-2026-101019 CVE-2026-101025
+.PP
+nginx 1.30.6 (stable) and 1.31.7 (mainline), 14 October 2026, fix five flaws.
+Three are heap/use\-after\-free memory bugs in worker processes (a crash, and
+possibly code execution): CVE-2026-15176 (alias with a rewrite),
+CVE-2026-93479 (a regex map's captures used by root or log_format), and
+CVE-2026-97205 (AIO with SSI). One forges a TLS session that can bypass
+client-certificate checks (CVE-2026-97629, automatic session-ticket-key
+rotation). One slips extra bytes into a proxied request (CVE-2026-95101,
+HTTP/3). nginx rates all five medium; F5 scores the three memory bugs 9.2
+critical, the TLS flaw 8.3, the HTTP/3 flaw 6.9. None was reported exploited
+as of mid-October 2026. njs 1.0.2 separately fixes two XML-module flaws in
+the JavaScript module (CVE-2026-101019, CVE-2026-101025).
+.PP
+Each flaw needs a specific directive in your configuration, so a vulnerable
+nginx version is not necessarily reachable. "check" and "hunt" are read-only: "check"
+reports the nginx and njs versions on the host (and in containers), and audits the
+running configuration (nginx \-T) for the directive combination each flaw
+needs, with F5's workaround for the ones you are exposed to; it
+changes nothing. The fix is to upgrade to 1.30.6 / 1.31.7 (or your distro's
+backport) and reload. "mitigate" is the only command that edits nginx.conf, and only
+for the three simple workarounds you choose, with a copy of every file and an
+automatic undo if nginx rejects the result; the others need an administrator.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+nginx and njs versions on the host and in containers, and
+a configuration audit of the running nginx for the five
+flaws' trigger directives. Root optional, but nginx \-T
+usually needs root to read the full config. Exit 0 =
+nothing exposed, 1 = a vulnerable nginx/njs is present,
+2 = something couldn't be read.
+.TP
+\fBmitigate [options]\fR
+.ad l
+(root) changes the host. Applies F5's own workarounds for
+the flaws your running configuration is exposed to (the same audit as
+check, so a patched build or an unexposed flaw is left alone). You must
+choose among these; with no option it applies \-\-tickets\-off and \-\-aio\-off,
+the two low-impact measures. Options:
+.RS 2
+.TP 10
+\fB\-\-tickets\-off\fR
+.ad l
+CVE-2026-97629: where ssl_session_cache is shared, adds ssl_session_tickets off (TLS session resumption through the shared cache still works; ticket resumption stops)
+.TP 10
+\fB\-\-aio\-off\fR
+.ad l
+CVE-2026-97205: replaces "aio on" and "aio threads" with "aio off" (slower file serving under load; nothing breaks)
+.TP 10
+\fB\-\-proxy\-buffering\-off\fR
+.ad l
+CVE-2026-95101: sets proxy_request_buffering off at the http level (request bodies are streamed to the upstream: retries stop, and an upstream that needs Content-Length may fail), only when the config sets it nowhere
+.TP 10
+\fB\-\-force\fR
+.ad l
+apply a chosen measure even if the audit does not report that flaw as exposed
+.TP 10
+\fB\-\-dry\-run, \-\-reload\fR
+.ad l
+show only; graceful reload afterwards
+.RE
+Every file is copied first and checked with nginx \-t before and after;
+if nginx rejects the result the originals are put back at once. Not
+automated, because they need a person to read the configuration:
+CVE-2026-15176 (alias with a rewrite and $request_filename) and
+CVE-2026-93479 (a regex map whose captures feed root or log_format).
+These are F5's workarounds; the permanent fix is to upgrade.
+.TP
+\fBrollback [\-\-dry\-run] [\-\-reload]\fR
+.ad l
+put back every file mitigate changed.
+.TP
+\fBhunt\fR
+.ad l
+read-only: the journal and logs for nginx worker crashes
+(segfaults, aborts), the likely symptom of the memory
+bugs. Exit 0 = clean, 1 = findings.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+FIXED_BUILDS="1.30.1\-1~deb13u2"   distro nginx builds known to carry the
+                                  backported fix, space-separated
+                                    full
+                                  versions (checked for dpkg-owned
+                                    nginx)
+NGINX_STABLE_FIXED=1.30.6         first fixed stable release
+NGINX_MAINLINE_FIXED=1.31.7       first fixed mainline release
+NJS_FIXED=1.0.2                   first fixed njs release
+SCAN_CONTAINERS=1                 1 = read nginx inside running containers
+STATE_DIR (default /var/lib/psf\-security\-patches/nginx) holds the
+  backups and manifest
+NGINX_BIN, NGINX_MAIN_CONF, NGINX_CONF_FILES   for mitigate: the binary, a non-default
+                                  main configuration file, and the
+                                    files to edit
+NGINX_T=1                         1 = run "nginx \-T" for the config audit
+                                  (0 to skip it)
+HUNT_SINCE="2026\-10\-01"           how far back hunt reads the journal
+HUNT_LOGS="/var/log/nginx/*.log"  extra log globs for hunt
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:nginx/\:\:nginx\-oct2026\-check.sh\fR
+.ad l
+The script.
+.TP
+\fB/var/lib/psf\-security\-patches/nginx\fR
+.ad l
+Backups and the record that rollback uses.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

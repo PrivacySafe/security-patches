@@ -1,0 +1,136 @@
+.TH PSF-RSYSLOG-DYNAFILE-AUDIT 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-rsyslog-dynafile-audit \- rsyslog dynaFile path traversal: configuration audit
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:rsyslog/\:\:rsyslog\-dynafile\-audit.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-92709 (GHSA-xmp9-244p-5ggv)
+.PP
+rsyslog's omfile dynaFile feature builds an output file name from a template.
+When a template puts a value that an outside party can influence (the HOSTNAME
+or program name of an incoming message, the message text, structured data...)
+into a path component WITHOUT explicit secure-path handling, the rendered path
+can escape the intended log directory. rsyslog usually runs as root or with
+broad write access to /var/log, so the result is an arbitrary file write, which
+the advisory title and several trackers escalate to code execution. Rated High,
+CVSS 8.1. The flaw is not limited to the RFC 5424 HOSTNAME field: any untrusted
+value that reaches a path component creates the condition. A PoC reference is
+listed by one aggregator; the page we saw held only the advisory text.
+.RS 2
+.nf
+Affected: rsyslog 1.15.0 through 8.2610.0, WHEN a dynaFile
+  template uses an
+          untrusted value in a path component without secure-path
+            handling
+Fixed:    NO RELEASE IS LISTED AS FULLY PATCHED (30 October 2026). Debian,
+          Cyberus and nixpkgs trackers show it as open. The daily
+            stable
+          documentation describes new dynaFile controls and a rule
+            that the
+          path must stay under a fixed leading prefix, which hints
+            that a fix
+          is on the way; no release carries it yet, so do not wait
+            for it.
+.fi
+.RE
+.PP
+The documented, recommended defense, which works on every version, is explicit
+secure-path handling for each untrusted value in a dynaFile path:
+.RS 2
+.nf
+string templates:   %HOSTNAME:::secpath-replace%     (or secpath-drop)
+list templates:     property(name="hostname" securePath="replace")
+.fi
+.RE
+.PP
+Both forms were validated with rsyslogd \-N1 on 8.2312.0.
+.RS 2
+.PP
+CAUTION: global(compatibility.defaults.secure="strict"), which defaults
+unprotected dynaFile fields to secpath-replace, is only known to newer
+rsyslog. On 8.2312.0 it is a configuration ERROR ("parameter ... not known").
+Test any change with rsyslogd \-N1 before you restart.
+.RE
+.PP
+"audit" is read-only; "mitigate" and "rollback" are the only commands that change
+anything. "audit" reads the rsyslog version, the main configuration
+and everything it includes, finds the templates used by dynaFile, and lists any
+path component that comes from an untrusted property without secure-path
+handling. It reports whether remote input modules are configured and which
+user rsyslogd runs as. It does not restart rsyslog and does not send any
+message. It is a text search over the configuration, not a full parser.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBaudit (default)\fR
+.ad l
+read-only. Exit 0 = no unprotected untrusted value in a
+dynaFile path, 1 = at least one was found or could not be judged.
+.TP
+\fBmitigate [\-\-dry\-run] [\-\-restart]\fR
+.ad l
+(root) changes the host. Applies the
+documented defense: for every template that a dynaFile action
+uses, it adds secpath-replace to each untrusted property
+(%HOSTNAME% becomes %HOSTNAME:::secpath-replace%; in list
+templates securePath="replace" is added to the property). It
+never touches a template no dynaFile uses, or a property that
+already has secure-path handling. Every file is copied first,
+the configuration is checked with rsyslogd \-N1 before and after,
+and if rsyslog rejects the result the originals are put back at
+once. Nothing is restarted unless you add \-\-restart (rsyslog
+reads its configuration at start; a restart can drop UDP syslog
+messages for a moment). Then it runs the audit again.
+Limits: a template written across lines with a backslash is
+not rewritten, and a template used both as a file path and as a
+message format would change the message too: the audit run at
+the end tells you whether anything was missed.
+.TP
+\fBrollback [\-\-dry\-run] [\-\-restart]\fR
+.ad l
+put back every file mitigate changed.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Environment: RSYSLOG_CONF (space separated files) replaces configuration discovery.
+.RS 2
+.PP
+STATE_DIR (default /var/lib/psf\-security\-patches/rsyslog) holds the
+backups and the manifest.
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:rsyslog/\:\:rsyslog\-dynafile\-audit.sh\fR
+.ad l
+The script.
+.TP
+\fB/var/lib/psf\-security\-patches/rsyslog\fR
+.ad l
+Backups and the record that rollback uses.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

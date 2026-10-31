@@ -1,0 +1,93 @@
+.TH PSF-LITELLM-ESCALATION-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-litellm-escalation-check \- LiteLLM proxy admin escalation: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:litellm/\:\:litellm\-escalation\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-114612 (CVSS 9.9, GHSA-7hp6-4w63-5g45)
+.PP
+The LiteLLM proxy uses one cryptographic context for two purposes: sealing secrets
+at rest and minting session tokens. An authenticated user with internal_user
+privileges can request a new API key with a crafted metadata field that holds a forged
+administrator credential as the "secret"; the proxy encrypts it and returns it, and the
+user replays it as a bearer token to become proxy_admin, which reaches arbitrary
+commands through the MCP stdio endpoint.
+.RS 2
+.nf
+Affected (CVE record): 1.87.0 up to 1.100.4, 1.101.0 up to
+  1.101.3, 1.102.0 up to
+          1.102.2, 1.103.0 up to 1.103.1, and 1.104.0-rc.1 up to
+            1.104.0-rc.2
+Fixed:    1.100.4, 1.101.3, 1.102.2, 1.103.1 and 1.104.0-rc.2 (all on PyPI), and
+          every later release. move 1.87.0 through 1.99.x to
+            1.100.4 or newer.
+Note:     The vendor advisory lists 1.91.0 as the first exploitable version; a
+          third-party reading says 1.87.0 to 1.90.x need
+            EXPERIMENTAL_UI_LOGIN and
+          1.91.0 and later are exploitable by default. This script
+            treats the whole
+          CVE range as affected.
+.fi
+.RE
+.PP
+It is the PROXY that is affected. Using litellm only as a Python library (the SDK), with
+no proxy running, does not expose it; this script says which it found evidence of.
+.PP
+DO NOT CONFUSE THIS WITH THE MALICIOUS RELEASE. litellm 1.107.0 is a different problem
+(a supply-chain compromise, see litellm-oct2026-check.sh in this folder). If this script
+meets 1.107.0 it says so and stops: treat that host as compromised.
+.PP
+This script is read-only. It finds installed copies (dist-info), pinned versions
+(requirements, poetry.lock, uv.lock, pdm.lock, Pipfile.lock), and container image tags
+in compose, Helm and Kubernetes files, and looks for proxy evidence. It does not open
+running containers.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /usr/lib /usr/local/lib /opt /srv /var/lib /etc
+/home /root). Exit 0 = nothing exposed, 1 = an affected proxy, a
+floating image tag, or the malicious 1.107.0.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe copies what this check reads
+(the package metadata, the lock and requirements files that mention litellm, a one-line marker for
+each proxy config, and only the matched image-tag strings) into a private temporary directory,
+and this script runs once per container in isolation against that copy. API keys, master keys
+and index credentials never leave the container. Paths shown as .../docker_NAME/... are inside
+the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:litellm/\:\:litellm\-escalation\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-litellm-oct2026-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

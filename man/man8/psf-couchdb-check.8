@@ -1,0 +1,84 @@
+.TH PSF-COUCHDB-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-couchdb-check \- Apache CouchDB admin-to-OS-command execution: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:couchdb/\:\:couchdb\-check.sh\fR [command] [URL ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-86471
+.PP
+An unvalidated runtime configuration value in Apache CouchDB lets a CouchDB
+server admin run arbitrary shell commands as the operating system user that
+runs CouchDB. CVSS 9.3 on the v4 scale. The attacker needs server-admin
+credentials, so this is a privilege escalation from a CouchDB admin (a stolen
+or weak admin password, an exposed admin interface, or a compromised
+application that holds admin credentials) to the host. It is not a flaw an
+anonymous visitor can use alone.
+.RS 2
+.nf
+Affected: Apache CouchDB 3.5.2 and earlier, on all platforms
+Fixed:    3.5.3
+.fi
+.RE
+.PP
+The same release fixes other CouchDB flaws, among them a pre-authentication
+gzip decompression bomb on POST /_session. That one needs no credentials, which
+is why it matters whether the node listens beyond localhost.
+.PP
+This script is read-only. It reads the CouchDB version from the release files
+(releases/start_erl.data), the installed package, and, if you give it URLs, from
+a single unauthenticated GET of the server's root document. It reads the ini
+files for the bind address, require_valid_user and how many admin entries
+exist. It NEVER prints a value from the [admins] section (they are password
+hashes or passwords).
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = nothing affected, 1 = an affected version was found.
+With URL arguments (such as http://10.0.0.5:5984/) it also
+asks each server for its version. Without arguments it asks
+only http://127.0.0.1:5984/ and ignores a refusal.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Environment: COUCHDB_ROOT (default /opt/couchdb) and COUCHDB_ETC (space
+separated, default "/opt/couchdb/etc /etc/couchdb /usr/local/etc/couchdb")
+point the script at unusual layouts.
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe captures the daemon's version
+output and its configuration (secrets are redacted inside the container before anything is
+copied) into a private temporary directory, and this script then runs once per container, in
+isolation, against that copy. Paths shown as .../docker_NAME/... are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:couchdb/\:\:couchdb\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

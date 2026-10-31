@@ -1,0 +1,135 @@
+.TH PSF-BROTLI-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-brotli-oct2026-check \- Brotli decoder out-of-bounds write, October 2026: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:brotli/\:\:brotli\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-111497
+.PP
+Known as Broccoli2Shell (first called Node2Shell). Google's Brotli decoder
+(libbrotli / libbrotlidec, 1.0.3 through 1.2.0) can be handed a block switch
+that cannot happen. DecodeBlockTypeAndLength() returned a plain boolean, so
+the caller could not tell a malformed stream from one that needed more input,
+and the fast path ignored the result. The decoder kept appending attacker
+bytes to an eight-byte internal buffer, writing past its end: a crash, a
+memory disclosure, or remote code execution (CWE-252 and CWE-787). The flaw
+is in the upstream C library, and the same CVE has advisories across
+everything that bundles it: Node.js, Bun, Envoy, Istio, the Python brotli and
+brotlicffi bindings, the Ruby and PHP extensions, and OS packages. Some
+people are calling the broadened picture "HTTP2Shell", since any HTTP path
+that decodes untrusted Brotli can be a route to it.
+.PP
+Fixed upstream in Brotli 1.0.10, 1.1.1 and 1.2.1 (the decoder now returns
+BROTLI_DECODER_ERROR_FORMAT_BLOCK_SWITCH, \-17). Distributions backport the
+fix into their own libbrotli builds, sometimes under an older version number.
+A copy older than 1.0.3 is outside the advisory's affected range, but this
+script still reports it as not fixed: it is unsupported, so it moves to 1.0.10,
+1.1.1 or 1.2.1.
+.PP
+This is read-only: it finds what needs updating and judges each against the
+fixes. It does NOT change anything. The fix is to update the library or the
+runtime. There is no host-wide switch to turn Brotli off; disabling Brotli
+decoding is application-specific (reject
+Content-Encoding: br before it is decompressed, turn off automatic Brotli in
+HTTP clients, disable the Brotli decompressor filter in Envoy/Istio). See
+the repository README and https://patchtheplanet.org/brotli
+.PP
+For the Node.js guard (loading a require-hook that refuses to decode),
+use node/node\-oct2026\-mitigate.sh and node/brotli\-guard.cjs instead. This
+script only reports Node's version.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+every libbrotli on the host, the running processes that
+have libbrotlidec loaded (and any still running a library
+that was replaced on disk), the runtimes that bundle their
+own Brotli (Node.js, Bun, Python's brotli and brotlicffi,
+the Ruby brotli gem, the PHP brotli extension, Envoy,
+Istio, cdxgen), and libbrotli inside running containers,
+with whether each carries the fix. It also lists other
+software on PATH that bundles an unfixed copy (.NET,
+DuckDB, ClickHouse); that list is informational. Root
+optional. Exit 0 = nothing exposed, 1 = a vulnerable
+Brotli is present, 2 = something couldn't be read.
+.TP
+\fBhunt\fR
+.ad l
+read-only: the journal and logs for process crashes that
+look like a Brotli decoder overflow (segfaults with
+brotli/BrotliDecoder frames, heap corruption aborts).
+Exit 0 = clean, 1 = findings.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+FIXED_BUILDS="1.0.9\-2+deb12u2 1.1.0-2ubuntu0.1"
+                                  extra distro libbrotli builds
+                                    known to
+                                  carry the fix, space-separated
+                                    full
+                                  versions. Checked alongside a
+                                    built-in
+                                  list of known builds (Debian
+                                    13's
+                                  1.1.0-2+deb13u1), which a value
+                                    here does
+                                  not replace.
+BRANCH_FIXED="1.0:1.0.10 1.1:1.1.1 1.2:1.2.1"
+                                  first fixed upstream release per
+                                    branch
+RUBY_BROTLI_FIXED="0.9.1"         first fixed Ruby brotli gem
+PHP_BROTLI_FIXED="0.21.1"         first fixed PHP brotli extension
+SCAN_CONTAINERS=1                 1 = read libbrotli inside running
+                                  containers (default 1; 0 to
+                                    skip)
+HUNT_SINCE="2026\-10\-01"           how far back hunt reads the journal
+HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt
+NODE_FIXED="22.23.4 24.22.1 26.12.1"
+                                  first fixed Node.js release per
+                                    line
+BUN_FIXED=1.4.4                   first fixed Bun release
+PYBROTLICFFI_FIXED=1.2.1.0        first fixed pybrotlicffi release
+ENVOY_FIXED="1.40.0 1.39.3 1.38.6 1.37.8 1.36.12"
+                                  first fixed Envoy release per
+                                    line
+ISTIO_FIXED="1.29.9 1.30.6 1.31.2"  first fixed Istio release per
+  line
+CDXGEN_FIXED="13.5.0 12.8.9"       first fixed cdxgen release per line
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:brotli/\:\:brotli\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

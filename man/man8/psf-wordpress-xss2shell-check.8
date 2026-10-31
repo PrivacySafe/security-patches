@@ -1,0 +1,98 @@
+.TH PSF-WORDPRESS-XSS2SHELL-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-wordpress-xss2shell-check \- WordPress XSS2Shell pre-auth XSS, October 2026: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress/\:\:wordpress\-xss2shell\-check.sh\fR [command] [arguments]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-64638
+.PP
+WordPress Core 4.7 through 7.0.2 reflects the submitted username in the
+wp-login.php error message via sprintf() without adequate sanitization. A
+parser-differential payload (a whitespace character between '<' and a tag
+name, such as "< area") survives PHP strip_tags() because of the space,
+then WordPress's KSES sanitizer re-tokenizes it into a live DOM element. An
+attacker who can get a logged-in administrator to trigger the XSS can chain
+that into full remote code execution via OAuth app-password abuse and plugin
+upload. The attack is pre-authentication: no account is required to send the
+crafted login form. Disclosed 2026-08-07 by PWN.AI; WordPress shipped the
+fix in 7.0.3 the same day.
+.PP
+This script is read-only: it checks the WordPress version, probes for XSS
+reflection (a non-destructive POST to wp-login.php that generates only an
+authentication failure), audits defensive posture, and searches logs and
+plugin directories for signs of exploitation. It does NOT exercise the RCE
+chain or upload anything.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck URL (default)\fR
+.ad l
+detect WordPress version and probe wp-login.php for
+XSS reflection. The probe is a URL-encoded POST to the
+login form: it generates one failed-authentication entry
+in the auth log and no other side effects. Root not
+needed. Exit 0 = not vulnerable or not WordPress, 1 =
+appears vulnerable, 2 = error or unreachable.
+.TP
+\fBaudit URL\fR
+.ad l
+all of check, plus: sensitive file exposure
+(wp-config backups, .git/config, debug.log, xmlrpc.php,
+\&.env), security headers (CSP, HSTS, X-Frame-Options,
+X-Content-Type-Options), and REST API user enumeration.
+Exit 0 = no critical findings, 1 = critical, 2 = error.
+.TP
+\fBhunt [WEBROOT]\fR
+.ad l
+read-only log and filesystem analysis: web server access
+logs for POST bursts to wp-login.php, requests to
+authorize-application.php (OAuth app-password abuse),
+plugin upload requests, and direct PHP execution in
+plugin directories; WordPress debug.log for error
+patterns; and the plugin directories under WEBROOT (or
+WP_ROOTS) for recently added or unexpected PHP files.
+Exit 0 = nothing found, 1 = findings.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+WP_ROOTS="/var/www /srv/www"   where hunt looks for wp\-content/ (space-sep)
+HUNT_SINCE="2026\-08\-07"        earliest date hunt reads from logs
+HUNT_LOGS="/srv/app/log/*.log" extra log globs
+CURL_OPTS="\-\-insecure"         extra curl options (e.g. skip TLS verify)
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress/\:\:wordpress\-xss2shell\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-wordpress-plugins-oct2026-check(8), psf-wordpress-wp2shell-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

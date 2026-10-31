@@ -1,0 +1,84 @@
+.TH PSF-PILLOW-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-pillow-oct2026-check \- Pillow 13.0.0 security release: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:pillow/\:\:pillow\-oct2026\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-96639  (stale image storage reused after mode transitions, CVSS 9.8)
+.PP
+CVE-2026-112900 (EPS filename argument injection into Ghostscript)
+.PP
+Pillow 13.0.0 (announced 21 October 2026) fixes a long list of memory-safety and
+parsing bugs in the most widely installed Python imaging library. Two of
+them are covered here.
+.RS 2
+.PP
+CVE-2026-96639  Multi-frame loaders can keep an allocation made for a narrow
+frame mode while a later frame of the same size switches to
+wider RGB or CMYK data. Crafted PSD, MPO, DCX or MIC files
+then write past the allocation. The MPO path can also read
+out of bounds and, in demonstrated runtime-specific cases,
+run commands. Affected: 11.0.0 up to 13.0.0.
+CVE-2026-112900 EpsImagePlugin passes the caller-supplied filename after \-f
+to Ghostscript without making it absolute. A name that
+starts with a hyphen is read as a Ghostscript option, and a
+name that starts with @ names an argument file. Command
+execution needs the attacker to control the filename and
+the referenced text file. Affected: 2.6.0 up to 13.0.0.
+.RE
+.PP
+Fixed in 13.0.0 for both. This script is read-only: it finds Pillow in Python
+environments (installed dist-info and egg-info metadata) and in lock files,
+compares versions, and reports whether Ghostscript is installed, since the
+EPS bug needs the gs binary.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /usr/lib /usr/local/lib /opt /srv
+/var/www /var/lib /home /root) for Pillow installs and
+lock file pins. Exit 0 = nothing affected, 1 = an affected
+version was found.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Distribution packages often backport fixes without changing the version
+string. For packages owned by dpkg or rpm the script reads the package
+changelog and reports a mention of either CVE.
+Containers: with no directory argument the check also reads the project files it needs from
+running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
+read-only probe, and judges them like host projects. The copies are temporary: a path shown as
+\&.../docker_NAME/PATH is the PATH inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:pillow/\:\:pillow\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

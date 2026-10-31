@@ -63,7 +63,7 @@ set -uo pipefail
 
 SCRIPT_NAME="incus-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -219,7 +219,7 @@ cmd_check() {
 
     step "Who can reach the daemon"
     if [[ -z "$CLIENT" ]] || [[ "$srv_ver" == unreachable || -z "$srv_ver" ]]; then
-        caution "the daemon did not answer (or no client is installed), so projects, listeners and remotes cannot be read: treating as unverified"
+        caution "the daemon did not answer (or no client is installed), so projects, listeners and remotes cannot be read: reporting it as exposed so you can review it"
         rc=1
     else
         https="$(q config get core.https_address | head -n1)"
@@ -261,7 +261,7 @@ cmd_check() {
         info "Nothing exposed on this host's current configuration. The affected version still needs the upgrade."
     else
         warn "Exposed or unverifiable Incus found. Upgrade to 7.5.0, or to 7.0.2 (7.0 LTS) or 6.0.7 (6.0 LTS) at the least."
-        inf "Interim (ours, not the vendor's): do not treat restricted projects as a security boundary on this release; remove untrusted users from the incus group and the trust store; do not copy or move instances from servers you do not control; ZFS-optimized transfers are not affected by CVE-2026-115377."
+        inf "PrivacySafe recommendation: do not treat restricted projects as a security boundary on this release; remove untrusted users from the incus group and the trust store; do not copy or move instances from servers you do not control; ZFS-optimized transfers are not affected by CVE-2026-115377."
         inf "Advisories: https://github.com/lxc/incus/security/advisories/GHSA-hpjh-q53p-f27r, GHSA-579w-c4rw-c8q3 and GHSA-4cph-ccqv-hm3c"
     fi
     return "$rc"

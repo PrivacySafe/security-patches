@@ -1,0 +1,59 @@
+.TH PSF-PHP2SHELL-EDGE-TEST 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-php2shell-edge-test \- Usage:
+.SH SYNOPSIS
+.ad l
+.B /\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:edge/\:\:php2shell\-edge\-test.sh
+.SH DESCRIPTION
+.ad l
+.PP
+\&./php2shell\-edge\-test.sh [options] URL
+.RS 2
+.nf
+\-\-expect MODE    block     (default) the guard is enforcing: a multipart
+                           POST to URL must get 403
+                 dry-run   the .htaccess dry run: a multipart POST must NOT
+                           get 403 and must carry
+                             X-PHP2Shell-Guard
+                 log-only  the .conf or nginx log-only mode: a
+                   multipart
+                           POST must NOT get 403 (add \-\-log FILE
+                             to also
+                           confirm the guard logged it)
+\-\-allow PATH     a path on your allowlist (for example /wp\-admin/async\-
+                 upload.php). A multipart POST to it must NOT get
+                   403, and
+                 one to PATH.bak must get 403 when enforcing
+\-\-log FILE       a log the guard writes to; used with \-\-expect log-only
+\-\-host NAME      send this Host header (the URL may be 127.0.0.1)
+\-\-insecure       do not verify a TLS certificate
+\-h, \-\-help, version
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:edge/\:\:php2shell\-edge\-test.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

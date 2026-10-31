@@ -21,7 +21,7 @@
 #
 # What a version number can and cannot show. Adobe ships this fix as an isolated patch, and
 # applying it does not change the version string. So for Magento and Adobe Commerce the script
-# reports "cannot confirm" rather than guessing, and tells you what to check. It can give a
+# tells you what to check rather than guessing. It can give a
 # firm answer for Mage-OS (the fix arrives as a release) and for a dated release string if your
 # build uses one (for example 2.4.9-2026-oct).
 #
@@ -47,7 +47,7 @@ set -uo pipefail
 
 SCRIPT_NAME="magento-check.sh"
 SCRIPT_VERSION="3.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -234,7 +234,7 @@ cmd_check() {
             else ok "${ver}: built in or after October 2026, which carries the BlockStrap fix"; fi
             continue
         fi
-        caution "${ver}: cannot confirm. Adobe ships this fix as an isolated patch, and a patch does not change the version string. Confirm with your patch tooling that the APSB26-153 fix for CVE-2026-103849 is applied, or move to the October 2026 release"
+        caution "${ver}: confirm the patch. Adobe ships this fix as an isolated patch, and a patch does not change the version string. Confirm with your patch tooling that the APSB26-153 fix for CVE-2026-103849 is applied, or move to the October 2026 release"
         rc=1
     done
     step "Verdict"

@@ -1,0 +1,100 @@
+.TH PSF-OPENSSL-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-openssl-check \- OpenSSL DTLS handshake retransmission read (heap disclosure): read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:openssl/\:\:openssl\-check.sh\fR [check]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-84782
+.PP
+OpenSSL's security release of 29 September 2026 fixed 14 flaws. One is rated High:
+CVE-2026-84782, "DTLS retransmits handshake messages from a stale buffer offset".
+When DTLS retransmits a handshake message it can read from the wrong place in a buffer,
+so a remote peer may receive unintended plaintext heap memory in the handshake data, or
+the program may crash. CISA scored it 8.2 (confidentiality low, availability high).
+Found by Laurent Gaffie (Secorizon); fix by Ryan Hooper. The FIPS module is not affected.
+.PP
+It matters only to software that speaks DTLS (TLS over UDP): VPN servers such as ocserv,
+VoIP and WebRTC servers such as Asterisk, FreeSWITCH, Janus and coturn, and IoT
+endpoints. Ordinary TLS (HTTPS, SMTP, IMAP, databases) does not use the vulnerable
+code. Node.js and Python's ssl module have no DTLS API.
+.RS 2
+.nf
+Affected: 4.0.0 before 4.0.3, 3.6 before 3.6.5, 3.5 before 3.5.9,
+  3.4 before 3.4.8,
+          3.0 before 3.0.23, 1.1.1 before 1.1.1zj, 1.0.2 before
+            1.0.2zs.
+Fixed:    public releases 4.0.3, 3.6.5, 3.5.9, 3.4.8. The fixes for 3.0 (3.0.23),
+          1.1.1 (1.1.1zj) and 1.0.2 (1.0.2zs) are available only
+            to premium-support
+          customers, and public support for 3.0 ended on 7
+            September 2026. Branches
+          3.1 to 3.3 are end of life and were not evaluated by
+            OpenSSL.
+Ubuntu:   fixed in openssl 3.5.5-1ubuntu3.6 (26.04), 3.0.13-0ubuntu3.16 (24.04) and
+          3.0.2-0ubuntu1.30 (22.04); older Ubuntu releases were
+            still "needs
+          evaluation". Other distributions backport under their
+            own version numbers.
+.fi
+.RE
+.PP
+How this script decides. A distribution package is judged by its changelog naming
+CVE-2026-84782 (a backport), and for Ubuntu also against the fixed package versions
+above. A copy that no package owns (a local build, a bundled library) is judged by the
+upstream version compared with the table. The script points you to your distribution's advisory when a
+distribution package has no changelog entry and no published fixed version to compare.
+It also reports DTLS-capable daemons that are running and processes still holding an
+old libssl in memory (a library update does not reach a running process until it
+restarts).
+.PP
+This script is read-only.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = nothing exposed, 1 = an affected or unconfirmed OpenSSL.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: OPENSSL_BIN, OPENSSL_PKG_VERSION, OPENSSL_OS_RELEASE, OPENSSL_CHANGELOG, OPENSSL_PROC,
+.RS 2
+.PP
+OPENSSL_NODE override the openssl command, the package version, /etc/os\-release, a
+changelog file (plain or .gz), /proc and the node command. OPENSSL_NO_PACKAGE=1 treats
+the installed openssl as not owned by a package (a local build).
+SCAN_CONTAINERS=1 (the default) also reads OpenSSL inside running docker and podman
+containers, judged by each container's own distribution and packages; 0 skips them.
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:openssl/\:\:openssl\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

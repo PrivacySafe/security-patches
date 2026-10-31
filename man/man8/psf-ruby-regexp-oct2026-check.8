@@ -1,0 +1,102 @@
+.TH PSF-RUBY-REGEXP-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-ruby-regexp-oct2026-check \- Ruby Regexp compilation fixes, October 2026: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:ruby/\:\:ruby\-regexp\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+GitLab CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264
+.PP
+Fixed in Ruby 4.0.9, 3.4.12 and 3.3.13 (23 Oct 2026) and in GitLab
+18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+every Ruby runtime on the host (system packages, rbenv,
+rvm, chruby, asdf, mise, vendor-bundled Rubies under /opt),
+every running Ruby process (Puma, Sidekiq, Unicorn...),
+GitLab (Omnibus, source and container installs) and
+Discourse (Docker launcher and bare-metal installs),
+with whether each is fixed. Root optional (root sees
+every process). Exit 0 = nothing exposed, 1 = something
+unfixed is running or a bundled app is unfixed, 2 =
+something couldn't be read.
+.TP
+\fBscan\fR
+.ad l
+application code that compiles regexps from strings:
+Regexp.new / Regexp.compile / Regexp.union and
+interpolated regexp literals, graded by whether the
+pattern is a literal, escaped, or worth reviewing.
+Exit 0 = nothing to review, 1 = findings, 2 = none of the
+scan paths exist, so nothing was scanned.
+.TP
+\fBhunt\fR
+.ad l
+the journal and Ruby and GitLab logs for Ruby crash
+reports, Onigmo frames in backtraces, heap corruption
+aborts and services killed by a crash signal.
+Exit 0 = clean, 1 = findings, 2 = no journal or log could
+be read, so nothing was searched.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Everything here is read-only. Ruby has no in-process switch that blocks
+these bugs: Regexp.timeout doesn't, length limits don't, and interpolated
+literals compile without passing through any method a guard could wrap.
+The fix is the upgrade.
+.PP
+This script never executes a Ruby binary. Versions are read from the
+binary's contents or from the libruby it links.
+.PP
+Env overrides:
+.RS 2
+.nf
+RUBY_FIXED_33=3.3.13 RUBY_FIXED_34=3.4.12 RUBY_FIXED_40=4.0.9
+FIXED_BUILDS="3.3.8\-2ubuntu1.2"    distro builds known to carry the fixes
+GITLAB_FIXED="18.11.13 19.0.10 19.1.9 19.2.9 19.3.6 19.4.3 19.5.1"
+DISCOURSE_ROOT="/var/discourse"   where the Docker launcher lives
+DISCOURSE_APP="/var/www/discourse"  where a bare-metal checkout
+  lives
+SCAN_PATHS="/srv /opt /var/www /home /usr/local/lib"
+SCAN_DEPTH=10                      how deep scan descends
+SCAN_GEMS=0                        1 = also scan installed gems and
+                                   vendor/bundle (noisy, slow)
+SCAN_SHOW=5                        findings printed per app and grade
+HUNT_SINCE="2026\-09\-01"            how far back hunt reads the journal
+HUNT_LOGS="/srv/app/log/*.log"     extra log globs for hunt
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:ruby/\:\:ruby\-regexp\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

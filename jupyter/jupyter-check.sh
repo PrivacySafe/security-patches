@@ -56,7 +56,7 @@ set -uo pipefail
 
 SCRIPT_NAME="jupyter-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -332,8 +332,8 @@ cmd_check() {
         info "Nothing exposed (${found} copy or pin checked). An affected Jupyter Server without the gateway and authorizer conditions still needs the update."
     else
         warn "Exposed Jupyter component found. Upgrade: pip install --upgrade 'jupyter_server>=2.6.0' 'nbconvert>=7.17.2'"
-        inf "Interim for nbconvert (ours): do not convert notebooks from untrusted sources to markdown, LaTeX, reST or AsciiDoc, and run conversions in a throwaway directory as an unprivileged user. Re-running a cell replaces the malicious output metadata; merely converting the notebook does not."
-        inf "Interim for Jupyter Server (ours): remove GatewayClient.url if you do not need a gateway."
+        inf "PrivacySafe recommendation for nbconvert: do not convert notebooks from untrusted sources to markdown, LaTeX, reST or AsciiDoc, and run conversions in a throwaway directory as an unprivileged user. Re-running a cell replaces the malicious output metadata; merely converting the notebook does not."
+        inf "PrivacySafe recommendation for Jupyter Server: remove GatewayClient.url if you do not need a gateway."
     fi
     return "$rc"
 }

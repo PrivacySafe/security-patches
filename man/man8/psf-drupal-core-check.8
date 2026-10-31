@@ -1,0 +1,119 @@
+.TH PSF-DRUPAL-CORE-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-drupal-core-check \- Drupal core Field UI and Entity List remote code execution: checker with mitigation
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:drupal/\:\:drupal\-core\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-108097 (SA-CORE-2026-014) and CVE-2026-108099 (SA-CONTRIB-2026-218)
+.PP
+The Field UI module in Drupal core does not properly validate PHP callbacks
+while it renders its tables. Drupal rates it Critical, 19/25. Drupal core
+alone is not directly exploitable: the callbacks have to be reachable from
+data an attacker controls, and that happens through contributed modules or
+custom code. At least one such path needs no authentication, which is why the
+Drupal Security Team announced it in advance (PSA-2026-10-12) and called for
+emergency patching. A research write-up with laboratory artifacts has been
+published; at disclosure no public exploit for real sites existed.
+.RS 2
+.nf
+Affected: Drupal core 8.9.0 up to 10.6.19, 11.0.0 up to 11.3.19,
+          11.4.0 up to 11.4.10, and Drupal 12 before 12.0.0-beta2
+Fixed:    10.6.19, 11.3.19, 11.4.10 (released 14 October 2026), and
+          12.0.0-beta2 for Drupal 12
+Move to:  a supported branch. 10.5.x and earlier, 11.2.x and
+  earlier, 9.x and
+          8.9.x are end of life
+Workaround published by Drupal: uninstall the core Field UI
+  module. It covers
+          only this advisory. The same release fixes two other
+            core issues
+          that only the update fixes.
+.fi
+.RE
+.PP
+CVE-2026-108099 is the same story for the contributed Entity List module
+(project entity_list), which builds lists of entities without Views. Versions
+before 3.0.10 have a critical remote code execution flaw (Drupal rating 19/25).
+It is not directly exploitable by itself, but multiple serious exploit paths exist
+with other contributed modules, at least one needs no authentication, and custom
+code may expose it. Fixed: Entity List 3.0.10 (14 October 2026). UPDATING DRUPAL
+CORE DOES NOT REPLACE THE MODULE: it needs its own update. The script checks it on
+every site it finds, whatever the core version is.
+.PP
+"check" is read-only; "mitigate" and "rollback" are the only commands that change
+anything. "check" finds Drupal sites from core/lib/Drupal.php (and
+composer.lock), applies the version rules, reads exported configuration
+(core.extension.yml) to see whether Field UI is enabled, and flags the
+contributed Entity List module and compares its version with 3.0.10 (read from
+its info.yml, or from composer.lock when the info file carries no version).
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /opt /home). Exit 0 = nothing
+exposed, 1 = an affected site is exposed, unverifiable, or on
+an end-of-life branch that cannot be patched.
+.TP
+\fBmitigate [\-\-dir DIR] [\-\-dry\-run] [\-\-force]\fR
+.ad l
+(root) changes the host. Drupal's own
+published workaround for CVE-2026-108097: uninstalls the Field UI
+module with drush (pm:uninstall field_ui) on every site whose core is
+affected and where the LIVE site (not only exported configuration)
+still has it enabled. drush runs as the owner of the site, never as
+root, and is looked up in the project's vendor/bin, then PATH. The
+field management screens are unavailable until you reinstall Field UI.
+It covers this advisory only: the same release fixes two other core
+issues, so update core as well. \-\-force uninstalls on a core that is
+not in the affected range.
+.TP
+\fBrollback [\-\-dry\-run]\fR
+.ad l
+reinstall Field UI (pm:install field_ui) on the sites mitigate changed.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Configuration kept only in the database is not visible to a file scan. On a
+live site, run in the Drupal root:
+.RS 2
+.PP
+drush pm:list \-\-status=enabled \-\-type=module \-\-format=list | grep \-x field_ui
+.RE
+.PP
+Containers: with no directory argument the check also copies the files it reads from running
+docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them) and judges them like
+host installs. The copies are temporary: a path shown as .../docker_NAME_PATH is the PATH inside
+the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:drupal/\:\:drupal\-core\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-drupal-webform-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

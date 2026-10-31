@@ -10,9 +10,9 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 [CVE-2026-110447](https://github.com/CollaboraOnline/online/security/advisories/GHSA-g3vx-3m76-fghh) is an unauthenticated OS command injection in Nextcloud's optional "Collabora Online - Built-in CODE Server" app (package `richdocumentscode`), which downloads a copy of Collabora Online Development Edition and runs it on the Nextcloud server itself. The app's `proxy.php` starts that local server when a request arrives and nothing is listening. Before 26.4.303 it built the start command by placing text from the request, including its path, inside a double-quoted bash string, so a request with `$(...)` in its path ran commands as the web server account. It is reachable only while the local CODE server is down (a restart, upgrade or crash), which is exactly when `proxy.php` tries to start it. The flaw has been exploited in the wild since September 2026 to plant PHP web shells under `apps/richdocumentscode/` (files named `shx*.php`), which then search for credential stores and wallets.
 
-The key operational point, from Collabora's advisory: **disabling the app is not enough.** `proxy.php` is a plain PHP file the web server runs directly, outside Nextcloud's code, so it stays reachable whether or not the app is enabled. The fix is to update `richdocumentscode` to 26.4.303 or later, or remove the app. The fixed app requires Nextcloud 30 or later; on Nextcloud 29 and older (end of life), upgrade Nextcloud or remove the app. Standalone Collabora Online servers, and Nextcloud Office (`richdocuments`) without the built-in app, are not affected.
+The key operational point, from Collabora's advisory: **disabling the app is not enough.** `proxy.php` is a plain PHP file the web server runs directly, outside Nextcloud's code, so it stays reachable whether or not the app is enabled. The fix is to update `richdocumentscode` to 26.4.303 or later, or remove the app. The fixed app requires Nextcloud 30 or later. On Nextcloud 29 and older (end of life), upgrade Nextcloud or remove the app. Standalone Collabora Online servers, and Nextcloud Office (`richdocuments`) without the built-in app, are not affected.
 
-This script does not run the update or removal for you, since that is an app-store or `occ` action an administrator should time. What it does: find affected installs, apply a reversible interim block by neutralizing the exploited `proxy.php`, and hunt for the web shells and request markers the attacks leave behind.
+This script does not run the update or removal for you, since that is an app-store or `occ` action an administrator should time. What it does: find affected installs, apply a reversible block by neutralizing the exploited `proxy.php`, and hunt for the web shells and request markers the attacks leave behind.
 
 ### Nextcloud Collabora quick start
 
@@ -38,7 +38,7 @@ This script does not run the update or removal for you, since that is an app-sto
    sudo ./collabora-code-oct2026-mitigate.sh check
    ```
 
-4. Apply the interim block if you cannot update or remove the app immediately. It backs up `proxy.php` first and is reversible.
+4. Apply the block if you cannot update or remove the app immediately. It backs up `proxy.php` first and is reversible.
 
    ```bash
    sudo ./collabora-code-oct2026-mitigate.sh apply
@@ -63,7 +63,7 @@ This script does not run the update or removal for you, since that is an app-sto
 
 ### Why `apply` edits `proxy.php` rather than disabling the app
 
-Because disabling the app does nothing: the web server serves `proxy.php` directly, outside Nextcloud. Neutralizing that one file closes the exploited path at once, no matter how the app is enabled or which web server is in front, and it is reversible (`restore`) and self-healing (an app update to 26.4.303 replaces the stub with the fixed `proxy.php`). It is an interim step, not the fix: update the app to 26.4.303 or later, or remove it.
+Because disabling the app does nothing: the web server serves `proxy.php` directly, outside Nextcloud. Neutralizing that one file closes the exploited path at once, no matter how the app is enabled or which web server is in front, and it is reversible (`restore`) and self-healing (an app update to 26.4.303 replaces the stub with the fixed `proxy.php`). The fix is to update the app to 26.4.303 or later, or remove it.
 
 ### Nextcloud Collabora configuration
 
@@ -77,18 +77,22 @@ Because disabling the app does nothing: the web server serves `proxy.php` direct
 | `HUNT_SINCE` | `2026-09-01` | How far back `hunt` reads the journal |
 | `HUNT_LOGS` | *(empty)* | Extra access-log globs for `hunt` |
 
-### Nextcloud Collabora know before you run it
+## Before you run it
 
-- **The real fix is update or remove, which this script does not do for you.** Update `richdocumentscode` to 26.4.303 or later, or remove the app through Nextcloud. `apply` is an interim, reversible block for the window before you can.
-- **Disabling the app does not help.** `proxy.php` runs directly from the web server, so it stays reachable when the app is disabled. This is why `apply` edits that file.
-- **`apply` disables the built-in CODE server.** Document editing through the built-in CODE server stops until you update the app (which restores a safe `proxy.php`) or `restore` and then update. The app is for local, non-production use by its own description.
-- **Neutralizing `proxy.php` trips Nextcloud's integrity check.** That is expected: the file is intentionally changed. The integrity check is also a useful detector here, since it flags a planted web shell as a new file.
-- **If you were already exploited, closing the hole is not enough.** Run `hunt`, delete any `shx*.php` under `apps/richdocumentscode/`, and treat anything the web server account could read as exposed: rotate credentials and check for access to credential stores and wallets.
-- **On Nextcloud 29 and older the fixed app cannot be installed.** Upgrade Nextcloud to 30+ or remove the app.
-- **GNU/Linux only**, and it finds installs under `NC_PATHS`; point `NC_PATHS` at an install kept elsewhere.
-- **Only `--force` is a recognised option.** Any other option is refused with exit `2`, so a mistyped or invented flag (for example `restore --dry-run`) can never turn into a real `apply` or `restore`.
+- The real fix is update or remove, which this script does not do for you. Update `richdocumentscode` to 26.4.303 or later, or remove the app through Nextcloud. `apply` is a reversible block that protects the app until you update.
+- Disabling the app does not help. `proxy.php` runs directly from the web server, so it stays reachable when the app is disabled. This is why `apply` edits that file.
+- `apply` disables the built-in CODE server. Document editing through the built-in CODE server stops until you update the app (which restores a safe `proxy.php`) or `restore` and then update. The app is for local, non-production use by its own description.
+- Neutralizing `proxy.php` trips Nextcloud's integrity check. That is expected: the file is intentionally changed. The integrity check is also a useful detector here, since it flags a planted web shell as a new file.
+- If you were already exploited, closing the hole is not enough. Run `hunt`, delete any `shx*.php` under `apps/richdocumentscode/`, and treat anything the web server account could read as exposed: rotate credentials and check for access to credential stores and wallets.
+- On Nextcloud 29 and older the fixed app cannot be installed. Upgrade Nextcloud to 30+ or remove the app.
+- GNU/Linux only , and it finds installs under `NC_PATHS`. Point `NC_PATHS` at an install kept elsewhere.
+- Only `--force` is a recognized option. Any other option is refused with exit `2`, so a mistyped or invented flag (for example `restore --dry-run`) can never turn into a real `apply` or `restore`.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

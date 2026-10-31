@@ -1,0 +1,87 @@
+.TH PSF-BIND-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-bind-check \- ISC BIND 9 GSS-TSIG memory corruption: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:bind/\:\:bind\-check.sh\fR [command] [PATH-TO-named ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-94300
+.PP
+Replaying a GSS-TSIG signed UDP message can corrupt memory in named, the BIND 9
+name server. ISC says that, combined with crafted queries to a zone the attacker
+controls, it can lead to remote code execution, and at minimum it can crash
+named. Rated High, CVSS 8.1 (the attack is complex: the attacker must capture a
+signed message and replay it while the key is still valid). ISC knows of no
+active exploitation and lists NO WORKAROUND.
+.RS 2
+.nf
+Affected: BIND 9.11.0 through 9.18.50, 9.20.0 through 9.20.29,
+          9.21.0 through 9.21.26 (and matching \-S1 Supported
+            Preview builds)
+Fixed:    9.20.30 and 9.21.27 (9.20.30-S1 for the Preview Edition)
+Move to:   9.20. The 9.18 branch and everything older is end of life. Distributions that still
+          support 9.18 may backport the fix: the script looks for
+            that.
+.fi
+.RE
+.PP
+The code is present in every build, but the vulnerable path needs GSS-TSIG,
+which is used for secure dynamic updates against Kerberos or Active Directory.
+One analysis says builds without GSS-TSIG configured do not reach it; ISC's
+advisory text does not spell out which configuration is required,
+so the script reports whether GSS-TSIG is configured as a hint, never as proof
+of safety, and tells you to update either way.
+.PP
+The same BIND releases fix three other denial of service flaws, which only the
+update fixes.
+.PP
+This script is read-only. It finds named binaries (PATH, usual locations and
+running processes), reads the version from "named \-v", reads named.conf and its
+include files, and looks for GSS-TSIG settings. It never reloads named.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = nothing exposed, 1 = an affected version is exposed
+or its configuration could not be read.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Environment: NAMED_CONF (space separated files) replaces configuration discovery.
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe captures the daemon's version
+output and its configuration (secrets are redacted inside the container before anything is
+copied) into a private temporary directory, and this script then runs once per container, in
+isolation, against that copy. Paths shown as .../docker_NAME/... are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:bind/\:\:bind\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

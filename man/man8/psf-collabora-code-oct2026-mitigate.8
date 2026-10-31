@@ -1,0 +1,113 @@
+.TH PSF-COLLABORA-CODE-OCT2026-MITIGATE 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-collabora-code-oct2026-mitigate \- Nextcloud Collabora Built-in CODE Server command injection: mitigation
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:nextcloud/\:\:collabora\-code\-oct2026\-mitigate.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-110447
+.PP
+The optional Nextcloud app "Collabora Online \- Built-in CODE Server"
+(package richdocumentscode) ships a proxy.php that the web server runs
+directly, outside Nextcloud's code. Before 26.4.303 it built the command to
+start the local CODE server by placing text from the request, including its
+path, inside a double-quoted bash string, so a request with $(...) in its
+path ran commands as the web server account, without logging in. It is
+reachable only while the local CODE server is down (a restart, upgrade or
+crash), which is when proxy.php tries to start it. The flaw has been
+exploited in the wild since September 2026 to plant PHP web shells
+(apps/richdocumentscode/shx*.php). Collabora is explicit that DISABLING the
+app is not enough, because proxy.php is served whether or not the app is
+enabled: it must be updated to >= 26.4.303 or removed. The fixed app needs
+Nextcloud 30 or later; on Nextcloud 29 and older, upgrade Nextcloud or
+remove the app. Standalone Collabora Online servers, and Nextcloud Office
+(richdocuments) without the built-in app, are not affected. A separate
+earlier command-injection fix in the same script does not close this one.
+.PP
+The real fix is to update richdocumentscode to >= 26.4.303 or remove it,
+which this script does not do for you (an app-store update or removal, run
+through Nextcloud's occ, is the administrator's call). What apply does is an
+reversible mitigation: it neutralizes the exploited proxy.php on a
+vulnerable install by replacing it with a stub that returns HTTP 403 and
+builds no command, backing the original up first. That closes the exploited
+path at once and disables the built-in CODE server until you update or
+remove the app; restore puts the original back, and an app update replaces
+the stub with the fixed proxy.php on its own.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+find every Nextcloud with the built-in CODE app, report
+the app version (fixed at 26.4.303), the Nextcloud version
+(the fix needs 30+), and the proxy.php state. Read-only,
+root optional. Exit 0 = nothing exposed, 1 = a vulnerable
+app is present, 2 = something couldn't be read.
+.TP
+\fBapply\fR
+.ad l
+neutralize the exploited proxy.php on every vulnerable
+install (backup first, idempotent, reversible). Needs
+write access to the app, so run as root or the web user.
+Refuses an already-fixed app unless \-\-force.
+.TP
+\fBrestore\fR
+.ad l
+put the original proxy.php back where apply replaced it.
+.TP
+\fBstatus\fR
+.ad l
+show which installs this script has mitigated.
+.TP
+\fBhunt\fR
+.ad l
+read-only: the app folders for planted web shells
+(shx*.php and a known shell by hash) and the web server
+access logs for the exploitation markers. Exit 0 = clean,
+1 = findings, 2 = no app folder and no readable log, so
+nothing was searched.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+NC_PATHS="/var/www /srv /opt"     where to look for Nextcloud installs
+RICHDOC_FIXED=26.4.303            first fixed app version
+NC_MIN_FOR_FIX=30                 Nextcloud major the fixed app requires
+BACKUP_ROOT=/\:var/\:backups/\:collabora\-code\-oct2026
+HUNT_SINCE="2026\-09\-01"           how far back hunt reads the journal
+HUNT_LOGS="/srv/app/log/*.log"    extra access-log globs for hunt
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:nextcloud/\:\:collabora\-code\-oct2026\-mitigate.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

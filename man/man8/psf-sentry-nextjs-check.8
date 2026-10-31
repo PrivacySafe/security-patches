@@ -1,0 +1,90 @@
+.TH PSF-SENTRY-NEXTJS-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-sentry-nextjs-check \- @sentry/nextjs tunnelRoute middleware bypass: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:sentry/\:\:sentry\-nextjs\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-114139 (GHSA-mchm-gjx6-7h55)
+.PP
+The tunnelRoute option of the Sentry SDK for Next.js sends browser events to a path
+on your own server (for example /monitoring), where a rewrite forwards them to
+Sentry. To stop your middleware rejecting those envelope requests, the SDK makes
+the webpack build skip middleware for them. The skip is WIDER than the rewrite: it
+covers every path under the tunnel path, while the rewrite serves only the exact
+tunnel path with valid query parameters. A request in that gap reaches your
+application and your middleware never runs on it. Skipping middleware grants no
+privileges by itself. CVSS 9.1 (v4.0).
+.RS 2
+.nf
+Affected: @sentry/nextjs 9.36.0 up to 9.47.2, 10.0.0-alpha.0 up to
+  10.75.2,
+          11.0.0-alpha.0 up to 11.0.0-rc.1
+Fixed:    9.47.2, 10.75.2 and 11.0.0-rc.1 (all exist on the npm registry)
+.fi
+.RE
+.PP
+EXPLOITATION NEEDS ALL FOUR OF THESE AT ONCE:
+.RS 2
+.PP
+1. tunnelRoute is set (a string path, or true);
+2. the app is built with webpack (Turbopack builds are not affected);
+3. one of your routes resolves under the tunnel path;
+4. your middleware is the ONLY authorization control for that route.
+.RE
+.PP
+The vendor's own workaround: set tunnelRoute to a path no route of yours can resolve
+under, or remove the option.
+.PP
+This script is read-only. It finds Next.js projects, reads the @sentry/nextjs version
+from package-lock.json, npm-shrinkwrap.json, yarn.lock, pnpm-lock.yaml, bun.lock and
+installed node_modules, then reads next.config.* for tunnelRoute, guesses the bundler
+from the build script and the Next.js version, and looks for routes that collide with
+the tunnel path. Conditions 2 and 3 are judged from file and script contents; condition 4 cannot be seen from
+outside the application, so review it yourself.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /opt /home). Exit 0 = nothing
+exposed, 1 = an affected version with tunnelRoute on a webpack
+build, or a configuration that could not be read.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no directory argument the check also reads the project files it needs from
+running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
+read-only probe, and judges them like host projects. The copies are temporary: a path shown as
+\&.../docker_NAME/PATH is the PATH inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:sentry/\:\:sentry\-nextjs\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

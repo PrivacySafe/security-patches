@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# Linux kernel local root quartet: read-only checker  (v1)
+# Linux kernel local root quartet: checker  (v1)
 # DirtyAH6 CVE-2026-80844, TUNderflow CVE-2026-81000, PPPoEject CVE-2026-68121,
 # DiagSpill CVE-2026-74469
 #
@@ -49,14 +49,14 @@
 # builds). Debian puts it in `uname -v`. Ubuntu, RHEL and its derivatives, SUSE and Amazon Linux
 # backport fixes under release strings that do not say which fixes they carry, so a number from
 # them cannot be compared with the table. For those the vendor changelog is the evidence: the
-# script looks in it for each CVE, and says "cannot confirm" when it is absent. A kernel that
+# script looks in it for each CVE, and points you to the vendor's tracker when it is absent. A kernel that
 # is a stable release candidate (-rc) is judged as the release before it.
 #
 # What the exposure lines mean. They report whether the module each flaw needs is loaded,
 # built in or loadable, and whether unprivileged user namespaces are allowed. That is
 # information for you to weigh, not a verdict: a kernel below its fixed release is affected
 # whatever these show, and a process with the right capabilities, such as a container, does not
-# need a user namespace for the first three. That reading is the project's, not the vendor's.
+# need a user namespace for the first three. That reading is the project's.
 #
 # A container shows the host's kernel, so run this on the host.
 #
@@ -67,9 +67,41 @@
 #   ./linux-kernel-lpe-check.sh [check]
 #   check (default)  Exit 0 = the running kernel has all four fixes (or vendor backports),
 #                    1 = affected by at least one, or a vendor backport could not be confirmed.
+#   mitigate [--userns] [--modules LIST] [--force] [--dry-run]   (root) changes the host.
+#                    The researcher's protective measures; a patched kernel is the
+#                    permanent fix: they only act when check finds
+#                    the kernel affected (--force overrides). Choose what to apply,
+#                    because each can break software that depends on it:
+#                      --userns        stops unprivileged user namespaces, using the
+#                                      mildest switch this kernel has:
+#                                      kernel.unprivileged_userns_clone=0, else
+#                                      kernel.apparmor_restrict_unprivileged_userns=1
+#                                      (restricts, does not fully block). Only with
+#                                      --force does it fall back to
+#                                      user.max_user_namespaces=0, which stops ALL new
+#                                      user namespaces. Breaks rootless containers
+#                                      (podman, rootless docker), flatpak and browser
+#                                      sandboxes. The change is applied live and
+#                                      written to a sysctl.d file. It does not stop
+#                                      DiagSpill, which needs no namespace.
+#                      --modules LIST  prevents loading of the listed modules, from:
+#                                      ah6 tun pppoe sctp sctp_diag ebt_snat (or all).
+#                                      "install NAME /bin/false" lines in a modprobe.d
+#                                      file. A module that is loaded now is left alone
+#                                      (it cannot be unloaded safely here) unless
+#                                      --force, which still only blocks later loads.
+#                                      tun is used by OpenVPN, Tailscale and QEMU
+#                                      networking; sctp by telecom software; pppoe by
+#                                      DSL dial-up; ah6 by IPsec AH; ebt_snat by
+#                                      bridge firewalls.
+#                    --dry-run shows everything and changes nothing. Previous sysctl
+#                    values are saved so that rollback can put them back.
+#   rollback [--dry-run]   restore the saved sysctl values and remove the files mitigate wrote.
 #   version          print the script version.
 #
 # Env: KERNEL_CHANGELOG   a vendor changelog file to read, plain or .gz
+#      STATE_DIR (default /var/lib/psf-security-patches/linux-kernel), SYSCTL_D and
+#      MODPROBE_D (default /etc/sysctl.d and /etc/modprobe.d) for mitigate and rollback
 #      KERNEL_RELEASE, KERNEL_VERSION_STRING   override uname -r and uname -v
 #      KERNEL_MODULES_FILE, KERNEL_PROC_SYS    override /proc/modules and /proc/sys
 #      KERNEL_BUILTIN_FILE   override /lib/modules/<release>/modules.builtin
@@ -81,8 +113,9 @@ set -uo pipefail
 
 SCRIPT_NAME="linux-kernel-lpe-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/linux-kernel}"
 
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -270,7 +303,7 @@ cmd_check() {
                         affected) bad "${name} (${id}): upstream ${up} is below the fixed release of its branch" ;;
                         eol)      bad "${name} (${id}): upstream ${up} is on a branch with no upstream fix listed (end of life): only a vendor backport fixes it" ;;
                         unknown)  caution "${name} (${id}): cannot parse upstream version '${up}', and the vendor changelog does not name ${id}" ;;
-                        vendor)   caution "${name} (${id}): cannot confirm. The vendor changelog does not name ${id} (or is not readable), and this release string cannot be compared with the upstream table" ;;
+                        vendor)   caution "${name} (${id}): The vendor changelog does not name ${id} (or is not readable), and this release string cannot be compared with the upstream table" ;;
                     esac
                     rc=1; n_bad=$((n_bad+1)); affected_ids+=("${id}|${name}|${mods}|${needns}")
                 fi ;;
@@ -305,6 +338,128 @@ cmd_check() {
     return "$rc"
 }
 
+
+# ---------- mitigate and rollback --------------------------------------------
+LM_MANIFEST=""; LM_DRY=0
+lm_note() { [[ "$LM_DRY" -eq 1 ]] || echo "$1" >>"$LM_MANIFEST"; }
+lm_valid_mods="ah6 tun pppoe sctp sctp_diag ebt_snat"
+
+lm_sysctl_set() {   # path-under-proc-sys value
+    local ps="${KERNEL_PROC_SYS:-/proc/sys}" f old
+    f="$ps/$1"; old="$(cat "$f" 2>/dev/null)"
+    if [[ "$LM_DRY" -eq 1 ]]; then echo "  would set ${1//\//.}=$2 (now ${old:-unreadable})"; return 0; fi
+    if printf '%s\n' "$2" >"$f" 2>/dev/null; then
+        lm_note "sysctl|$1|${old}"; ok "set ${1//\//.}=$2 (was ${old:-unknown}), applied now"; return 0
+    fi
+    bad "could not write ${f}: read-only /proc/sys (a container?) or no permission"; return 1
+}
+
+cmd_mitigate() {
+    local userns=0 mods="" force=0 rc=0 rel ps m st line keys="" lines="" sd md mf cnt=0 did=0 mt
+    local -a want=() mlines=()
+    LM_DRY=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --userns) userns=1 ;; --force) force=1 ;; --dry-run) LM_DRY=1 ;;
+            --modules) shift; mods="${1:-}"; [[ -n "$mods" ]] || die "--modules needs a comma separated list (${lm_valid_mods// /,} or all)" ;;
+            *) die "Unknown mitigate option: $1 (--userns --modules LIST --force --dry-run)" ;;
+        esac
+        shift
+    done
+    [[ $userns -eq 1 || -n "$mods" ]] || die "mitigate needs --userns and/or --modules LIST, because each measure can break software that depends on it (see --help). Nothing was changed."
+    if [[ -n "$mods" ]]; then
+        [[ "$mods" == all ]] && mods="${lm_valid_mods// /,}"
+        for m in ${mods//,/ }; do
+            case " $lm_valid_mods " in *" $m "*) want+=("$m") ;; *) die "not a module this tool knows: ${m} (${lm_valid_mods// /,})" ;; esac
+        done
+    fi
+    [[ $LM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    rel="${KERNEL_RELEASE:-$(uname -r)}"; ps="${KERNEL_PROC_SYS:-/proc/sys}"
+    step "Is this kernel affected?"
+    if cmd_check >/dev/null 2>&1; then
+        if [[ $force -eq 0 ]]; then info "check finds this kernel fixed (or carrying vendor backports): nothing to do (use --force to apply anyway)"; return 0; fi
+        caution "check finds this kernel fixed, applying anyway because of --force"
+    else bad "check finds kernel ${rel} affected or no vendor backport is confirmed: applying the measures you chose"; fi
+    if [[ $LM_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        LM_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$LM_MANIFEST"
+    else LM_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
+    sd="${SYSCTL_D:-/etc/sysctl.d}"; md="${MODPROBE_D:-/etc/modprobe.d}"
+    if [[ $userns -eq 1 ]]; then
+        step "Unprivileged user namespaces"
+        local keypath="" val=""
+        if [[ -e "$ps/kernel/unprivileged_userns_clone" ]]; then keypath="kernel/unprivileged_userns_clone"; val=0
+        elif [[ -e "$ps/kernel/apparmor_restrict_unprivileged_userns" ]]; then keypath="kernel/apparmor_restrict_unprivileged_userns"; val=1; caution "this switch restricts unprivileged namespaces to AppArmor-allowed programs; it does not block them outright"
+        elif [[ -e "$ps/user/max_user_namespaces" ]]; then
+            if [[ $force -eq 1 ]]; then keypath="user/max_user_namespaces"; val=0; caution "using user.max_user_namespaces=0: this stops ALL new user namespaces (rootless containers, flatpak, browser sandboxes)"
+            else caution "this kernel only has user.max_user_namespaces, which stops ALL user namespaces (rootless containers, flatpak, browser sandboxes): left alone. Add --force to use it."; rc=1; fi
+        else caution "no user namespace switch found under ${ps}"; rc=1; fi
+        if [[ -n "$keypath" ]]; then
+            if lm_sysctl_set "$keypath" "$val"; then
+                lines="${keypath//\//.} = ${val}"; did=1
+                if [[ $LM_DRY -eq 0 ]]; then
+                    mkdir -p "$sd" && { printf '# psf-security-patches: Linux kernel local root quartet protective measure (linux-kernel-lpe-check.sh mitigate). Remove with: rollback\n%s\n' "$lines" >"$sd/99-psf-kernel-lpe.conf" && lm_note "file|$sd/99-psf-kernel-lpe.conf" && ok "persistent across reboots: ${sd}/99-psf-kernel-lpe.conf"; }
+                else echo "  would write ${sd}/99-psf-kernel-lpe.conf"; fi
+            else rc=1; fi
+        fi
+    fi
+    if [[ ${#want[@]} -gt 0 ]]; then
+        step "Module loading"
+        for m in "${want[@]}"; do
+            st="$(mod_state "$m" "$rel")"
+            case "$st" in
+                loaded) if [[ $force -eq 1 ]]; then caution "${m}: loaded now; blocking later loads only (it stays loaded until reboot or unload)"; mlines+=("$m")
+                        else caution "${m}: loaded and probably in use: left alone (--force blocks later loads only)"; fi ;;
+                builtin) inf "${m}: built into the kernel: a modprobe rule cannot block it" ;;
+                absent) inf "${m}: not present on this kernel: nothing to block" ;;
+                *) mlines+=("$m") ;;
+            esac
+        done
+        if [[ ${#mlines[@]} -gt 0 ]]; then
+            mf="$md/psf-kernel-lpe.conf"
+            mt="# psf-security-patches: Linux kernel local root quartet protective measure (linux-kernel-lpe-check.sh mitigate). Remove with: rollback"
+            for m in "${mlines[@]}"; do mt+=$'\n'"blacklist ${m}"$'\n'"install ${m} /bin/false"; done
+            if [[ $LM_DRY -eq 1 ]]; then echo "  would write ${mf}:"; printf '%s\n' "$mt" | sed 's/^/      /'
+            else
+                mkdir -p "$md" && printf '%s\n' "$mt" >"$mf" && { lm_note "file|${mf}"; ok "loading blocked for: ${mlines[*]} (${mf})"; did=1; }
+            fi
+        fi
+    fi
+    step "Result"
+    if [[ $LM_DRY -eq 1 ]]; then info "Dry run finished: nothing was changed"
+    elif [[ $did -eq 1 ]]; then info "Applied. Backups and manifest: ${STATE_DIR}. Undo with: $0 rollback"
+    else info "Nothing was changed"; fi
+    inf "These are the researcher's measures, applied by PrivacySafe. The fix is a patched kernel and a reboot."
+    return "$rc"
+}
+
+cmd_rollback() {
+    local line kind rest path old f rc=0 ps="${KERNEL_PROC_SYS:-/proc/sys}"
+    LM_DRY=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) LM_DRY=1 ;; *) die "Unknown rollback option: $1 (--dry-run)" ;; esac
+        shift
+    done
+    LM_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$LM_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $LM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    step "Rolling back"
+    while IFS= read -r line; do
+        kind="${line%%|*}"; rest="${line#*|}"
+        case "$kind" in
+            sysctl) path="${rest%%|*}"; old="${rest#*|}"
+                if [[ -z "$old" ]]; then caution "${path//\//.}: previous value unknown, left alone"; rc=1; continue; fi
+                if [[ $LM_DRY -eq 1 ]]; then echo "  would set ${path//\//.}=${old}"; else printf '%s\n' "$old" >"$ps/$path" 2>/dev/null && ok "restored ${path//\//.}=${old}" || { bad "could not write ${path}"; rc=1; }; fi ;;
+            file) f="$rest"; if [[ $LM_DRY -eq 1 ]]; then echo "  would remove ${f}"; else rm -f "$f" && ok "removed ${f}"; fi ;;
+        esac
+    done <"$LM_MANIFEST"
+    if [[ $LM_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$LM_MANIFEST" "${LM_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back. A module that was blocked can load again."
+    fi
+    return "$rc"
+}
+
 main() {
     CMD="${1:-check}"; [[ $# -gt 0 ]] && shift
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
@@ -313,7 +468,9 @@ main() {
     echo "DirtyAH6, TUNderflow, PPPoEject and DiagSpill (CVE-2026-80844, -81000, -68121, -74469): Linux kernel local root"
     case "$CMD" in
         check) cmd_check "$@" ;;
-        *) die "Unknown command: ${CMD} (check|version)" ;;
+        mitigate) cmd_mitigate "$@" ;;
+        rollback) cmd_rollback "$@" ;;
+        *) die "Unknown command: ${CMD} (check|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

@@ -1,0 +1,98 @@
+.TH PSF-PLEX2SHELL-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-plex2shell-oct2026-check \- Plex Media Server "Plex2Shell" RCE chain: check and hunt
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:plex/\:\:plex2shell\-oct2026\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-96651 CVE-2026-96652 CVE-2026-96654 CVE-2026-96655 CVE-2026-96656
+.PP
+"Plex2Shell" chains flaws in Plex Media Server into unauthenticated remote
+code execution: an SSRF on /player/timeline (CVE-2026-96652), an admin-token
+theft via searchOne (CVE-2026-96654), a second SSRF on the transcode path
+(CVE-2026-96655), and a file write into the Codecs directory that drops and
+runs an ELF shared object (CVE-2026-96656); CVE-2026-96651 was fixed in the
+same release. Plex fixed all of them in Plex Media Server 1.43.3.10861 (3
+August 2026). A public proof-of-concept landed on 16 October 2026 and
+exploitation began the next day: attackers drop an XMRig miner (seen as
+"mylovelyminer", fetched as "x12345") and a reverse-proxy backdoor
+("myawesomeproxy"), with mining and proxy traffic to proxystream[.]st.
+.PP
+The fix is to upgrade to 1.43.3.10861 or later (including NAS, Docker and VM
+installs) and restart, which this script does not do for you. It is
+read-only: it reports the Plex version on the host and in containers and
+judges it, and hunts for the known compromise indicators. Successful
+exploitation runs code as the Plex service account, so if this host was
+exposed and unpatched, treat it as compromised: rebuild from a clean install,
+rotate the Plex account credentials and server token, and remove
+any router port-forwarding to Plex until it is updated. Attackers rotate file
+names, domains and ports, so a clean hunt means none of the published indicators were found; the version is the reliable signal.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+the Plex Media Server version on the host and in running
+containers, judged against 1.43.3.10861. Read-only, root
+optional. Exit 0 = fixed/none, 1 = a vulnerable Plex is
+present, 2 = a version couldn't be read.
+.TP
+\fBhunt\fR
+.ad l
+read-only: Plex data directories, /tmp and logs for the
+known indicators (the miner and proxy file names, the
+Codecs-directory payload, the proxyware banner, the mining
+domain and attacker IPs) and for the miner/proxy running.
+Exit 0 = clean, 1 = findings.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+PLEX_FIXED=1.43.3.10861           first fixed Plex Media Server build
+PLEX_DATA_PATHS="/\:var/\:lib/\:plexmediaserver ..."
+                                  where to look for Plex data
+                                    directories
+SCAN_CONTAINERS=1                 1 = read the Plex version inside containers
+HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt
+SCAN_DEPTH=7                      how deep the search for Plex data directories goes
+CODECS_SINCE_DAYS=30              how far back hunt lists changed files in the
+                                  Codecs directory
+HUNT_ROOTS="/tmp /var/tmp /dev/shm"
+                                  scratch directories hunt
+                                    searches for payload
+                                  files and indicator strings
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:plex/\:\:plex2shell\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

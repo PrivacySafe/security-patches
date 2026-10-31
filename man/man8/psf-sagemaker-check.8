@@ -1,0 +1,79 @@
+.TH PSF-SAGEMAKER-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-sagemaker-check \- Amazon SageMaker Python SDK default_bucket() takeover: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:sagemaker/\:\:sagemaker\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-112408
+.PP
+The SDK's default_bucket() uses an S3 bucket named sagemaker-{region}-{AWS account ID}
+and, in affected versions, does not check that the bucket belongs to your account.
+Region and account ID are not secret, so another AWS account can pre-create a bucket
+with that name; the SDK then reads from and writes to the attacker's bucket, which can
+give the attacker code execution in your SageMaker execution environment and your IAM
+credentials. Amazon rates it 8.1 (CVSS 3.1); the CNA record also carries 9.4.
+.RS 2
+.nf
+Affected: V2 before 2.257.3, and V3 (3.0.0) before 3.10.0
+Fixed:    2.257.3 and 3.10.0 (both exist on PyPI). The fix adds an
+          ExpectedBucketOwner check to the SDK's S3 operations.
+Bulletin:
+  https:/\:/\:aws.amazon.com/\:security/\:security\-bulletins/\:2026\-142\-aws/\:
+.fi
+.RE
+.PP
+A separate flaw in the same releases (repository credentials written to CloudWatch
+Logs by git_utils) is fixed by the same upgrade; it is not counted separately here.
+.PP
+This script is read-only and makes no AWS calls. It finds installed copies and pinned
+versions, and lists the Python files and notebooks that call default_bucket() so you
+know where the default bucket is relied on. It cannot tell whether someone has
+already pre-created your bucket name: see the manual check it prints.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /usr/lib /usr/local/lib /opt /srv /var/lib /home
+/root). Exit 0 = nothing affected, 1 = an affected SDK found.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe copies the package metadata
+directories and the lock, requirements and environment files that mention sagemaker (index URLs
+and credentials are dropped inside the container) into a private temporary directory, and this
+script runs once per container in isolation against that copy. Paths shown as .../docker_NAME/...
+are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:sagemaker/\:\:sagemaker\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

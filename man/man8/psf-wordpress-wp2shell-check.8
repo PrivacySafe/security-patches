@@ -1,0 +1,163 @@
+.TH PSF-WORDPRESS-WP2SHELL-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-wordpress-wp2shell-check \- wp2shell, WordPress core pre-authentication RCE: checker, hunter and mitigation
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress/\:\:wordpress\-wp2shell\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-63030 (REST batch route confusion)
+.PP
+CVE-2026-60137 (SQL injection in WP_Query author__not_in)
+.PP
+Disclosed and fixed on 17 July 2026, exploited in the wild from 20 July, and added to
+CISA's Known Exploited Vulnerabilities catalog on 21 July. Chained, the two flaws give an
+unauthenticated attacker remote code execution on a default WordPress install, with no
+plugins and no login. Observed attacks create rogue administrator accounts and install
+webshells.
+.RS 2
+.PP
+CVE-2026-63030  REST API batch endpoint (/wp\-json/batch/v1 or /?rest_route=/batch/v1).
+A malformed sub-request path desynchronizes the matched handlers from
+the requests, so later sub-requests run under the wrong permission
+check. Affects 6.9.0 through 6.9.4 and 7.0.0 through 7.0.1.
+CVE-2026-60137  When author__not_in reaches WP_Query as a string rather than an array
+it skips integer sanitization and is interpolated into the SQL WHERE
+clause. Affects 6.8.0 through 6.8.5, 6.9.0 through 6.9.4 and 7.0.0
+through 7.0.1. On 6.8.x the batch flaw is absent, so the SQL injection
+needs another way to reach it and the full chain does not apply.
+.RE
+.RS 2
+.PP
+Fixed: 6.8.6, 6.9.5, 7.0.2, and 7.1 beta 2 (every 7.1 release after beta 1).
+WordPress before 6.8.0 is not affected.
+.RE
+.RS 2
+.PP
+Object cache: when a persistent object cache (Redis, Memcached) is active, the
+SQL injection sink is not reached and the chain does not fire on currently
+affected installs. The site still needs the update; disabling or flushing the
+cache later re-exposes it. Discovered by Adam Kues of Searchlight Cyber.
+.RE
+.PP
+The fixes are recognizable in the source. The SQL injection fix replaces the is_array
+test and implode() in wp\-includes/class\-wp\-query.php with wp_parse_id_list(); the batch
+fix adds a guard against starting a new top-level REST cycle while one is already
+dispatching, in wp\-includes/\:rest\-api/\:class\-wp\-rest\-server.php. A distribution package
+can carry both fixes under an older version number, so this script reads the files as
+well as the version.
+.PP
+Protective measure when you cannot update at once: refuse both URL forms of the batch
+route at the web server, for example in nginx
+.RS 2
+.PP
+location ~* "^/wp\-json/batch" { return 403; }
+if ($args ~* "rest_route=(%2F|/)batch") { return 403; }
+.RE
+.PP
+or in Apache
+.RS 2
+.PP
+RewriteRule ^wp\-json/batch \- [F,L]
+RewriteCond %{QUERY_STRING} rest_route=(%2F|/)batch [NC]
+RewriteRule ^ \- [F,L]
+.RE
+.PP
+Both forms must be covered. The block stops the chain's entry point; it does not fix
+the SQL injection, so update anyway. The block editor uses the batch route for some
+saves, so expect that editing may be affected until you update.
+.PP
+"check" and "hunt" are read-only; "mitigate" and "rollback" are the only commands that change
+anything. It finds WordPress installs by wp\-includes/version.php.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+find WordPress under DIR (default /var/www /srv /home /opt
+/usr/share/wordpress /usr/share/nginx /var/lib/wordpress), read each
+version, read the two source files for the fixes, and look for a
+web server block on the batch route. Exit 0 = nothing exposed,
+1 = an install without the fixes, or one whose state is unclear.
+.TP
+\fBmitigate [options]\fR
+.ad l
+(root) changes the host. The documented protective measure: refuses
+both URL forms of the REST batch route (/wp\-json/batch and
+?rest_route=/batch) at the web server, which closes the entry point of
+the unauthenticated chain. It does not fix the SQL injection, so
+update. Only when an exposed WordPress is found (\-\-force overrides).
+nginx: an include as the first line of every PHP-serving server block,
+checked with nginx \-t. Apache: psf-wp2shell-batch-block.conf (server
+scope, so virtual hosts inherit it), checked with a configtest. If the
+web server rejects the result everything is undone at once. Matches
+the route anywhere in the path, so a WordPress in a subdirectory is
+covered. The block editor uses the route for some saves.
+.RS 2
+.TP 10
+\fB\-\-web auto|apache|nginx\fR
+.ad l
+which web server (default auto)
+.TP 10
+\fB\-\-dir DIR\fR
+.ad l
+where to look for WordPress (repeat)
+.TP 10
+\fB\-\-server\-name NAME\fR
+.ad l
+nginx: only the server block that lists NAME
+.TP 10
+\fB\-\-dry\-run, \-\-reload, \-\-force\fR
+.ad l
+
+.RE
+.TP
+\fBrollback [\-\-dry\-run] [\-\-reload]\fR
+.ad l
+remove what mitigate added and restore the files it edited.
+.TP
+\fBhunt\fR
+.ad l
+look for signs of exploitation: batch route requests and SQL
+injection strings in web server logs, PHP files in wp\-content/
+uploads, and recent changes to mu-plugins. Exit 0 = nothing found,
+1 = a strong lead. A clean hunt means none of the published indicators were found.
+proof of safety.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: HUNT_SINCE (YYYY-MM-DD, default 2026-07-17) for file changes;
+.RS 2
+.PP
+WP2S_LOGS (space separated paths or globs) to name web server logs.
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:wordpress/\:\:wordpress\-wp2shell\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-wordpress-plugins-oct2026-check(8), psf-wordpress-xss2shell-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

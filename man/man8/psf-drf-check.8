@@ -1,0 +1,129 @@
+.TH PSF-DRF-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-drf-check \- Django REST framework October 2026: checker with mitigation
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:django/\:\:drf\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-114138 (Accept header CPU exhaustion)
+.PP
+CVE-2026-114137 (TokenProxy.delete() revokes nothing)
+.PP
+Django REST framework (DRF) is the standard toolkit for building web APIs on
+Django. Both flaws are fixed in DRF 3.18.2.
+.PP
+CVE-2026-114138  DefaultContentNegotiation accepts an unbounded number and size
+.RS 2
+.PP
+of Accept header tokens, and parses each one repeatedly for
+every renderer. A remote, unauthenticated client can send many
+distinct media types with large quoted parameters and burn
+about 19 seconds of CPU per request. Every API view does
+content negotiation, so any reachable endpoint is a target.
+CVSS 7.5. Affected: every release before 3.18.2 (the 0.x and
+2.x lines are not fixed upstream). The cost also involves
+Django's own header parameter parser, which Django fixed
+separately in 5.2.18, 6.0.9 and 6.1.2, so keep Django current
+as well.
+.RE
+.PP
+CVE-2026-114137  From 3.12.0 until 3.18.2, TokenProxy.delete() in
+.RS 2
+.PP
+rest_framework.authtoken uses the wrong primary key, so the
+delete matches no row and reports success. The token keeps
+working. DRF tokens do not expire, so code that revokes access
+through a TokenProxy instance leaves the access open
+indefinitely. CVSS 7.4. Only sites with rest_framework.authtoken
+installed are exposed, and DRF's own admin delete is not
+affected. Revocation done with Token.objects (not TokenProxy)
+works on every version.
+.RE
+.PP
+"check" is read-only; "mitigate" and "rollback" are the only commands that change
+anything. "check" finds installed copies (dist-info and egg-info
+metadata) and declared pins (requirements, poetry.lock, uv.lock, pdm.lock,
+Pipfile.lock), notes where rest_framework.authtoken and TokenProxy appear in
+project source, and for installed copies compares the neighbouring Django.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /usr/lib /usr/local/lib /opt /srv /var/www
+/var/lib /home /root). Exit 0 = nothing affected, 1 = an
+affected copy or pin was found.
+.TP
+\fBmitigate [options]\fR
+.ad l
+(root) changes the host. PrivacySafe protection: real Accept headers are far shorter than 1 KB, so
+nginx answers 406 to an Accept header of 1024 characters or more,
+which bounds the cost of the attack. Only when an affected copy is
+found (\-\-force overrides). Adds a map block right after "http {" and
+an include as the first line of every server block that proxies
+(proxy_pass, uwsgi_pass or scgi_pass), then checks with nginx \-t; if
+nginx rejects the result everything is undone at once. nginx only.
+.RS 2
+.TP 10
+\fB\-\-server\-name NAME\fR
+.ad l
+only the server block that lists NAME (repeat)
+.TP 10
+\fB\-\-dir DIR\fR
+.ad l
+where to look for Django REST framework (repeat)
+.TP 10
+\fB\-\-dry\-run\fR
+.ad l
+show the changes, change nothing
+.TP 10
+\fB\-\-reload\fR
+.ad l
+graceful reload afterwards (systemd)
+.TP 10
+\fB\-\-force\fR
+.ad l
+apply even if no affected copy is found
+.RE
+.TP
+\fBrollback [\-\-dry\-run] [\-\-reload]\fR
+.ad l
+remove what mitigate added and restore the files it edited.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no directory argument the check also reads the project files it needs from
+running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
+read-only probe, and judges them like host projects. The copies are temporary: a path shown as
+\&.../docker_NAME/PATH is the PATH inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:django/\:\:drf\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

@@ -27,7 +27,7 @@
 # The real fix is to update richdocumentscode to >= 26.4.303 or remove it,
 # which this script does not do for you (an app-store update or removal, run
 # through Nextcloud's occ, is the administrator's call). What apply does is an
-# interim, reversible mitigation: it neutralizes the exploited proxy.php on a
+# reversible mitigation: it neutralizes the exploited proxy.php on a
 # vulnerable install by replacing it with a stub that returns HTTP 403 and
 # builds no command, backing the original up first. That closes the exploited
 # path at once and disables the built-in CODE server until you update or
@@ -82,7 +82,7 @@ KNOWN_SHELL_SHA256="4b9fbd0663fbfd6028fc216ed18e0d6ef3ae498a7fdc97083e4b0ce3cec4
 KNOWN_IPS="139.28.18.122 89.38.98.50"
 SCRIPT_NAME="collabora-code-oct2026-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 ADVISORY="https://github.com/CollaboraOnline/online/security/advisories/GHSA-g3vx-3m76-fghh"
 FORCE=0
@@ -179,7 +179,7 @@ cmd_check() {
     [[ $rc -eq 0 && $unknownz -eq 1 ]] && rc=2
     case $rc in
         0) info "No vulnerable built-in CODE app found where this could read one" ;;
-        1) warn "A vulnerable built-in CODE app is present. Update richdocumentscode to ${RICHDOC_FIXED} or later, or remove the app; disabling it is not enough. For an interim, reversible block run 'apply'. Then run 'hunt' to look for planted web shells. Advisory: ${ADVISORY}" ;;
+        1) warn "A vulnerable built-in CODE app is present. Update richdocumentscode to ${RICHDOC_FIXED} or later, or remove the app; disabling it is not enough. For a reversible block run 'apply'. Then run 'hunt' to look for planted web shells. Advisory: ${ADVISORY}" ;;
         *) warn "Some installs couldn't be read. Rerun as root to read every install" ;;
     esac
     return "$rc"
@@ -192,7 +192,7 @@ write_stub() {   # <proxy.php path>
     cat >"$tmp" <<PHP
 <?php
 // ${STUB_MARKER} ${CVE}
-// The original proxy.php was neutralized as an interim mitigation because it
+// The original proxy.php was neutralized as an mitigation because it
 // was exploitable (${CVE}). Restore it with this repo's mitigate script
 // 'restore' command, or update the app to >= ${RICHDOC_FIXED}, which replaces
 // this file with the fixed proxy.php. The built-in CODE server will not start
@@ -223,7 +223,7 @@ cmd_apply() {
     done < <(find_apps)
     echo
     info "neutralized ${did}, already done ${skipped}, failed ${failed}"
-    inf "This is interim. Update richdocumentscode to ${RICHDOC_FIXED} or later, or remove the app, then (optionally) 'restore'. Run 'hunt' to check for web shells already planted."
+    inf "This block protects the app until you update. Update richdocumentscode to ${RICHDOC_FIXED} or later, or remove the app, then (optionally) 'restore'. Run 'hunt' to check for web shells already planted."
     [[ $failed -eq 0 ]]
 }
 
@@ -312,7 +312,7 @@ cmd_hunt() {
         done
     fi
     echo
-    echo "  A hit is a lead, not proof. A shx*.php file in the app folder, a request to"
+    echo "  A hit tells you where to look. A shx*.php file in the app folder, a request to"
     echo "  proxy.php with \$( or \${IFS} in its path, or a known attacker IP is worth"
     echo "  treating as a compromise: anything the web server account could read may be"
     echo "  exposed (check for *.kdbx, wallet.dat, keystore.json and credential stores),"
@@ -339,4 +339,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

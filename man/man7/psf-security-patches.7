@@ -1,0 +1,362 @@
+.TH PSF\-SECURITY\-PATCHES 7 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "Miscellaneous"
+.ad l
+.SH NAME
+.ad l
+psf\-security\-patches \- security checks, hunts and protection for serious vulnerabilities
+.SH DESCRIPTION
+.ad l
+.PP
+Free security tools for GNU/Linux servers (and one for developer machines), written by PrivacySafe Foundation with the help of Ivy Cyber and released into the public domain. When a serious vulnerability is announced, each tool tells you whether your machine is exposed and looks for signs that someone has already used the flaw. Where there is a safe way to do it, the tool also protects the machine until you can update. Everything is plain bash.
+.SH GETTING STARTED
+.ad l
+.IP 1. 3
+Run the tool's \fBcheck\fR. It changes nothing.
+.IP 2. 3
+If you are exposed, install the vendor's update. That is the permanent fix.
+.IP 3. 3
+If you cannot update yet, run \fBmitigate \-\-dry\-run\fR to see what the protection would do, then \fBmitigate\fR. \fBrollback\fR undoes it.
+.IP 4. 3
+If the flaw was being exploited, run \fBhunt\fR, then change any password, key or token an attacker could have reached.
+.SH NEWEST: 22 TO 30 OCTOBER 2026
+.ad l
+.TP
+30 October 2026: \fBpsf-vsftpd-ftps-ticket-check\fR(8)
+.ad l
+vsftpd FTPS data channel hijack (CVE-2026-119568) and a denial of service in Red Hat family packages (CVE-2025-14242)
+.TP
+29 October 2026: \fBpsf-claude-code-vsx-oct2026-check\fR(8)
+.ad l
+the tampered Claude Code extension served from Cursor's marketplace (no CVE)
+.TP
+25 October 2026: \fBpsf-brotli-oct2026-check\fR(8)
+.ad l
+Brotli decoder out-of-bounds write (CVE-2026-111497)
+.TP
+24 October 2026: \fBpsf-grav-core-check\fR(8)
+.ad l
+Grav core allowlist bypass (CVE-2026-116019)
+.TP
+23 October 2026: \fBpsf-basercms-check\fR(8)
+.ad l
+baserCMS 5 (CVE-2026-114621, CVE-2026-114622, CVE-2026-114624)
+.TP
+23 October 2026: \fBpsf-openapi-codegen-check\fR(8)
+.ad l
+openapi-typescript-codegen code injection (CVE-2026-108551)
+.TP
+23 October 2026: \fBpsf-ruby-regexp-oct2026-check\fR(8)
+.ad l
+Ruby and GitLab regular expression memory corruption
+.TP
+22 October 2026: \fBpsf-drf-check\fR(8)
+.ad l
+Django REST framework (CVE-2026-114138, CVE-2026-114137)
+.TP
+22 October 2026: \fBpsf-expat-check\fR(8)
+.ad l
+libexpat entity amplification (CVE-2026-115506)
+.TP
+22 October 2026: \fBpsf-haproxy-check\fR(8)
+.ad l
+HAProxy HTTP/2 PING frame (CVE-2026-110353)
+.TP
+22 October 2026: \fBpsf-rsyslog-dynafile-audit\fR(8)
+.ad l
+rsyslog dynaFile path traversal (CVE-2026-92709)
+.TP
+22 October 2026: \fBpsf-yootheme-check\fR(8)
+.ad l
+YOOtheme Pro remote code execution (CVE-2026-102785)
+.SH ALL TOOLS
+.ad l
+.TP
+\fBpsf-basercms-check\fR(8)
+.ad l
+baserCMS 5 admin SQL injection, path traversal and deserialization: read-only checker
+.TP
+\fBpsf-bind-check\fR(8)
+.ad l
+ISC BIND 9 GSS-TSIG memory corruption: read-only checker
+.TP
+\fBpsf-brotli-oct2026-check\fR(8)
+.ad l
+Brotli decoder out-of-bounds write, October 2026: read-only checker
+.TP
+\fBpsf-claude-code-vsx-oct2026-check\fR(8)
+.ad l
+Claude Code extension SSH backdoor (Cursor marketplace, 29 October 2026): check, hunt, update, keys, clean
+.TP
+\fBpsf-collabora-code-oct2026-mitigate\fR(8)
+.ad l
+Nextcloud Collabora Built-in CODE Server command injection: mitigation
+.TP
+\fBpsf-couchdb-check\fR(8)
+.ad l
+Apache CouchDB admin-to-OS-command execution: read-only checker
+.TP
+\fBpsf-craftcms-check\fR(8)
+.ad l
+Craft CMS Twig create() blocklist bypass: read-only checker
+.TP
+\fBpsf-curl-oct2026-check\fR(8)
+.ad l
+curl HTTP/2 upload use-after-free, October 2026: read-only checker
+.TP
+\fBpsf-drf-check\fR(8)
+.ad l
+Django REST framework October 2026: checker with mitigation
+.TP
+\fBpsf-drupal-core-check\fR(8)
+.ad l
+Drupal core Field UI and Entity List remote code execution: checker with mitigation
+.TP
+\fBpsf-drupal-webform-check\fR(8)
+.ad l
+Drupal Webform remote code execution: read-only checker
+.TP
+\fBpsf-emudhra-mitigate\fR(8)
+.ad l
+eMudhra intermediate CA compromise, mitigation
+.TP
+\fBpsf-expat-check\fR(8)
+.ad l
+libexpat billion laughs detection delay: read-only checker
+.TP
+\fBpsf-ghostaction-oct2026-check\fR(8)
+.ad l
+GhostAction stage-2 developer-machine stealer: scan, hunt and contain
+.TP
+\fBpsf-gitea-check\fR(8)
+.ad l
+Gitea SSH certificate principal impersonation: read-only checker
+.TP
+\fBpsf-gitlab-check\fR(8)
+.ad l
+GitLab security releases of October 2026: read-only checker
+.TP
+\fBpsf-grav-core-check\fR(8)
+.ad l
+Grav CMS core allowlist bypass through Flex form overrides: read-only checker
+.TP
+\fBpsf-grav-login-check\fR(8)
+.ad l
+Grav CMS Login plugin invitation privilege escalation: read-only checker
+.TP
+\fBpsf-haproxy-check\fR(8)
+.ad l
+HAProxy truncated HTTP/2 PING frame denial of service: checker
+.TP
+\fBpsf-incus-check\fR(8)
+.ad l
+Incus October 2026 host-compromise flaws: read-only checker
+.TP
+\fBpsf-jenkins-check\fR(8)
+.ad l
+Jenkins plugin security advisory of 16 September 2026 (20 CVEs): read-only checker
+.TP
+\fBpsf-joomla-check\fR(8)
+.ad l
+Joomla core, September 2026 security release (16 issues): checker with mitigation
+.TP
+\fBpsf-jupyter-check\fR(8)
+.ad l
+Jupyter Server and nbconvert October 2026: read-only checker
+.TP
+\fBpsf-laravel-tokenguard-check\fR(8)
+.ad l
+Laravel TokenGuard authentication bypass: read-only checker
+.TP
+\fBpsf-libheif-oct2026-check\fR(8)
+.ad l
+libheif HEIF/AVIF decoder check
+.TP
+\fBpsf-linux-kernel-check\fR(8)
+.ad l
+Linux kernel ebtables SNAT out-of-bounds write: read-only checker
+.TP
+\fBpsf-linux-kernel-lpe-check\fR(8)
+.ad l
+Linux kernel local root quartet: checker
+.TP
+\fBpsf-litellm-escalation-check\fR(8)
+.ad l
+LiteLLM proxy admin escalation: read-only checker
+.TP
+\fBpsf-litellm-oct2026-check\fR(8)
+.ad l
+LiteLLM 1.107.0 supply-chain compromise: detect, hunt and contain
+.TP
+\fBpsf-magento-check\fR(8)
+.ad l
+Magento, Adobe Commerce and Mage-OS email-template RCE (BlockStrap): read-only checker
+.TP
+\fBpsf-nextjs-server-actions-check\fR(8)
+.ad l
+Next.js Server Actions denial of service: read-only checker
+.TP
+\fBpsf-nginx-oct2026-check\fR(8)
+.ad l
+nginx October 2026 security release: checker with optional workarounds
+.TP
+\fBpsf-nginx-ui-check\fR(8)
+.ad l
+nginx-ui restricted-directive bypass (authenticated RCE): read-only checker
+.TP
+\fBpsf-node-oct2026-mitigate\fR(8)
+.ad l
+Node.js October 2026 mitigation
+.TP
+\fBpsf-openapi-codegen-check\fR(8)
+.ad l
+openapi-typescript-codegen code injection, October 2026: read-only checker
+.TP
+\fBpsf-openssl-check\fR(8)
+.ad l
+OpenSSL DTLS handshake retransmission read (heap disclosure): read-only checker
+.TP
+\fBpsf-php-session-audit\fR(8)
+.ad l
+PHP session audit for the CVE-2026-115560 preconditions
+.TP
+\fBpsf-php2shell-cpanel-mitigate\fR(8)
+.ad l
+PHP2Shell mitigation for cPanel EasyApache 4
+.TP
+\fBpsf-php2shell-edge-test\fR(8)
+.ad l
+Usage:
+.TP
+\fBpsf-php2shell-mitigate\fR(8)
+.ad l
+PHP2Shell mitigation for PHP-FPM 7.0 through 8.5
+.TP
+\fBpsf-php2shell-watch\fR(8)
+.ad l
+php2shell-watch: follow PHP and web server logs live and flag trouble
+.TP
+\fBpsf-pillow-oct2026-check\fR(8)
+.ad l
+Pillow 13.0.0 security release: read-only checker
+.TP
+\fBpsf-plex2shell-oct2026-check\fR(8)
+.ad l
+Plex Media Server "Plex2Shell" RCE chain: check and hunt
+.TP
+\fBpsf-pulsar-check\fR(8)
+.ad l
+Apache Pulsar October 2026: read-only checker
+.TP
+\fBpsf-roundcube-oct2026-check\fR(8)
+.ad l
+Roundcube Webmail 1.6.20 and 1.7.5 security release: read-only checker
+.TP
+\fBpsf-rsyslog-dynafile-audit\fR(8)
+.ad l
+rsyslog dynaFile path traversal: configuration audit
+.TP
+\fBpsf-ruby-regexp-oct2026-check\fR(8)
+.ad l
+Ruby Regexp compilation fixes, October 2026: read-only checker
+.TP
+\fBpsf-sagemaker-check\fR(8)
+.ad l
+Amazon SageMaker Python SDK default_bucket() takeover: read-only checker
+.TP
+\fBpsf-sentry-nextjs-check\fR(8)
+.ad l
+@sentry/nextjs tunnelRoute middleware bypass: read-only checker
+.TP
+\fBpsf-storybook-check\fR(8)
+.ad l
+Storybook dev server code injection from the local network: read-only checker
+.TP
+\fBpsf-tomcat-oct2026-check\fR(8)
+.ad l
+Apache Tomcat October 2026: request/response mix-up checker
+.TP
+\fBpsf-trafficserver-check\fR(8)
+.ad l
+Apache Traffic Server experimental plugins, October 2026: read-only checker
+.TP
+\fBpsf-vsftpd-ftps-ticket-check\fR(8)
+.ad l
+vsftpd FTPS data channel hijack (require_ssl_reuse bypass): checker
+.TP
+\fBpsf-wordpress-plugins-oct2026-check\fR(8)
+.ad l
+WordPress plugin checks, October 2026: LiteSpeed Cache, Rank Math PRO, OttoKit, SureCart,
+.TP
+\fBpsf-wordpress-pt-check\fR(8)
+.ad l
+WordPress core page-template path traversal: read-only checker
+.TP
+\fBpsf-wordpress-wp2shell-check\fR(8)
+.ad l
+wp2shell, WordPress core pre-authentication RCE: checker, hunter and mitigation
+.TP
+\fBpsf-wordpress-xss2shell-check\fR(8)
+.ad l
+WordPress XSS2Shell pre-auth XSS, October 2026: read-only checker
+.TP
+\fBpsf-yootheme-check\fR(8)
+.ad l
+YOOtheme Pro 5 unauthenticated remote code execution: checker
+.TP
+\fBpsf-zammad-check\fR(8)
+.ad l
+Zammad session hijack and local privilege escalation: read-only checker
+.SH COMMON COMMANDS
+.ad l
+.TP
+\fBcheck\fR
+.ad l
+Reports whether this machine is exposed. Read-only. Most tools run it when you give no command; the PHP2Shell and eMudhra mitigation scripts apply their protection instead, so type the command every time.
+.TP
+\fBhunt\fR
+.ad l
+Looks for signs of exploitation. Read-only.
+.TP
+\fBmitigate\fR
+.ad l
+Applies protection you can undo. Copies every file first, checks the result with the service's own checker, puts the original back if the check fails, and reloads nothing unless you ask. Supports \fB\-\-dry\-run\fR.
+.TP
+\fBrollback\fR
+.ad l
+Undoes what mitigate changed.
+.SH ENVIRONMENT
+.ad l
+.TP
+\fBSCAN_CONTAINERS\fR
+.ad l
+Set to 0 to skip running docker and podman containers.
+.TP
+\fBSTATE_DIR\fR
+.ad l
+Where a tool keeps its backups and rollback record. Each tool documents its default under /var/lib/psf\-security\-patches.
+.SH FILES
+.ad l
+.TP
+\fB/opt/psf\-security\-patches/\fR
+.ad l
+The tools, one folder per product.
+.TP
+\fB/usr/share/doc/psf\-security\-patches/\fR
+.ad l
+README, change log, licence and notice. On RPM systems the folder is psf\-security\-patches\-VERSION.
+.SH SEE ALSO
+.ad l
+info psf\-security\-patches
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance is disclosed in each script, in the Assisted-by line of its header, and in each manual page.
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.

@@ -1,0 +1,91 @@
+.TH PSF-LINUX-KERNEL-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-linux-kernel-check \- Linux kernel ebtables SNAT out-of-bounds write: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:linux\-kernel/\:\:linux\-kernel\-check.sh\fR [check]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-53266
+.PP
+CVE-2026-53266 is an out-of-bounds write in the bridge netfilter ebtables SNAT target.
+When the target rewrites the ARP sender hardware address, it writes into a
+socket-buffer fragment, which can be backed by a page imported from a file, without
+first making that range writable. A local user with CAP_NET_ADMIN who can reach that
+path can cause memory corruption, a crash, or privilege escalation to root.
+.PP
+CISA added it to the Known Exploited Vulnerabilities catalog on 18 September 2026 with
+a three-day federal deadline. CVSS 8.8 (NVD, CVSS 3.1); Red Hat scores it 7.5. CWE-787.
+.RS 2
+.PP
+Fixed in the stable kernels:
+5.10.259  5.15.210  6.1.176  6.6.143  6.12.94  6.18.36  7.0.13
+Branches with no upstream fix listed (end of life, for example 5.4): a vendor
+backport is the only fix.
+.RE
+.PP
+Why this script reads the kernel's origin first. The upstream patch level is in the
+release string only on kernels that follow the stable series (vanilla, Arch, Alpine,
+most custom builds). Debian puts it in `uname \-v`. Ubuntu, RHEL and its derivatives,
+SUSE and Amazon Linux backport fixes under release strings that do not say which
+fixes they carry (for example 6.8.0-45-generic, 5.14.0-503.el9), so a number from
+them cannot be compared with the table above. For those the vendor changelog is the
+evidence: the script looks in it for CVE-2026-53266, and points you to the vendor's tracker when
+it is absent.
+.PP
+What the exposure lines mean. The CVE needs an ebtables SNAT rule that rewrites the
+ARP sender hardware address (the \-\-snat\-arp option). Seeing no such rule on the host
+does NOT make a kernel safe: a local user with CAP_NET_ADMIN inside a user namespace
+may be able to create one in their own network namespace. The script therefore
+reports the rules, whether the ebt_snat module is loaded or loadable, and whether
+unprivileged user namespaces are allowed, as information for you to weigh. That
+reading is the project's.
+.PP
+This script is read-only.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = the running kernel has the fix (or a vendor backport),
+1 = affected, or the vendor backport could not be confirmed.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: KERNEL_CHANGELOG   a vendor changelog file to read, plain or .gz
+.RS 2
+.nf
+KERNEL_RELEASE, KERNEL_VERSION_STRING   override uname \-r and uname \-v
+KERNEL_MODULES_FILE, KERNEL_PROC_SYS    override /proc/modules and /proc/sys
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:linux\-kernel/\:\:linux\-kernel\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-linux-kernel-lpe-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

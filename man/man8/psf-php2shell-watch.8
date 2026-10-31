@@ -1,0 +1,124 @@
+.TH PSF-PHP2SHELL-WATCH 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-php2shell-watch \- php2shell-watch: follow PHP and web server logs live and flag trouble
+.SH SYNOPSIS
+.ad l
+.B /\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:php2shell\-watch.sh
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-109618 / CVE-2026-109619
+.PP
+Prints one line per hit, and a count summary on stop. A hit is a lead to
+investigate: extensions crash workers too, and the upload-progress field is in
+legit forms. Only patching PHP fixes the bug.
+.PP
+Design notes, from a 24 October 2026 honeypot report by the phpot project
+(35 confirmed shell executions on single-worker Apache mod_php):
+https:/\:/\:github.com/\:0x4D31/\:honeypot\-data/\:blob/\:main/\:reports/\:php2shell/\:2026\-10\-24\-confirmed\-rce.md
+.RS 2
+.nf
+* The stages of that chain answered HTTP 200, and the final
+  request, the
+  one that starts the shell, never reached the access log because
+    the worker
+  died. The POST-500 correlation below cannot see that. The
+    pre-script-OOM
+  then same-worker-crash correlation and the per-client OOM burst
+    can.
+* The strongest signal in that report was process-level: an Apache
+  worker
+  starting /bin/sh. Logs only show the residue, so this script
+    also polls
+  /proc for shells and tools that appear under a web worker
+    (PROCS=0 to
+  turn off). It is a poller: a process that starts and exits
+    between two
+  samples is missed, and one whose worker has already died is
+    re-parented
+  and no longer links to it. For a guarantee use execve auditing
+    (auditd,
+  eBPF) instead; this is the cheap version.
+* Request fingerprints and source IPs are weak, fast-aging
+  signals: an
+  attacker changes them. They are here as extra leads, not as
+    protection.
+* The q-parameter fingerprint matches both the short numbered form
+  (?q0=v&q1=v&q2=v...) and the seven-digit form, because different
+    clients
+  used different ones. A process this script flags shows its TCP
+    peers
+  (the phpot report's shells tried to call out), and a POST with a
+    very
+  large response, or a PHPSESSID value thousands of characters
+    long, is
+  flagged as a LEAD: the disclosure stage returned a PHPSESSID of
+    819,200
+  bytes decoded (about 2 MB on the wire).
+* The per-client burst and the same-worker chain alert need the
+  error-log
+  line to carry the worker PID and the client address. Apache's
+    own error
+  log does; PHP's own error_log file format ("[23-Oct-2026
+    09:08:35 UTC]
+  PHP Fatal error: ...") carries neither, so those two alerts
+    cannot fire
+  from it. The plain per-line signature still does. The first such
+    line
+  prints a one-time NOTE.
+* nginx's "upstream sent too big header" error is flagged as a
+  LEAD. At
+  default fastcgi buffer sizes nginx refuses a leak-sized
+    Set-Cookie with a
+  502 and that line, so on nginx it is the counterpart of the
+    oversized
+  response size the access log cannot show. Large legitimate
+    headers raise
+  it too.
+.fi
+.RE
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBsudo ./php2shell\-watch.sh\fR
+.ad l
+# watch here; Ctrl-C to stop
+.TP
+\fBsudo nohup ./php2shell\-watch.sh >/var/log/php2shell\-watch.log 2>&1 &\fR
+.ad l
+# background
+.TP
+\fBtail \-f /var/log/php2shell\-watch.log # then watch it\fR
+.ad l
+
+.TP
+\fBLOGS="/a.log /b.log" ./php2shell\-watch.sh\fR
+.ad l
+# watch specific files
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:php/\:\:php2shell\-watch.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-php-session-audit(8), psf-php2shell-cpanel-mitigate(8), psf-php2shell-mitigate(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Opus 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

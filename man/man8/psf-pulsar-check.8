@@ -1,0 +1,102 @@
+.TH PSF-PULSAR-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-pulsar-check \- Apache Pulsar October 2026: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:pulsar/\:\:pulsar\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-105869 (broker, forged JWT roles, critical 9.2)
+.PP
+CVE-2026-105942 (broker, proxied requests, high 7.7)
+CVE-2026-105944 (Pulsar Manager, missing authentication, CVSS 10, retired)
+.PP
+BROKER. The Apache Pulsar PMC published 14 advisories on 21 October 2026, all fixed in
+4.0.14, 4.2.5 and 5.0.0. This script covers two that depend on configuration:
+.RS 2
+.PP
+CVE-2026-105869  2.8.1 before 4.0.14, and 4.1.0 before 4.2.5. With
+MultiRolesTokenAuthorizationProvider and a NON-EMPTY
+anonymousUserRole, HTTP and WebSocket requests whose credentials
+FAIL authentication fall back to the anonymous role, and the
+provider then authorizes them with the roles listed in the
+UNVERIFIED bearer token. A forged or unsigned token can claim a
+superuser role. The binary protocol is not affected.
+CVE-2026-105942  2.8.1 before 4.0.14, and 4.1.0 before 4.2.5. For requests a proxy
+sends on behalf of a user, the broker authorized the original
+principal with the proxy's own authentication data: with
+MultiRolesTokenAuthorizationProvider the user gains the roles in
+the proxy's token, and, whatever the provider, the tenant admin
+check of a proxied admin REST request passed without checking the
+original principal when the proxy role was a tenant admin.
+Only relevant when a proxy role is configured (proxyRoles).
+.RE
+.PP
+Neither is reachable on a default broker: authentication, authorization,
+anonymousUserRole and proxyRoles are all off or empty by default.
+The other twelve advisories in the same announcement are fixed by the same
+upgrade; they are not counted separately here.
+.PP
+PULSAR MANAGER. CVE-2026-105944 (CVSS 10): in 0.3.0 and later anyone who can reach
+Pulsar Manager over the network can take full control of it (the call that creates the
+first administrator is available without authentication and stays available after
+setup), and in all versions, when it holds an HTTP authentication credential for a
+cluster, any user who can reach it can perform the admin operations that credential
+permits and can have it send the credential to a host of their choosing. Affected:
+0.1.0 through 0.4.0, which is every release. The Pulsar PMC has RETIRED it: there is no
+fix and there will not be one. The advice is to stop using it and remove it.
+.PP
+This script is read-only. It finds Pulsar brokers (by their jars), reads their
+broker.conf and standalone.conf, scans configuration files, compose files, Helm values
+and env files for the exposing settings, and looks for Pulsar Manager (jars, running
+processes, listeners on 7750 and 9527, container images). It does not open the
+container images: for containers it reads the files beside them and tells you to
+check the tag.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /opt /srv /usr/local /var/lib /etc /home /root).
+Exit 0 = nothing exposed, 1 = an affected broker with an exposing
+configuration, an exposing configuration of unknown version, or
+Pulsar Manager present.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe copies the broker jar names
+(empty files, only the name carries the version) and, from each configuration file, only the lines
+that mention authorizationProvider, anonymousUserRole, authorizationEnabled or proxyRoles, so
+tokens and secret keys never leave the container. This script then runs once per container in
+isolation against that copy. Paths shown as .../docker_NAME/... are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:pulsar/\:\:pulsar\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

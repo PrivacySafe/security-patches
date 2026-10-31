@@ -17,8 +17,7 @@
 #   Affected (CVE record): 1.87.0 up to 1.100.4, 1.101.0 up to 1.101.3, 1.102.0 up to
 #             1.102.2, 1.103.0 up to 1.103.1, and 1.104.0-rc.1 up to 1.104.0-rc.2
 #   Fixed:    1.100.4, 1.101.3, 1.102.2, 1.103.1 and 1.104.0-rc.2 (all on PyPI), and
-#             every later release. 1.87.0 through 1.99.x have no fixed release of their
-#             own: move to 1.100.4 or newer.
+#             every later release. move 1.87.0 through 1.99.x to 1.100.4 or newer.
 #   Note:     The vendor advisory lists 1.91.0 as the first exploitable version; a
 #             third-party reading says 1.87.0 to 1.90.x need EXPERIMENTAL_UI_LOGIN and
 #             1.91.0 and later are exploitable by default. This script treats the whole
@@ -58,7 +57,7 @@ set -uo pipefail
 
 SCRIPT_NAME="litellm-escalation-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----

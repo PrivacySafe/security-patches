@@ -17,8 +17,7 @@
 #   Not affected: Pages Router applications, and App Router applications that
 #   have no Server Action.
 #
-# Next.js 13.x and 14.x have no patched release on their own branch, so those
-# apps have to move to 15.5.28 or later.
+# Next.js 13.x and 14.x apps move to 15.5.28 or later.
 #
 # This script is read-only. It reads the Next.js version from package-lock.json,
 # npm-shrinkwrap.json, yarn.lock, pnpm-lock.yaml and from installed
@@ -45,7 +44,7 @@ set -uo pipefail
 
 SCRIPT_NAME="nextjs-server-actions-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -289,7 +288,7 @@ cmd_check() {
             continue
         fi
         bad "next ${v} is affected by CVE-2026-94482"
-        [[ "${v%%.*}" -le 14 ]] && inf "13.x and 14.x have no patched release: move to 15.5.28 or later"
+        [[ "${v%%.*}" -le 14 ]] && inf "13.x and 14.x move to 15.5.28 or later"
         if server_actions_present "$dir"; then
             bad "this project uses Server Actions (${ACT_EVIDENCE}): exposed"
             rc=1

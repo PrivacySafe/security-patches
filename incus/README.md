@@ -58,16 +58,16 @@ Exit codes: `0` nothing exposed, `1` an affected version that cannot be shown to
 
 ## How to read the result
 
-- **Version outside every affected range:** done.
-- **Affected, and restricted projects, `incus` group members, or a network listener with trusted certificates exist:** exposed. CVE-2026-115375 and CVE-2026-115377 are judged against those; CVE-2026-115372 only against restricted projects, because there is no restriction to bypass without one.
-- **A configured remote server** (a non-public Incus remote that is not the local socket) makes **only** CVE-2026-115377 exposed, because a migration source is what that flaw needs. The public `images` remote is not a migration source.
-- **Affected, but only administrators can reach the daemon:** a warning and exit `0`. Upgrade anyway.
-- **The daemon does not answer:** the version is still judged, but exposure cannot be read, so the result is unverified and exits `1`.
-- **Distribution packages:** a package can carry a fix under an old version number. The script reads the package changelog for these CVE and advisory ids and says when it finds a backport. As of 25 October 2026 the changelog of Ubuntu 24.04's `incus 6.0.0-1ubuntu0.3` contains only no-change rebuilds and no backport, so that package is in the affected range of CVE-2026-115377.
+- Version outside every affected range: done.
+- Affected, and restricted projects, `incus` group members, or a network listener with trusted certificates exist: exposed. CVE-2026-115375 and CVE-2026-115377 are judged against those. CVE-2026-115372 only against restricted projects, because there is no restriction to bypass without one.
+- A configured remote server (a non-public Incus remote that is not the local socket) makes **only** CVE-2026-115377 exposed, because a migration source is what that flaw needs. The public `images` remote is not a migration source.
+- Affected, but only administrators can reach the daemon: a warning and exit `0`. Upgrade anyway.
+- The daemon does not answer: the version is still judged, but exposure cannot be read, so the result is reported as exposed (exit `1`) for you to review.
+- Distribution packages: a package can carry a fix under an old version number. The script reads the package changelog for these CVE and advisory ids and says when it finds a backport. Ubuntu 24.04's `incus 6.0.0-1ubuntu0.3` carries no backport of CVE-2026-115377, so that package is in the affected range: update it as soon as Ubuntu publishes the fixed package.
 
 ## Fixing it
 
-Upgrade to 7.5.0, or to 7.0.2 (the 7.0 LTS) or 6.0.7 (the 6.0 LTS) at the least. Until you can (our reasoning, not the vendor's): do not treat restricted projects as a security boundary on this release; remove untrusted users from the `incus` group and the trust store; do not copy or move instances from servers you do not control; and note that optimized ZFS transfers are not affected by CVE-2026-115377.
+Upgrade to 7.5.0, or to 7.0.2 (the 7.0 LTS) or 6.0.7 (the 6.0 LTS) at the least. Until you can (PrivacySafe recommendation): do not treat restricted projects as a security boundary on this release. Remove untrusted users from the `incus` group and the trust store. Do not copy or move instances from servers you do not control, and note that optimized ZFS transfers are not affected by CVE-2026-115377.
 
 ## Sources
 
@@ -75,14 +75,18 @@ Upgrade to 7.5.0, or to 7.0.2 (the 7.0 LTS) or 6.0.7 (the 6.0 LTS) at the least.
 - [GHSA-579w-c4rw-c8q3](https://github.com/lxc/incus/security/advisories/GHSA-579w-c4rw-c8q3)
 - [Incus release news](https://linuxcontainers.org/incus/news/)
 
-## Incus know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 6.0.7 (the 6.0 LTS, which fixes CVE-2026-115377 only), 7.0.2 (the 7.0 LTS) or 7.5.0. CVE-2026-115372 affects 7.3.0 before 7.5.0, so only 7.5.0 fixes it.
-- **It matters where a client is confined.** All three let a client the daemon is meant to confine act as root on the host. A full administrator is already as powerful as host root, so the flaws matter with restricted projects, restricted client certificates, members of the unprivileged `incus` unix group, or an instance migrated in from a server you do not control.
-- **The ranges differ.** CVE-2026-115375 affects 7.0.0 before 7.0.2 and 7.1.0 before 7.5.0 (6.x is not affected); CVE-2026-115377 affects everything before 6.0.7, 6.1.0 before 7.0.2 and 7.1.0 before 7.5.0, and optimized ZFS transfers are not affected by it. The script reads the daemon's version if it answers, else the package's, else the client's, and asks the daemon read-only questions about restricted projects, the network listener, trusted client certificates, configured remotes and the members of the `incus` group.
-- **There is no hunt.** No indicators of exploitation have been published.
+- The fix. Update to 6.0.7 (the 6.0 LTS, which fixes CVE-2026-115377 only), 7.0.2 (the 7.0 LTS) or 7.5.0. CVE-2026-115372 affects 7.3.0 before 7.5.0, so only 7.5.0 fixes it.
+- It matters where a client is confined. All three let a client the daemon is meant to confine act as root on the host. A full administrator is already as powerful as host root, so the flaws matter with restricted projects, restricted client certificates, members of the unprivileged `incus` unix group, or an instance migrated in from a server you do not control.
+- The ranges differ. CVE-2026-115375 affects 7.0.0 before 7.0.2 and 7.1.0 before 7.5.0 (6.x is not affected). CVE-2026-115377 affects everything before 6.0.7, 6.1.0 before 7.0.2 and 7.1.0 before 7.5.0, and optimized ZFS transfers are not affected by it. The script reads the daemon's version if it answers, else the package's, else the client's, and asks the daemon read-only questions about restricted projects, the network listener, trusted client certificates, configured remotes and the members of the `incus` group.
+- There is no hunt. No indicators of exploitation have been published.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

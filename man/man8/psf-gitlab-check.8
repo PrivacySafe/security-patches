@@ -1,0 +1,128 @@
+.TH PSF-GITLAB-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-gitlab-check \- GitLab security releases of October 2026: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:gitlab/\:\:gitlab\-check.sh\fR [command]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-16301, CVE-2026-92883, CVE-2026-14814, CVE-2026-81839, CVE-2026-96893,
+.PP
+CVE-2026-15723, CVE-2026-112212
+.PP
+GitLab's critical patch release of 12 October 2026 (19.4.2, 19.3.5, 19.2.8) fixed 24
+vulnerabilities in Community Edition (CE) and Enterprise Edition (EE). Five of them are
+rated High and are covered here, with the affected ranges GitLab published for each:
+.RS 2
+.PP
+CVE-2026-92883  8.7  CE/EE  stored cross-site scripting in syntax highlighting, through
+a crafted repository. From 19.1 before 19.2.8, 19.3 before
+19.3.5, 19.4 before 19.4.2.
+CVE-2026-16301  8.5  CE/EE  a user with the Developer role can run CI/CD pipelines on
+protected branches without authorization. From 18.7 before
+19.2.8, 19.3 before 19.3.5, 19.4 before 19.4.2.
+CVE-2026-14814  8.2  CE/EE  a permissive regular expression in repository file access
+lets a user poison the cache of raw repository files, so
+other users' pipelines run crafted content and protected
+variables can be exposed. Every version before 19.2.8, 19.3
+before 19.3.5, 19.4 before 19.4.2.
+CVE-2026-81839  7.7  EE only  after a project is transferred, scheduled pipeline
+execution policy records are not cleaned up, so pipelines
+run with the new group's privileges. From 18.1 before
+19.2.8, 19.3 before 19.3.5, 19.4 before 19.4.2.
+CVE-2026-96893  7.3  EE only  prompt injection in the GitLab Duo Agent Platform: crafted
+content in the AI conversation context can cause unintended
+commands attributed to other users. From 19.1 before 19.2.8,
+19.3 before 19.3.5, 19.4 before 19.4.2. (GitLab rates it High.)
+.RE
+.PP
+GitLab published fixes for those three lines only. Every line below 19.2 (19.1, 19.0 and
+all 18.x) is affected by the ones whose range reaches it: the fix there is to move to a
+fixed release of a supported line. 19.5 is not listed as affected.
+.PP
+The critical patch release of 21 October 2026 (19.5.1, 19.4.3, 19.3.6, plus backports of its
+critical fix to 19.2.9, 19.1.9, 19.0.10 and 18.11.13) added two more High flaws:
+.RS 2
+.nf
+CVE-2026-15723   8.2  CE/EE  account takeover: when OmniAuth SAML and LDAP auto-linking are
+                           both enabled, an authenticated user can
+                             take over an existing
+                           LDAP-backed account, because the LDAP
+                             email lookup used during
+                           identity linking does not sanitize its
+                             input. From 10.1 before
+                           19.3.6, 19.4 before 19.4.3, 19.5 before
+                             19.5.1.
+CVE-2026-112212  7.5  CE/EE  cache poisoning of the OAuth and
+  OpenID Connect discovery
+                           document, so an attacker without an
+                             account can point some
+                           sign-in flows at a server they control
+                             (it needs a shared cache).
+                           From 18.3 before 19.3.6, 19.4 before
+                             19.4.3, 19.5 before 19.5.1.
+.fi
+.RE
+.PP
+Those two are fixed on 19.3.6, 19.4.3 and 19.5.1 only. The backports of 19.2.9 and older carry
+the regular-expression fix alone, so 19.2.9 is NOT a full fix for this set. The Medium and Low
+flaws of both releases are not checked here.
+.PP
+The two regular-expression flaws of October (CVE-2026-97229 and CVE-2026-110264) are
+covered by the ruby/ checker in this collection; run both. Each flaw has its own fixed
+versions, so being current for one says nothing about the other.
+.PP
+The version is read from GitLab's own VERSION file (Omnibus: <root>/embedded/service/
+gitlab\-rails/VERSION, or version-manifest.txt; source installs: /home/git/gitlab/VERSION)
+and from the tags of gitlab/gitlab\-ce and gitlab/gitlab\-ee images known to docker or
+podman. The edition (Community or Enterprise) matters for CVE-2026-81839 and CVE-2026-96893
+and is read from the package or image marker (\-ee, \-ce), the manifest's product name, or the
+presence of GitLab's ee directory. If it cannot be read, the script says those flaws apply
+only to Enterprise Edition rather than skipping them.
+.PP
+GitLab published no indicators of exploitation for these flaws, so there is no hunt.
+This script is read-only.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = nothing exposed, 1 = an install without a fix.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: GITLAB_ROOT         Omnibus root (default /opt/gitlab)
+.RS 2
+.PP
+GITLAB_SOURCE_DIRS  source install directories (default /home/git/gitlab)
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:gitlab/\:\:gitlab\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

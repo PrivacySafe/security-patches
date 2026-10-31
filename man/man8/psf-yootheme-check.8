@@ -1,0 +1,148 @@
+.TH PSF-YOOTHEME-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-yootheme-check \- YOOtheme Pro 5 unauthenticated remote code execution: checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:yootheme/\:\:yootheme\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-102785
+.PP
+YOOtheme Pro is a widely used commercial theme and page builder for WordPress
+and Joomla. Its publicly reachable image handler (the route that creates and
+caches resized and cropped images) does not fully bind the normalized image
+operations and the output destination to the request signature. An
+unauthenticated attacker can reuse a signature disclosed in an ordinary public
+image URL, inject extra image operations, traverse out of the intended cache
+directory, and write an attacker-controlled PNG/PHP polyglot file into an
+executable public media directory. That file is then requested to run code.
+CVSS 10.0. Disclosed 21 to 22 October 2026. It is not listed as known
+exploited, but a CVSS 10 pre-authentication flaw with a published
+mechanism should be treated as likely to be exploited quickly.
+.RS 2
+.nf
+Affected: YOOtheme Pro 5.0.0 through 5.0.52
+Fixed:    5.0.53 (released 21 October 2026)
+Not affected: YOOtheme Pro 4 and earlier (vendor statement)
+.fi
+.RE
+.PP
+Sources disagree slightly: the CVE record is filed against the Joomla extension
+and one aggregator title says "5.0.0-5.0.55". The vendor's own notice, the
+changelog and the CVE description text say 5.0.52 and earlier, fixed in 5.0.53,
+for YOOtheme Pro 5 in general, so this script applies the rule to the WordPress
+theme as well as the Joomla template.
+.PP
+This script is read-only. "check" finds YOOtheme Pro installs and reads their
+version. "hunt" looks for what the attack leaves behind: PHP files inside
+media, upload and cache directories, PHP code inside image files, and web log
+requests that run such files. It sends nothing to your site and exercises no
+part of the flaw.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /opt /home) for YOOtheme.
+Exit 0 = nothing affected, 1 = an affected version found.
+.TP
+\fBhunt\fR
+.ad l
+check, then search for signs of the attack. Exit 0 = nothing
+found, 1 = an indicator or an affected version was found.
+.TP
+\fBmitigate [options]\fR
+.ad l
+(root) changes the host. PrivacySafe protection
+documented: refuses PHP files under uploads, media, images and
+cache paths with a 403, so a file an attacker managed to write
+cannot run. It does NOT stop the write: update to 5.0.53. It
+only acts when an affected or unreadable YOOtheme is found
+(\-\-force overrides). Options:
+.RS 2
+.TP 10
+\fB\-\-web auto|apache|nginx\fR
+.ad l
+which web server (default auto: every one found)
+.TP 10
+\fB\-\-dir DIR\fR
+.ad l
+where to look for YOOtheme (repeat; default /var/www /srv /opt /home)
+.TP 10
+\fB\-\-dry\-run\fR
+.ad l
+show the changes, change nothing
+.TP 10
+\fB\-\-reload\fR
+.ad l
+graceful reload afterwards (systemd)
+.TP 10
+\fB\-\-force\fR
+.ad l
+apply even if no affected install is found
+.RE
+Apache: writes psf-yootheme-deny-php.conf (conf-available and
+a2enconf on Debian, conf.d on RHEL) and checks it with a
+configtest. nginx: writes a snippet and adds an include as the
+FIRST line of every server block that serves PHP (the first
+matching regex location wins), then checks with nginx \-t
+(NGINX_MAIN_CONF=FILE checks a non-default main file). If the
+web server rejects the result everything is undone at once.
+The rule applies to EVERY PHP virtual host on the machine, and
+it also blocks a legitimate PHP file requested directly under a
+directory named cache, images, media or uploads.
+.TP
+\fBrollback [\-\-dry\-run] [\-\-reload]\fR
+.ad l
+remove what mitigate added and restore the files
+it edited.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Environment: HUNT_WEB_LOGS (extra web access log paths for the hunt). STATE_DIR
+(default /\:var/\:lib/\:psf\-security\-patches/\:yootheme) holds the backups and manifest.
+.PP
+Version reading: the script reads the standard WordPress theme header
+(style.css, Version:) and the Joomla template manifest (templateDetails.xml,
+<version>). If it cannot read a version it says so; the YOOtheme dashboard also
+shows the version.
+Containers: with no argument the check also looks in running docker and podman containers
+(SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe copies only the first few KB of
+each theme's style.css or templateDetails.xml, where the version is, into a private temporary
+directory, and this script runs once per container in isolation against that copy. The hunt
+command does not look inside containers. Paths shown as .../docker_NAME/... are inside the
+container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:yootheme/\:\:yootheme\-check.sh\fR
+.ad l
+The script.
+.TP
+\fB/var/lib/psf\-security\-patches/yootheme\fR
+.ad l
+Backups and the record that rollback uses.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

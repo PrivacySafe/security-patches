@@ -1,0 +1,103 @@
+.TH PSF-BASERCMS-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-basercms-check \- baserCMS 5 admin SQL injection, path traversal and deserialization: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:basercms/\:\:basercms\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-114621, CVE-2026-114622, CVE-2026-114624
+.PP
+baserCMS is a website development framework and CMS (PHP, CakePHP based). Its security
+releases 5.3.2 and 5.4.2 of 23 October 2026 fix three flaws rated High:
+.RS 2
+.nf
+CVE-2026-114621  8.8 (v3.1)  SQL injection in the admin panel and
+  the admin API. The list
+                           and detail actions of the Admin and
+                             Api/Admin prefixes pass
+                           request query parameters (contain,
+                             conditions, fields, finder,
+                           order) straight to the ORM as options,
+                             so a logged-in user can
+                           inject SQL and read data such as
+                             password hashes.
+                           Affected: 5.0.0 before 5.3.2, and 5.4.0
+                             before 5.4.2.
+CVE-2026-114622  7.2         Path traversal (CWE-22).
+                           Affected: 5.2.3 before 5.3.2, and 5.4.0
+                             before 5.4.2.
+CVE-2026-114624  7.2         Deserialization of untrusted data (CWE-502). An administrator,
+                           or an attacker who gets widget-write
+                             capability through another
+                           flaw such as chained XSS, can plant an
+                             object graph that fires on
+                           unauthenticated page requests. Two
+                             gadget chains in the default
+                           dependency set reach proc_open() and
+                             run commands as the web
+                           server user. Affected: 5.0.0 before
+                             5.3.2, and 5.4.0 before 5.4.2.
+.fi
+.RE
+.RS 2
+.PP
+Fixed: 5.3.2 and 5.4.2. Sites on 5.0 to 5.2 move to 5.3.2 or 5.4.2.
+.RE
+.PP
+How this script reads a site. The version is the first line of
+plugins/baser\-core/VERSION.txt. Each flaw is judged on its own range. The script also reads
+the two things the fix for CVE-2026-114621 adds: the removeOrmStructureFromRequest() method in
+plugins/\:baser\-core/\:src/\:Controller/\:AppController.php, and 'order' in the list of ORM
+structure keys that plugins/\:baser\-core/\:src/\:Service/\:BcQueryParameterTrait.php strips. Both
+present means that fix is there, whatever the version string says; a fixed version whose
+files lack it is a failed update; one of the two is a partial update. Those signatures
+cover CVE-2026-114621 only, so the other two flaws are always judged by version.
+.PP
+No indicators of exploitation have been published for these flaws, so there is no hunt. This
+script is read-only. A plain version file means a clean result cannot prove the site was not
+attacked: after exposure, review administrator accounts and widgets, and rotate passwords.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /opt /home) for baserCMS 5 sites. Exit 0 =
+nothing exposed, 1 = an exposed or unverifiable site.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Containers: with no directory argument the check also copies the files it reads from running
+docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them) and judges them like
+host installs. The copies are temporary: a path shown as .../docker_NAME_PATH is the PATH inside
+the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:basercms/\:\:basercms\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

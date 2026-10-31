@@ -1,0 +1,171 @@
+.TH PSF-LINUX-KERNEL-LPE-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-linux-kernel-lpe-check \- Linux kernel local root quartet: checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:linux\-kernel/\:\:linux\-kernel\-lpe\-check.sh\fR [check]
+.SH DESCRIPTION
+.ad l
+.PP
+DirtyAH6 CVE-2026-80844, TUNderflow CVE-2026-81000, PPPoEject CVE-2026-68121,
+.PP
+DiagSpill CVE-2026-74469
+.PP
+Four local privilege escalation flaws in the Linux kernel, disclosed on the oss-security list
+on 18 September 2026 by Asim Manizada, after an embargo agreed with the linux-distros list
+(reported to the kernel security team in mid-July). Public proof-of-concept exploits exist.
+Each gives an unprivileged local user code execution as root on the systems it targets, and
+each can corrupt the host kernel from a container. The bugs are 10 to 21 years old.
+.RS 2
+.nf
+CVE-2026-80844  DirtyAH6    IPsec AH over IPv6 (ah6): ipv6_rearrange_rthdr() does not check
+                            that segments_left is within the
+                              header, an out-of-bounds
+                            access. Needs unprivileged user and
+                              network namespaces, or
+                            CAP_NET_ADMIN and CAP_NET_RAW over an
+                              attacker-controlled
+                            network namespace. Remote crash only
+                              if the host routes IPv6
+                            and adds an Authentication Header in
+                              transport mode.
+CVE-2026-81000  TUNderflow  TUN/TAP: oversized receive headroom
+  underflows a length and
+                            leaves skb->data beyond its
+                              allocation. Needs unprivileged
+                            user and network namespaces, or
+                              CAP_NET_ADMIN over one.
+CVE-2026-68121  PPPoEject   PPPoE: pppoe_sendmsg() keeps a pointer into a socket-buffer
+                            head that dev_hard_header() can free
+                              (use after free). Needs
+                            unprivileged user and network
+                              namespaces, or CAP_NET_ADMIN.
+CVE-2026-74469  DiagSpill   SCTP: a 16-bit peer transport count wraps to zero, so sctp_diag
+                            copies about 8 MiB past the end of its
+                              Netlink reply. Needs
+                            SCTP and sctp_diag, and NO user
+                              namespace or capability.
+                            Remote crash only with non-default
+                              SCTP options.
+.fi
+.RE
+.RS 2
+.nf
+Affected: DirtyAH6 and PPPoEject since 2.6.12, TUNderflow since
+  4.6, DiagSpill since 4.7,
+          through the stable releases below. Every release of a
+            branch not listed in the
+          table (5.11 to 5.14, 5.16 to 6.0, 6.2 to 6.5, 6.7 to
+            6.11, 6.13 to 6.17, 6.19
+          to 7.0, and older ones such as 5.4) is affected and has
+            no upstream fix.
+First fixed stable release of each branch, per flaw (DirtyAH6 /
+  TUNderflow / PPPoEject /
+DiagSpill):
+  5.10  269 / 270 / 265 / 265      6.12  108 / 109 / 101 / 103
+  5.15  220 / 221 / 216 / 216      6.18   49 /  50 /  42 /  44
+  6.1   187 / 188 / 183 / 183      7.1    13 /  14 /   6 /   8
+  6.6   156 / 157 / 148 / 151      7.2     3 /   4 / not affected / not affected
+The first stable releases with all four fixes: 5.10.270, 5.15.221,
+  6.1.188, 6.6.157,
+6.12.109, 6.18.50 and 7.2.4.
+.fi
+.RE
+.PP
+Why this script reads the kernel's origin first. The upstream patch level is in the release
+string only on kernels that follow the stable series (vanilla, Arch, Alpine, most custom
+builds). Debian puts it in `uname \-v`. Ubuntu, RHEL and its derivatives, SUSE and Amazon Linux
+backport fixes under release strings that do not say which fixes they carry, so a number from
+them cannot be compared with the table. For those the vendor changelog is the evidence: the
+script looks in it for each CVE, and points you to the vendor's tracker when it is absent. A kernel that
+is a stable release candidate (\-rc) is judged as the release before it.
+.PP
+What the exposure lines mean. They report whether the module each flaw needs is loaded,
+built in or loadable, and whether unprivileged user namespaces are allowed. That is
+information for you to weigh, not a verdict: a kernel below its fixed release is affected
+whatever these show, and a process with the right capabilities, such as a container, does not
+need a user namespace for the first three. That reading is the project's.
+.PP
+A container shows the host's kernel, so run this on the host.
+.PP
+GitHub proof-of-concept repositories exist for all four, so there is no indicator to hunt
+for in logs and this script has no hunt. It is read-only.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+Exit 0 = the running kernel has all four fixes (or vendor backports),
+1 = affected by at least one, or a vendor backport could not be confirmed.
+.TP
+\fBmitigate [\-\-userns] [\-\-modules LIST] [\-\-force] [\-\-dry\-run]\fR
+.ad l
+(root) changes the host.
+The researcher's protective measures; a patched kernel is the
+permanent fix: they only act when check finds
+the kernel affected (\-\-force overrides). Choose what to apply,
+because each can break software that depends on it:
+.RS 2
+.TP 10
+\fB\-\-userns\fR
+.ad l
+stops unprivileged user namespaces, using the mildest switch this kernel has: kernel.unprivileged_userns_clone=0, else kernel.apparmor_restrict_unprivileged_userns=1 (restricts, does not fully block). Only with \-\-force does it fall back to user.max_user_namespaces=0, which stops ALL new user namespaces. Breaks rootless containers (podman, rootless docker), flatpak and browser sandboxes. The change is applied live and written to a sysctl.d file. It does not stop DiagSpill, which needs no namespace.
+.TP 10
+\fB\-\-modules LIST\fR
+.ad l
+prevents loading of the listed modules, from: ah6 tun pppoe sctp sctp_diag ebt_snat (or all). "install NAME /bin/false" lines in a modprobe.d file. A module that is loaded now is left alone (it cannot be unloaded safely here) unless \-\-force, which still only blocks later loads. tun is used by OpenVPN, Tailscale and QEMU networking; sctp by telecom software; pppoe by DSL dial-up; ah6 by IPsec AH; ebt_snat by bridge firewalls.
+.RE
+\-\-dry\-run shows everything and changes nothing. Previous sysctl
+values are saved so that rollback can put them back.
+.TP
+\fBrollback [\-\-dry\-run]\fR
+.ad l
+restore the saved sysctl values and remove the files mitigate wrote.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env: KERNEL_CHANGELOG   a vendor changelog file to read, plain or .gz
+.RS 2
+.nf
+STATE_DIR (default /\:var/\:lib/\:psf\-security\-patches/\:linux\-kernel),
+  SYSCTL_D and
+MODPROBE_D (default /etc/sysctl.d and /etc/modprobe.d) for
+  mitigate and rollback
+KERNEL_RELEASE, KERNEL_VERSION_STRING   override uname \-r and uname \-v
+KERNEL_MODULES_FILE, KERNEL_PROC_SYS    override /proc/modules and /proc/sys
+KERNEL_BUILTIN_FILE   override /lib/modules/<release>/modules.builtin
+.fi
+.RE
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:linux\-kernel/\:\:linux\-kernel\-lpe\-check.sh\fR
+.ad l
+The script.
+.TP
+\fB/\:var/\:lib/\:psf\-security\-patches/\:linux\-kernel\fR
+.ad l
+Backups and the record that rollback uses.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7), psf-linux-kernel-check(8).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

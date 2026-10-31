@@ -1,0 +1,76 @@
+.TH PSF-LARAVEL-TOKENGUARD-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-laravel-tokenguard-check \- Laravel TokenGuard authentication bypass: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:laravel/\:\:laravel\-tokenguard\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-114509 (GHSA-f9x3-7vq9-cph6)
+.PP
+Laravel's built-in token guard ('driver' => 'token') does not reject a
+crafted non-string credential, such as a JSON body {"api_token": [0]}. On
+MySQL and MariaDB the lookup can then match an unintended existing user, so an
+unauthenticated attacker can sign in as that user on any route protected by
+the token guard. CVSS 9.2 (v4.0). Reported by Hristijan Manasijev.
+.PP
+Fixed in laravel/framework 12.68.0 and 13.29.0, both released 25 August 2026,
+two months before the advisory was published on 19 October 2026. The 11.x
+branch carries the same is_string() check from v11.56.1. 10.x and 9.x apps upgrade to a fixed branch. Apps that use
+Laravel Sanctum or Laravel Passport register their own guard drivers and are
+not the target of this bug.
+.PP
+This script is read-only. It looks at composer.lock and the installed
+vendor/ copy, at config/auth.php for a guard with the token driver, at routes
+that use that guard, and at the database driver in .env.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /home /opt) for Laravel
+projects. Exit 0 = nothing exposed, 1 = an affected
+project looks exposed or is on a branch that needs an upgrade.
+.TP
+\fBmiddleware\fR
+.ad l
+print a protective PHP middleware that rejects non-string
+api_token values. It prints to stdout only.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+The protective middleware is for apps that cannot upgrade today. 9.x and 10.x apps should plan an upgrade.
+Containers: with no directory argument the check also reads the project files it needs from
+running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
+read-only probe, and judges them like host projects. The copies are temporary: a path shown as
+\&.../docker_NAME/PATH is the PATH inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:laravel/\:\:laravel\-tokenguard\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

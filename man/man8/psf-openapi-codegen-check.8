@@ -1,0 +1,91 @@
+.TH PSF-OPENAPI-CODEGEN-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-openapi-codegen-check \- openapi-typescript-codegen code injection, October 2026: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:openapi/\:\:openapi\-codegen\-check.sh\fR [command] [arguments]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-108551
+.PP
+openapi-typescript-codegen (npm, through 0.31.0) copies strings from an
+OpenAPI document into single-quoted JavaScript literals in the TypeScript it
+generates, without escaping them: path keys, parameter names, media types,
+response header names, servers[0].url and info.version. A single quote in
+one of those values ends the literal and the rest runs as code. A value in
+servers[0].url or info.version runs when the generated client is imported;
+a path or parameter name runs when the affected method is called.
+.PP
+The victim is the developer or build job that generates or runs a client
+from a document someone else can influence. It is not a bug in a server.
+The remedy (0.31.0 is the latest release and is affected) is
+to stop using the package, or to stop feeding it documents you do not
+control. This script finds where it is used and checks generated code. It
+changes nothing and never imports, compiles or runs a generated file.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+find the package in package.json and lockfiles, in
+installed node_modules copies, and the CI jobs, scripts
+and Makefiles that run it, flagging inputs fetched from a
+URL. Root optional. Exit 0 = not found, 1 = found,
+2 = something couldn't be read.
+.TP
+\fBscan DIR...\fR
+.ad l
+static check of generated TypeScript or JavaScript under
+each DIR: a spec-derived value that is not exactly one
+well-formed single-quoted literal is reported.
+Exit 0 = nothing found, 1 = findings, 2 = bad argument.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Env overrides:
+.RS 2
+.nf
+ROOTS="/home /root /srv /var/www /opt /usr/local"
+                      where check looks (default shown). A
+                        directory that
+                      does not exist is skipped.
+MAX_DEPTH=9           how deep check descends under each root
+.fi
+.RE
+.PP
+Containers: with no argument and ROOTS unset, the check also looks in running docker and podman
+containers (SCAN_CONTAINERS=1, the default; 0 skips them). A read-only probe copies the
+package.json and lockfiles that mention the generator, whole, and the installed
+node_modules copy's package.json, into a private temporary directory, and this script runs once
+per container in isolation against that copy. Workflows, Makefiles and shell scripts are not read
+inside containers. Paths shown as .../docker_NAME/... are inside the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:openapi/\:\:openapi\-codegen\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

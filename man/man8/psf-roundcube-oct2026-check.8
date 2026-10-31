@@ -1,0 +1,88 @@
+.TH PSF-ROUNDCUBE-OCT2026-CHECK 8 "30 October 2026" "psf-security-patches 26.10.30-1.0.0" "System Administration"
+.ad l
+.SH NAME
+.ad l
+psf-roundcube-oct2026-check \- Roundcube Webmail 1.6.20 and 1.7.5 security release: read-only checker
+.SH SYNOPSIS
+.ad l
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:roundcube/\:\:roundcube\-oct2026\-check.sh\fR [command] [DIR ...]
+.SH DESCRIPTION
+.ad l
+.PP
+CVE-2026-114716 (mail header injection, CVSS 8.5)
+.PP
+Roundcube released 1.6.20 (LTS) and 1.7.5 (mainline) on 19 October 2026. Both
+carry the same 20 security fixes, the largest batch since 1.7.0: IMAP command
+injection, four mail header injection flaws, XSS, SSRF, CSRF, an object
+injection primitive in session handling and ImageMagick limit bypasses.
+CVE-2026-114716 is one of the mail header injection fixes (the release notes
+list header injection through the From display-name in Bounce, through the
+References, In-Reply-To, Message-ID and From parameters, through the subject
+of a message forwarded as an attachment, and through the media type of an
+inline image). A header injection lets an attacker add or alter headers of an
+outgoing message, which feeds phishing and mail forgery from a trusted host.
+.RS 2
+.nf
+Affected: Roundcube 1.6.x before 1.6.20, and 1.7.x before 1.7.5
+Fixed:    1.6.20 and 1.7.5. These releases do not cover 1.5 and earlier.
+.fi
+.RE
+.PP
+Roundcube is bundled by hosting panels. cPanel and Plesk ship their own copy
+and update it with the panel, so the panel's changelog decides when it is safe.
+.PP
+This script is read-only. It finds Roundcube installs, reads the version from
+program/include/iniset.php, and can search web server logs for CRLF probing
+of the _uid and _flag parameters (the IMAP injection that the same release
+fixes), which is a sign someone has been testing your webmail.
+.SH COMMANDS AND OPTIONS
+.ad l
+.TP
+\fBcheck (default)\fR
+.ad l
+scan DIR (default /var/www /srv /opt /home
+/usr/share/roundcube /usr/share/roundcubemail
+/var/lib/roundcube plus the cPanel and Plesk paths).
+Exit 0 = nothing affected, 1 = an affected install found.
+.TP
+\fBhunt\fR
+.ad l
+search readable web server logs for _uid or _flag values
+that contain an encoded carriage return or line feed.
+Exit 0 = none found, 1 = matches found.
+.TP
+\fBversion\fR
+.ad l
+print the script version.
+.PP
+Distribution packages backport fixes without changing the version string. The
+script reads the owning package changelog and reports a mention of the CVE.
+Containers: with no directory argument the check also copies the files it reads from running
+docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them) and judges them like
+host installs. The copies are temporary: a path shown as .../docker_NAME_PATH is the PATH inside
+the container NAME.
+.SH FILES
+.ad l
+.TP
+\fB/\:\:opt/\:\:psf\-security\-patches/\:\:roundcube/\:\:roundcube\-oct2026\-check.sh\fR
+.ad l
+The script.
+.SH SEE ALSO
+.ad l
+psf\-security\-patches(7).
+.PP
+https:/\:/\:codeberg.org/\:PrivacySafe/\:security\-patches
+.br
+Documentation: https://privacysafe.app/docs/security-patches/
+.br
+PrivacySafe: https://privacysafe.app
+.SH AUTHORS
+.ad l
+Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC.
+.PP
+AI assistance in this script: Claude Sonnet 5.5 (the Assisted-by line in the script header).
+.SH COPYRIGHT
+.ad l
+CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. CC0 does not waive trademark or patent rights.
+.PP
+If this software is helpful, please consider supporting PrivacySafe Foundation: https://privacysafe.foundation

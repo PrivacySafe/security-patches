@@ -26,11 +26,11 @@ The start of the affected range for CVE-2026-112212 comes from write-ups of GitL
 |---|---|
 | Fixed | See the table: each flaw has its own fixed releases, and 19.5 and later are not listed as affected by any |
 | **Which release is a full fix** | **19.5.1, 19.4.3 and 19.3.6.** The 21 October release backported only the regular-expression fix (CVE-2026-110264) to 19.2.9, 19.1.9, 19.0.10 and 18.11.13, so those leave the High flaws above open. 19.2.9 is the case to watch for: it is current for the regex flaw and still exposed to CVE-2026-15723 and CVE-2026-112212 |
-| No fix on the line | A line below those named in the table is affected and has no fixed release: move to a fixed release of a supported line |
+| Move to | A fixed release of a supported line (a line below those named in the table is affected) |
 | Scope | Self-managed instances (Omnibus, source and Helm). GitLab.com already ran the fixes, and GitLab Dedicated needed no action |
 | Not checked | The Medium and Low flaws of the two releases |
 
-The two regular-expression flaws of October (CVE-2026-97229 and CVE-2026-110264) are covered by the [`ruby/`](../ruby/README.md) checker. Run both: each flaw has its own fixed versions, so being current for one says nothing about the other. An 18.11.13 instance, for example, has the regular-expression fix and still has no fix for five of the seven flaws in this table.
+The two regular-expression flaws of October (CVE-2026-97229 and CVE-2026-110264) are covered by the [`ruby/`](../ruby/README.md) checker. Run both: each flaw has its own fixed versions, so being current for one says nothing about the other. An 18.11.13 instance, for example, has the regular-expression fix and still needs a later release for five of the seven flaws in this table.
 
 ## How the script reads an install
 
@@ -68,7 +68,7 @@ Move to 19.5.1, 19.4.3 or 19.3.6. Until you can, the project suggests taking the
 
 ## If an affected instance was reachable
 
-If CVE-2026-14814 applied, protected CI/CD variables that pipelines could read may have been exposed: rotate them. If CVE-2026-15723 applied (SAML and LDAP auto-linking both on), review LDAP-backed accounts for sign-ins you do not recognise.
+If CVE-2026-14814 applied, protected CI/CD variables that pipelines could read may have been exposed: rotate them. If CVE-2026-15723 applied (SAML and LDAP auto-linking both on), review LDAP-backed accounts for sign-ins you do not recognize.
 
 ## Sources
 
@@ -76,14 +76,18 @@ If CVE-2026-14814 applied, protected CI/CD variables that pipelines could read m
 - [GitLab critical patch release 19.5.1, 19.4.3, 19.3.6 (21 October 2026)](https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-5-1-released/)
 - [GitLab package information: package version format](https://docs.gitlab.com/ee/administration/package_information)
 
-## GitLab know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Only 19.5.1, 19.4.3 and 19.3.6 are a full fix for the seven flaws. The backports of the 21 October release to 19.2.9, 19.1.9, 19.0.10 and 18.11.13 carry only the regular-expression fix, so 19.2.9 is current for that flaw and still exposed to CVE-2026-15723 and CVE-2026-112212.
-- **Each flaw is judged on its own ranges.** Being current for one says nothing about another, and the two regular-expression flaws (CVE-2026-97229, CVE-2026-110264) are in the Ruby checker, so run both.
-- **The edition matters.** CVE-2026-81839 and CVE-2026-96893 affect Enterprise Edition only. The script reads the edition from the package or image marker, the manifest or the presence of GitLab's `ee` directory; when it cannot, it raises those flaws as warnings instead of skipping them.
-- **Some inputs are second-hand.** The start of the affected range for CVE-2026-112212 (18.3) comes from write-ups of GitLab's advisory, not the CVE record. The Medium and Low flaws of the two releases are not checked, and there is no hunt, because GitLab published no indicators.
+- The fix. Only 19.5.1, 19.4.3 and 19.3.6 are a full fix for the seven flaws. The backports of the 21 October release to 19.2.9, 19.1.9, 19.0.10 and 18.11.13 carry only the regular-expression fix, so 19.2.9 is current for that flaw and still exposed to CVE-2026-15723 and CVE-2026-112212.
+- Each flaw is judged on its own ranges. Being current for one says nothing about another, and the two regular-expression flaws (CVE-2026-97229, CVE-2026-110264) are in the Ruby checker, so run both.
+- The edition matters. CVE-2026-81839 and CVE-2026-96893 affect Enterprise Edition only. The script reads the edition from the package or image marker, the manifest or the presence of GitLab's `ee` directory. When it cannot, it raises those flaws as warnings instead of skipping them.
+- Some inputs are second-hand. The start of the affected range for CVE-2026-112212 (18.3) comes from write-ups of GitLab's advisory, not the CVE record. The Medium and Low flaws of the two releases are not checked, and there is no hunt, because GitLab published no indicators.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

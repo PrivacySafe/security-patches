@@ -54,12 +54,12 @@ Exit codes: `0` nothing exposed, `1` an affected nbconvert, or an affected Jupyt
 
 ## How to read the result
 
-- **Jupyter Server in range, gateway and custom authorizer both configured:** exposed. Upgrade.
-- **In range, gateway configured, no custom authorizer found:** a warning and exit `0`. With the default allow-all authorizer there is nothing to bypass, but check whether an authorizer is set somewhere this tool cannot see.
-- **In range, no gateway configured:** exit `0`: the vulnerable handler is not in use. Update anyway, because a gateway enabled later would activate it.
-- **No Jupyter configuration file found:** the defaults (no gateway) apply, and the tool says it cannot see settings given only on the command line or in `JUPYTER_GATEWAY_URL`. It does read the command-line arguments of running jupyter processes (`--gateway-url`, `--GatewayClient.url`, `--ServerApp.authorizer_class`).
-- **nbconvert in range:** exit `1` on version alone, because a library cannot tell whether you convert untrusted notebooks. It only matters if you do, including through JupyterLab's **Download as** on a shared hub or a notebook-rendering service.
-- **Look-alikes** such as `jupyter-server-terminals` and `jupyter_server_fileid` are different packages and are ignored, including when listed before the real one in a lock file.
+- Jupyter Server in range, gateway and custom authorizer both configured: exposed. Upgrade.
+- In range, gateway configured, no custom authorizer found: a warning and exit `0`. With the default allow-all authorizer there is nothing to bypass, but check whether an authorizer is set somewhere this tool cannot see.
+- In range, no gateway configured: exit `0`: the vulnerable handler is not in use. Update anyway, because a gateway enabled later would activate it.
+- No Jupyter configuration file found: the defaults (no gateway) apply, and the tool says it cannot see settings given only on the command line or in `JUPYTER_GATEWAY_URL`. It does read the command-line arguments of running jupyter processes (`--gateway-url`, `--GatewayClient.url`, `--ServerApp.authorizer_class`).
+- nbconvert in range: exit `1` on version alone, because a library cannot tell whether you convert untrusted notebooks. It only matters if you do, including through JupyterLab's **Download as** on a shared hub or a notebook-rendering service.
+- Look-alikes such as `jupyter-server-terminals` and `jupyter_server_fileid` are different packages and are ignored, including when listed before the real one in a lock file.
 
 ## Fixing it
 
@@ -67,22 +67,26 @@ Exit codes: `0` nothing exposed, `1` an affected nbconvert, or an affected Jupyt
 pip install --upgrade 'jupyter_server>=2.6.0' 'nbconvert>=7.17.2'
 ```
 
-Until you can: do not convert notebooks from untrusted sources to markdown, LaTeX, reST or AsciiDoc, and run conversions in a throwaway directory as an unprivileged user; remove `GatewayClient.url` if you do not need a gateway. Those two steps are our reasoning, not the vendor's.
+Until you can: do not convert notebooks from untrusted sources to markdown, LaTeX, reST or AsciiDoc, and run conversions in a throwaway directory as an unprivileged user. Remove `GatewayClient.url` if you do not need a gateway. Those two steps are PrivacySafe's recommendation.
 
 ## Sources
 
 - [jupyter_server advisory GHSA-354v-3q48-cv69](https://github.com/jupyter-server/jupyter_server/security/advisories/GHSA-354v-3q48-cv69)
 - [nbconvert advisory GHSA-pjvx-prjx-h659](https://github.com/jupyter/nbconvert/security/advisories/GHSA-pjvx-prjx-h659)
 
-## Jupyter know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update Jupyter Server to 2.6.0 and nbconvert to 7.17.2.
-- **CVE-2026-114135 needs two conditions together.** A gateway must be configured (`GatewayClient.url`) and a restrictive Authorizer must be in use. With the default `AllowAllAuthorizer` nobody is denied, so there is nothing to bypass. Even in 2.6.0 and later the bypass remains if a deployment manually registers the deprecated `jupyter_server.gateway.handlers` module.
-- **CVE-2026-114140 needs user interaction.** The victim must convert a malicious notebook to markdown, LaTeX, reStructuredText or AsciiDoc.
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container finds the installed copies by their `dist-info` and `egg-info` directories and the lock and requirements files that mention the package, and copies only those names and files into a private temporary directory, which the normal check then judges. Jupyter configuration files found in a container (`jupyter_server_config.*`, `jupyter_config.*`, `jupyter_notebook_config.*`, `jupyter_server_config.d/*.json`) are read together with the host's, as the check always aggregates the configuration it finds, so a gateway or authorizer setting in a container counts toward every copy found. A staged symlink is never kept and the copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
+- The fix. Update Jupyter Server to 2.6.0 and nbconvert to 7.17.2.
+- CVE-2026-114135 needs two conditions together. A gateway must be configured (`GatewayClient.url`) and a restrictive Authorizer must be in use. With the default `AllowAllAuthorizer` nobody is denied, so there is nothing to bypass. Even in 2.6.0 and later the bypass remains if a deployment manually registers the deprecated `jupyter_server.gateway.handlers` module.
+- CVE-2026-114140 needs user interaction. The victim must convert a malicious notebook to markdown, LaTeX, reStructuredText or AsciiDoc.
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe finds the installed copies by their `dist-info` and `egg-info` folders, plus the lock and requirements files that mention the package. It copies only those names and files into a private temporary folder, and the normal check judges that folder. Jupyter configuration files found in a container (`jupyter_server_config.*`, `jupyter_config.*`, `jupyter_notebook_config.*`, `jupyter_server_config.d/*.json`) are read together with the host's, as the check always aggregates the configuration it finds, so a gateway or authorizer setting in a container counts toward every copy found. A staged symlink is never kept and the copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

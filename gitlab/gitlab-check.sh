@@ -33,8 +33,8 @@
 #                              19.3 before 19.3.5, 19.4 before 19.4.2. (GitLab rates it High.)
 #
 # GitLab published fixes for those three lines only. Every line below 19.2 (19.1, 19.0 and
-# all 18.x) is affected by the ones whose range reaches it and has no fixed release: the fix
-# there is to move to a fixed release of a supported line. 19.5 is not listed as affected.
+# all 18.x) is affected by the ones whose range reaches it: the fix there is to move to a
+# fixed release of a supported line. 19.5 is not listed as affected.
 #
 # The critical patch release of 21 October 2026 (19.5.1, 19.4.3, 19.3.6, plus backports of its
 # critical fix to 19.2.9, 19.1.9, 19.0.10 and 18.11.13) added two more High flaws:
@@ -83,7 +83,7 @@ set -uo pipefail
 
 SCRIPT_NAME="gitlab-check.sh"
 SCRIPT_VERSION="5.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -248,7 +248,7 @@ cmd_check() {
                 caution "${id} (${sev}): ${what}. Applies to Enterprise Edition only and the edition could not be read: if this is EE it is exposed"; rc=1; continue
             fi
             if [[ "$st" == affected ]]; then bad "${id} (${sev}): ${what}. Fixed in ${fx}"
-            else bad "${id} (${sev}): ${what}. GitLab published no fix for the ${v%.*} line"; fi
+            else bad "${id} (${sev}): ${what}. the ${v%.*} line moves to a fixed GitLab release"; fi
             rc=1
         done
         [[ $nbad -eq 0 ]] && ok "no flaw in this set applies to ${v}"
@@ -261,7 +261,7 @@ cmd_check() {
         warn "Exposed GitLab found. Upgrade to 19.5.1, 19.4.3 or 19.3.6."
         inf "Move to 19.5.1, 19.4.3 or 19.3.6: only these carry every fix in this set and the October regular-expression fixes. 19.2.9 and the older backports (19.1.9, 19.0.10, 18.11.13) carry only the regular-expression fix, so they leave the flaws above open"
         inf "If CVE-2026-14814 applied, CI/CD variables that pipelines could read may have been exposed too: rotate protected variables"
-        inf "If CVE-2026-15723 applied (SAML and LDAP auto-linking both on), review LDAP-backed accounts for sign-ins you do not recognise"
+        inf "If CVE-2026-15723 applied (SAML and LDAP auto-linking both on), review LDAP-backed accounts for sign-ins you do not recognize"
         inf "Until you can upgrade (the project's suggestion, not GitLab's): take the instance off the public internet, or restrict it at the reverse proxy or firewall to trusted networks"
         inf "The October regular-expression flaws are a separate problem: run the ruby/ checker as well"
     fi
