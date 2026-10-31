@@ -61,11 +61,11 @@ Exit codes: `0` nothing exposed, `1` an affected version with `tunnelRoute` on a
 
 ## How each condition is judged
 
-- **Condition 1, `tunnelRoute`:** read from `next.config.js`, `.mjs`, `.cjs`, `.ts` or `.mts` (and `sentry.config.*`). A value in a `//` comment, `false`, or an absent option means it is not set, and the tool exits `0` with a reminder to update anyway.
-- **Condition 2, webpack or Turbopack (a heuristic):** a `--turbopack` or `--turbo` flag in the `build` script means Turbopack; `--webpack` means webpack; otherwise Next.js 16 or newer is taken to use Turbopack by default, and older versions webpack. If your build is configured some other way, check it yourself.
-- **Condition 3, a colliding route:** a directory or file named after the tunnel path in `app/`, `src/app/`, `pages/` or `src/pages/`, or a root catch-all (`[...slug]` or `[[...slug]]`), which matches every path. `tunnelRoute: true` lets the SDK choose the path, so a collision cannot be checked and the tool treats it as exposed. This heuristic cannot see rewrites, redirects, custom servers or routes defined elsewhere, and says so.
-- **Condition 4, middleware as the only authorization:** not visible from outside the application. The tool tells you to review it. Do not rely on middleware alone: check access in the route handler or data layer too.
-- **Prereleases:** `11.0.0-alpha.*`, `-beta.*` and `-rc.0` are affected; `-rc.1` and `11.0.0` are fixed.
+- Condition 1, `tunnelRoute`: read from `next.config.js`, `.mjs`, `.cjs`, `.ts` or `.mts` (and `sentry.config.*`). A value in a `//` comment, `false`, or an absent option means it is not set, and the tool exits `0` with a reminder to update anyway.
+- Condition 2, webpack or Turbopack: a `--turbopack` or `--turbo` flag in the `build` script means Turbopack; `--webpack` means webpack; otherwise Next.js 16 or newer is taken to use Turbopack by default, and older versions webpack. If your build is configured some other way, check it yourself.
+- Condition 3, a colliding route: a directory or file named after the tunnel path in `app/`, `src/app/`, `pages/` or `src/pages/`, or a root catch-all (`[...slug]` or `[[...slug]]`), which matches every path. `tunnelRoute: true` lets the SDK choose the path, so a collision cannot be checked and the tool treats it as exposed. This check cannot see rewrites, redirects, custom servers or routes defined elsewhere, and says so.
+- Condition 4, middleware as the only authorization: not visible from outside the application. The tool tells you to review it. Do not rely on middleware alone: check access in the route handler or data layer too.
+- Prereleases: `11.0.0-alpha.*`, `-beta.*` and `-rc.0` are affected; `-rc.1` and `11.0.0` are fixed.
 
 ## Fixing it
 
@@ -76,15 +76,19 @@ Upgrade to 9.47.2, 10.75.2 or 11.0.0-rc.1 or newer and rebuild. Until then, foll
 - [Advisory GHSA-mchm-gjx6-7h55](https://github.com/getsentry/sentry-javascript/security/advisories/GHSA-mchm-gjx6-7h55)
 - [GitLab advisory database entry for CVE-2026-114139](https://advisories.gitlab.com/npm/@sentry/nextjs/CVE-2026-114139/)
 
-## Sentry SDK for Next.js know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update `@sentry/nextjs` to 9.47.2, 10.75.2 or 11.0.0-rc.1. The vendor's workaround is to set `tunnelRoute` to a path none of your routes can resolve under, or to remove the option.
-- **Exploitation needs all four conditions at once.** `tunnelRoute` is set, the app is built with webpack (Turbopack builds are not affected), one of your routes resolves under the tunnel path, and your middleware is the only authorization control for that route. Skipping middleware grants no privileges by itself.
-- **Two of the four conditions are heuristics and one cannot be seen.** The script reads `next.config.*` for `tunnelRoute`, guesses the bundler from the build script and the Next.js version, and looks for routes that collide with the tunnel path; those last two are heuristics. Whether your middleware is the only authorization control for a route cannot be seen from outside the application, so review that yourself.
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container lists the project files this check needs (lockfiles, `package.json`, route directory names, the few source files that contain `'use server'`, `config/auth.php`, and similar), and only those are copied into a private temporary directory that the normal check then judges like a host directory. Only the *names* of the entries under `app`, `src/app`, `pages` and `src/pages` are copied, as empty files, so no application source leaves the container; `next.config.*` is copied because it holds the `tunnelRoute` setting. A staged symlink is never kept, paths the container reports are validated, and nothing is run in a container beyond `find`, `grep` and `test`. The copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
+- The fix. Update `@sentry/nextjs` to 9.47.2, 10.75.2 or 11.0.0-rc.1. The vendor's workaround is to set `tunnelRoute` to a path none of your routes can resolve under, or to remove the option.
+- Exploitation needs all four conditions at once. `tunnelRoute` is set, the app is built with webpack (Turbopack builds are not affected), one of your routes resolves under the tunnel path, and your middleware is the only authorization control for that route. Skipping middleware grants no privileges by itself.
+- Two of the four conditions are judged from file and script contents and one cannot be seen. The script reads `next.config.*` for `tunnelRoute`, guesses the bundler from the build script and the Next.js version, and looks for routes that collide with the tunnel path. Those last two are heuristics. Whether your middleware is the only authorization control for a route cannot be seen from outside the application, so review that yourself.
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe lists the project files this check needs: lockfiles, `package.json`, route directory names, the few source files that contain `'use server'`, `config/auth.php` and similar. Only those files are copied into a private temporary folder, and the normal check judges that folder like a host directory. Only the *names* of the entries under `app`, `src/app`, `pages` and `src/pages` are copied, as empty files, so no application source leaves the container. `next.config.*` is copied because it holds the `tunnelRoute` setting. A staged symlink is never kept, paths the container reports are validated, and nothing is run in a container beyond `find`, `grep` and `test`. The copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`yootheme/yootheme-check.sh`](yootheme-check.sh)
 
-YOOtheme Pro is a widely used commercial theme and page builder for WordPress and Joomla. Its publicly reachable image handler, the route that creates and caches resized and cropped images, does not fully bind the normalised image operations and the output destination to the request signature. An unauthenticated attacker can reuse a signature disclosed in an ordinary public image URL, inject extra image operations, traverse out of the intended cache directory, and write an attacker-controlled **PNG/PHP polyglot** into an executable public media directory. That file is then requested to run code.
+YOOtheme Pro is a widely used commercial theme and page builder for WordPress and Joomla. Its public image handler, the route that creates and caches resized images, does not fully tie the image operations and the output location to the request signature (CVE-2026-102785, CVSS 10.0). Without logging in, an attacker can reuse a signature from an ordinary public image URL, add image operations, step out of the cache directory and write a PNG/PHP polyglot into a public media directory that runs PHP. Requesting that file runs the attacker's code.
 
 | | |
 |---|---|
@@ -19,7 +19,7 @@ YOOtheme Pro is a widely used commercial theme and page builder for WordPress an
 | Not affected | YOOtheme Pro 4 and earlier (vendor statement) |
 | Needs | Nothing: no account is required |
 | Exploited | Not listed as known exploited. A CVSS 10 pre-authentication flaw with a published mechanism should be treated as likely to be exploited quickly |
-| Workaround | None documented by the vendor. See the interim web server rules below |
+| Workaround | None documented by the vendor. See the web server rules below |
 
 **Sources disagree slightly, and this tool follows the vendor.** The CVE record is filed against the Joomla extension, and one aggregator's title says "5.0.0-5.0.55". The vendor's own notice, the changelog entry and the CVE description text say 5.0.52 and earlier, fixed in 5.0.53, for "YOOtheme Pro 5" in general. So the tool applies the same rule to the **WordPress theme** as well as the Joomla template.
 
@@ -54,13 +54,15 @@ YOOtheme Pro is a widely used commercial theme and page builder for WordPress an
 |---|---|
 | `check [DIR ...]` (default) | Finds WordPress themes (`wp-content/themes/yootheme`) and Joomla templates (`templates/yootheme`) under `/var/www /srv /opt /home` or the directories you pass, reads each version, and applies the rule. A look-alike such as `yootheme-child` is not matched |
 | `hunt [DIR ...]` | Runs `check`, then searches each site's upload, media and cache directories and the web logs (below) |
+| `mitigate [--web auto\|apache\|nginx] [--dir DIR] [--dry-run] [--reload] [--force]` | **Changes the host (root).** Applies the rule below for you, and only when an affected or unreadable YOOtheme is found. Apache: writes `psf-yootheme-deny-php.conf` (`conf-available` plus `a2enconf` on Debian, `conf.d` on RHEL) and checks it with a configtest. nginx: writes a snippet and adds an `include` as the first line of every server block that serves PHP, then checks with `nginx -t`. If the web server rejects the result, everything is undone at once. Reloads nothing unless you add `--reload` |
+| `rollback [--dry-run] [--reload]` | Removes what `mitigate` added and restores the files it edited |
 | `version` | Prints the script version |
 
-Environment: `HUNT_WEB_LOGS` adds web access log paths for the hunt.
+Environment: `HUNT_WEB_LOGS` adds web access log paths for the hunt. `STATE_DIR` (default `/var/lib/psf-security-patches/yootheme`) holds the backups and manifest. `NGINX_MAIN_CONF=FILE` checks a non-default nginx main file.
 
 Exit codes: `0` nothing affected or nothing found, `1` an affected or unreadable version, or an indicator, `2` bad arguments.
 
-It reads the standard WordPress theme header (`style.css`, `Version:`) and the Joomla template manifest (`templateDetails.xml`, `<version>`). If it cannot read a version it says so and exits `1`; the YOOtheme dashboard also shows the version.
+It reads the standard WordPress theme header (`style.css`, `Version:`) and the Joomla template manifest (`templateDetails.xml`, `<version>`). If it cannot read a version it says so and exits `1`. The YOOtheme dashboard also shows the version.
 
 ## What the hunt looks for
 
@@ -81,9 +83,11 @@ A clean hunt does not prove a site is clean: the attacker may have used a path o
 
 An update does not remove a file an attacker already wrote.
 
-## Interim measure: deny PHP in media and cache paths
+## Protective measure: deny PHP in media and cache paths
 
-Not vendor documented. It stops a written file from running; it does not stop the write, so it does not replace the update. On nginx and Apache, both rules answer 403 for PHP under uploads, media, images and cache paths (including upper-case extensions, a query string, and the `/images/a.jpg/x.php` path-info trick), while ordinary PHP entry points such as `/index.php` and `admin-ajax.php`, a file merely *named* `cache.php`, and static images are served as before.
+`./yootheme-check.sh mitigate --dry-run` and then `mitigate --reload` apply the rules below. `rollback` removes them. Verified on nginx 1.24: PHP under `uploads` and `cache` (including `.PHP` and `.phtml`) gets 403 after the change and reached the PHP handler before. `index.php` and static files are unaffected. On Apache 2.4.58 with mod_php and two virtual hosts, the same rule stopped an uploaded PHP file from running on both, and in the Debian layout `a2enconf` and Apache's own `configtest` accepted it and `rollback` removed it. The rule applies to every PHP virtual host on the machine.
+
+PrivacySafe recommendation. It stops a written file from running. It does not stop the write, so it does not replace the update. On nginx and Apache, both rules answer 403 for PHP under uploads, media, images and cache paths. That includes upper-case extensions, a query string, and the `/images/a.jpg/x.php` path-info trick. Ordinary PHP entry points such as `/index.php` and `admin-ajax.php`, a file merely *named* `cache.php`, and static images are served as before.
 
 nginx (this location must come **before** your generic PHP location, because the first matching regex wins):
 
@@ -106,15 +110,19 @@ These rules also block any legitimate PHP file that lives under a directory name
 - [YOOtheme on X: critical security update for YOOtheme Pro 5](https://x.com/yootheme)
 - [mySites.guru: YOOtheme Pro 5.0.53 fixes an unauthenticated RCE](https://mysites.guru/blog/yootheme-pro-5-critical-security-update/)
 
-## YOOtheme Pro know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update YOOtheme Pro 5 to 5.0.53. YOOtheme Pro 4 and earlier are not affected (vendor statement).
-- **Sources disagree slightly.** The CVE record is filed against the Joomla extension and one aggregator title says 5.0.0 to 5.0.55; the vendor's notice, the changelog and the CVE description say 5.0.52 and earlier, fixed in 5.0.53, for YOOtheme Pro 5 in general, and the script follows the vendor.
-- **A CVSS 10 flaw with a published mechanism should be treated as likely to be exploited quickly,** although it was not listed as exploited at the time of the sources.
-- **`hunt` is read-only.** Run it on a site that was exposed before the update.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container copies only the first few KB of each YOOtheme `style.css` or `templateDetails.xml`, where the version is, and the script runs once per container in isolation against that copy. `hunt` does not look inside containers. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME.
+- The fix. Update YOOtheme Pro 5 to 5.0.53. YOOtheme Pro 4 and earlier are not affected (vendor statement).
+- Sources disagree slightly. The CVE record is filed against the Joomla extension and one aggregator title says 5.0.0 to 5.0.55. The vendor's notice, the changelog and the CVE description say 5.0.52 and earlier, fixed in 5.0.53, for YOOtheme Pro 5 in general, and the script follows the vendor.
+- A CVSS 10 flaw with a published mechanism should be treated as likely to be exploited quickly, although it was not listed as exploited at the time of the sources.
+- `hunt` is read-only. Run it on a site that was exposed before the update.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. A read-only probe inside each running docker and podman container copies only the first few KB of each YOOtheme `style.css` or `templateDetails.xml`, where the version is, and the script runs once per container in isolation against that copy. `hunt` does not look inside containers. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

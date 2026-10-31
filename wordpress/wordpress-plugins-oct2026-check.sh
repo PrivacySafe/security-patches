@@ -74,7 +74,7 @@
 #                  case administrator. Fixed: 4.0.5. Only the free plugin folder
 #                  profile-builder is checked; the paid add-on ships separately.
 #
-# This script is read-only.
+# "check" and "hunt" are read-only. "mitigate" and "rollback" are the only commands that change a site.
 #
 # CVE-2026-85097   Bricksforge (an add-on for the Bricks site builder, about 6,000 sites)
 #                  up to and including 3.1.8.9 trusts file metadata that arrives with a
@@ -100,6 +100,26 @@
 #                    Rank Math PRO 3.0.123 it compares file change times with the
 #                    incident window. Exit 0 = nothing affected, 1 = affected or
 #                    to review.
+#   mitigate (--plugin SLUG[,SLUG] | --all-affected) [--dry-run] [DIR ...]   (root, or the
+#                    site's own user) changes the site. Deactivates a plugin that is
+#                    below its fixed version with WP-CLI, as the owner of the site and
+#                    with --skip-plugins and --skip-themes so the vulnerable code is not
+#                    loaded to switch it off. An inactive plugin registers no routes. You
+#                    must choose, because deactivating turns the plugin's features off
+#                    (forms, bookings, checkout, login pages). Plugins it will act on:
+#                    OttoKit (suretriggers) below 1.1.41, SureCart (surecart) below
+#                    4.9.6, LatePoint (latepoint) below 5.7.5, Amelia (ameliabooking)
+#                    below 2.4.12, Profile Builder (profile-builder) below 4.0.5 and
+#                    Bricksforge below 3.1.8.10 (found by its Plugin Name, whatever its
+#                    folder is called; Patchstack reports deactivation as the
+#                    mitigation). A plugin at or above its fixed version, one that is
+#                    already inactive and one that is network-activated are left alone.
+#                    LiteSpeed Cache (the measure there is to hold comments for
+#                    moderation) and Rank Math PRO (follow the vendor notice) are not
+#                    touched. It needs wp (WP-CLI) on PATH, or WP_CLI=/path/to/wp.
+#                    The fix is to update the plugin. An update does not remove
+#                    accounts or files an attacker already created: run hunt.
+#   rollback [--dry-run]   reactivate the plugins mitigate deactivated.
 #   hunt             search each WordPress install, and this server, for the
 #                    published indicators of the Rank Math PRO malware, and for
 #                    signs of OttoKit abuse (new administrator accounts and
@@ -140,8 +160,9 @@ set -uo pipefail
 
 SCRIPT_NAME="wordpress-plugins-oct2026-check.sh"
 SCRIPT_VERSION="6.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/wordpress-plugins}"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -404,7 +425,7 @@ cmd_check_host() {
             elif ver_lt "$ver" "7.9.2"; then
                 bad "LiteSpeed Cache ${ver} is affected by CVE-2026-113500 (fixed in 7.9.2)"
                 inf "exposure needs the HTML optimization feature on and comments from unauthenticated visitors being published"
-                inf "interim, derived from the description and not vendor documented: hold every comment for moderation (Settings > Discussion) until you update"
+                inf "PrivacySafe recommendation, derived from the description: hold every comment for moderation (Settings > Discussion) until you update"
                 rc=1
             else ok "LiteSpeed Cache ${ver} has the fix (7.9.2 or newer)"; fi
         fi
@@ -505,7 +526,7 @@ cmd_check_host() {
     if [[ $rc -eq 0 ]]; then
         info "No affected plugin found (${found} WordPress install(s) checked)"
     else
-        warn "Affected or unverified plugin found."
+        warn "Affected plugin found, or one whose version could not be read."
         inf "LiteSpeed Cache: update to 7.9.2 or later."
         inf "OttoKit: update to 1.1.41 or later."
         inf "SureCart: update to 4.9.6 or later."
@@ -689,7 +710,7 @@ cmd_hunt() {
     step "Verdict"
     if [[ $rc -eq 0 ]]; then
         info "No indicator of the Rank Math PRO malware or of OttoKit abuse found"
-        inf "A clean result is not proof: the malware can rebuild or hide, and the published indicator list may be incomplete."
+        inf "A clean result means none of the published indicators were found."
     else
         warn "Indicators found. Treat the server as compromised:"
         inf "  1. delete the whole plugin folder first (deactivating does not stop it), then the database rows"
@@ -703,6 +724,147 @@ cmd_hunt() {
 }
 
 # ---------- dispatch ---------------------------------------------------------
+
+# ---------- mitigate and rollback --------------------------------------------
+WPM_MANIFEST=""; WPM_DRY=0; WPM_BIN=""
+# slug|name|first fixed version, for the plugins mitigate may deactivate (Bricksforge is found by its header)
+WPM_TABLE=("suretriggers|OttoKit|1.1.41" "surecart|SureCart|4.9.6" "latepoint|LatePoint|5.7.5" "ameliabooking|Amelia|2.4.12" "profile-builder|Profile Builder|4.0.5")
+wpm_owner() { ls -ld "$1/wp-config.php" 2>/dev/null | awk '{print $3}'; }
+wpm_runner() {   # path of runuser, which usually lives in /usr/sbin and may not be on PATH
+    local c
+    for c in "$(command -v runuser 2>/dev/null || true)" /usr/sbin/runuser /sbin/runuser /usr/bin/runuser; do
+        [[ -n "$c" && -x "$c" ]] && { echo "$c"; return 0; }
+    done
+    return 1
+}
+wpm_wp() {   # OWNER ROOT args... : WP-CLI as the site's owner, without loading plugins or themes. Never falls back to root.
+    local owner="$1" root="$2" ru; shift 2
+    if [[ "$(id -u)" -eq 0 && -n "$owner" && "$owner" != root ]]; then
+        ru="$(wpm_runner)" || { echo "cannot run WP-CLI as ${owner}: runuser not found" >&2; return 126; }
+        "$ru" -u "$owner" -- "$WPM_BIN" --path="$root" --skip-plugins --skip-themes "$@"
+    else "$WPM_BIN" --path="$root" --skip-plugins --skip-themes "$@"; fi
+}
+wpm_known() {   # slug -> 0 if mitigate knows it
+    local e; for e in "${WPM_TABLE[@]}"; do [[ "${e%%|*}" == "$1" ]] && return 0; done
+    [[ "$1" == bricksforge ]]
+}
+
+cmd_mitigate() {
+    local all=0 rc=0 root slug name fixed e d bff ver owner chosen="" x did=0 found=0
+    local -a plugins=() dirs=() roots=() existing=() cands=()
+    WPM_DRY=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run) WPM_DRY=1 ;;
+            --all-affected) all=1 ;;
+            --plugin) shift; [[ -n "${1:-}" ]] || die "--plugin needs a comma separated list of plugin folder names"; chosen="$1" ;;
+            -*) die "Unknown mitigate option: $1 (--plugin LIST --all-affected --dry-run)" ;;
+            *) dirs+=("$1") ;;
+        esac
+        shift
+    done
+    [[ $all -eq 1 || -n "$chosen" ]] || die "mitigate needs --plugin SLUG[,SLUG] or --all-affected, because deactivating turns a plugin's features off (see --help). Nothing was changed."
+    if [[ -n "$chosen" ]]; then
+        for x in ${chosen//,/ }; do
+            wpm_known "$x" || die "not a plugin this tool deactivates: ${x} (suretriggers, surecart, latepoint, ameliabooking, profile-builder, bricksforge)"
+            plugins+=("$x")
+        done
+    fi
+    [[ $WPM_DRY -eq 1 || "$(id -u)" -eq 0 || -n "${WPM_ALLOW_NONROOT:-}" ]] || die "mitigate changes a site: run it as root or as the site's own user, or add --dry-run to see what it would do"
+    WPM_BIN="${WP_CLI:-$(command -v wp 2>/dev/null || true)}"
+    [[ ${#dirs[@]} -gt 0 ]] || read -r -a dirs <<<"$(default_dirs)"
+    for d in "${dirs[@]}"; do [[ -d "$d" ]] && existing+=("$d"); done
+    step "Looking for WordPress installs"
+    if [[ ${#existing[@]} -eq 0 ]]; then info "None of the search directories exist"; return 0; fi
+    while IFS= read -r root; do [[ -n "$root" ]] && roots+=("$root"); done < <(discover_wp "${existing[@]}")
+    if [[ ${#roots[@]} -eq 0 ]]; then info "No WordPress install found under: ${existing[*]}"; return 0; fi
+    if [[ $WPM_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        WPM_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$WPM_MANIFEST"
+    else WPM_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
+    caution "deactivating a plugin turns its features off (forms, bookings, checkout, login pages) until you update and reactivate it"
+    for root in "${roots[@]}"; do
+        step "WordPress at ${root}"
+        cands=()
+        for e in "${WPM_TABLE[@]}"; do
+            slug="${e%%|*}"; fixed="${e##*|}"; name="${e#*|}"; name="${name%%|*}"
+            [[ -d "${root}/wp-content/plugins/${slug}" ]] && cands+=("${slug}|${name}|${fixed}")
+        done
+        for d in "${root}/wp-content/plugins"/*/; do
+            [[ -d "$d" ]] || continue
+            bff="$(main_php "${d%/}")"; [[ -n "$bff" ]] || continue
+            head -n 60 "$bff" | grep -iE 'Plugin Name:[[:space:]]*Bricksforge' >/dev/null || continue
+            cands+=("$(basename "${d%/}")|Bricksforge|3.1.8.10")
+        done
+        if [[ ${#cands[@]} -eq 0 ]]; then inf "none of the plugins this tool deactivates is installed here"; continue; fi
+        for e in "${cands[@]}"; do
+            slug="${e%%|*}"; fixed="${e##*|}"; name="${e#*|}"; name="${name%%|*}"
+            if [[ $all -eq 0 ]]; then
+                x=0; for d in "${plugins[@]}"; do [[ "$d" == "$slug" || ( "$d" == bricksforge && "$name" == Bricksforge ) ]] && x=1; done
+                [[ $x -eq 1 ]] || { inf "${name} (${slug}): not chosen, left alone"; continue; }
+            fi
+            found=$((found + 1))
+            ver="$(plugin_version "${root}/wp-content/plugins/${slug}")"
+            if [[ -z "$ver" ]]; then caution "${name}: no version header found, left alone"; rc=1; continue; fi
+            if ! ver_lt "$ver" "$fixed"; then ok "${name} ${ver} has the fix (${fixed} or newer): left alone"; continue; fi
+            bad "${name} ${ver} is below the fixed version ${fixed}"
+            if [[ -z "$WPM_BIN" ]]; then
+                caution "no WP-CLI (wp) found: deactivate ${name} from the Plugins screen, or install WP-CLI and run this again"; rc=1; continue
+            fi
+            owner="$(wpm_owner "$root")"
+            if [[ "$(id -u)" -ne 0 && -n "$owner" && "$owner" != "$(id -un)" ]]; then
+                caution "${root} belongs to ${owner}: run this as root or as ${owner}"; rc=1; continue
+            fi
+            if [[ "$(id -u)" -eq 0 && -n "$owner" && "$owner" != root ]] && ! wpm_runner >/dev/null; then
+                caution "cannot run WP-CLI as ${owner} (runuser not found) and it will not be run as root on that site: deactivate ${name} from the Plugins screen"; rc=1; continue
+            fi
+            if wpm_wp "$owner" "$root" plugin is-active "$slug" --network >/dev/null 2>&1; then
+                caution "${name} is network-activated: deactivate it from the Network Admin plugins screen"; rc=1; continue
+            fi
+            if ! wpm_wp "$owner" "$root" plugin is-active "$slug" >/dev/null 2>&1; then ok "${name} is already inactive"; continue; fi
+            if [[ $WPM_DRY -eq 1 ]]; then
+                echo "  would run (as ${owner:-the current user}): wp --path=${root} --skip-plugins --skip-themes plugin deactivate ${slug}"; continue
+            fi
+            if wpm_wp "$owner" "$root" plugin deactivate "$slug" >/dev/null 2>&1 && ! wpm_wp "$owner" "$root" plugin is-active "$slug" >/dev/null 2>&1; then
+                ok "${name} deactivated (an inactive plugin registers no routes)"
+                echo "wp|${root}|${slug}|${owner}|${WPM_BIN}" >>"$WPM_MANIFEST"; did=1
+            else bad "${name}: WP-CLI could not deactivate it (check the database settings in wp-config.php): deactivate it from the Plugins screen"; rc=1; fi
+        done
+    done
+    step "Result"
+    if [[ $WPM_DRY -eq 1 ]]; then info "Dry run finished: nothing was changed"
+    elif [[ $did -eq 1 ]]; then info "Done. Undo with: $0 rollback"
+    else info "Nothing needed changing"; fi
+    inf "Update the plugin to its fixed version, then reactivate it. An update does not remove accounts or files an attacker already created: run $0 hunt."
+    return "$rc"
+}
+
+cmd_rollback() {
+    local line rest root slug owner bin rc=0
+    WPM_DRY=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) WPM_DRY=1 ;; *) die "Unknown rollback option: $1 (--dry-run)" ;; esac
+        shift
+    done
+    WPM_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$WPM_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $WPM_DRY -eq 1 || "$(id -u)" -eq 0 || -n "${WPM_ALLOW_NONROOT:-}" ]] || die "rollback changes a site: run it as root or as the site's own user, or add --dry-run"
+    step "Rolling back"
+    while IFS= read -r line; do
+        [[ "$line" == wp\|* ]] || continue
+        rest="${line#wp|}"; root="${rest%%|*}"; rest="${rest#*|}"; slug="${rest%%|*}"; rest="${rest#*|}"; owner="${rest%%|*}"; bin="${rest#*|}"
+        WPM_BIN="$bin"
+        if [[ $WPM_DRY -eq 1 ]]; then echo "  would run (as ${owner:-the current user}): wp --path=${root} --skip-plugins --skip-themes plugin activate ${slug}"; continue; fi
+        if wpm_wp "$owner" "$root" plugin activate "$slug" >/dev/null 2>&1; then ok "reactivated ${slug} at ${root}"
+        else bad "could not reactivate ${slug} at ${root}: do it from the Plugins screen"; rc=1; fi
+    done <"$WPM_MANIFEST"
+    if [[ $WPM_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$WPM_MANIFEST" "${WPM_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back."
+    fi
+    return "$rc"
+}
+
 main() {
     CMD="${1:-check}"; [[ $# -gt 0 ]] && shift
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
@@ -710,8 +872,8 @@ main() {
     echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
     echo "CVE-2026-113500, -111862, -110372, -112241, -110653, -112327, -112242, -85097; fixed in LiteSpeed 7.9.2, Rank Math PRO 3.0.124, OttoKit 1.1.41, SureCart 4.9.6, LatePoint 5.7.5, Amelia 2.4.12, Profile Builder 4.0.5, Bricksforge 3.1.8.10 or 4.0.1"
     case "$CMD" in
-        check|hunt) "cmd_${CMD}" "$@" ;;
-        *) die "Unknown command: ${CMD} (check|hunt|version)" ;;
+        check|hunt|mitigate|rollback) "cmd_${CMD}" "$@" ;;
+        *) die "Unknown command: ${CMD} (check|hunt|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

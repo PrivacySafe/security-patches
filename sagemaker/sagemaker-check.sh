@@ -47,7 +47,7 @@ set -uo pipefail
 
 SCRIPT_NAME="sagemaker-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -283,7 +283,7 @@ cmd_check_host() {
         info "No affected SageMaker Python SDK found (${found} copy or pin checked)."
     else
         warn "Affected SageMaker Python SDK found. Upgrade: pip install --upgrade 'sagemaker>=2.257.3' (V2) or 'sagemaker>=3.10.0' (V3)."
-        inf "Interim (ours, not the vendor's): pass an explicit bucket you own instead of relying on the default, and create the default bucket sagemaker-<region>-<account-id> yourself so no one else can."
+        inf "PrivacySafe recommendation: pass an explicit bucket you own instead of relying on the default, and create the default bucket sagemaker-<region>-<account-id> yourself so no one else can."
         inf "Check by hand whether that name is already someone else's (needs the AWS CLI and read access; this script does not run it):"
         inf "    aws s3api head-bucket --bucket sagemaker-REGION-ACCOUNTID --expected-bucket-owner ACCOUNTID"
         inf "A 404 suggests the name is unclaimed and anyone could take it; a 403 usually means it exists under a different account (or that you lack permission). If it is someone else's, review what the SDK uploaded there."

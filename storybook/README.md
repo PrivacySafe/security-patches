@@ -38,7 +38,7 @@ The Storybook dev server exposes its WebSocket authentication token to any clien
    chmod +x storybook-check.sh
    ```
 
-3. Check this machine. By default it searches `/var/www /srv /opt /home`; pass directories to narrow it. Run it while your dev server is running if you want it to see the listening address.
+3. Check this machine. By default it searches `/var/www /srv /opt /home`. Pass directories to narrow it. Run it while your dev server is running if you want it to see the listening address.
 
    ```bash
    ./storybook-check.sh check
@@ -56,13 +56,13 @@ Exit codes: `0` nothing exposed, `1` an affected version while a dev server is l
 
 ## How to read the result
 
-- **Affected version and a dev server listening beyond loopback right now:** exposed. Stop it, upgrade, and treat any story file you did not write as suspect (this flaw writes code into story files; review recent changes in version control).
-- **Affected version, no dev server running:** exit `0` with a warning to update before the next run, because the next `storybook dev` will listen on all interfaces.
-- **A script with `--host 0.0.0.0` or another non-loopback address:** exposed by configuration. `--host 127.0.0.1` or `localhost` is not flagged.
-- **Fixed version:** fine even while a dev server listens on `0.0.0.0`; the check is on the version, not on the socket.
-- **Storybook 7.x and earlier** are outside the advisory's range but unsupported: update anyway.
-- **Look-alikes** (`eslint-plugin-storybook`, `@storybook/*`) are different packages and are not matched, in all four lock formats.
-- **Prereleases:** `11.0.0-alpha.0` to `alpha.5` are affected; `alpha.6` and later are fixed.
+- Affected version and a dev server listening beyond loopback right now: exposed. Stop it, upgrade, and treat any story file you did not write as suspect (this flaw writes code into story files; review recent changes in version control).
+- Affected version, no dev server running: exit `0` with a warning to update before the next run, because the next `storybook dev` will listen on all interfaces.
+- A script with `--host 0.0.0.0` or another non-loopback address: exposed by configuration. `--host 127.0.0.1` or `localhost` is not flagged.
+- Fixed version: fine even while a dev server listens on `0.0.0.0`. The check is on the version, not on the socket.
+- Storybook 7.x and earlier are outside the advisory's range but unsupported: update anyway.
+- Look-alikes (`eslint-plugin-storybook`, `@storybook/*`) are different packages and are not matched, in all four lock formats.
+- Prereleases: `11.0.0-alpha.0` to `alpha.5` are affected; `alpha.6` and later are fixed.
 
 ## Fixing it
 
@@ -73,15 +73,19 @@ Upgrade to 8.6.19, 9.1.21, 10.6.2 or 11.0.0-alpha.6 or newer. If you cannot, do 
 - [Advisory GHSA-px85-f4q5-jh77](https://github.com/storybookjs/storybook/security/advisories/GHSA-px85-f4q5-jh77)
 - [GitLab advisory database entry for CVE-2026-114126](https://advisories.gitlab.com/npm/storybook/CVE-2026-114126/)
 
-## Storybook know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 8.6.19, 9.1.21, 10.6.2 or 11.0.0-alpha.6. The fixed releases also bind the dev server to `127.0.0.1` by default. If you cannot upgrade, do not run an affected dev server (the vendor's advice).
-- **Running `storybook dev` is the exposure.** Affected versions listen on all network interfaces, so a host on the same network can obtain the WebSocket token. A Storybook built and served as static files has no dev server and is not reachable this way.
-- **Code execution depends on the Vitest addon.** With the Storybook Vitest addon and an old Vitest, the payload can write more files or run commands as the developer.
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container lists the project files this check needs (lockfiles, `package.json`, route directory names, the few source files that contain `'use server'`, `config/auth.php`, and similar), and only those are copied into a private temporary directory that the normal check then judges like a host directory. The version comes from the copied lockfile or the installed `node_modules/storybook/package.json`, and the `package.json` scripts are read for an explicit non-loopback `--host`. A dev server that is listening *right now* is probed on the host only. A staged symlink is never kept, paths the container reports are validated, and nothing is run in a container beyond `find`, `grep` and `test`. The copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
+- The fix. Update to 8.6.19, 9.1.21, 10.6.2 or 11.0.0-alpha.6. The fixed releases also bind the dev server to `127.0.0.1` by default. If you cannot upgrade, do not run an affected dev server (the vendor's advice).
+- Running `storybook dev` is the exposure. Affected versions listen on all network interfaces, so a host on the same network can obtain the WebSocket token. A Storybook built and served as static files has no dev server and is not reachable this way.
+- Code execution depends on the Vitest addon. With the Storybook Vitest addon and an old Vitest, the payload can write more files or run commands as the developer.
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe lists the project files this check needs: lockfiles, `package.json`, route directory names, the few source files that contain `'use server'`, `config/auth.php` and similar. Only those files are copied into a private temporary folder, and the normal check judges that folder like a host directory. The version comes from the copied lockfile or the installed `node_modules/storybook/package.json`, and the `package.json` scripts are read for an explicit non-loopback `--host`. A dev server that is listening *right now* is probed on the host only. A staged symlink is never kept, paths the container reports are validated, and nothing is run in a container beyond `find`, `grep` and `test`. The copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

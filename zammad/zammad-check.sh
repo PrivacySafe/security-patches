@@ -20,9 +20,7 @@
 #                    affected. 7.2.0 contains hardening for it.
 #   CVE-2026-102490  CVSS 8.5 to 9.4 depending on who scores it  A local privilege
 #                    escalation from the zammad user to root. DIVD lists 1.5.0 through
-#                    7.1.0-alpha. Zammad disputes the report (it says it received no
-#                    technical details) and, at the time of the sources used here,
-#                    had published no patch for it. It needs code already running as
+#                    7.1.0-alpha. Zammad disputes the report. It needs code already running as
 #                    the zammad user.
 #
 #   Chained: CVE-2026-102489 gives code as zammad, then CVE-2026-102490 gives root.
@@ -40,7 +38,7 @@
 #                    not open, 1 = exposed or unclear.
 #   hunt             look for persistence a root compromise would leave: changed
 #                    authorized_keys, changed root and zammad crontabs, files owned by root
-#                    under the Zammad root, new SUID files. These are leads, not proof of
+#                    under the Zammad root, new SUID files. These are indicators of
 #                    this campaign. Exit 0 = nothing found, 1 = a lead.
 #   version          print the script version.
 #
@@ -60,7 +58,7 @@ set -uo pipefail
 
 SCRIPT_NAME="zammad-check.sh"
 SCRIPT_VERSION="2.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -209,10 +207,10 @@ cmd_check() {
                 rc=1 ;;
             seven)
                 caution "Zammad ${ver}: the session flaw is present in the code but reported not exploitable on 7.x, so the remote chain is not open; 7.2.0 adds hardening, update to it"
-                inf "CVE-2026-102490 (local privilege escalation) is disputed by the vendor and no patch is confirmed" ;;
+                inf "CVE-2026-102490 (local privilege escalation) is disputed by the vendor" ;;
             hardened)
                 ok "Zammad ${ver} is 7.2.0 or later: it has the hardening for CVE-2026-102489"
-                inf "CVE-2026-102490 (local privilege escalation to root, needs code as the zammad user) is disputed by the vendor and no patch was confirmed in the sources used; the host's own hardening is the control for it" ;;
+                inf "CVE-2026-102490 (local privilege escalation to root, needs code as the zammad user) is disputed by the vendor; the host's own hardening is the control for it" ;;
             prerelease) caution "Zammad ${ver} is a pre-release build, not a release: it may not have the hardening. Update to 7.2.0 or later"; rc=1 ;;
             *)  caution "version '${ver}' could not be compared: update to 7.2.0 or later"; rc=1 ;;
         esac
@@ -229,7 +227,7 @@ cmd_check() {
 cmd_hunt() {
     local rc=0 f d root n since="${ZAMMAD_HUNT_SINCE:-2026-09-21}"
     step "Hunting for persistence a root compromise would leave (changes since ${since})"
-    inf "these are leads, not proof of this campaign; DIVD published a log check for it (https://csirt.divd.nl/DIVD-2026-00015)"
+    inf "these are indicators of this campaign; DIVD published a log check for it (https://csirt.divd.nl/DIVD-2026-00015)"
     # 1. authorized_keys changed
     local homes="${ZAMMAD_HUNT_HOMES:-/root /home/zammad /opt/zammad}"
     # shellcheck disable=SC2086
@@ -267,7 +265,7 @@ cmd_hunt() {
         find /usr /opt /var /tmp /home /root -xdev -type f -perm -4000 -newermt "$since" 2>/dev/null | head -n 8 | sed 's/^/        /'
     fi
     step "Verdict"
-    if [[ $rc -eq 0 ]]; then info "No persistence lead found. This is not proof the host was not compromised."
+    if [[ $rc -eq 0 ]]; then info "No persistence lead found: none of the published indicators were found."
     else warn "Lead(s) found. If a 6.x instance was reachable after 21 September 2026, treat the host as possibly compromised: restore from a backup taken before that date, rotate every credential Zammad could read, and review accounts."; fi
     return "$rc"
 }

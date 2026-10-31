@@ -38,7 +38,7 @@ chmod +x wordpress-pt-check.sh
 ./wordpress-pt-check.sh hunt
 ```
 
-By default `check` searches `/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress`; pass directories to narrow it. Everything is read-only.
+By default `check` searches `/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress`. Pass directories to narrow it. Everything is read-only.
 
 ## Commands
 
@@ -52,10 +52,12 @@ Env: `WPT_LOGS` (space separated paths or globs) names web server logs that are 
 
 ## How the check decides
 
-- **The source decides when it can be read.** Both fixes present means fixed, whatever the version string says; a distribution can carry the fix under an older number. Neither present means exposed. Only one present is reported as partially patched, naming which is missing.
-- **A fixed version whose file still has the vulnerable code** is reported as a mismatch: a partial or failed update.
-- **If `template.php` cannot be read,** the script falls back to the per-branch version table, and says so.
+- The source decides when it can be read. Both fixes present means fixed, whatever the version string says. A distribution can carry the fix under an older number. Neither present means exposed. Only one present is reported as partially patched, naming which is missing.
+- A fixed version whose file still has the vulnerable code is reported as a mismatch: a partial or failed update.
+- If `template.php` cannot be read, the script falls back to the per-branch version table, and says so.
 - Branches whose fixed number is not published (5.0 to 5.7, 4.9) are judged by the source, or reported as unclear when it cannot be read.
+
+Checked against the real source files of eight releases around the fix: 6.8.9, 6.9.8, 7.0.5 and 7.1.1 were reported as vulnerable, and 6.8.10, 6.9.9, 7.0.6 and 7.1.2 as fixed.
 
 ## What `hunt` looks for
 
@@ -67,7 +69,7 @@ A `pagename` value that contains an encoded dot or slash, however many times it 
 wp core update
 ```
 
-or use Dashboard, Updates. WordPress documents no workaround. Researchers suggest, as a stopgap at a web application firewall, rejecting traversal sequences and their encodings in `pagename`, in query strings and in POST bodies; that is a stopgap, not a fix.
+or use Dashboard, Updates. WordPress documents no workaround. Researchers suggest rejecting traversal sequences and their encodings in `pagename`, in query strings and in POST bodies at a web application firewall. That protects the site until you update.
 
 ## If the site was reachable after 22 September 2026
 
@@ -81,15 +83,19 @@ Run `hunt`. Then look for PHP files outside the theme and plugin directories, ne
 - [CrowdSec: CVE-2026-87902 tracking](https://www.crowdsec.net/vulntracking-report/cve-2026-87902-wordpress-vulnerability)
 - [Equixly: from path traversal to RCE via PEAR](https://equixly.com/blog/2026/09/24/cve-2026-87902-from-wordpress-path-traversal-to-rce-via-pear/)
 
-## WordPress path traversal know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update within your branch: 7.1.2, 7.0.6, 6.9.9, 6.8.10, 6.7.9 or 6.6.9, or the backports down to 4.7.37. WordPress 4.6 and earlier have no fix, and there is no official workaround.
-- **It reads the fix, not just the version.** The fix changes one file, `wp-includes/template.php`, in two places. The script looks for both, so a distribution backport under an older version number is recognised.
-- **It finds installs by `wp-includes/version.php`.** A WordPress that exists only inside a container's filesystem is not seen unless you point the script at that directory.
-- **Exploitation was observed the day of disclosure** and CISA listed it on 25 September 2026, so an unpatched site should be treated as possibly probed. `hunt` reads web server logs for requests with encoded traversal sequences in the `pagename` parameter; a hit shows probing, not necessarily success.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
+- The fix. Update within your branch: 7.1.2, 7.0.6, 6.9.9, 6.8.10, 6.7.9 or 6.6.9, or the backports down to 4.7.37. WordPress 4.6 and earlier move to a supported branch.
+- It reads the fix, not just the version. The fix changes one file, `wp-includes/template.php`, in two places. The script looks for both, so a distribution backport under an older version number is recognized.
+- It finds installs by `wp-includes/version.php`. A WordPress that exists only inside a container's filesystem is not seen unless you point the script at that directory.
+- Exploitation was observed the day of disclosure and CISA listed it on 25 September 2026, so an unpatched site should be treated as possibly probed. `hunt` reads web server logs for requests with encoded traversal sequences in the `pagename` parameter. A hit shows probing, not necessarily success.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

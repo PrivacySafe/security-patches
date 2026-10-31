@@ -78,7 +78,7 @@ DISCOURSE_ROOT="${DISCOURSE_ROOT:-/var/discourse}"
 DISCOURSE_APP="${DISCOURSE_APP:-/var/www/discourse}"
 SCRIPT_NAME="ruby-regexp-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 RUBY_ADVISORY="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/"
 
@@ -176,9 +176,9 @@ ruby_state() {   # <X.Y.Z> [binary] [libruby]
     if ver_ge "$v" "4.1.0"; then
         echo "2|${v} is newer than the 23 Oct releases: check the build includes ruby/ruby#13332, #19020 and #16801"
     elif [[ -n "${pkg:-}" ]]; then
-        echo "1|${v} (${pkg} ${full}): Ruby ${mm} got no fixed release and the changelog doesn't name the GitLab CVEs"
+        echo "1|${v} (${pkg} ${full}): Ruby ${mm} is an older line and the changelog doesn't name the GitLab CVEs"
     else
-        echo "1|${v}: Ruby ${mm} got no fixed release. Move to 3.3.13, 3.4.12 or 4.0.9"
+        echo "1|${v}: Ruby ${mm} is an older line. Move to 3.3.13, 3.4.12 or 4.0.9"
     fi
 }
 
@@ -270,7 +270,7 @@ gitlab_state() {   # <X.Y.Z> -> "<rc>|<explanation>"
     done
     # Lines newer than every fixed release shipped after the fixes
     if ver_ge "$mm.0" "${newest%.*}.1"; then echo "0|${v} is newer than ${newest}"; return; fi
-    echo "1|${v}: GitLab ${mm} got no fixed release. CVE-2026-110264 affects every version from 7.0; move to a fixed line"
+    echo "1|${v}: GitLab ${mm} is an older line. CVE-2026-110264 affects every version from 7.0: move to a fixed line"
 }
 
 # Discourse installs: "kind|where|version|ruby"
@@ -511,7 +511,7 @@ cmd_scan() {
     echo
     echo "  For each 'review' line, trace where the pattern comes from. If a user can supply it"
     echo "  (params, CI config, saved filters, webhooks, search syntax), that app is exposed until"
-    echo "  its Ruby is fixed. The interim fix is in the app: stop compiling the user's text, or"
+    echo "  its Ruby is fixed. The protective fix is in the app: stop compiling the user's text, or"
     echo "  pass it through Regexp.escape so it is matched literally. This is a grep: it misses"
     echo "  patterns built across several lines and can flag interpolated strings that aren't regexps."
     grep -q $'\treview\t' "$hits" && return 1
@@ -562,7 +562,7 @@ cmd_hunt() {
         fi
     done
     echo
-    echo "  A hit is a lead, not proof: native gems crash Ruby too, and RegexpError is ordinary when"
+    echo "  A hit tells you where to look: native gems crash Ruby too, and RegexpError is ordinary when"
     echo "  users type bad patterns. A crash with Onigmo frames on an unfixed Ruby, or a burst of"
     echo "  RegexpError from one source before a worker died, is worth treating as an incident:"
     echo "  check what the process could reach (secrets, database credentials, tokens, GitLab runner"
@@ -586,4 +586,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

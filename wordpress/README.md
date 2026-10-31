@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`wordpress/wordpress-xss2shell-check.sh`](wordpress-xss2shell-check.sh)
 
-WordPress Core 4.7 through 7.0.2 reflects the submitted username in the `wp-login.php` error message through `sprintf()` without adequate sanitization. A whitespace parser-differential payload (`< area`, with a space between `<` and the tag name) survives PHP `strip_tags()` but is re-tokenized by WordPress's KSES sanitizer into a live DOM element. An attacker who can get a logged-in administrator to send that crafted login form runs attacker JavaScript in the WordPress origin, and can then chain the injected session privileges into full remote code execution through OAuth app-password abuse and plugin upload. No account is required for the XSS stage. Disclosure by PWN.AI on 2026-08-07; WordPress shipped the fix in 7.0.3 the same day.
+WordPress Core 4.7 through 7.0.2 reflects the submitted username in the `wp-login.php` error message through `sprintf()` without adequate sanitization. A whitespace parser-differential payload (`< area`, with a space between `<` and the tag name) survives PHP `strip_tags()` but is re-tokenized by WordPress's KSES sanitizer into a live DOM element. An attacker who can get a logged-in administrator to send that crafted login form runs attacker JavaScript in the WordPress origin, and can then chain the injected session privileges into full remote code execution through OAuth app-password abuse and plugin upload. No account is required for the XSS stage. Disclosure by PWN.AI on 2026-08-07. WordPress shipped the fix in 7.0.3 the same day.
 
 | | |
 |---|---|
@@ -67,7 +67,7 @@ Environment: `WP_ROOTS` (space-separated directories to look for `wp-content/` u
 
 ## What the probe checks and why it is non-destructive
 
-The probe posts `< area id=ajaxurl href=/?rest_route=/>` as the username to `wp-login.php`. On a vulnerable WordPress install, KSES re-tokenizes the whitespace-prefixed tag into a real `<area id="ajaxurl">` element in the error message; on a patched install the output is escaped or the tag is stripped. The checker looks for `id="ajaxurl"` and `<area` together with `Error:` (the login-failure marker, which also prevents false positives against non-WordPress pages). This is the same matcher the verified Nuclei template uses.
+The probe posts `< area id=ajaxurl href=/?rest_route=/>` as the username to `wp-login.php`. On a vulnerable WordPress install, KSES re-tokenizes the whitespace-prefixed tag into a real `<area id="ajaxurl">` element in the error message. On a patched install the output is escaped or the tag is stripped. The checker looks for `id="ajaxurl"` and `<area` together with `Error:` (the login-failure marker, which also prevents false positives against non-WordPress pages). This is the same matcher the verified Nuclei template uses.
 
 Posting to `wp-login.php` with an incorrect password generates one failed-authentication record in the auth log and no other side effects: no account is created or modified, no data is written, and no session is opened.
 
@@ -75,29 +75,29 @@ Posting to `wp-login.php` with an incorrect password generates one failed-authen
 
 In web server access logs (Apache and nginx, from standard paths and from `HUNT_LOGS`):
 
-- **POST bursts to `wp-login.php`:** the XSS stage sends a crafted login form. Legitimate traffic is usually much lower volume.
-- **Requests to `authorize-application.php`:** this page handles OAuth application-password authorization and is not normally accessed directly. A request here after a burst of login POSTs is a strong indicator of stage 4 of the chain.
-- **Plugin upload requests (`update.php?action=upload-plugin`):** the RCE stage uploads a plugin zip containing a webshell. Each upload that the admin did not make is worth investigating.
-- **Direct PHP access in plugin directories returning 200:** a webshell dropped via plugin upload lives at `wp-content/plugins/<slug>/<slug>.php` and is web-accessible without activation. Successful GET requests to a path matching that pattern are a strong signal.
+- POST bursts to `wp-login.php`: the XSS stage sends a crafted login form. Legitimate traffic is usually much lower volume.
+- Requests to `authorize-application.php`: this page handles OAuth application-password authorization and is not normally accessed directly. A request here after a burst of login POSTs is a strong indicator of stage 4 of the chain.
+- Plugin upload requests (`update.php?action=upload-plugin`): the RCE stage uploads a plugin zip containing a webshell. Each upload that the admin did not make is worth investigating.
+- Direct PHP access in plugin directories returning 200: a webshell dropped via plugin upload lives at `wp-content/plugins/<slug>/<slug>.php` and is web-accessible without activation. Successful GET requests to a path matching that pattern are a strong signal.
 
 In plugin directories under `WP_ROOTS` (with `WEBROOT` supplied as an argument or from the environment):
 
-- **PHP files created after `HUNT_SINCE`:** any `*.php` file that appeared after the disclosure date is worth reviewing. The webshell dropped by the public PoC is not named uniquely, so a new PHP file in any plugin directory is a lead.
+- PHP files created after `HUNT_SINCE`: any `*.php` file that appeared after the disclosure date is worth reviewing. The webshell dropped by the public PoC is not named uniquely, so a new PHP file in any plugin directory is a lead.
 
 In WordPress `debug.log` (under `WP_ROOTS`):
 
 - Fatal errors, `call_user_func` warnings, and `system()` or `shell_exec()` calls that suggest code execution.
 
-A hit is a lead, not proof. Confirm by reviewing the specific request IDs, the plugin directory contents, and your outbound traffic logs.
+A hit tells you exactly where to look. Confirm by reviewing the specific request IDs, the plugin directory contents, and your outbound traffic logs.
 
-## Know before you run it
+## Before you run it
 
-- **`check` and `audit` make HTTP requests to the target.** The probe causes one failed-authentication entry. The sensitive-file checks each make one GET request. `audit` fetches the homepage, the OPML endpoint, several sensitive paths, the homepage headers, and the REST API user list: nine or ten requests in total.
-- **`hunt` is read-only.** It reads log files and file system metadata; it does not modify anything.
-- **Version detection can miss.** WordPress plugins and themes often hide the meta generator tag. A clean version result does not mean the site is patched; the XSS reflection probe covers this case independently.
-- **GNU/Linux only.** The find `-printf` and date formats assume GNU tools.
-- **Root helps but is not required.** Without root, hunt reads only the logs you own and may miss files in other users' directories.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container copies only the `Plugin Name` and `Version` header lines of each covered plugin's main file, plus its modification time, and the script runs once per container in isolation against that copy. For Rank Math PRO 3.0.123 the arrival-time test uses the modification time alone, because a container's inode change time cannot be recovered; the output says so. `hunt` does not look inside containers. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME.
+- `check` and `audit` make HTTP requests to the target. The probe causes one failed-authentication entry. The sensitive-file checks each make one GET request. `audit` fetches the homepage, the OPML endpoint, several sensitive paths, the homepage headers, and the REST API user list: nine or ten requests in total.
+- `hunt` is read-only. It reads log files and file system metadata; it does not modify anything.
+- Version detection can miss. WordPress plugins and themes often hide the meta generator tag. A clean version result does not mean the site is patched. The XSS reflection probe covers this case independently.
+- GNU/Linux only. The find `-printf` and date formats assume GNU tools.
+- Root helps but is not required. Without root, hunt reads only the logs you own and may miss files in other users' directories.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. A read-only probe inside each running docker and podman container copies only the `Plugin Name` and `Version` header lines of each covered plugin's main file, plus its modification time, and the script runs once per container in isolation against that copy. For Rank Math PRO 3.0.123 the arrival-time test uses the modification time alone, because a container's inode change time cannot be recovered. The output says so. `hunt` does not look inside containers. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME.
 
 ## Sources
 
@@ -150,7 +150,7 @@ One more plugin, exploited since 7 October 2026:
 | Exploitation | **Yes.** Patchstack saw the first attempts on 7 October 2026 at 21:47 UTC, before the advisory of 8 October, from 63 addresses within days |
 | If you cannot update | Deactivate Pro Forms or the whole plugin (the mitigation reported by Patchstack). **An update does not remove a file already uploaded**: run `hunt` and treat a site that was reachable as possibly compromised |
 
-**What the Rank Math malware reportedly does once activated.** It contacts a command server (`rank1cdn[.]com`), plants hidden PHP backdoors that it rebuilds whenever a visitor loads a page, creates administrator accounts, drops a fake WordPress core file and PHP code hidden inside `.cache` files, adds scheduled tasks, can add SSH keys, and reads every secret the web server can reach: WordPress passwords, the database login, API keys and payment gateway keys. Treat an activated tainted copy as a full compromise. The vendor notice is [rankmath.com/kb/pro-3-0-123-security-incident](https://rankmath.com/kb/pro-3-0-123-security-incident/).
+Once activated, the Rank Math malware reportedly contacts a command server (`rank1cdn[.]com`) and plants hidden PHP backdoors that it rebuilds whenever a visitor loads a page. It creates administrator accounts, drops a fake WordPress core file and PHP code hidden inside `.cache` files, adds scheduled tasks, can add SSH keys, and reads every secret the web server can reach: WordPress passwords, the database login, API keys and payment gateway keys. Treat an activated tainted copy as a full compromise. The vendor notice is [rankmath.com/kb/pro-3-0-123-security-incident](https://rankmath.com/kb/pro-3-0-123-security-incident/).
 
 ### Quick start
 
@@ -183,7 +183,11 @@ One more plugin, exploited since 7 October 2026:
 |---|---|
 | `check [DIR ...]` (default) | Finds WordPress installs (a `wp-content/plugins` directory under `/var/www /srv /home /opt /usr/share/wordpress`, or the directories you pass), reads the `Version:` header of LiteSpeed Cache, OttoKit, SureCart, LatePoint, Amelia, Profile Builder and Rank Math PRO (folders `seo-by-rank-math-pro` and `rank-math-pro`), and compares them. For Rank Math PRO 3.0.123 it compares the plugin file's modification and inode-change times with the incident window |
 | `hunt [DIR ...]` | Looks for the published Rank Math indicators, for signs of OttoKit abuse and for Bricksforge upload attacks, in each install and on the server (below) |
+| `mitigate (--plugin SLUG[,SLUG] \| --all-affected) [--dry-run] [DIR ...]` | Deactivates a plugin that is below its fixed version, with WP-CLI, as the owner of the site and with `--skip-plugins --skip-themes` so the vulnerable code is not loaded to switch it off. You must choose the plugins, because deactivating turns their features off. Acts on OttoKit (`suretriggers`) below 1.1.41, SureCart below 4.9.6, LatePoint below 5.7.5, Amelia (`ameliabooking`) below 2.4.12, Profile Builder below 4.0.5 and Bricksforge below 3.1.8.10 (found by its Plugin Name, whatever the folder is called). Plugins at or above the fixed version, already inactive, or network-activated are left alone. LiteSpeed Cache (hold comments for moderation instead) and Rank Math PRO (follow the vendor notice) are never touched. Needs `wp` on `PATH`, or `WP_CLI=/path/to/wp` |
+| `rollback [--dry-run]` | Reactivates the plugins `mitigate` deactivated |
 | `version` | Prints the script version |
+
+With WP-CLI 2.12 on WordPress 6.4.3, the REST routes of the deactivated plugins went from 200 to 404 and `rollback` brought them back. Update the plugin to its fixed version, then reactivate it. An update does not remove accounts or files an attacker already created, so run `hunt`. As root, WP-CLI runs as the owner of `wp-config.php` and never as root, if `runuser` is not available the plugin is left active and the script says how to deactivate it by hand. `STATE_DIR` (default `/var/lib/psf-security-patches/wordpress-plugins`) holds the record `rollback` uses.
 
 Exit codes: `0` nothing affected or nothing found, `1` affected or to review (check) or an indicator found (hunt), `2` bad arguments.
 
@@ -191,31 +195,31 @@ A pre-release of a fixed release (`7.9.2-rc1` against a fix in 7.9.2) counts as 
 
 ### Reading the Rank Math result
 
-- **3.0.123 whose files changed inside the window:** likely the tainted package.
-- **3.0.123 that arrived before the window opened:** not the tainted package.
-- **3.0.123 that arrived after the window:** probably clean, because Rank Math pulled the bad files, but the script asks you to update and run the hunt. File times are circumstantial: a backup restore or `rsync` resets them. Also check the plugin update history, your backup log and the email Rank Math sent to affected accounts.
-- **3.0.124 or newer:** clean replacement. If the site ever ran 3.0.123, run the hunt anyway.
+- 3.0.123 whose files changed inside the window: likely the tainted package.
+- 3.0.123 that arrived before the window opened: not the tainted package.
+- 3.0.123 that arrived after the window: probably clean, because Rank Math pulled the bad files, but the script asks you to update and run the hunt. File times are circumstantial: a backup restore or `rsync` resets them. Also check the plugin update history, your backup log and the email Rank Math sent to affected accounts.
+- 3.0.124 or newer: clean replacement. If the site ever ran 3.0.123, run the hunt anyway.
 
 ### Reading the Profile Builder result
 
-- **4.0.4 or earlier:** affected. Update to 4.0.5. A registered user may be able to gain a higher role, so afterwards review administrator and editor accounts (the hunt lists administrators created since 1 October). If you cannot update today, deactivate the plugin and close public registration. Only the free `profile-builder` folder is checked; a folder named `profile-builder-pro` is a different product and is not matched.
+- 4.0.4 or earlier: affected. Update to 4.0.5. A registered user may be able to gain a higher role, so afterwards review administrator and editor accounts (the hunt lists administrators created since 1 October). If you cannot update today, deactivate the plugin and close public registration. Only the free `profile-builder` folder is checked. A folder named `profile-builder-pro` is a different product and is not matched.
 
 ### Reading the LatePoint and Amelia results
 
-- **LatePoint 5.7.4 or earlier:** affected. Update to 5.7.5. An attacker who brute-forces the one-time code logs in as a customer, so afterwards review recent customer logins and bookings. The hunt counts web log requests that name LatePoint's OTP route (`auth__verify_otp`) by source address; many from one address is a lead. POST bodies are not normally logged, so a POST-only attack may not show.
-- **Amelia 2.4.11 or earlier:** affected. Update to 2.4.12. An SQL injection can expose the whole database, including user password hashes, so afterwards rotate administrator passwords and the keys and salts in `wp-config.php`, and run the hunt for new administrators.
-- If you cannot update today, deactivate the plugin: an inactive plugin registers no routes (our reasoning, not vendor documented).
+- LatePoint 5.7.4 or earlier: affected. Update to 5.7.5. An attacker who brute-forces the one-time code logs in as a customer, so afterwards review recent customer logins and bookings. The hunt counts web log requests that name LatePoint's OTP route (`auth__verify_otp`) by source address. Many from one address is a lead. POST bodies are not normally logged, so a POST-only attack may not show.
+- Amelia 2.4.11 or earlier: affected. Update to 2.4.12. An SQL injection can expose the whole database, including user password hashes, so afterwards rotate administrator passwords and the keys and salts in `wp-config.php`, and run the hunt for new administrators.
+- If you cannot update today, deactivate the plugin: an inactive plugin registers no routes (PrivacySafe recommendation).
 
 ### Reading the SureCart result
 
-- **4.9.5 or earlier:** affected. Update to 4.9.6, or deactivate the plugin if you cannot update today (an inactive plugin registers no routes; this is our reasoning, not vendor documented). After updating, reset administrator passwords and end all sessions by changing the `AUTH_KEY` and `SECURE_AUTH_KEY` salts in `wp-config.php`, because an authentication bypass leaves no account trace.
-- **4.9.6 or newer:** fixed. If the site ran 4.9.5 or earlier in October, run the hunt. It lists new administrator accounts, but it cannot see a login as an existing user, so also review recent administrator activity.
+- 4.9.5 or earlier: affected. Update to 4.9.6, or deactivate the plugin if you cannot update today (an inactive plugin registers no routes; this is PrivacySafe's recommendation). After updating, reset administrator passwords and end all sessions by changing the `AUTH_KEY` and `SECURE_AUTH_KEY` salts in `wp-config.php`, because an authentication bypass leaves no account trace.
+- 4.9.6 or newer: fixed. If the site ran 4.9.5 or earlier in October, run the hunt. It lists new administrator accounts, but it cannot see a login as an existing user, so also review recent administrator activity.
 - SureCart has had a run of authentication and account-takeover fixes this autumn, so keep it current rather than pinning a version.
 
 ### Reading the OttoKit result
 
-- **1.1.40 or earlier:** affected. Update to 1.1.41, or deactivate the plugin if you cannot update today (an inactive plugin registers no routes; this is our reasoning, not vendor documented).
-- **1.1.41 or newer:** fixed, but a site that ran an affected version in October may already have a rogue administrator. Run the hunt.
+- 1.1.40 or earlier: affected. Update to 1.1.41, or deactivate the plugin if you cannot update today (an inactive plugin registers no routes; this is PrivacySafe's recommendation).
+- 1.1.41 or newer: fixed, but a site that ran an affected version in October may already have a rogue administrator. Run the hunt.
 
 ### What the hunt looks for
 
@@ -248,9 +252,9 @@ For the Rank Math malware:
 
 For OttoKit: update to 1.1.41, remove administrator accounts you did not create, reset the password of every administrator and rotate the keys and salts in `wp-config.php`, and review plugins and themes for files you did not add.
 
-### LiteSpeed Cache: fixing and an interim measure
+### LiteSpeed Cache: fixing and a protective measure
 
-Update LiteSpeed Cache to 7.9.2 or later. Until then, hold every comment for moderation (Settings, Discussion). That is our reading of the description, which needs a published comment from an unauthenticated visitor; it is not vendor documented.
+Update LiteSpeed Cache to 7.9.2 or later. Until then, hold every comment for moderation (Settings, Discussion). That is our reading of the description, which needs a published comment from an unauthenticated visitor; this is PrivacySafe's recommendation.
 
 ### Sources
 
@@ -278,7 +282,7 @@ wp2shell chains two flaws in WordPress core into remote code execution for an **
 
 Update with `wp core update`, to 6.8.6, 6.9.5, 7.0.2 or newer on your branch.
 
-**Object cache caveat:** when a persistent object cache (Redis, Memcached) is active, the SQL injection sink is not reached and the chain does not fire. The site still needs the update; if the cache is ever disabled or flushed the full chain becomes reachable again.
+**Object cache caveat:** when a persistent object cache (Redis, Memcached) is active, the SQL injection sink is not reached and the chain does not fire. The site still needs the update, if the cache is ever disabled or flushed the full chain becomes reachable again.
 
 ## Quick start
 
@@ -290,26 +294,32 @@ chmod +x wordpress-wp2shell-check.sh
 ./wordpress-wp2shell-check.sh hunt
 ```
 
-By default it searches `/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress`; pass directories to narrow it. Everything it does is read-only.
+By default it searches `/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress`. Pass directories to narrow it. Everything it does is read-only.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `check` (default) | Finds each WordPress install by `wp-includes/version.php`, reads the version, reads the two source files for the fixes, and looks for a web server rule that refuses the batch route. Exit `0` nothing exposed, `1` an install without the fixes or whose state is unclear |
-| `hunt` | Looks for signs of exploitation: requests to the batch route and SQL injection strings in web server logs (plain and rotated `.gz`), PHP files inside `wp-content/uploads`, and changes to `wp-content/mu-plugins` since the disclosure. Exit `0` nothing found, `1` a strong lead. A lead is not proof, and a clean hunt is not proof of safety |
+| `hunt` | Looks for signs of exploitation: requests to the batch route and SQL injection strings in web server logs (plain and rotated `.gz`), PHP files inside `wp-content/uploads`, and changes to `wp-content/mu-plugins` since the disclosure. Exit `0` nothing found, `1` a strong lead. A clean hunt means none of the published indicators were found |
+| `mitigate [--web auto\|apache\|nginx] [--dir DIR] [--server-name NAME] [--dry-run] [--reload] [--force]` | **Changes the host (root).** Applies the web server block below for you, only when an exposed WordPress is found. nginx: an `include` as the first line of every PHP-serving server block, checked with `nginx -t`. Apache: a server-scope file (`psf-wp2shell-batch-block.conf`, with `LocationMatch` and `If`, so virtual hosts inherit it) checked with a configtest. If the web server rejects the result, everything is undone at once. Reloads nothing unless you add `--reload` |
+| `rollback [--dry-run] [--reload]` | Removes what `mitigate` added and restores the files it edited |
 | `version` | Prints the script version |
 
-Env: `HUNT_SINCE` (`YYYY-MM-DD`, default `2026-07-17`) sets the date for file changes; `WP2S_LOGS` names web server logs (space separated paths or globs) when they are not in the usual places.
+Env: `STATE_DIR` (default `/var/lib/psf-security-patches/wp2shell`) holds the backups and manifest. `HUNT_SINCE` (`YYYY-MM-DD`, default `2026-07-17`) sets the date for file changes. `WP2S_LOGS` names web server logs (space separated paths or globs) when they are not in the usual places.
 
 ## How the check decides
 
-- **Version, per branch.** 6.8.0 to 6.8.5 is reported as the SQL injection only; 6.9.0 to 6.9.4, 7.0.0 to 7.0.1 and 7.1 beta 1 as the full chain; 6.8.6, 6.9.5, 7.0.2, 7.1 beta 2 and later as fixed; anything before 6.8.0 as not affected.
-- **The source, because a package can backport.** A distribution can carry both fixes under an older version number. The SQL injection fix replaces the `is_array` test and `implode()` in `wp-includes/class-wp-query.php` with `wp_parse_id_list()`; the batch fix adds a guard against starting a new top-level REST cycle while one is already dispatching, in `wp-includes/rest-api/class-wp-rest-server.php`. The script judges **each flaw from its own signature**: both present is reported as a backport and not exposed; only one present is reported as partially patched and exposed, naming the flaw that remains.
-- **A fixed version whose files still hold the vulnerable code** is reported as a mismatch (a partial or failed update).
-- **The block on the batch route.** If an install is exposed, the script looks in the usual nginx, Apache and `.htaccess` locations for a refusing rule for **each of the two URL forms** and says which it found. Both forms must be covered. The block closes the chain's entry point; it does not fix the SQL injection, so update anyway.
+- Version, per branch. 6.8.0 to 6.8.5 is reported as the SQL injection only. 6.9.0 to 6.9.4, 7.0.0 to 7.0.1 and 7.1 beta 1 are reported as the full chain. 6.8.6, 6.9.5, 7.0.2, 7.1 beta 2 and later are reported as fixed. Anything before 6.8.0 as not affected.
+- The source, because a package can backport. A distribution can carry both fixes under an older version number. The SQL injection fix replaces the `is_array` test and `implode()` in `wp-includes/class-wp-query.php` with `wp_parse_id_list()`. The batch fix adds a guard against starting a new top-level REST cycle while one is already dispatching, in `wp-includes/rest-api/class-wp-rest-server.php`. The script judges **each flaw from its own signature**: both present is reported as a backport and not exposed. Only one present is reported as partially patched and exposed, naming the flaw that remains.
+- A fixed version whose files still hold the vulnerable code is reported as a mismatch (a partial or failed update).
+- The block on the batch route. If an install is exposed, the script looks in the usual nginx, Apache and `.htaccess` locations for a refusing rule for **each of the two URL forms** and says which it found. Both forms must be covered. The block closes the chain's entry point. It does not fix the SQL injection, so update anyway.
+
+Checked against the real source files of WordPress 6.8.5, 6.8.6, 6.9.4, 6.9.5, 7.0.1 and 7.0.2: the verdicts above came out as described. A tree with the 6.9.4 version file and the 6.9.5 source files was recognized as a backport and reported as not exposed, and the reverse (6.9.5 version file, 6.9.4 source) was reported as a partial or failed update.
 
 ## If you cannot update at once
+
+`./wordpress-wp2shell-check.sh mitigate --dry-run`, then `mitigate --reload`, applies the web server block below. `rollback` removes it. Verified on nginx 1.24 in front of a PHP handler: the plain, subdirectory, query-string, URL-encoded and mixed-case forms of the route all got 403 after the change, other REST routes, `index.php` and static files were unaffected, and `rollback` restored the original behavior. The rule matches the route anywhere in the path, so a WordPress in a subdirectory is covered, and it applies to every PHP virtual host on the machine. On a live WordPress 6.9.4 (an affected release) on Apache 2.4.58 in the Debian layout, the check flagged the install as the full chain. The batch route answered anonymous POSTs (207 and 200) before the block and 403 after it, in the query-string, `index.php/` and URL-encoded forms. The login page and other REST routes kept working, the check then reported a refusing rule for both URL forms, and `rollback` restored the original behavior. On Apache 2.4.58 with WordPress 6.4.3, the batch route answered 403 in the plain, query-string, URL-encoded and `index.php/` forms on every virtual host, while other REST routes still answered. In the Debian layout, `a2enconf` and `configtest` accepted the rule and `rollback` removed it. The block editor uses the batch route for some saves. On a site that is edited, the plugin below leaves editors working and is the better choice.
 
 Refuse both URL forms of the batch route at the web server.
 
@@ -358,11 +368,11 @@ add_filter( 'rest_pre_dispatch', 'wporg_require_authentication_for_rest_batch', 
 
 This approach causes fewer compatibility issues than a network-level block, because authenticated editors keep full access to the batch endpoint. Source: Searchlight Cyber.
 
-The block editor uses the batch route for some saves, so a network-level block may affect editing until you update. These are interim measures; they do not fix the underlying flaws.
+The block editor uses the batch route for some saves, so a network-level block may affect editing until you update. These are protective measures. They do not fix the underlying flaws.
 
 ## If an affected site was reachable after 17 July 2026
 
-Run `hunt`. Then treat any strong lead as a possible compromise: update core; in the database look for administrator accounts you did not create (`wp user list --role=administrator`) and for unexpected `customize_changeset` posts; review `wp-content/plugins` and `mu-plugins`; and rotate the database password, the salts in `wp-config.php` and every administrator password. The hunt cannot see request bodies, which is where the exploit's payload travels, so a quiet log does not rule out an attack.
+Run `hunt`. Then treat any strong lead as a possible compromise: update core. In the database look for administrator accounts you did not create (`wp user list --role=administrator`) and for unexpected `customize_changeset` posts; review `wp-content/plugins` and `mu-plugins`; and rotate the database password, the salts in `wp-config.php` and every administrator password. The hunt cannot see request bodies, which is where the exploit's payload travels, so a quiet log does not rule out an attack.
 
 ## Sources
 
@@ -373,6 +383,10 @@ Run `hunt`. Then treat any strong lead as a possible compromise: update core; in
 - [Rapid7 ETR: CVE-2026-63030 wp2shell](https://www.rapid7.com/blog/post/etr-cve-2026-63030-wp2shell-a-critical-remote-code-execution-vulnerability-in-wordpress-core/)
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

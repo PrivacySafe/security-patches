@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# wp2shell, WordPress core pre-authentication RCE: read-only checker and hunter  (v1)
+# wp2shell, WordPress core pre-authentication RCE: checker, hunter and mitigation  (v1)
 # CVE-2026-63030 (REST batch route confusion)
 # CVE-2026-60137 (SQL injection in WP_Query author__not_in)
 #
@@ -32,14 +32,14 @@
 #   affected installs. The site still needs the update; disabling or flushing the
 #   cache later re-exposes it. Discovered by Adam Kues of Searchlight Cyber.
 #
-# The fixes are recognisable in the source. The SQL injection fix replaces the is_array
+# The fixes are recognizable in the source. The SQL injection fix replaces the is_array
 # test and implode() in wp-includes/class-wp-query.php with wp_parse_id_list(); the batch
 # fix adds a guard against starting a new top-level REST cycle while one is already
 # dispatching, in wp-includes/rest-api/class-wp-rest-server.php. A distribution package
 # can carry both fixes under an older version number, so this script reads the files as
 # well as the version.
 #
-# Interim measure when you cannot update at once: refuse both URL forms of the batch
+# Protective measure when you cannot update at once: refuse both URL forms of the batch
 # route at the web server, for example in nginx
 #     location ~* "^/wp-json/batch" { return 403; }
 #     if ($args ~* "rest_route=(%2F|/)batch") { return 403; }
@@ -51,7 +51,8 @@
 # the SQL injection, so update anyway. The block editor uses the batch route for some
 # saves, so expect that editing may be affected until you update.
 #
-# This script is read-only. It finds WordPress installs by wp-includes/version.php.
+# "check" and "hunt" are read-only; "mitigate" and "rollback" are the only commands that change
+# anything. It finds WordPress installs by wp-includes/version.php.
 #
 # Usage:
 #   ./wordpress-wp2shell-check.sh [command] [DIR ...]
@@ -61,10 +62,26 @@
 #                    version, read the two source files for the fixes, and look for a
 #                    web server block on the batch route. Exit 0 = nothing exposed,
 #                    1 = an install without the fixes, or one whose state is unclear.
+#   mitigate [options]   (root) changes the host. The documented protective measure: refuses
+#                    both URL forms of the REST batch route (/wp-json/batch and
+#                    ?rest_route=/batch) at the web server, which closes the entry point of
+#                    the unauthenticated chain. It does not fix the SQL injection, so
+#                    update. Only when an exposed WordPress is found (--force overrides).
+#                    nginx: an include as the first line of every PHP-serving server block,
+#                    checked with nginx -t. Apache: psf-wp2shell-batch-block.conf (server
+#                    scope, so virtual hosts inherit it), checked with a configtest. If the
+#                    web server rejects the result everything is undone at once. Matches
+#                    the route anywhere in the path, so a WordPress in a subdirectory is
+#                    covered. The block editor uses the route for some saves.
+#                      --web auto|apache|nginx  which web server (default auto)
+#                      --dir DIR                where to look for WordPress (repeat)
+#                      --server-name NAME       nginx: only the server block that lists NAME
+#                      --dry-run, --reload, --force
+#   rollback [--dry-run] [--reload]   remove what mitigate added and restore the files it edited.
 #   hunt             look for signs of exploitation: batch route requests and SQL
 #                    injection strings in web server logs, PHP files in wp-content/
 #                    uploads, and recent changes to mu-plugins. Exit 0 = nothing found,
-#                    1 = a strong lead. A lead is not proof, and a clean hunt is not
+#                    1 = a strong lead. A clean hunt means none of the published indicators were found.
 #                    proof of safety.
 #   version          print the script version.
 #
@@ -78,8 +95,9 @@ set -uo pipefail
 
 SCRIPT_NAME="wordpress-wp2shell-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/wp2shell}"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -340,7 +358,7 @@ cmd_hunt() {
         else ok "no PHP files in wp-content/uploads"; fi
         n="$(find "$root/wp-content/mu-plugins" -type f -newermt "$since" 2>/dev/null | grep -c .)"
         if [[ "$n" -gt 0 ]]; then
-            bad "${n} file(s) in wp-content/mu-plugins changed since ${since} (must-use plugins load on every request and are a favourite place to persist):"
+            bad "${n} file(s) in wp-content/mu-plugins changed since ${since} (must-use plugins load on every request and are a favorite place to persist):"
             find "$root/wp-content/mu-plugins" -type f -newermt "$since" 2>/dev/null | head -n 10 | sed 's/^/        /'
             rc=1
         else ok "no changes in wp-content/mu-plugins since ${since}"; fi
@@ -352,7 +370,7 @@ cmd_hunt() {
     done
     step "Verdict"
     if [[ $rc -eq 0 ]]; then
-        info "No strong lead found. This is not proof that the site was not compromised."
+        info "No strong lead found: none of the published indicators were found."
     else
         warn "Strong leads found. Treat the site as possibly compromised: update core, then in the database look for administrator accounts you did not create (wp user list --role=administrator) and for unexpected customize_changeset posts, review wp-content/plugins and mu-plugins, and rotate the database password, the salts in wp-config.php and every administrator password."
     fi
@@ -360,6 +378,241 @@ cmd_hunt() {
 }
 
 # ---------- dispatch ---------------------------------------------------------
+
+# ---------- mitigate and rollback --------------------------------------------
+W2_MANIFEST=""; W2_DRY=0
+w2_run() { if [[ "$W2_DRY" -eq 1 ]]; then echo "  would run: $*"; return 0; fi; "$@"; }
+w2_note() { [[ "$W2_DRY" -eq 1 ]] || echo "$1" >>"$W2_MANIFEST"; }
+w2_backup() {
+    local f="$1" b
+    grep -qF "conf|${f}|" "$W2_MANIFEST" 2>/dev/null && return 0
+    b="${STATE_DIR}/$(printf '%s' "$f" | sed 's#/#_#g').orig"
+    cp -p "$f" "$b" || return 1
+    echo "conf|${f}|${b}" >>"$W2_MANIFEST"
+}
+w2_restore_all() {
+    local line f
+    while IFS= read -r line; do
+        [[ "$line" == conf\|* ]] || continue
+        f="${line#conf|}"; f="${f%%|*}"; cat "${line##*|}" >"$f"
+    done <"$W2_MANIFEST"
+}
+w2_nginx_files() {
+    local f
+    if [[ -n "${NGINX_CONF_FILES:-}" ]]; then for f in $NGINX_CONF_FILES; do [[ -r "$f" ]] && echo "$f"; done; return 0; fi
+    { nginx -T 2>/dev/null | sed -n 's/^# configuration file \(.*\):$/\1/p'
+      echo /etc/nginx/nginx.conf; ls /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* 2>/dev/null; } | while IFS= read -r f; do [[ -f "$f" && -r "$f" ]] && echo "$f"; done | awk '!s[$0]++'
+}
+read -r -d '' W2_AWK_SERVER <<'AWKEOF'
+function chk(code,    t) {
+    if (code ~ trig) hit = 1
+    if (only != "" && code ~ /server_name/) {
+        t = code; sub(/;.*/, "", t); sub(/^[ \t]*server_name[ \t]+/, "", t)
+        if (index(" " t " ", " " only " ") > 0) sn = 1
+    }
+}
+function flush(   i) {
+    for (i = 1; i <= n; i++) {
+        print buf[i]
+        if (i == 1 && hit && (only == "" || sn) && !has) print "    include " snip ";"
+    }
+    n = 0; hit = 0; has = 0; sn = 0
+}
+{
+    raw = $0; code = raw; sub(/#.*/, "", code)
+    o = gsub(/\{/, "{", code); c = gsub(/\}/, "}", code)
+    if (!inserv) {
+        if (raw ~ /^[ \t]*server[ \t]*\{/) {
+            inserv = 1; sdepth = depth; buf[++n] = raw; chk(code); depth += o - c
+            if (depth <= sdepth) { flush(); inserv = 0 }
+        } else { print raw; depth += o - c }
+    } else {
+        buf[++n] = raw; chk(code)
+        if (index(raw, snip)) has = 1
+        depth += o - c
+        if (depth <= sdepth) { flush(); inserv = 0 }
+    }
+}
+END { if (n > 0) flush() }
+AWKEOF
+read -r -d '' W2_AWK_HTTP <<'AWKEOF'
+{
+    print $0
+    if (!done && $0 !~ /^[ \t]*#/ && $0 ~ /^[ \t]*http[ \t]*\{/) {
+        if (!already) print "    include " snip ";"
+        done = 1
+    }
+}
+AWKEOF
+w2_nginx_test() {
+    if [[ -n "${NGINX_MAIN_CONF:-}" ]]; then nginx -t -c "$NGINX_MAIN_CONF" >/dev/null 2>&1; else nginx -t >/dev/null 2>&1; fi
+}
+# w2_nginx_apply HTTP_TEXT SERVER_TEXT TRIGGER_REGEX ONLY_SERVER_NAME -> 0 ok, 1 failed (undone), 2 no nginx
+w2_nginx_apply() {
+    local http_text="$1" server_text="$2" trig="$3" only="$4"
+    local snipdir sh ss f tmp n changed=0 already files=() hdr
+    have nginx || return 2
+    snipdir="${NGINX_SNIPPET_DIR:-/etc/nginx/snippets}"; sh="${snipdir}/psf-wp2shell-http.conf"; ss="${snipdir}/psf-wp2shell-server.conf"
+    hdr='# psf-security-patches: WordPress core wp2shell protective measure (wordpress-wp2shell-check.sh mitigate). Remove with: rollback'
+    while IFS= read -r f; do [[ -n "$f" ]] && files+=("$f"); done < <(w2_nginx_files)
+    if [[ ${#files[@]} -eq 0 ]]; then caution "nginx found but no readable configuration file: add the rule by hand (see the README)"; return 1; fi
+    if [[ "$W2_DRY" -eq 0 ]]; then
+        mkdir -p "$snipdir" || return 1
+        if [[ -n "$http_text" ]]; then printf '%s\n%s\n' "$hdr" "$http_text" >"$sh" || return 1; w2_note "file|${sh}"; fi
+        printf '%s\n%s\n' "$hdr" "$server_text" >"$ss" || return 1
+        w2_note "file|${ss}"
+    else
+        if [[ -n "$http_text" ]]; then echo "  would write ${sh}:"; printf '%s\n' "$http_text" | sed 's/^/      /'; fi
+        echo "  would write ${ss}:"; printf '%s\n' "$server_text" | sed 's/^/      /'
+    fi
+    tmp="$(mktemp "${TMPDIR:-/tmp}/psfng.XXXXXX")" || return 1
+    for f in "${files[@]}"; do
+        if [[ -n "$http_text" ]]; then
+            already=0; grep -qF "$sh" "$f" && already=1
+            awk -v snip="$sh" -v already="$already" "$W2_AWK_HTTP" "$f" >"$tmp" || continue
+            if ! cmp -s "$f" "$tmp"; then
+                if [[ "$W2_DRY" -eq 1 ]]; then echo "  would add the http include to ${f}"
+                elif w2_backup "$f" && cat "$tmp" >"$f"; then ok "nginx: added the http-level include to ${f}"; changed=1; fi
+            fi
+        fi
+        awk -v snip="$ss" -v trig="$trig" -v only="$only" "$W2_AWK_SERVER" "$f" >"$tmp" || continue
+        if ! cmp -s "$f" "$tmp"; then
+            n=$(diff "$f" "$tmp" | grep -c '^>')
+            if [[ "$W2_DRY" -eq 1 ]]; then echo "  would add the include to ${n} server block(s) in ${f}"
+            elif w2_backup "$f" && cat "$tmp" >"$f"; then ok "nginx: added the include to ${n} server block(s) in ${f}"; changed=1; fi
+        fi
+    done
+    rm -f "$tmp"
+    if [[ "$W2_DRY" -eq 1 ]]; then echo "  would run: nginx -t"; return 0; fi
+    [[ $changed -eq 1 ]] || inf "nginx: no matching server block needed the include"
+    if w2_nginx_test; then ok "nginx: nginx -t accepts the new configuration"; return 0; fi
+    bad "nginx: nginx -t REJECTS the new configuration: restoring the originals now"
+    w2_restore_all; rm -f "$sh" "$ss"; : >"$W2_MANIFEST"; return 1
+}
+w2_reload() {
+    [[ "${W2_RELOAD:-0}" -eq 1 ]] || return 0
+    local u did=0
+    for u in "$@"; do
+        if have systemctl && grep -q "^${u}" <<<"$(systemctl list-unit-files 2>/dev/null)"; then w2_run systemctl reload "$u" && inf "reloaded ${u} (graceful)"; did=1; fi
+    done
+    [[ $did -eq 1 ]] || caution "--reload given but no matching systemd unit found: reload the web server yourself"
+}
+w2_rollback_core() {   # shared rollback loop
+    local line f b kind rc=0 name enabled
+    while IFS= read -r line; do
+        kind="${line%%|*}"
+        case "$kind" in
+            conf) f="${line#conf|}"; f="${f%%|*}"; b="${line##*|}"
+                  if [[ ! -r "$b" ]]; then bad "${f}: backup ${b} is missing, left alone"; rc=1; continue; fi
+                  if [[ $W2_DRY -eq 1 ]]; then echo "  would restore ${f} from ${b}"; else cat "$b" >"$f" && ok "restored ${f}"; fi ;;
+            a2conf) name="${line#a2conf|}"; enabled="${name#*|}"; name="${name%%|*}"
+                  if [[ $W2_DRY -eq 1 ]]; then echo "  would disable ${name}"; else { have a2disconf && a2disconf "$name" >/dev/null 2>&1; rm -f "${enabled}/${name}.conf"; } || true; ok "disabled ${name}"; fi ;;
+            file) f="${line#file|}"
+                  if [[ $W2_DRY -eq 1 ]]; then echo "  would remove ${f}"; else rm -f "$f" && ok "removed ${f}"; fi ;;
+        esac
+    done <"$W2_MANIFEST"
+    return $rc
+}
+
+w2_apache_ctl() { local c; for c in apache2ctl apachectl httpd; do have "$c" && { echo "$c"; return 0; }; done; return 1; }
+w2_apache_text() {
+    printf '%s\n' '# psf-security-patches: WordPress core wp2shell protective measure (wordpress-wp2shell-check.sh mitigate). Remove with: rollback' \
+        '<LocationMatch "(?i)/wp-json/batch">' '    Require all denied' '</LocationMatch>' \
+        '<If "%{QUERY_STRING} =~ m#rest_route=(%2F|/)batch#i">' '    Require all denied' '</If>'
+}
+w2_apache_apply() {   # -> 0 ok, 1 failed (undone), 2 no apache
+    local ctl avail enabled confd target name=psf-wp2shell-batch-block
+    ctl="$(w2_apache_ctl)" || return 2
+    avail="${APACHE_CONF_AVAILABLE:-/etc/apache2/conf-available}"; enabled="${APACHE_CONF_ENABLED:-/etc/apache2/conf-enabled}"; confd="${APACHE_CONFD:-/etc/httpd/conf.d}"
+    if [[ -d "$avail" ]]; then target="${avail}/${name}.conf"
+    elif [[ -d "$confd" ]]; then target="${confd}/${name}.conf"
+    else caution "Apache found but neither ${avail} nor ${confd} exists: add the rule by hand (see the README)"; return 1; fi
+    if [[ "$W2_DRY" -eq 1 ]]; then
+        echo "  would write ${target}:"; w2_apache_text | sed 's/^/      /'
+        [[ "$target" == "${avail}/"* ]] && echo "  would run: a2enconf ${name}"
+        echo "  would run: ${ctl} configtest"; return 0
+    fi
+    w2_apache_text >"$target" || return 1
+    w2_note "file|${target}"
+    if [[ "$target" == "${avail}/"* ]]; then
+        if have a2enconf; then a2enconf "$name" >/dev/null 2>&1 || true
+        else mkdir -p "$enabled" && ln -sf "$target" "${enabled}/${name}.conf"; fi
+        w2_note "a2conf|${name}|${enabled}"
+    fi
+    if "$ctl" configtest >/dev/null 2>&1; then ok "Apache: ${target} written and ${ctl} configtest accepts it"; return 0; fi
+    bad "Apache: configtest REJECTS the new rule: removing it"
+    have a2disconf && a2disconf "$name" >/dev/null 2>&1 || true
+    rm -f "${enabled}/${name}.conf" "$target"; return 1
+}
+
+cmd_mitigate() {
+    local web=auto force=0 rc=0 r any_web=0 only=""
+    local -a dirs=() reload_units=()
+    W2_DRY=0; W2_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run) W2_DRY=1 ;; --reload) W2_RELOAD=1 ;; --force) force=1 ;;
+            --web) shift; web="${1:-}"; case "$web" in auto|apache|nginx) ;; *) die "--web needs auto, apache or nginx" ;; esac ;;
+            --dir) shift; [[ -n "${1:-}" ]] || die "--dir needs a directory"; dirs+=("$1") ;;
+            --server-name) shift; [[ -n "${1:-}" ]] || die "--server-name needs a name"; only="$1" ;;
+            *) die "Unknown mitigate option: $1 (--web --dir --server-name --dry-run --reload --force)" ;;
+        esac
+        shift
+    done
+    [[ $W2_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    [[ ${#dirs[@]} -gt 0 ]] || dirs=(/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress)
+    step "Is there an exposed WordPress?"
+    if cmd_check "${dirs[@]}" >/dev/null 2>&1; then
+        if [[ $force -eq 0 ]]; then info "No exposed WordPress found: nothing to do (use --force to apply the rule anyway)"; return 0; fi
+        caution "no exposed WordPress found, applying anyway because of --force"
+    else bad "an exposed WordPress was found: refusing the batch route at the web server"; fi
+    if [[ $W2_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        W2_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$W2_MANIFEST"
+    else W2_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
+    caution "the block editor uses the batch route for some saves: editing may be affected until you update. The block applies to EVERY PHP virtual host on the machine and also refuses any other site's /wp-json/batch"
+    step "Web server rule"
+    if [[ "$web" == auto || "$web" == apache ]]; then
+        w2_apache_apply; r=$?
+        case $r in 0) any_web=1; reload_units+=(apache2 httpd) ;; 1) rc=1 ;; 2) [[ "$web" == apache ]] && { caution "no Apache found"; rc=1; } ;; esac
+    fi
+    if [[ "$web" == auto || "$web" == nginx ]]; then
+        w2_nginx_apply "" 'location ~* "/wp-json/batch" { return 403; }
+if ($args ~* "rest_route=(%2F|/)batch") { return 403; }' 'fastcgi_pass|fastcgi_param|[.]php' "$only"; r=$?
+        case $r in 0) any_web=1; reload_units+=(nginx) ;; 1) rc=1 ;; 2) [[ "$web" == nginx ]] && { caution "no nginx found"; rc=1; } ;; esac
+    fi
+    if [[ $any_web -eq 0 && $rc -eq 0 ]]; then caution "no Apache or nginx found: add the rule by hand (see the README)"; rc=1; fi
+    [[ $any_web -eq 1 && $W2_DRY -eq 0 ]] && w2_reload "${reload_units[@]}"
+    step "Result"
+    if [[ $W2_DRY -eq 1 ]]; then info "Dry run finished: nothing was changed"
+    elif [[ $any_web -eq 1 ]]; then
+        info "/wp-json/batch and ?rest_route=/batch now answer 403. Backups and manifest: ${STATE_DIR}. Undo with: $0 rollback"
+        [[ $W2_RELOAD -eq 1 ]] || inf "reload the web server for it to take effect (or re-run with --reload)"
+    fi
+    inf "This closes the chain's entry point (CVE-2026-63030); it does not fix the SQL injection (CVE-2026-60137). Update core: wp core update."
+    return "$rc"
+}
+
+cmd_rollback() {
+    local rc=0
+    W2_DRY=0; W2_RELOAD=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) W2_DRY=1 ;; --reload) W2_RELOAD=1 ;; *) die "Unknown rollback option: $1 (--dry-run --reload)" ;; esac
+        shift
+    done
+    W2_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$W2_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $W2_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    step "Rolling back"
+    w2_rollback_core || rc=1
+    if [[ $W2_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$W2_MANIFEST" "${W2_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back. Reload the web server for it to take effect."
+    fi
+    w2_reload apache2 httpd nginx
+    return "$rc"
+}
+
 main() {
     CMD="${1:-check}"; [[ $# -gt 0 ]] && shift
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
@@ -369,7 +622,9 @@ main() {
     case "$CMD" in
         check) cmd_check "$@" ;;
         hunt)  cmd_hunt "$@" ;;
-        *) die "Unknown command: ${CMD} (check|hunt|version)" ;;
+        mitigate) cmd_mitigate "$@" ;;
+        rollback) cmd_rollback "$@" ;;
+        *) die "Unknown command: ${CMD} (check|hunt|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

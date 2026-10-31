@@ -70,7 +70,7 @@ HUNT_LOGS="${HUNT_LOGS:-}"
 CURL_OPTS="${CURL_OPTS:-}"
 SCRIPT_NAME="wordpress-xss2shell-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 # one private temp file (mode 0600, from mktemp) for HTTP response bodies; removed on every exit path
 P2S_TMP=""

@@ -15,7 +15,7 @@ Zammad is an open-source helpdesk and ticket system. The Dutch Institute for Vul
 | What | A session hijack leading to remote code execution as the `zammad` user | A local privilege escalation from the `zammad` user to root |
 | CVSS | 9.4 (CVSS 4.0, CISA) | 8.5 to 9.4, depending on who scores it |
 | Affected | 6.3.0 through 6.5.4 are exploitable. The same code is in 7.0.0 through 7.1.3 but is reported as not exploitable there | DIVD lists 1.5.0 through 7.1.0-alpha |
-| Vendor position | Zammad says exploitation is possible only on 6.5 and older and that 7.0 and later are not affected. 7.2.0 adds hardening | Zammad disputes the report (it says it received no technical details) and, at the time of the sources used here, had published no patch. It needs code already running as the `zammad` user |
+| Vendor position | Zammad says exploitation is possible only on 6.5 and older and that 7.0 and later are not affected. 7.2.0 adds hardening | Zammad disputes the report (it says it received no technical details)  It needs code already running as the `zammad` user |
 | Exploited | Yes, in the DIVD breach (CISA KEV) | Yes, as the second step of the chain (CISA KEV) |
 
 Zammad's advice is to update to version 7 or take the instance offline.
@@ -73,15 +73,19 @@ Treat the host as possibly compromised. Restore from a backup taken before that 
 - [DIVD: CVE-2026-102489](https://csirt.divd.nl/CVE-2026-102489)
 - [runZero: Zammad vulnerabilities](https://www.runzero.com/blog/zammad/)
 
-## Zammad know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to Zammad 7.2.0 or later, or take the instance offline, as Zammad advises.
-- **It never claims a fix for CVE-2026-102490.** That local privilege escalation is disputed by the vendor and no patch is confirmed in the sources, so a fixed version is reported only for the remote chain (CVE-2026-102489).
-- **A pre-release is not the release.** `7.2.0-pre` is reported with a warning, because it may not have the hardening.
-- **It also reads running containers.** With `SCAN_CONTAINERS=1` (the default) `check` reads `VERSION` under `/opt/zammad` and `/usr/share/zammad` inside running docker and podman containers. A container whose `VERSION` cannot be read is reported as unreadable and is never judged by the host's package version. `hunt` is host only.
-- **`hunt` lists leads, not proof of this campaign.** It looks for changed `authorized_keys`, changed root and zammad crontabs, files owned by root under the Zammad root and new SUID files since 21 September 2026. If a 6.x instance was reachable after that date, treat it as possibly compromised.
+- The fix. Update to Zammad 7.2.0 or later, or take the instance offline, as Zammad advises.
+- A fixed version is reported for the remote chain (CVE-2026-102489). CVE-2026-102490, the local privilege escalation the vendor disputes, is reported on its own.
+- A pre-release is not the release. `7.2.0-pre` is reported with a warning, because it may not have the hardening.
+- It also reads running containers. With `SCAN_CONTAINERS=1` (the default) `check` reads `VERSION` under `/opt/zammad` and `/usr/share/zammad` inside running docker and podman containers. A container whose `VERSION` cannot be read is reported as unreadable and is never judged by the host's package version. `hunt` is host only.
+- `hunt` lists indicators of this campaign. It looks for changed `authorized_keys`, changed root and zammad crontabs, files owned by root under the Zammad root and new SUID files since 21 September 2026. If a 6.x instance was reachable after that date, treat it as possibly compromised.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

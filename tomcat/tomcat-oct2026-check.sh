@@ -21,9 +21,10 @@
 #                    Affected: 11.0.22 - 11.0.26, 10.1.55 - 10.1.60,
 #                    9.0.118 - 9.0.122.  Fixed: 11.0.27, 10.1.61, 9.0.123.
 #
-# This script is read-only. It finds Tomcat installs, reads the exact version
+# "check" is read-only; "mitigate" and "rollback" are the only commands that change
+# anything. "check" finds Tomcat installs, reads the exact version
 # from lib/catalina.jar, and reads server.xml to see whether the AJP connector
-# and HTTP/2 are switched on. It never starts, stops or edits Tomcat.
+# and HTTP/2 are switched on. It never starts or stops Tomcat.
 #
 # Usage:
 #   ./tomcat-oct2026-check.sh [command] [CATALINA_HOME ...]
@@ -33,7 +34,31 @@
 #                    /usr/share/tomcat*, /usr/local/tomcat) or use the
 #                    directories you pass. Exit 0 = nothing exposed, 1 = an
 #                    affected version is exposed or its config could not be read.
+#   mitigate --ajp | --http2 [...]   (root) changes the host. The protective measures from
+#                    the README, applied to server.xml. With no option it applies --http2,
+#                    the low-impact measure; --ajp is added on request because it can break
+#                    something:
+#                      --ajp     comments out every AJP Connector. Only for 11.x below
+#                                11.0.27 (CVE-2026-103119). Anything that reaches
+#                                Tomcat over AJP (Apache mod_proxy_ajp or mod_jk) stops
+#                                working: move it to HTTP proxying first.
+#                      --http2   comments out every UpgradeProtocol element for HTTP/2.
+#                                Only for 11.0.22-11.0.26, 10.1.55-10.1.60 and
+#                                9.0.118-9.0.122 (CVE-2026-101356). Clients that talk
+#                                HTTP/2 straight to Tomcat fall back to HTTP/1.1; a
+#                                proxy in front can still speak HTTP/2 to them.
+#                    Elements are commented out, never deleted. server.xml is copied
+#                    first and checked with xmllint (or python3) before and after; if
+#                    the result is not well-formed the original is put back at once.
+#                    Nothing is restarted unless you add --restart (Tomcat reads
+#                    server.xml at start; a restart ends requests in progress).
+#                    Other options: --dry-run, --restart, and CATALINA_HOME
+#                    directories to use instead of discovery. These are our
+#                    measures from PrivacySafe; the permanent fix is the upgrade.
+#   rollback [--dry-run] [--restart]   put back every file mitigate changed.
 #   version          print the script version.
+#
+# STATE_DIR (default /var/lib/psf-security-patches/tomcat) holds the backups and manifest.
 #
 # Running docker and podman containers are inspected too (see "Containers" below). An image that is
 # not running is not: check its tag against the fixed versions.
@@ -50,8 +75,9 @@ set -uo pipefail
 
 SCRIPT_NAME="tomcat-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/tomcat}"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -379,14 +405,193 @@ cmd_check_host() {
         info "No exposed Tomcat found (${found} install(s) checked)"
     else
         warn "Exposed or unverifiable Tomcat found. Upgrade to 11.0.27, 10.1.61 or 9.0.123 and restart."
-        inf "Interim, not vendor documented: for AJP, disable the AJP connector and proxy over HTTP instead."
-        inf "Interim, not vendor documented: for HTTP/2, remove the UpgradeProtocol element and let the front proxy speak HTTP/1.1 to Tomcat."
+        inf "PrivacySafe recommendation: for AJP, disable the AJP connector and proxy over HTTP instead."
+        inf "PrivacySafe recommendation: for HTTP/2, remove the UpgradeProtocol element and let the front proxy speak HTTP/1.1 to Tomcat."
         inf "Advisories: https://www.openwall.com/lists/oss-security/2026/10/20/28 and .../27"
     fi
     return "$rc"
 }
 
 # ---------- dispatch ---------------------------------------------------------
+
+# ---------- mitigate and rollback --------------------------------------------
+read -r -d '' AWK_XML_FIX <<'AWKEOF'
+function tag_end(s, from,    i, c, q) {      # index of the ">" that ends the start tag, quotes respected
+    q = ""
+    for (i = from; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (q != "") { if (c == q) q = ""; continue }
+        if (c == "\"" || c == "'") { q = c; continue }
+        if (c == ">") return i
+    }
+    return 0
+}
+function wrap(elem, cve, what) {
+    return "<!-- psf-security-patches " cve ": " what " (rollback restores the original) " elem " -->"
+}
+{ txt = txt $0 "\n" }
+END {
+    out = ""; i = 1; n = length(txt)
+    while (i <= n) {
+        rest = substr(txt, i)
+        c = index(rest, "<!--"); k = index(rest, "<Connector"); u = index(rest, "<UpgradeProtocol")
+        p = 0; kind = ""
+        if (c > 0)                 { p = c; kind = "c" }
+        if (k > 0 && (p == 0 || k < p)) { p = k; kind = "k" }
+        if (u > 0 && (p == 0 || u < p)) { p = u; kind = "u" }
+        if (p == 0) { out = out rest; break }
+        out = out substr(rest, 1, p - 1)
+        rest = substr(rest, p)
+        if (kind == "c") {
+            e = index(rest, "-->")
+            if (e == 0) { out = out rest; break }
+            out = out substr(rest, 1, e + 2); i = i + p - 1 + e + 2; continue
+        }
+        te = tag_end(rest, 1)
+        if (te == 0) { out = out rest; break }
+        tagtxt = substr(rest, 1, te)
+        selfclose = (substr(tagtxt, length(tagtxt) - 1, 1) == "/")
+        elem = tagtxt; elen = te
+        if (!selfclose) {
+            close_tag = (kind == "k") ? "</Connector>" : "</UpgradeProtocol>"
+            ce = index(rest, close_tag)
+            if (ce > 0) { elem = substr(rest, 1, ce + length(close_tag) - 1); elen = ce + length(close_tag) - 1 }
+        }
+        do_wrap = 0
+        lt = tolower(tagtxt)
+        if (kind == "k" && ajp && lt ~ /protocol[ \t\n]*=[ \t\n]*["'](ajp\/1\.3|ajps|org\.apache\.coyote\.ajp\.[a-z0-9]+)["']/) { do_wrap = 1; cve = "CVE-2026-103119"; what = "AJP connector disabled" }
+        if (kind == "u" && http2 && index(tagtxt, "Http2Protocol") > 0) { do_wrap = 1; cve = "CVE-2026-101356"; what = "HTTP/2 upgrade disabled" }
+        if (do_wrap && index(elem, "--") > 0) { print "SKIP " cve > "/dev/stderr"; do_wrap = 0 }
+        if (do_wrap) { out = out wrap(elem, cve, what); i = i + p - 1 + elen }
+        else { out = out tagtxt; i = i + p - 1 + te }
+    }
+    printf "%s", out
+}
+AWKEOF
+
+TM_MANIFEST=""; TM_DRY=0; TM_RESTART=0
+tm_run() { if [[ "$TM_DRY" -eq 1 ]]; then echo "  would run: $*"; return 0; fi; "$@"; }
+tm_xml_ok() {   # file -> 0 when well-formed
+    if have xmllint; then xmllint --noout "$1" >/dev/null 2>&1
+    elif have python3; then python3 -c 'import sys,xml.dom.minidom as m; m.parse(sys.argv[1])' "$1" >/dev/null 2>&1
+    else return 2; fi
+}
+tm_backup() {
+    local f="$1" b
+    grep -qF "conf|${f}|" "$TM_MANIFEST" 2>/dev/null && return 0
+    b="${STATE_DIR}/$(printf '%s' "$f" | sed 's#/#_#g').orig"
+    cp -p "$f" "$b" || return 1
+    echo "conf|${f}|${b}" >>"$TM_MANIFEST"
+}
+tm_restart() {
+    [[ "$TM_RESTART" -eq 1 ]] || return 0
+    local u did=0
+    if have systemctl; then
+        for u in $(systemctl list-unit-files 2>/dev/null | awk '/^tomcat[^ ]*\.service/{print $1}'); do tm_run systemctl restart "$u" && inf "restarted ${u}"; did=1; done
+    fi
+    [[ $did -eq 1 ]] || caution "--restart given but no tomcat systemd unit found: restart Tomcat yourself"
+}
+
+cmd_mitigate() {
+    local ajp=0 http2=0 root ver f n t1 rc=0 changed=0 skipped=0 line did_any=0 sk
+    local -a roots=() posroots=()
+    TM_DRY=0; TM_RESTART=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --ajp) ajp=1 ;; --http2) http2=1 ;; --dry-run) TM_DRY=1 ;; --restart) TM_RESTART=1 ;;
+            -*) die "Unknown mitigate option: $1 (--ajp --http2 --dry-run --restart)" ;;
+            *) posroots+=("$1") ;;
+        esac
+        shift
+    done
+    local defaulted=0
+    if [[ $ajp -eq 0 && $http2 -eq 0 ]]; then http2=1; defaulted=1; fi
+    [[ $TM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    have xmllint || have python3 || die "need xmllint or python3 to check that server.xml is still well-formed afterwards: refusing to edit without it"
+    if [[ ${#posroots[@]} -gt 0 ]]; then roots=("${posroots[@]}")
+    else while IFS= read -r root; do [[ -n "$root" ]] && roots+=("$root"); done < <(discover_roots); fi
+    [[ $defaulted -eq 0 ]] || info "No option given: applying --http2, the low-impact measure. Add --ajp for the AJP connector."
+    step "Looking for Apache Tomcat installs"
+    if [[ ${#roots[@]} -eq 0 ]]; then info "No Tomcat install found on this host (try passing CATALINA_HOME as an argument)"; return 0; fi
+    if [[ $TM_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        TM_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$TM_MANIFEST"
+    else TM_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
+    for root in "${roots[@]}"; do
+        [[ -d "$root" ]] || { caution "${root}: not a directory"; continue; }
+        ver="$(tomcat_version "$root")"
+        [[ -n "$ver" ]] || { caution "${root}: version not found, left alone"; continue; }
+        step "Tomcat ${ver} at ${root}"
+        local do_ajp=0 do_h2=0
+        if [[ $ajp -eq 1 ]]; then
+            if ajp_affected "$ver"; then do_ajp=1; else ok "${ver} is outside the range of CVE-2026-103119: no AJP change needed"; fi
+        fi
+        if [[ $http2 -eq 1 ]]; then
+            if h2_affected "$ver"; then do_h2=1; else ok "${ver} is outside the range of CVE-2026-101356: no HTTP/2 change needed"; fi
+        fi
+        [[ $do_ajp -eq 1 || $do_h2 -eq 1 ]] || continue
+        local nconf=0
+        while IFS= read -r f; do
+            [[ -n "$f" ]] || continue
+            nconf=$((nconf+1))
+            if ! tm_xml_ok "$f"; then bad "${f}: not well-formed XML as it is now: left alone"; rc=1; continue; fi
+            t1="$(mktemp "${TMPDIR:-/tmp}/tcxml.XXXXXX")" || { bad "no temp file"; return 1; }
+            sk="$(awk -v ajp="$do_ajp" -v http2="$do_h2" "$AWK_XML_FIX" "$f" 2>&1 >"$t1" | grep -c '^SKIP')"
+            if [[ "${sk:-0}" -gt 0 ]]; then caution "${f}: ${sk} element(s) contain '--' and cannot be commented out safely: edit them by hand"; skipped=1; fi
+            if cmp -s "$f" "$t1"; then inf "${f}: nothing to change"; rm -f "$t1"; continue; fi
+            n=$(diff "$f" "$t1" | grep -c '^>')
+            if [[ $TM_DRY -eq 1 ]]; then
+                echo "  would comment out element(s) in ${f} (${n} new line(s)):"; diff "$f" "$t1" | grep '^>' | sed 's/^/      /' | cut -c1-150
+            else
+                if ! tm_backup "$f"; then bad "${f}: could not back it up, left alone"; rm -f "$t1"; rc=1; continue; fi
+                cat "$t1" >"$f" || { rc=1; rm -f "$t1"; continue; }
+                if tm_xml_ok "$f"; then ok "${f}: commented out the connector element(s); the file is still well-formed"; changed=1; did_any=1
+                else
+                    bad "${f}: the result is NOT well-formed XML: restoring the original now"
+                    cat "$(grep -F "conf|${f}|" "$TM_MANIFEST" | head -n1 | sed 's/.*|//')" >"$f"; rc=1
+                fi
+            fi
+            rm -f "$t1"
+        done < <(conf_candidates "$root")
+        [[ $nconf -gt 0 ]] || { caution "${root}: no readable server.xml found"; rc=1; }
+    done
+    tm_restart
+    step "Result"
+    if [[ $TM_DRY -eq 1 ]]; then info "Dry run finished: nothing was changed"
+    elif [[ $changed -eq 1 ]]; then
+        info "server.xml changed. Backups and manifest: ${STATE_DIR}. Undo with: $0 rollback"
+        [[ $TM_RESTART -eq 1 ]] || inf "restart Tomcat for it to take effect (or re-run with --restart)"
+    else info "Nothing needed changing"; fi
+    [[ $skipped -eq 0 ]] || rc=1
+    inf "These are PrivacySafe's measures; the permanent fix is to upgrade to 11.0.27, 10.1.61 or 9.0.123."
+    return "$rc"
+}
+
+cmd_rollback() {
+    local line f b rc=0
+    TM_DRY=0; TM_RESTART=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) TM_DRY=1 ;; --restart) TM_RESTART=1 ;; *) die "Unknown rollback option: $1 (--dry-run --restart)" ;; esac
+        shift
+    done
+    TM_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$TM_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $TM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    step "Rolling back"
+    while IFS= read -r line; do
+        [[ "$line" == conf\|* ]] || continue
+        f="${line#conf|}"; f="${f%%|*}"; b="${line##*|}"
+        if [[ ! -r "$b" ]]; then bad "${f}: backup ${b} is missing, left alone"; rc=1; continue; fi
+        if [[ $TM_DRY -eq 1 ]]; then echo "  would restore ${f} from ${b}"; else cat "$b" >"$f" && ok "restored ${f}"; fi
+    done <"$TM_MANIFEST"
+    if [[ $TM_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$TM_MANIFEST" "${TM_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back. Restart Tomcat for the restored configuration to take effect."
+    fi
+    tm_restart
+    return "$rc"
+}
+
 main() {
     CMD="${1:-check}"; [[ $# -gt 0 ]] && shift
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
@@ -395,7 +600,9 @@ main() {
     echo "CVE-2026-103119, CVE-2026-101356; fixed in Tomcat 11.0.27, 10.1.61, 9.0.123"
     case "$CMD" in
         check) cmd_check "$@" ;;
-        *) die "Unknown command: ${CMD} (check|version)" ;;
+        mitigate) cmd_mitigate "$@" ;;
+        rollback) cmd_rollback "$@" ;;
+        *) die "Unknown command: ${CMD} (check|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

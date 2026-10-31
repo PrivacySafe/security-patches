@@ -24,8 +24,7 @@
 #   Affected: 8.0.0 through 8.1.11, 9.0.0 through 9.2.15, 10.0.0 through 10.1.4, 10.2.0
 #             (the magick plugin from 8.0.1)
 #   Fixed:    9.2.16, 10.1.5 and 10.2.1 (released 20 October 2026)
-#   No fix:   8.x, 9.0, 9.1 and 10.0 are end of life branches that Apache does not
-#             patch: move to a fixed branch
+#   Move to:  a fixed branch. 8.x, 9.0, 9.1 and 10.0 are end of life branches
 #
 # Both flaws only matter when the plugin is LOADED. The script therefore reads the
 # configuration (plugin.config and the remap files) for magick.so and tsmemcache.so
@@ -61,7 +60,7 @@ set -uo pipefail
 
 SCRIPT_NAME="trafficserver-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -345,7 +344,7 @@ cmd_check_host() {
         info "No exposed Traffic Server found (${found} checked). An affected version without these two plugins still needs the update."
     else
         warn "Exposed or unverifiable Traffic Server found. Upgrade to 9.2.16, 10.1.5 or 10.2.1 (or a distribution build that carries the fix)."
-        inf "Interim (ours, not vendor documented): remove magick.so and tsmemcache.so from plugin.config and the remap files and restart Traffic Server; neither plugin is enabled by default and both are experimental."
+        inf "PrivacySafe recommendation: remove magick.so and tsmemcache.so from plugin.config and the remap files and restart Traffic Server; neither plugin is enabled by default and both are experimental."
         inf "Advisory: https://trafficserver.apache.org/security-2026-10.html"
     fi
     return "$rc"

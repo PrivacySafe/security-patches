@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# rsyslog dynaFile path traversal: read-only configuration audit  (v1)
+# rsyslog dynaFile path traversal: configuration audit  (v1)
 # CVE-2026-92709 (GHSA-xmp9-244p-5ggv)
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -20,13 +20,13 @@
 #
 #   Affected: rsyslog 1.15.0 through 8.2610.0, WHEN a dynaFile template uses an
 #             untrusted value in a path component without secure-path handling
-#   Fixed:    NO RELEASE IS LISTED AS FULLY PATCHED (27 October 2026). Debian,
+#   Fixed:    NO RELEASE IS LISTED AS FULLY PATCHED (30 October 2026). Debian,
 #             Cyberus and nixpkgs trackers show it as open. The daily stable
 #             documentation describes new dynaFile controls and a rule that the
 #             path must stay under a fixed leading prefix, which hints that a fix
 #             is on the way; no release carries it yet, so do not wait for it.
 #
-# The documented, recommended defence, which works on every version, is explicit
+# The documented, recommended defense, which works on every version, is explicit
 # secure-path handling for each untrusted value in a dynaFile path:
 #     string templates:   %HOSTNAME:::secpath-replace%     (or secpath-drop)
 #     list templates:     property(name="hostname" securePath="replace")
@@ -37,7 +37,8 @@
 #   rsyslog. On 8.2312.0 it is a configuration ERROR ("parameter ... not known").
 #   Test any change with rsyslogd -N1 before you restart.
 #
-# This script is read-only. It reads the rsyslog version, the main configuration
+# "audit" is read-only; "mitigate" and "rollback" are the only commands that change
+# anything. "audit" reads the rsyslog version, the main configuration
 # and everything it includes, finds the templates used by dynaFile, and lists any
 # path component that comes from an untrusted property without secure-path
 # handling. It reports whether remote input modules are configured and which
@@ -47,11 +48,30 @@
 # Usage:
 #   ./rsyslog-dynafile-audit.sh [command]
 #
-#   audit (default)  Exit 0 = no unprotected untrusted value in a dynaFile path,
-#                    1 = at least one was found or could not be judged.
+#   audit (default)  read-only. Exit 0 = no unprotected untrusted value in a
+#                    dynaFile path, 1 = at least one was found or could not be judged.
+#   mitigate [--dry-run] [--restart]   (root) changes the host. Applies the
+#                    documented defense: for every template that a dynaFile action
+#                    uses, it adds secpath-replace to each untrusted property
+#                    (%HOSTNAME% becomes %HOSTNAME:::secpath-replace%; in list
+#                    templates securePath="replace" is added to the property). It
+#                    never touches a template no dynaFile uses, or a property that
+#                    already has secure-path handling. Every file is copied first,
+#                    the configuration is checked with rsyslogd -N1 before and after,
+#                    and if rsyslog rejects the result the originals are put back at
+#                    once. Nothing is restarted unless you add --restart (rsyslog
+#                    reads its configuration at start; a restart can drop UDP syslog
+#                    messages for a moment). Then it runs the audit again.
+#                    Limits: a template written across lines with a backslash is
+#                    not rewritten, and a template used both as a file path and as a
+#                    message format would change the message too: the audit run at
+#                    the end tells you whether anything was missed.
+#   rollback [--dry-run] [--restart]   put back every file mitigate changed.
 #   version          print the script version.
 #
 # Environment: RSYSLOG_CONF (space separated files) replaces configuration discovery.
+#              STATE_DIR (default /var/lib/psf-security-patches/rsyslog) holds the
+#              backups and the manifest.
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -60,8 +80,9 @@ set -uo pipefail
 
 SCRIPT_NAME="rsyslog-dynafile-audit.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
+STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/rsyslog}"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -356,7 +377,7 @@ cmd_audit() {
             for t in "${sp[@]}"; do
                 p="${t%%|*}"; flag="${t#*|}"
                 if [[ "$p" == "?unanalyzable" ]]; then
-                    caution "template '${ref}' is a subtree or plugin template that this script cannot analyse: review it by hand"; bad_here=1; continue
+                    caution "template '${ref}' is a subtree or plugin template that this script cannot analyze: review it by hand"; bad_here=1; continue
                 fi
                 cls="$(prop_class "$p")"
                 if [[ -n "$flag" ]]; then
@@ -369,7 +390,7 @@ cmd_audit() {
                 elif [[ "$cls" == "sender" ]]; then
                     bad "template '${ref}': property '${p}' comes from the message and has NO secure-path handling"; bad_here=1
                 else
-                    caution "template '${ref}': property '${p}' is unrecognised and has no secure-path handling: if a sender can influence it, treat it as unsafe"; bad_here=1
+                    caution "template '${ref}': property '${p}' is unrecognized and has no secure-path handling: if a sender can influence it, treat it as unsafe"; bad_here=1
                 fi
             done
             if [[ $bad_here -eq 1 ]]; then unsafe=$((unsafe+1))
@@ -388,13 +409,247 @@ cmd_audit() {
         info "No unprotected untrusted value found in a dynaFile path (${dyn} dynaFile template(s) checked)"
         return 0
     fi
-    warn "${unsafe} dynaFile template(s) are unsafe or could not be shown safe (untrusted data in a path without secure-path handling, an undefined template, or one this script cannot analyse)."
+    warn "${unsafe} dynaFile template(s) are unsafe or could not be shown safe (untrusted data in a path without secure-path handling, an undefined template, or one this script cannot analyze)."
     inf "Fix each untrusted property: %HOSTNAME% becomes %HOSTNAME:::secpath-replace% (or secpath-drop); in list templates add securePath=\"replace\" to the property()."
     inf "Test the result with: rsyslogd -N1   before you restart rsyslog."
     inf "global(compatibility.defaults.secure=\"strict\") is only known to newer rsyslog; on older versions such as 8.2312.0 it is a configuration error, so test before relying on it."
     inf "Also run rsyslogd as an unprivileged user and keep its writable area to the log directories."
     inf "Advisory: https://github.com/rsyslog/rsyslog/security/advisories/GHSA-xmp9-244p-5ggv"
     return 1
+}
+
+
+# ---------- mitigate and rollback --------------------------------------------
+SAFE_PROPS='fromhost-ip inputname timegenerated timereported timestamp now year month day hour minute pri pri-text syslogfacility syslogfacility-text syslogseverity syslogseverity-text iut $now $year $month $day $hour $minute $myhostname $now-utc $year-utc $month-utc $day-utc $hour-utc $minute-utc'
+
+read -r -d '' AWK_FIX_COMMON <<'AWKEOF'
+function lc(s) { return tolower(s) }
+function secpath_expr(expr,    a, n, opts, i) {
+    n = split(expr, a, ":")
+    if (n == 1) return expr ":::secpath-replace"
+    if (n == 2) return expr "::secpath-replace"
+    if (n == 3) return expr ":secpath-replace"
+    opts = a[4]; for (i = 5; i <= n; i++) opts = opts ":" a[i]
+    if (lc(opts) ~ /secpath|securepath/) return expr
+    if (opts == "") return expr "secpath-replace"
+    return expr ",secpath-replace"
+}
+function fix_string(s,    out, expr, pre, a) {
+    out = ""
+    while (match(s, /%[^%]*%/)) {
+        pre = substr(s, 1, RSTART - 1); expr = substr(s, RSTART + 1, RLENGTH - 2); s = substr(s, RSTART + RLENGTH)
+        if (expr == "") { out = out pre "%%"; continue }
+        split(expr, a, ":")
+        if (index(" " safe " ", " " lc(a[1]) " ") > 0) out = out pre "%" expr "%"
+        else out = out pre "%" secpath_expr(expr) "%"
+    }
+    return out s
+}
+AWKEOF
+
+read -r -d '' AWK_FIX_LEGACY <<'AWKEOF'
+{
+    line = $0; l = lc(line)
+    if (match(l, /^[ \t]*\$template[ \t]+/)) {
+        m1 = RSTART + RLENGTH - 1
+        rest = substr(line, m1 + 1); c = index(rest, ",")
+        if (c > 0) {
+            nm = substr(rest, 1, c - 1); gsub(/[ \t]/, "", nm)
+            if (index(" " fix " ", " " nm " ") > 0) {
+                head = substr(line, 1, m1 + c)
+                r2 = substr(rest, c + 1); q1 = index(r2, "\"")
+                if (q1 > 0) {
+                    r3 = substr(r2, q1 + 1); q2 = 0
+                    for (k = length(r3); k >= 1; k--) if (substr(r3, k, 1) == "\"") { q2 = k; break }
+                    if (q2 > 0) { print head substr(r2, 1, q1) fix_string(substr(r3, 1, q2 - 1)) substr(r3, q2); next }
+                }
+            }
+        }
+    }
+    print line
+}
+AWKEOF
+
+read -r -d '' AWK_FIX_RS <<'AWKEOF'
+function scan_close(s, start, op, cl,    i, c, depth, inq) {
+    depth = 1; inq = 0
+    for (i = start; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (inq) { if (c == "\\") { i++; continue } if (c == "\"") inq = 0; continue }
+        if (c == "\"") { inq = 1; continue }
+        if (c == op) depth++
+        else if (c == cl) { depth--; if (depth == 0) return i }
+    }
+    return 0
+}
+function getattr(s, key,    re, seg, l) {
+    l = lc(s); re = "(^|[ \t\n])" key "[ \t\n]*=[ \t\n]*\"[^\"]*\""
+    if (match(l, re)) { seg = substr(s, RSTART, RLENGTH); sub(/^[^"]*"/, "", seg); sub(/"$/, "", seg); return seg }
+    return ""
+}
+function fix_args_string(a,    l, q, i, c) {
+    l = lc(a)
+    if (!match(l, /(^|[ \t\n])string[ \t\n]*=[ \t\n]*"/)) return a
+    q = RSTART + RLENGTH
+    for (i = q; i <= length(a); i++) { c = substr(a, i, 1); if (c == "\\") { i++; continue } if (c == "\"") break }
+    if (i > length(a)) return a
+    return substr(a, 1, q - 1) fix_string(substr(a, q, i - q)) substr(a, i)
+}
+function fix_list(blk,    lb, bp, po, pc, pa, nm, out, lastp) {
+    lb = lc(blk); bp = 1; out = ""; lastp = 1
+    while (bp <= length(blk) && match(substr(lb, bp), /(^|[^a-z0-9_])property[ \t\n]*\(/)) {
+        po = bp + RSTART - 1 + RLENGTH - 1
+        pc = scan_close(blk, po + 1, "(", ")"); if (pc == 0) break
+        pa = substr(blk, po + 1, pc - po - 1); bp = pc + 1
+        nm = lc(getattr(pa, "name"))
+        if (lc(pa) !~ /securepath|secpath/ && index(" " safe " ", " " nm " ") == 0) {
+            out = out substr(blk, lastp, pc - lastp) " securePath=\"replace\""; lastp = pc
+        }
+    }
+    return out substr(blk, lastp)
+}
+{ txt = txt $0 "\n" }
+END {
+    out = ""; last = 1; lt = lc(txt); pos = 1
+    while (pos <= length(txt) && match(substr(lt, pos), /(^|[^a-z0-9_$])template[ \t\n]*\(/)) {
+        op = pos + RSTART - 1 + RLENGTH - 1
+        cl = scan_close(txt, op + 1, "(", ")"); if (cl == 0) break
+        args = substr(txt, op + 1, cl - op - 1); pos = cl + 1
+        nm = getattr(args, "name"); ty = lc(getattr(args, "type"))
+        if (nm == "" || index(" " fix " ", " " nm " ") == 0) continue
+        if (ty == "list") {
+            j = cl + 1
+            while (j <= length(txt) && substr(txt, j, 1) ~ /[ \t\n]/) j++
+            if (substr(txt, j, 1) == "{") {
+                e = scan_close(txt, j + 1, "{", "}")
+                if (e > 0) {
+                    out = out substr(txt, last, j - last + 1) fix_list(substr(txt, j + 1, e - j - 1))
+                    last = e; pos = e + 1
+                }
+            }
+        } else {
+            out = out substr(txt, last, op - last + 1) fix_args_string(args)
+            last = cl; pos = cl + 1
+        }
+    }
+    printf "%s", out substr(txt, last)
+}
+AWKEOF
+
+RS_MANIFEST=""
+rs_validate() { "$1" -N1 -f "$2" >/dev/null 2>&1; }
+rs_run() { if [[ "${RS_DRY:-0}" -eq 1 ]]; then echo "  would run: $*"; return 0; fi; "$@"; }
+rs_backup() {
+    local f="$1" b
+    grep -qF "conf|${f}|" "$RS_MANIFEST" 2>/dev/null && return 0
+    b="${STATE_DIR}/$(printf '%s' "$f" | sed 's#/#_#g').orig"
+    cp -p "$f" "$b" || return 1
+    echo "conf|${f}|${b}" >>"$RS_MANIFEST"
+}
+rs_restart() {
+    [[ "${RS_RESTART:-0}" -eq 1 ]] || return 0
+    if have systemctl && grep -q '^rsyslog' <<<"$(systemctl list-unit-files 2>/dev/null)"; then
+        rs_run systemctl restart rsyslog && inf "restarted rsyslog"
+    else caution "--restart given but no rsyslog systemd unit found: restart it yourself"; fi
+}
+
+cmd_mitigate() {
+    local bin f t1 t2 t3 names="" nm n changed=0 rc=0 flat tmpd main_conf line
+    local -a files=() touched=()
+    local -A seen=()
+    RS_DRY=0; RS_RESTART=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) RS_DRY=1 ;; --restart) RS_RESTART=1 ;; *) die "Unknown mitigate option: $1 (--dry-run --restart)" ;; esac
+        shift
+    done
+    [[ $RS_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    bin="$(command -v rsyslogd 2>/dev/null)"; [[ -z "$bin" && -x /usr/sbin/rsyslogd ]] && bin=/usr/sbin/rsyslogd
+    if [[ -z "$bin" ]]; then info "No rsyslogd found on this host: nothing to do"; return 0; fi
+    while IFS= read -r f; do [[ -n "$f" ]] && files+=("$f"); done < <(config_files)
+    if [[ ${#files[@]} -eq 0 ]]; then caution "no readable rsyslog configuration found: set RSYSLOG_CONF"; return 1; fi
+    main_conf="${files[0]}"
+    step "Checking the current configuration"
+    if ! rs_validate "$bin" "$main_conf"; then bad "rsyslogd -N1 rejects the configuration as it is now: not touching it (fix that first)"; return 1; fi
+    ok "rsyslogd -N1 accepts the current configuration (${#files[@]} file(s))"
+    tmpd="$(mktemp -d 2>/dev/null || mktemp -d -t rsmit)" || die "no temp directory"
+    # which templates does a dynaFile action use?
+    for f in "${files[@]}"; do
+        flat="$tmpd/flat.$$"
+        sed -E 's/^[[:space:]]*#.*$//; s/\r$//' "$f" | sed -e ':a' -e '/\\$/N; s/\\\n//; ta' > "$flat"
+        awk "$AWK_PARSE" "$flat" | while IFS=$'\t' read -r line_kind _file name _specs; do [[ "$line_kind" == REF ]] && echo "$name"; done
+    done | sort -u > "$tmpd/refs.txt"
+    while IFS= read -r nm; do [[ -n "$nm" ]] && names+="${names:+ }${nm}"; done < "$tmpd/refs.txt"
+    if [[ -z "$names" ]]; then rm -rf "$tmpd"; info "No dynaFile template found: nothing here builds a path from message data"; return 0; fi
+    inf "templates used by dynaFile: ${names}"
+    if [[ $RS_DRY -eq 0 ]]; then
+        mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        RS_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$RS_MANIFEST"
+    else RS_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
+    step "Configuration changes"
+    for f in "${files[@]}"; do
+        [[ -n "${seen[$f]:-}" ]] && continue; seen[$f]=1
+        t1="$tmpd/t1"; t2="$tmpd/t2"; t3="$tmpd/t3"
+        awk -v fix="$names" -v safe="$SAFE_PROPS" "${AWK_FIX_COMMON}"$'\n'"${AWK_FIX_LEGACY}" "$f" > "$t1" || { bad "${f}: parse failed, left alone"; rc=1; continue; }
+        awk -v fix="$names" -v safe="$SAFE_PROPS" "${AWK_FIX_COMMON}"$'\n'"${AWK_FIX_RS}" "$t1" > "$t2" || { bad "${f}: parse failed, left alone"; rc=1; continue; }
+        if [[ -n "$(tail -c1 "$f")" ]]; then head -c -1 "$t2" > "$t3"; else cp "$t2" "$t3"; fi
+        if cmp -s "$f" "$t3"; then inf "${f}: nothing to change"; continue; fi
+        n=$(diff "$f" "$t3" | grep -c '^>')
+        if [[ $RS_DRY -eq 1 ]]; then
+            echo "  would change ${n} line(s) in ${f}:"; diff "$f" "$t3" | grep '^>' | sed 's/^/      /'
+        else
+            if ! rs_backup "$f"; then bad "${f}: could not back it up, left alone"; rc=1; continue; fi
+            if cat "$t3" >"$f"; then ok "${f}: changed ${n} line(s)"; touched+=("$f"); changed=1; fi
+        fi
+    done
+    if [[ $RS_DRY -eq 0 && $changed -eq 1 ]]; then
+        step "Checking the new configuration"
+        if rs_validate "$bin" "$main_conf"; then ok "rsyslogd -N1 accepts the new configuration"
+        else
+            bad "rsyslogd -N1 REJECTS the new configuration: restoring the originals now"
+            while IFS= read -r line; do
+                [[ "$line" == conf\|* ]] || continue
+                f="${line#conf|}"; f="${f%%|*}"; cat "${line##*|}" >"$f"
+            done <"$RS_MANIFEST"
+            : >"$RS_MANIFEST"; rm -rf "$tmpd"
+            bad "originals restored, nothing was changed"; return 1
+        fi
+    fi
+    rm -rf "$tmpd"
+    rs_restart
+    step "Result"
+    if [[ $RS_DRY -eq 1 ]]; then info "Dry run finished: nothing was changed"; return "$rc"; fi
+    if [[ $changed -eq 1 ]]; then
+        info "Secure-path handling added in ${#touched[@]} file(s). Backups are in ${STATE_DIR}. Undo with: $0 rollback"
+        [[ $RS_RESTART -eq 1 ]] || inf "restart rsyslog for it to take effect (or re-run with --restart)"
+    else info "Nothing needed changing"; fi
+    if cmd_audit >/dev/null 2>&1; then ok "the audit now reports no unprotected untrusted value in a dynaFile path"
+    else caution "the audit still reports something: run  $0 audit  to see what (for example a template written across lines)"; rc=1; fi
+    return "$rc"
+}
+
+cmd_rollback() {
+    local line f b rc=0
+    RS_DRY=0; RS_RESTART=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in --dry-run) RS_DRY=1 ;; --restart) RS_RESTART=1 ;; *) die "Unknown rollback option: $1 (--dry-run --restart)" ;; esac
+        shift
+    done
+    RS_MANIFEST="${STATE_DIR}/manifest.txt"
+    [[ -s "$RS_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
+    [[ $RS_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    step "Rolling back"
+    while IFS= read -r line; do
+        [[ "$line" == conf\|* ]] || continue
+        f="${line#conf|}"; f="${f%%|*}"; b="${line##*|}"
+        if [[ ! -r "$b" ]]; then bad "${f}: backup ${b} is missing, left alone"; rc=1; continue; fi
+        if [[ $RS_DRY -eq 1 ]]; then echo "  would restore ${f} from ${b}"; else cat "$b" >"$f" && ok "restored ${f}"; fi
+    done <"$RS_MANIFEST"
+    if [[ $RS_DRY -eq 0 && $rc -eq 0 ]]; then
+        mv "$RS_MANIFEST" "${RS_MANIFEST}.rolled-back-$(date +%s)" 2>/dev/null || true
+        info "Rolled back. Restart rsyslog for the restored configuration to take effect."
+    fi
+    rs_restart
+    return "$rc"
 }
 
 # ---------- dispatch ---------------------------------------------------------
@@ -405,10 +660,12 @@ main() {
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
     case "$CMD" in -h|--help|help) print_help; exit 0 ;; esac
     echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
-    echo "CVE-2026-92709; no release is listed as fully patched; secure-path handling is the defence"
+    echo "CVE-2026-92709; no release is listed as fully patched; secure-path handling is the defense"
     case "$CMD" in
         audit) cmd_audit "$@" ;;
-        *) die "Unknown command: ${CMD} (audit|version)" ;;
+        mitigate) cmd_mitigate "$@" ;;
+        rollback) cmd_rollback "$@" ;;
+        *) die "Unknown command: ${CMD} (audit|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

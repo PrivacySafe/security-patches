@@ -8,15 +8,15 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`rsyslog/rsyslog-dynafile-audit.sh`](rsyslog-dynafile-audit.sh)
 
-rsyslog's `omfile` `dynaFile` feature builds an output file name from a template. When a template puts a value that an outside party can influence (the HOSTNAME or program name of an incoming message, the message text, structured data) into a path component **without** explicit secure-path handling, the rendered path can escape the intended log directory. rsyslog usually runs as root or with broad write access to `/var/log`, so the result is an arbitrary file write, which the advisory title and several trackers escalate to code execution.
+rsyslog's `omfile` `dynaFile` feature builds an output file name from a template. When a template puts a value an outsider can influence into a path without secure-path handling, the path can escape the log directory (CVE-2026-92709). That value can be the HOSTNAME or program name of an incoming message, the message text or structured data. rsyslog usually runs as root or with wide write access to `/var/log`, so this becomes an arbitrary file write. The advisory and several trackers take it further to code execution.
 
 | | |
 |---|---|
 | CVE | CVE-2026-92709 (GHSA-xmp9-244p-5ggv, published 22 October 2026) |
 | Severity | High, CVSS 8.1 (attack complexity high) |
 | Affected | rsyslog 1.15.0 through 8.2610.0, **when** a dynaFile template uses an untrusted value in a path component without secure-path handling |
-| Fixed | **No release is listed as fully patched** as of 27 October 2026. Debian, Cyberus and nixpkgs trackers show it as open |
-| Defence | The documented, recommended one, which works on every version: explicit secure-path handling for each untrusted value in a dynaFile path |
+| Remedy | Run `mitigate` now and install the rsyslog release that fully patches CVE-2026-92709 when it is published |
+| Defense | The documented, recommended one, which works on every version: explicit secure-path handling for each untrusted value in a dynaFile path |
 | Not limited to | The RFC 5424 HOSTNAME field. Any untrusted value that reaches a path component creates the condition |
 | Exploit | A PoC reference is listed by one aggregator. The page we saw contained only the advisory text |
 
@@ -75,27 +75,31 @@ template(name="DynFileList" type="list") {
 | Command | What it does |
 |---|---|
 | `audit` (default) | Reads the rsyslog version, the main configuration and everything included through `$IncludeConfig` and `include(file=...)` (files, globs and directories, with a loop guard), finds templates used by `dynaFile` and by the legacy `?Template` action, and lists every path component that comes from an untrusted property without secure-path handling. Reports whether network input modules are configured and which user `rsyslogd` runs as |
+| `mitigate [--dry-run] [--restart]` | **Changes the host (root).** For every template that a `dynaFile` action uses, adds `secpath-replace` to each untrusted property (`%HOSTNAME%` becomes `%HOSTNAME:::secpath-replace%`; in list templates `securePath="replace"` is added to the property). Never touches a template no `dynaFile` uses, or a property that already has secure-path handling. Copies every file first, checks the configuration with `rsyslogd -N1` before and after, restores the originals at once if rsyslog rejects the result, restarts nothing unless you add `--restart`, then runs the audit again and tells you if anything was missed (a template written across lines with a backslash is not rewritten) |
+| `rollback [--dry-run] [--restart]` | Puts back every file `mitigate` changed |
 | `version` | Prints the script version |
 
-Environment: `RSYSLOG_CONF` (space separated files) replaces configuration discovery.
+Environment: `RSYSLOG_CONF` (space separated files) replaces configuration discovery. `STATE_DIR` (default `/var/lib/psf-security-patches/rsyslog`) holds the backups and manifest.
+
+On rsyslog 8.2312.0, `rsyslogd -N1` accepts every form the rewrite produces (legacy `$template` strings, RainerScript string templates, list templates and property options such as `%msg:1:5:lowercase,secpath-replace%`). This is the defense rsyslog documents. A template used both as a file path and as a message format would have its message changed too, so look at what `mitigate --dry-run` would change first.
 
 Exit codes: `0` no unprotected untrusted value in a dynaFile path, `1` at least one was found or could not be judged, `2` bad arguments.
 
 ## How it classifies properties
 
-- **Treated as untrusted:** `hostname`, `source`, `fromhost`, `programname`, `app-name`, `syslogtag`, `msg`, `rawmsg`, `procid`, `msgid`, `structured-data`, `protocol-version`, and any message variable starting `$!`.
-- **Treated as not controllable by a sender:** `fromhost-ip`, `inputname`, `timegenerated`, `timereported`, `timestamp`, `now`, the date parts, the priority and facility properties, and `$now`, `$year`, `$month`, `$day`, `$hour`, `$minute`, `$myhostname`.
-- **Unrecognised:** anything else, including local variables (`$.name`). The script warns, because it cannot tell whether a sender can influence the value, and exits `1`.
-- **Protected:** a property whose options contain `secpath-replace`, `secpath-drop` or `securepath`, in string templates (`%name:::options%`) and list templates (`securePath=`).
+- Treated as untrusted: `hostname`, `source`, `fromhost`, `programname`, `app-name`, `syslogtag`, `msg`, `rawmsg`, `procid`, `msgid`, `structured-data`, `protocol-version`, and any message variable starting `$!`.
+- Treated as not controllable by a sender: `fromhost-ip`, `inputname`, `timegenerated`, `timereported`, `timestamp`, `now`, the date parts, the priority and facility properties, and `$now`, `$year`, `$month`, `$day`, `$hour`, `$minute`, `$myhostname`.
+- Unrecognized: anything else, including local variables (`$.name`). The script warns, because it cannot tell whether a sender can influence the value, and exits `1`.
+- Protected: a property whose options contain `secpath-replace`, `secpath-drop` or `securepath`, in string templates (`%name:::options%`) and list templates (`securePath=`).
 
 ## How to read the result
 
-- **Unprotected untrusted property:** add secure-path handling to each one, test with `rsyslogd -N1`, then restart.
-- **Strict mode set:** shown as protected only by the global setting, with a warning to confirm your rsyslog accepts it.
-- **A dynaFile template that is not defined in the files read,** or a subtree or plugin template: reported for manual review, with exit `1`.
-- **No dynaFile at all:** nothing here builds a path from message data. A template that is defined but never used by dynaFile is ignored.
-- **Network input configured:** senders you do not control can reach the templates. Local sources such as `imuxsock` and `imjournal` can still carry attacker-chosen program names.
-- **rsyslogd running as root:** a path escape writes as root. Run it as an unprivileged user and keep its writable area to the log directories. Debian and Ubuntu drop to `syslog` by default.
+- Unprotected untrusted property: add secure-path handling to each one, test with `rsyslogd -N1`, then restart.
+- Strict mode set: shown as protected only by the global setting, with a warning to confirm your rsyslog accepts it.
+- A dynaFile template that is not defined in the files read, or a subtree or plugin template: reported for manual review, with exit `1`.
+- No dynaFile at all: nothing here builds a path from message data. A template that is defined but never used by dynaFile is ignored.
+- Network input configured: senders you do not control can reach the templates. Local sources such as `imuxsock` and `imjournal` can still carry attacker-chosen program names.
+- rsyslogd running as root: a path escape writes as root. Run it as an unprivileged user and keep its writable area to the log directories. Debian and Ubuntu drop to `syslog` by default.
 
 This is a text search over the configuration, not a full parser. Unusual layouts, generated configuration, and templates built through other mechanisms may be missed.
 
@@ -104,14 +108,18 @@ This is a text search over the configuration, not a full parser. Unusual layouts
 - [rsyslog advisory GHSA-xmp9-244p-5ggv](https://github.com/rsyslog/rsyslog/security/advisories/GHSA-xmp9-244p-5ggv)
 - [rsyslog omfile dynaFile documentation](https://docs.rsyslog.com/doc/reference/parameters/omfile-dynafile.html)
 
-## rsyslog know before you run it
+## Before you run it
 
-- **There is no fixed release to move to yet.** As of 27 October 2026 no rsyslog release is listed as fully patched for CVE-2026-92709, so this is an audit of your configuration, not a version check.
-- **It only matters with an untrusted value in a path component.** The flaw applies when a `dynaFile` template puts a value an outside party can influence (the hostname or program name of an incoming message, the message text, structured data) into a path component without secure-path handling.
-- **The documented defence works on every version.** Use explicit secure-path handling in the template; rsyslog usually runs as root or with broad write access to `/var/log`, which is why an escape is an arbitrary file write.
-- **There is no hunt.** No indicators of exploitation have been published.
+- This is an audit of your configuration, not a version check. Run `mitigate` now, and install the rsyslog release that fully patches CVE-2026-92709 when it is published.
+- It only matters with an untrusted value in a path component. The flaw applies when a `dynaFile` template puts a value an outside party can influence (the hostname or program name of an incoming message, the message text, structured data) into a path component without secure-path handling.
+- The documented defense works on every version. Use explicit secure-path handling in the template. Rsyslog usually runs as root or with broad write access to `/var/log`, which is why an escape is an arbitrary file write.
+- There is no hunt. No indicators of exploitation have been published.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

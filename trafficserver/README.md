@@ -21,7 +21,7 @@ Apache Traffic Server (ATS) is a caching reverse and forward proxy used in front
 |---|---|
 | Affected | 8.0.0 through 8.1.11, 9.0.0 through 9.2.15, 10.0.0 through 10.1.4, and 10.2.0 (the `magick` plugin from 8.0.1) |
 | Fixed | **9.2.16, 10.1.5 and 10.2.1**, released 20 October 2026 |
-| No fix | **8.x, 9.0, 9.1 and 10.0 are end-of-life branches** that Apache does not patch: move to a fixed branch |
+| Move to | **A fixed branch.** 8.x, 9.0, 9.1 and 10.0 are end-of-life branches |
 | Same release | Thirteen other flaws (request smuggling, cache poisoning, denial of service) that only the update fixes |
 
 **Both flaws only matter when the plugin is loaded.** The plugins are experimental and not enabled by default. So the tool reads the **configuration** (`plugin.config` and the remap files) for `magick.so` and `tsmemcache.so` rather than looking for files. This matters: on a typical Ubuntu host the only `magick.so` on disk is an *ImageMagick coder*, not the ATS plugin, and a check that merely searched for the file would give a false alarm.
@@ -64,31 +64,35 @@ Exit codes: `0` nothing exposed, `1` an affected version loads one of the plugin
 
 ## How to read the result
 
-- **Affected version, plugin loaded:** exposed. The script prints the file and line number. Upgrade, and remove the plugin line until you have.
-- **Affected version, neither plugin loaded:** exit `0`: these two flaws are not reachable. The script still warns to update, because the same release fixes thirteen other flaws.
-- **End-of-life branch (8.x, 9.0, 9.1, 10.0):** always reported as in the affected range with no upstream fix. With neither plugin loaded it exits `0` but tells you to plan the move.
-- **Configuration directory not found or unreadable:** treated as exposed.
-- **The plugin name must match exactly.** `libmagick.so`, `notmagick.so` and `xtsmemcache.so` are not the plugins and are not matched; a full path such as `/opt/ts/libexec/trafficserver/magick.so` is.
-- **Distribution packages** often backport fixes without changing the version, so the script reads the package changelog for a mention of either CVE.
+- Affected version, plugin loaded: exposed. The script prints the file and line number. Upgrade, and remove the plugin line until you have.
+- Affected version, neither plugin loaded: exit `0`: these two flaws are not reachable. The script still warns to update, because the same release fixes thirteen other flaws.
+- End-of-life branch (8.x, 9.0, 9.1, 10.0): always reported as in the affected range with no upstream fix. With neither plugin loaded it exits `0` but tells you to plan the move.
+- Configuration directory not found or unreadable: treated as exposed.
+- The plugin name must match exactly. `libmagick.so`, `notmagick.so` and `xtsmemcache.so` are not the plugins and are not matched. A full path such as `/opt/ts/libexec/trafficserver/magick.so` is.
+- Distribution packages often backport fixes without changing the version, so the script reads the package changelog for a mention of either CVE.
 
 ## Fixing it
 
-Upgrade to 9.2.16, 10.1.5 or 10.2.1, or to a distribution build that carries the fix, and restart Traffic Server. Until then, remove `magick.so` and `tsmemcache.so` from `plugin.config` and the remap files and restart. That is our reasoning, not the vendor's; neither plugin is enabled by default and both are experimental.
+Upgrade to 9.2.16, 10.1.5 or 10.2.1, or to a distribution build that carries the fix, and restart Traffic Server. Until then, remove `magick.so` and `tsmemcache.so` from `plugin.config` and the remap files and restart. That is PrivacySafe's recommendation. Neither plugin is enabled by default and both are experimental.
 
 ## Sources
 
 - [Apache Traffic Server October 2026 CVE release](https://trafficserver.apache.org/security-2026-10.html)
 - [Apache announcement: multiple vulnerabilities fixed in 9.2.16, 10.1.5 and 10.2.1](https://lists.apache.org/thread/r95dq29ywcd1f4x30snxlqmb12z4s4kc)
 
-## Apache Traffic Server know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 9.2.16, 10.1.5 or 10.2.1. The 8.x, 9.0, 9.1 and 10.0 branches are end of life and not patched: move to a fixed branch.
-- **Both severe flaws are in experimental plugins and only matter when the plugin is loaded** (`magick` for CVE-2026-111813, `tsmemcache` for CVE-2026-111811). The script reads the configuration to see whether it is. The October release fixes 15 vulnerabilities in all; only these two are covered, and the other thirteen (request smuggling, cache poisoning, denial of service) are fixed only by the update.
-- **It reads the configuration, not the files.** The script looks in `plugin.config` and the remap files for `magick.so` and `tsmemcache.so`, because the plugins are experimental and not enabled by default, and a `magick.so` on disk can just as well be an ImageMagick coder. It also reads the version from `traffic_server -V` and checks the owning package's changelog for a backported fix.
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container captures the output of `traffic_server -V` and the configuration files with every line that does not load `magick.so` or `tsmemcache.so` blanked inside the container, so remap tokens and other credentials never leave it while line numbers stay exact. The script then runs once per container in isolation. A path shown as `.../docker_NAME/...` is inside the container NAME.
+- The fix. Update to 9.2.16, 10.1.5 or 10.2.1. The 8.x, 9.0, 9.1 and 10.0 branches are end of life: move to a fixed branch.
+- Both severe flaws are in experimental plugins and only matter when the plugin is loaded (`magick` for CVE-2026-111813, `tsmemcache` for CVE-2026-111811). The script reads the configuration to see whether it is. The October release fixes 15 vulnerabilities in all. Only these two are covered, and the other thirteen (request smuggling, cache poisoning, denial of service) are fixed only by the update.
+- It reads the configuration, not the files. The script looks in `plugin.config` and the remap files for `magick.so` and `tsmemcache.so`, because the plugins are experimental and not enabled by default, and a `magick.so` on disk can just as well be an ImageMagick coder. It also reads the version from `traffic_server -V` and checks the owning package's changelog for a backported fix.
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe captures the output of `traffic_server -V` and the configuration files. Every line that does not load `magick.so` or `tsmemcache.so` is blanked inside the container, so remap tokens and other credentials never leave it and line numbers stay exact. The script then runs once per container in isolation. A path shown as `.../docker_NAME/...` is inside the container NAME.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

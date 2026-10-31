@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`sagemaker/sagemaker-check.sh`](sagemaker-check.sh)
 
-The SDK's `default_bucket()` uses an S3 bucket named `sagemaker-{region}-{AWS account ID}`. In affected versions it does not check that the bucket belongs to your account. Region and account ID are not secret, so another AWS account can pre-create a bucket with that name; the SDK then reads from and writes to the attacker's bucket, which can give the attacker code execution in your SageMaker execution environment and your IAM credentials.
+The SDK's `default_bucket()` uses an S3 bucket named `sagemaker-{region}-{AWS account ID}`. In affected versions it does not check that the bucket belongs to your account. Region and account ID are not secret, so another AWS account can pre-create a bucket with that name. The SDK then reads from and writes to the attacker's bucket, which can give the attacker code execution in your SageMaker execution environment and your IAM credentials.
 
 | | |
 |---|---|
@@ -36,7 +36,7 @@ The SDK's `default_bucket()` uses an S3 bucket named `sagemaker-{region}-{AWS ac
    chmod +x sagemaker-check.sh
    ```
 
-3. Check this host. By default it searches `/usr/lib /usr/local/lib /opt /srv /var/lib /home /root`; pass directories to narrow it, such as one virtual environment.
+3. Check this host. By default it searches `/usr/lib /usr/local/lib /opt /srv /var/lib /home /root`. Pass directories to narrow it, such as one virtual environment.
 
    ```bash
    ./sagemaker-check.sh check
@@ -54,15 +54,15 @@ Exit codes: `0` nothing affected, `1` an affected SDK found, `2` bad arguments.
 
 ## How to read the result
 
-- **Affected version:** exit `1`. The tool cannot prove your code relies on the default bucket (estimators and processors use it implicitly), so it judges by version and lists the files that call `default_bucket()` directly, excluding the SDK's own source.
-- **The SDK's own packages and look-alikes** such as `sagemaker-core` and `sagemaker_studio` are different packages and are not matched, including when listed before the real one in a lock file.
-- **It cannot tell whether someone has already pre-created your bucket name.** To check by hand, with the AWS CLI and read access (this script does not run it):
+- Affected version: exit `1`. The tool cannot prove your code relies on the default bucket (estimators and processors use it implicitly), so it judges by version and lists the files that call `default_bucket()` directly, excluding the SDK's own source.
+- The SDK's own packages and look-alikes such as `sagemaker-core` and `sagemaker_studio` are different packages and are not matched, including when listed before the real one in a lock file.
+- It cannot tell whether someone has already pre-created your bucket name. To check by hand, with the AWS CLI and read access (this script does not run it):
 
   ```bash
   aws s3api head-bucket --bucket sagemaker-REGION-ACCOUNTID --expected-bucket-owner ACCOUNTID
   ```
 
-  A 404 suggests the name is unclaimed and anyone could take it; a 403 usually means it exists under a different account (or that you lack permission). If it is someone else's, review what the SDK uploaded there.
+  A 404 suggests the name is unclaimed and anyone could take it. A 403 usually means it exists under a different account (or that you lack permission). If it is someone else's, review what the SDK uploaded there.
 
 ## Fixing it
 
@@ -71,22 +71,26 @@ pip install --upgrade 'sagemaker>=2.257.3'   # V2
 pip install --upgrade 'sagemaker>=3.10.0'    # V3
 ```
 
-Interim, until you can upgrade (our reasoning, not the vendor's): pass an explicit bucket you own instead of relying on the default (V2's `Session` documents a `default_bucket` argument; use the equivalent setting in V3), and create the default bucket `sagemaker-<region>-<account-id>` yourself so no one else can.
+Until you can upgrade (PrivacySafe recommendation): pass an explicit bucket you own instead of relying on the default (V2's `Session` documents a `default_bucket` argument; use the equivalent setting in V3), and create the default bucket `sagemaker-<region>-<account-id>` yourself so no one else can.
 
 ## Sources
 
 - [AWS security bulletin 2026-142-aws](https://aws.amazon.com/security/security-bulletins/2026-142-aws/)
 - [Advisory GHSA-5rx8-8fr2-f855](https://github.com/aws/sagemaker-python-sdk/security/advisories/GHSA-5rx8-8fr2-f855)
 
-## SageMaker SDK know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update the SageMaker Python SDK to 2.257.3 (V2) or 3.10.0 (V3). The same upgrade fixes a separate flaw that wrote repository credentials to CloudWatch Logs.
-- **It makes no AWS calls.** It finds installed copies and pinned versions, and lists the Python files and notebooks that call `default_bucket()`.
-- **It cannot tell whether someone has pre-created your bucket name.** That is the real exposure, so the script prints a manual check for you to run.
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container copies the SageMaker SDK metadata directories and the lock, requirements and `environment*.yml` files that mention it (index URLs and credentials dropped inside the container) into a private temporary directory, and the script runs once per container in isolation against that copy. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME.
+- The fix. Update the SageMaker Python SDK to 2.257.3 (V2) or 3.10.0 (V3). The same upgrade fixes a separate flaw that wrote repository credentials to CloudWatch Logs.
+- It makes no AWS calls. It finds installed copies and pinned versions, and lists the Python files and notebooks that call `default_bucket()`.
+- It cannot tell whether someone has pre-created your bucket name. That is the real exposure, so the script prints a manual check for you to run.
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe copies the SageMaker SDK metadata folders and the lock, requirements and `environment*.yml` files that mention it into a private temporary folder, with index URLs and credentials dropped inside the container. The script then runs once per container, in isolation, against that copy. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

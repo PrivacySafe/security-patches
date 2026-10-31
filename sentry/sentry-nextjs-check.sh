@@ -32,7 +32,7 @@
 # from package-lock.json, npm-shrinkwrap.json, yarn.lock, pnpm-lock.yaml, bun.lock and
 # installed node_modules, then reads next.config.* for tunnelRoute, guesses the bundler
 # from the build script and the Next.js version, and looks for routes that collide with
-# the tunnel path. Conditions 2 and 3 are heuristics; condition 4 cannot be seen from
+# the tunnel path. Conditions 2 and 3 are judged from file and script contents; condition 4 cannot be seen from
 # outside the application, so review it yourself.
 #
 # Usage:
@@ -54,7 +54,7 @@ set -uo pipefail
 
 SCRIPT_NAME="sentry-nextjs-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -358,7 +358,7 @@ cmd_check() {
         inf "tunnelRoute is set (${tv})"
         bundler="$(bundler_guess "$proj")"
         if [[ "$bundler" == "turbopack" ]]; then
-            ok "the build looks like Turbopack (a --turbopack flag, or Next.js 16 or newer, whose default bundler it is): not affected (heuristic, condition 2 is not met)"
+            ok "the build looks like Turbopack (a --turbopack flag, or Next.js 16 or newer, whose default bundler it is): not affected (condition 2 is not met)"
             caution "update anyway: a webpack build would be affected"
             continue
         fi
@@ -372,7 +372,7 @@ cmd_check() {
                 grep -v '^$' <<<"$cols" | sed 's/^/        /' | head -n6
             else
                 ok "no route under ${tv} and no root catch-all was found in app/ or pages/ (condition 3 looks unmet)"
-                caution "this heuristic cannot see rewrites, redirects, custom servers or routes defined elsewhere: update anyway"
+                caution "this check cannot see rewrites, redirects, custom servers or routes defined elsewhere: update anyway"
                 inf "condition 4 (your middleware is the only authorization control for that route) cannot be checked from outside: review it"
                 continue
             fi

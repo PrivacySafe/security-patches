@@ -25,13 +25,13 @@
 # in two places: the decoded pagename is used only if validate_file() accepts it, and a
 # template found by locate_template() is loaded only if the new function
 # _wp_is_template_path_allowed() accepts it. This script reads both from the source, so
-# a distribution backport under an older version number is recognised.
+# a distribution backport under an older version number is recognized.
 #
 #   Affected: WordPress 4.7.0 through 7.1.1, across every supported branch.
 #             WordPress before 4.7.0 is not affected.
 #   Fixed:    7.1.2, 7.0.6, 6.9.9, 6.8.10, 6.7.9, 6.6.9 and backports down
 #             to 4.7.37 (released September 22, 2026). WordPress 4.6 and
-#             earlier have no fix.
+#             earlier move to a supported branch.
 #
 # WordPress releases a fixed version for every branch on the same day, so
 # updating within your branch is always safe. On 7.1: update to 7.1.2. On
@@ -50,7 +50,7 @@
 #                    without the fix, or one whose state is unclear.
 #   hunt             look in web server logs for an encoded traversal in the pagename
 #                    parameter and for the scanner user agents seen in the attacks.
-#                    Exit 0 = nothing found, 1 = a strong lead. A clean hunt is not proof.
+#                    Exit 0 = nothing found, 1 = a strong lead. A clean hunt means none of the published indicators were found.
 #   version          print the script version.
 #
 # Env: WPT_LOGS (space separated paths or globs) to name web server logs.
@@ -66,7 +66,7 @@ set -uo pipefail
 
 SCRIPT_NAME="wordpress-pt-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -312,8 +312,8 @@ cmd_hunt() {
         inf "a POST body is not recorded in an access log, and the public exploits send the payload in the body: a quiet log does not rule out an attempt"
     fi
     step "Verdict"
-    if [[ $rc -eq 0 ]]; then info "No strong lead found. This is not proof that no attempt was made."
-    else warn "Strong lead found. If the site had no fix at the time, look for PHP files outside the theme and plugin directories and for new administrator accounts."; fi
+    if [[ $rc -eq 0 ]]; then info "No strong lead found: none of the published indicators were found."
+    else warn "Strong lead found. If the site was not updated at the time, look for PHP files outside the theme and plugin directories and for new administrator accounts."; fi
     return "$rc"
 }
 
