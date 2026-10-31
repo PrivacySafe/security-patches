@@ -8,7 +8,9 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`openapi/openapi-codegen-check.sh`](openapi-codegen-check.sh)
 
-A crafted OpenAPI document can turn the TypeScript client that `openapi-typescript-codegen` generates into a code execution path. The generator's Handlebars templates copy strings from the document into single-quoted JavaScript literals in the output without escaping them: path keys, parameter names, request media types, response header names, `servers[0].url` and `info.version`. A single quote in one of those values ends the literal, and what follows runs as code.
+A crafted OpenAPI document can turn the TypeScript client that `openapi-typescript-codegen` generates into a way to run code. The generator copies strings from the document into single-quoted JavaScript literals without escaping them: path keys, parameter names, request media types, response header names, `servers[0].url` and `info.version`. One single quote ends the literal, and whatever follows runs as code.
+
+The package has no fixed release. Remove it, or generate only from documents you control. This tool finds where it is used and scans the code it generated.
 
 | | |
 |---|---|
@@ -20,9 +22,9 @@ A crafted OpenAPI document can turn the TypeScript client that `openapi-typescri
 
 **When it runs.** A value in `servers[0].url` or `info.version` runs the moment the generated client is imported, because `core/OpenAPI.ts` is always generated and every generated service file imports it. A value in a request path or parameter name runs each time the affected method is called.
 
-**Who is at risk.** Whoever generates or runs a client from a document someone else can influence: a developer running the generator locally, a CI job that regenerates a client from a remote or third-party specification, or an application that fetches a specification and runs a client built from it. This is a supply-chain and developer-tooling problem, not a bug in a server that listens for requests, even though the CVSS vector says network. The same class of bug has been reported and fixed in other OpenAPI generators, so apply the same discipline to them.
+**Who is at risk.** Anyone who generates or runs a client from a document someone else can influence. That includes a developer running the generator locally, a CI job that regenerates a client from a remote or third-party specification, and an application that fetches a specification and runs a client built from it. This is a supply-chain and developer-tooling problem, not a bug in a server that listens for requests, even though the CVSS vector says network. The same class of bug has been reported and fixed in other OpenAPI generators, so apply the same discipline to them.
 
-**Public exploit.** As of 23 October no exploit was public and the reporter offered a proof of concept on request; a public proof of concept on GitHub has since been reported. It is not linked here, and this tool contains no exploit logic: it reads files and never imports, compiles or runs generated code.
+**Public exploit.** As of 23 October no exploit was public and the reporter offered a proof of concept on request. A public proof of concept on GitHub has since been reported. It is not linked here, and this tool contains no exploit logic: it reads files and never imports, compiles or runs generated code.
 
 ## Quick start
 
@@ -74,25 +76,29 @@ The generator writes each spec-derived value inside one single-quoted literal an
 
 It reports a breakout in `BASE`, `VERSION`, `url`, a parameter name or `mediaType`, and does not flag keys and paths that contain escaped apostrophes.
 
-## Know before you run it
+## Before you run it
 
-- **It is a check, not a fix.** There is no fix to apply. Removing the package, or controlling every document it reads, is the remedy.
-- **`scan` is a heuristic on one generator's layout.** A clean result is not proof that output is safe, says nothing about code from another tool, and misses a value placed on a line the generator would not have written. Hand-written code is out of scope.
-- **`check` reads files, not running systems.** It does not look inside container images or other machines. Remote build services that run the generator are yours to find.
-- **GNU/Linux and a POSIX shell.** It needs bash, find and grep, and nothing from Node.js. It never runs `npm`, `node` or any generated file.
-- **It also reads running containers.** With no arguments, `ROOTS` unset and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container copies the `package.json` and lockfiles that mention `openapi-typescript-codegen`, **whole**, and the installed `node_modules` copy's `package.json`, into a private temporary directory, and the script runs once per container in isolation. Workflows, Makefiles and shell scripts are not read inside containers. Setting `ROOTS` yourself skips the containers.
+- The remedy. Remove the package, or control every document it reads.
+- `scan` reads one generator's output layout. A clean result covers that generator's output. It does not see a value placed on a line the generator would not have written, and hand-written code is out of scope.
+- `check` reads files, not running systems. It does not look inside container images or other machines. Remote build services that run the generator are yours to find.
+- GNU/Linux and a POSIX shell. It needs bash, find and grep, and nothing from Node.js. It never runs `npm`, `node` or any generated file.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. A read-only probe inside each running docker and podman container copies the `package.json` and lockfiles that mention `openapi-typescript-codegen`, **whole**, and the installed `node_modules` copy's `package.json`, into a private temporary directory, and the script runs once per container in isolation. Workflows, Makefiles and shell scripts are not read inside containers. Setting `ROOTS` yourself skips the containers.
 
 ## If you use it
 
-1. **Stop generating from documents you do not control.** Treat an OpenAPI document as source code: review it, pin it by commit or hash, and fetch it only from a trusted, authenticated place.
-2. **Move to a maintained generator.** The upstream tracking issue points to `@hey-api/openapi-ts`. Check what it does with the same values before you rely on it.
-3. **Until then, contain the job.** Generate in an ephemeral job with no secrets, a read-only token and restricted network access. Review the generated diff, and do not import freshly generated output in a privileged process before that review.
-4. **Run `scan` on what you already have**, in particular output generated from a remote or third-party specification.
-5. **If a hit is real,** rotate every secret the generating job or developer machine could reach, rebuild from a clean checkout, check published packages built from that output, and look at outbound traffic from the runner.
+1. Stop generating from documents you do not control. Treat an OpenAPI document as source code: review it, pin it by commit or hash, and fetch it only from a trusted, authenticated place.
+2. Move to a maintained generator. The upstream tracking issue points to `@hey-api/openapi-ts`. Check what it does with the same values before you rely on it.
+3. Until then, contain the job. Generate in an ephemeral job with no secrets, a read-only token and restricted network access. Review the generated diff, and do not import freshly generated output in a privileged process before that review.
+4. Run `scan` on what you already have , in particular output generated from a remote or third-party specification.
+5. If a hit is real, rotate every secret the generating job or developer machine could reach, rebuild from a clean checkout, check published packages built from that output, and look at outbound traffic from the runner.
 
-Sources: the [tracking issue](https://github.com/ferdikoomen/openapi-typescript-codegen/issues/2809), the [VulnCheck advisory](https://www.vulncheck.com/advisories/openapi-typescript-codegen-through-0.31.0-code-injection-via-handlebars-templates) and the [CVE record](https://www.cve.org/CVERecord?id=CVE-2026-108551). The fix status above was current on 23 October 2026; check the issue before relying on it.
+Sources: the [tracking issue](https://github.com/ferdikoomen/openapi-typescript-codegen/issues/2809), the [VulnCheck advisory](https://www.vulncheck.com/advisories/openapi-typescript-codegen-through-0.31.0-code-injection-via-handlebars-templates) and the [CVE record](https://www.cve.org/CVERecord?id=CVE-2026-108551). The fix status above was current on 23 October 2026. Check the issue before relying on it.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

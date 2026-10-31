@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# Node.js October 2026 interim mitigation  (v1)
+# Node.js October 2026 mitigation  (v1)
 # CVE-2026-111497 (Brotli decoder out-of-bounds write, RCE) and the nine other
 # CVEs fixed in Node.js 22.23.4 / 24.22.1 / 26.12.1 on 21 Oct 2026
 #
@@ -70,7 +70,7 @@ SCAN_DEPTH="${SCAN_DEPTH:-8}"
 HUNT_SINCE="${HUNT_SINCE:-2026-10-14}"
 SCRIPT_NAME="node-oct2026-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 GUARD_SRC="${GUARD_SRC:-${SELF_DIR}/brotli-guard.cjs}"
@@ -173,7 +173,7 @@ patch_state() {   # <vX.Y.Z> [binary path]
     if [[ -n "${pkg:-}" ]]; then
         echo "1|v${v} (${pkg} ${full}): Node ${major} is end-of-life upstream and the package changelog doesn't list ${KEY_CVE}"
     else
-        echo "1|v${v}: Node ${major} is end-of-life upstream; no fix will ship. Move to 22.23.4, 24.22.1 or 26.12.1"
+        echo "1|v${v}: Node ${major} is end-of-life upstream. Move to 22.23.4, 24.22.1 or 26.12.1"
     fi
 }
 
@@ -277,14 +277,14 @@ cmd_check() {
         elif [[ $ps -eq 0 ]]; then
             caution "${where}  ${vers}  fixed, but${stale}: restart it to run the new code"
         elif [[ $guarded -eq 1 ]]; then
-            caution "${where}  ${vers:-?}  $(state_word "$ps"), brotli-guard loaded (interim)${stale:+;${stale}}"
+            caution "${where}  ${vers:-?}  $(state_word "$ps"), brotli-guard loaded${stale:+;${stale}}"
         else
             bad "${where}  ${vers:-?}  $(state_word "$ps"), no guard${stale:+,${stale}}"
             exposed=1
             if [[ "$unit" == *.service ]]; then
-                echo "      fix: upgrade Node, then restart ${unit}. Interim: sudo ${SELF} guard --unit ${unit}"
+                echo "      fix: upgrade Node, then restart ${unit}. Until then: sudo ${SELF} guard --unit ${unit}"
             else
-                echo "      fix: upgrade Node and restart it. Interim: start it with --require=${GUARD_DST}"
+                echo "      fix: upgrade Node and restart it. Until then: start it with --require=${GUARD_DST}"
             fi
         fi
         [[ $snap -eq 1 ]] && caution "    pid ${pid} uses a startup snapshot: rebuild it with the fixed Node (CVE-2026-106074)"
@@ -527,7 +527,7 @@ guard_one() {
     mkdir -p "$(dirname "$dp")"
     local prev=""; [[ -f "$dp" ]] && prev="$(cat "$dp")"
     printf '%s\n' "$MARKER" \
-        "# Interim guard for ${KEY_CVE}, written by ${SCRIPT_NAME} ${SCRIPT_VERSION}." \
+        "# Guard for ${KEY_CVE}, written by ${SCRIPT_NAME} ${SCRIPT_VERSION}." \
         "# Remove with: ${SELF} unguard --unit ${u}" \
         "[Service]" \
         "Environment=\"NODE_OPTIONS=$(unit_quote "$want")\"" > "$dp"
@@ -635,7 +635,7 @@ cmd_hunt() {
         fi
     done
     echo
-    echo "  A hit is a lead, not proof. A crash in the Brotli decoder on an unfixed runtime is"
+    echo "  A hit tells you where to look. A crash in the Brotli decoder on an unfixed runtime is"
     echo "  worth treating as an incident: check what the process could reach (env secrets, DB"
     echo "  credentials, tokens) and rotate them. Guard blocks show what tried to decode Brotli;"
     echo "  from an attacker-reachable route, that's the request to look at."
@@ -665,4 +665,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

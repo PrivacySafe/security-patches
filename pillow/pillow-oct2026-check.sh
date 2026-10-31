@@ -54,7 +54,7 @@ set -uo pipefail
 
 SCRIPT_NAME="pillow-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -298,8 +298,8 @@ cmd_check() {
         info "No affected Pillow found (${found} copy or pin checked)"
     else
         warn "Affected Pillow found. Upgrade: pip install --upgrade 'Pillow>=13.0.0'  (check your Python version is supported by 13.x)"
-        inf "Stopgap for CVE-2026-96639: open untrusted files with an allowlist, Image.open(f, formats=['JPEG','PNG','GIF','WEBP']), which keeps PSD, MPO, DCX and MIC out."
-        inf "Stopgap for CVE-2026-112900: refuse EPS input, or refuse any filename that starts with '-' or '@' before it reaches Pillow, or remove Ghostscript."
+        inf "Protection for CVE-2026-96639: open untrusted files with an allowlist, Image.open(f, formats=['JPEG','PNG','GIF','WEBP']), which keeps PSD, MPO, DCX and MIC out."
+        inf "Protection for CVE-2026-112900: refuse EPS input, or refuse any filename that starts with '-' or '@' before it reaches Pillow, or remove Ghostscript."
         inf "Pillow 13.0.0 notes: https://github.com/python-pillow/Pillow/blob/main/docs/releasenotes/13.0.0.rst"
     fi
     return "$rc"

@@ -7,8 +7,8 @@
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
-# Prints one line per hit, and a count summary on stop. A hit is a lead, not
-# proof: extensions crash workers too, and the upload-progress field is in
+# Prints one line per hit, and a count summary on stop. A hit is a lead to
+# investigate: extensions crash workers too, and the upload-progress field is in
 # legit forms. Only patching PHP fixes the bug.
 #
 # Design notes, from a 24 October 2026 honeypot report by the phpot project
@@ -342,7 +342,7 @@ while IFS= read -r line <&"${TAILER[0]}"; do
     fi
   done
 
-  # Oversized response or PHPSESSID (leak-sized): a lead, not proof.
+  # Oversized response or PHPSESSID (leak-sized): a lead to investigate.
   big_resp_lead "$line"
   if [ -n "$BL_WHY" ]; then
     if [ "$BL_SHOW" = 1 ]; then

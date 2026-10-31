@@ -15,7 +15,7 @@ The Apache Pulsar PMC published **14 advisories on 21 October 2026**, all fixed 
 | Component | Broker | Broker | **Pulsar Manager** |
 | Severity | Critical, CVSS 4.0 9.2 | High, 7.7 | **Critical, CVSS 4.0 10.0** |
 | Affected | 2.8.1 before 4.0.14, and 4.1.0 before 4.2.5 | 2.8.1 before 4.0.14, and 4.1.0 before 4.2.5 | 0.1.0 through 0.4.0, **every release** |
-| Fixed | 4.0.14, 4.2.5, 5.0.0 | 4.0.14, 4.2.5, 5.0.0 | **No fix, and none will ship**: the Pulsar PMC retired the project |
+| Fixed | 4.0.14, 4.2.5, 5.0.0 | 4.0.14, 4.2.5, 5.0.0 | **Retired by the Pulsar PMC**: remove it |
 | What | With `MultiRolesTokenAuthorizationProvider` and a **non-empty `anonymousUserRole`**, HTTP and WebSocket requests whose credentials fail authentication fall back to the anonymous role, and the provider authorizes them with the roles in the **unverified** bearer token. A forged or unsigned token can claim a superuser role. The binary protocol is not affected | For requests a proxy sends on behalf of a user, the broker authorized the original principal with the proxy's own authentication data. With `MultiRolesTokenAuthorizationProvider` the user gains the roles in the proxy's token; whatever the provider, the tenant admin check of a proxied admin REST request passed without checking the original principal when the proxy role was a tenant admin | In 0.3.0 and later anyone who can reach it over the network can take full control (the call that creates the first administrator needs no authentication and stays available after setup). In all versions, when it holds an HTTP authentication credential for a cluster, any user who can reach it can perform the admin operations that credential permits, and can make it send the credential to a host of their choosing |
 | Needs | `MultiRolesTokenAuthorizationProvider`, non-empty `anonymousUserRole`, authorization enabled | `proxyRoles` set, authorization enabled | Pulsar Manager installed and reachable |
 
@@ -59,28 +59,32 @@ Exit codes: `0` nothing exposed, `1` an affected broker with an exposing configu
 
 ## How to read the result
 
-- **Broker in an affected range and the exposing settings present:** exposed. Upgrade to 4.0.14, 4.2.5 or 5.0.0 or newer. Until then (our reasoning, not the vendor's): empty `anonymousUserRole`, do not expose the HTTP and WebSocket ports to untrusted clients, and keep the broker behind the proxy with strict network rules.
-- **Affected range, no exposing settings:** exit `0` with a reminder that the upgrade is still needed.
-- **Affected broker with no `conf/` beside it:** unverified, exit `1`. The settings may come from environment variables or a mounted file.
-- **A fixed broker** (4.0.14 and later, 4.2.5 and later, 5.0.0 and later) is fine even if its configuration contains the settings: the check is on the version, and the file is not flagged separately.
-- **Versions older than 2.8.1:** the two configuration-dependent flaws start at 2.8.1, but those releases are unsupported and affected by other advisories in the set: upgrade.
-- **Containers:** a compose file or Helm values file with the exposing settings is reported without a version, because the image is not opened. Check the tag: below 4.0.14, any 4.1.x, or 4.2.x below 4.2.5 is exposed.
-- **Pulsar Manager, any version, any state:** stop and remove it. There will be no fix. If it was reachable from a network you do not fully trust, treat the Pulsar credential or token signing key it held as compromised and replace it, and check its user list for administrators you did not create. The Pulsar documentation lists alternatives: https://pulsar.apache.org/docs/administration-ui
+- Broker in an affected range and the exposing settings present: exposed. Upgrade to 4.0.14, 4.2.5 or 5.0.0 or newer. Until then (PrivacySafe recommendation): empty `anonymousUserRole`, do not expose the HTTP and WebSocket ports to untrusted clients, and keep the broker behind the proxy with strict network rules.
+- Affected range, no exposing settings: exit `0` with a reminder that the upgrade is still needed.
+- Affected broker with no `conf/` beside it: reported as exposed, exit `1`, so you review it with the settings in hand (they may come from environment variables or a mounted file).
+- A fixed broker (4.0.14 and later, 4.2.5 and later, 5.0.0 and later) is fine even if its configuration contains the settings: the check is on the version, and the file is not flagged separately.
+- Versions older than 2.8.1: the two configuration-dependent flaws start at 2.8.1, but those releases are unsupported and affected by other advisories in the set: upgrade.
+- Containers: a compose file or Helm values file with the exposing settings is reported without a version, because the image is not opened. Check the tag: below 4.0.14, any 4.1.x, or 4.2.x below 4.2.5 is exposed.
+- Pulsar Manager, any version, any state: stop and remove it. If it was reachable from a network you do not fully trust, treat the Pulsar credential or token signing key it held as compromised and replace it, and check its user list for administrators you did not create. The Pulsar documentation lists alternatives: https://pulsar.apache.org/docs/administration-ui
 
 ## Sources
 
 - [Advisory for CVE-2026-105869](https://pulsar.apache.org/security/CVE-2026-105869/)
 - [The Pulsar PMC's combined announcement of 14 CVEs (oss-security)](https://seclists.org/oss-sec/2026/q4/296)
 
-## Apache Pulsar know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Brokers: update to 4.0.14, 4.2.5 or 5.0.0. Pulsar Manager has no fix and will not get one: the Pulsar PMC retired it, and the advice is to stop using it and remove it.
-- **The broker flaws depend on configuration.** Neither CVE-2026-105869 nor CVE-2026-105942 is reachable on a default broker: authentication, authorization, `anonymousUserRole` and `proxyRoles` are off or empty by default. The script reads `broker.conf`, `standalone.conf`, configuration, compose, Helm and env files for the exposing settings.
-- **It does not open container images.** For containers it reads the files beside them and tells you to check the tag. It also looks for Pulsar Manager (jars, running processes, listeners on 7750 and 9527).
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container copies the broker jar names as empty files (only the name carries the version) and, from each `broker.conf`, `standalone.conf`, compose, Helm and `.env` file, only the lines that mention `authorizationProvider`, `anonymousUserRole`, `authorizationEnabled` or `proxyRoles`, so token secrets and client credentials never leave the container. A `broker.conf` that has none of those settings is still staged, so it is reported as clean rather than as unreadable. The script runs once per container in isolation. `/pulsar`, where the official image installs, is searched in containers.
+- The fix. Brokers: update to 4.0.14, 4.2.5 or 5.0.0. The Pulsar PMC retired Pulsar Manager: stop using it and remove it.
+- The broker flaws depend on configuration. Neither CVE-2026-105869 nor CVE-2026-105942 is reachable on a default broker: authentication, authorization, `anonymousUserRole` and `proxyRoles` are off or empty by default. The script reads `broker.conf`, `standalone.conf`, configuration, compose, Helm and env files for the exposing settings.
+- It does not open container images. For containers it reads the files beside them and tells you to check the tag. It also looks for Pulsar Manager (jars, running processes, listeners on 7750 and 9527).
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe copies the broker jar names as empty files, because only the name carries the version. From each `broker.conf`, `standalone.conf`, compose, Helm and `.env` file it copies only the lines that mention `authorizationProvider`, `anonymousUserRole`, `authorizationEnabled` or `proxyRoles`, so token secrets and client credentials never leave the container. A `broker.conf` that has none of those settings is still staged, so it is reported as clean rather than as unreadable. The script runs once per container in isolation. `/pulsar`, where the official image installs, is searched in containers.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

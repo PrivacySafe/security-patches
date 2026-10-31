@@ -8,7 +8,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`roundcube/roundcube-oct2026-check.sh`](roundcube-oct2026-check.sh)
 
-Roundcube released 1.6.20 (the LTS line) and 1.7.5 (mainline) on 19 October 2026. Both carry the same 20 security fixes, the largest batch since 1.7.0: IMAP command injection through a CRLF in the `_uid` and `_flag` parameters, four mail header injection flaws, cross-site scripting, server-side request forgery, cross-site request forgery, an object injection primitive in session handling, and ImageMagick limit bypasses. The project says it strongly recommends updating every production installation.
+Roundcube released 1.6.20 (the LTS line) and 1.7.5 (mainline) on 19 October 2026. Both carry the same 20 security fixes, the largest batch since 1.7.0. They cover IMAP command injection through a CRLF in the `_uid` and `_flag` parameters, four mail header injection flaws, cross-site scripting, server-side request forgery, cross-site request forgery, an object injection primitive in session handling, and ImageMagick limit bypasses. The project says it strongly recommends updating every production installation.
 
 CVE-2026-114716 is one of the mail header injection fixes. The release notes list four: through the From display-name in the Bounce action, through the `References`, `In-Reply-To`, `Message-ID` and `From` parameters, through the subject of a message forwarded as an attachment, and through the media type of an inline image. The advisory does not say which fix carries which CVE number, so this tool does not claim to tell them apart. A header injection lets an attacker add or change headers on an outgoing message, which feeds phishing and forged mail that leaves your own trusted server.
 
@@ -64,10 +64,10 @@ Exit codes: `0` nothing affected (or nothing found), `1` an affected install (or
 
 ## How to read the result
 
-- **Distribution packages.** Debian, Ubuntu, RHEL and others backport fixes without changing the version string. For copies owned by a `dpkg` or `rpm` package the script reads the package changelog and reports a mention of the CVE. Check your distribution's security tracker as well.
-- **Panel-bundled copies** are labelled. The panel's own update delivers the fix, so check the panel's changelog.
-- **Hunt hits** are probes of the IMAP injection parameter that this same release fixes. They show someone has been testing your webmail. A hit is a lead, not proof of a successful attack; update first, then look at the IMAP server's own log for commands you did not expect.
-- **A clean hunt** is not proof of safety: logs rotate, and POST bodies are not logged.
+- Distribution packages. Debian, Ubuntu, RHEL and others backport fixes without changing the version string. For copies owned by a `dpkg` or `rpm` package the script reads the package changelog and reports a mention of the CVE. Check your distribution's security tracker as well.
+- Panel-bundled copies are labeled. The panel's own update delivers the fix, so check the panel's changelog.
+- Hunt hits are probes of the IMAP injection parameter that this same release fixes. They show someone has been testing your webmail. A hit shows someone has probed your webmail. Update first, then look at the IMAP server's own log for commands you did not expect.
+- A clean hunt means no indicator was found in the logs that remain (logs rotate, and POST bodies are not logged).
 
 ## Fixing it
 
@@ -78,15 +78,19 @@ Back up the Roundcube files and database first, as the project advises, then mov
 - [Roundcube 1.6.20 release](https://github.com/roundcube/roundcubemail/releases/tag/1.6.20)
 - [Roundcube: security updates 1.6.20 and 1.7.5](https://roundcube.net/news/2026/10/19/security-updates-1.6.20-and-1.7.5)
 
-## Roundcube know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update to 1.6.20 or 1.7.5, which carry the same 20 security fixes. These releases do not cover 1.5 and earlier.
-- **Hosting panels bundle their own copy.** cPanel and Plesk ship Roundcube and update it with the panel, so the panel's changelog decides when it is safe.
-- **`hunt` searches web server logs for CRLF probing** of the `_uid` and `_flag` parameters (the IMAP injection the same release fixes). A hit means someone has been testing your webmail, not that an attack succeeded.
-- **The version is read from `program/include/iniset.php`.**
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), the check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
+- The fix. Update to 1.6.20 or 1.7.5, which carry the same 20 security fixes. These releases do not cover 1.5 and earlier.
+- Hosting panels bundle their own copy. cPanel and Plesk ship Roundcube and update it with the panel, so the panel's changelog decides when it is safe.
+- `hunt` searches web server logs for CRLF probing of the `_uid` and `_flag` parameters (the IMAP injection the same release fixes). A hit means someone has been testing your webmail, not that an attack succeeded.
+- The version is read from `program/include/iniset.php`.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as `.../docker_NAME_PATH` is the PATH inside the container NAME. It never runs anything in a container beyond `find` and a file copy, never copies `.env` or `wp-config.php`, never keeps a staged symlink, and is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

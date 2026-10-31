@@ -4,7 +4,7 @@
 # Apache Pulsar October 2026: read-only checker  (v1)
 # CVE-2026-105869 (broker, forged JWT roles, critical 9.2)
 # CVE-2026-105942 (broker, proxied requests, high 7.7)
-# CVE-2026-105944 (Pulsar Manager, missing authentication, CVSS 10, NO FIX)
+# CVE-2026-105944 (Pulsar Manager, missing authentication, CVSS 10, retired)
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
@@ -71,7 +71,7 @@ set -uo pipefail
 
 SCRIPT_NAME="pulsar-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -306,7 +306,7 @@ cmd_check_host() {
             fixed)   ok "${ver} has the fixes (4.0.14, 4.2.5 or 5.0.0 or newer)"; continue ;;
             unknown) caution "cannot parse version '${ver}': check it against 4.0.14, 4.2.5 and 5.0.0"; rc=1; continue ;;
         esac
-        inf "version ${ver} is in an affected range of the 21 October 2026 advisories (fixed in 4.0.14, 4.2.5 and 5.0.0; 3.x and 4.1.x are end of life with no fix of their own)"
+        inf "version ${ver} is in an affected range of the 21 October 2026 advisories (fixed in 4.0.14, 4.2.5 and 5.0.0; 3.x and 4.1.x are end of life: move to a fixed line)"
         if ver_lt "$(norm_ver "$ver")" "2.8.1"; then
             caution "older than 2.8.1: the two configuration-dependent flaws checked here start at 2.8.1, but this release is unsupported and affected by other advisories in the set: upgrade"
             continue
@@ -324,7 +324,7 @@ cmd_check_host() {
             fi
         done
         if [[ $any_conf -eq 0 ]]; then
-            caution "no conf/broker.conf or conf/standalone.conf beside this install: the settings cannot be read (they may come from environment variables or a mounted file). Treating as unverified."
+            caution "no conf/broker.conf or conf/standalone.conf beside this install: the settings cannot be read (they may come from environment variables or a mounted file). Reporting it as exposed so you can review it."
             rc=1
         fi
     done < <(find "${existing[@]}" -xdev -maxdepth 9 -type f \( -name 'pulsar-broker-[0-9]*.jar' -o -name 'org.apache.pulsar-pulsar-broker-[0-9]*.jar' \) 2>/dev/null | sort -u)
@@ -344,14 +344,14 @@ cmd_check_host() {
                 -not -path '*/node_modules/*' -size -2000k 2>/dev/null | sort -u)
     [[ $nconf -eq 0 ]] && ok "no configuration file with the exposing settings"
 
-    step "Looking for Pulsar Manager (CVE-2026-105944, no fix exists)"
+    step "Looking for Pulsar Manager (CVE-2026-105944, retired)"
     while IFS= read -r f; do
         [[ -n "$f" ]] || continue
         root="$(dirname "$f")"; [[ "$(basename "$root")" == bin ]] && root="$(dirname "$root")"
         [[ -n "${mgr_seen[$root]:-}" ]] && continue; mgr_seen["$root"]=1
         nmgr=$((nmgr+1))
         ver="$(sed -nE 's/^pulsar-manager-([0-9][0-9.]*)\.jar$/\1/p' <<<"$(basename "$f")")"
-        bad "Pulsar Manager found: ${f}${ver:+ (version ${ver})}: every release (0.1.0 to 0.4.0) is affected and the project is retired, so no fix will ever ship"
+        bad "Pulsar Manager found: ${f}${ver:+ (version ${ver})}: every release (0.1.0 to 0.4.0) is affected and the project is retired: remove it"
         rc=1
     done < <(find "${existing[@]}" -xdev -maxdepth 9 -type f \( -name 'pulsar-manager*.jar' -o -path '*pulsar-manager/bin/pulsar-manager' \) 2>/dev/null | sort -u)
     if have ps; then
@@ -382,7 +382,7 @@ cmd_check_host() {
     else
         warn "Exposed Pulsar component found."
         [[ $nmgr -gt 0 ]] && {
-            inf "Pulsar Manager: stop and remove it (the Pulsar PMC retired it; there will be no fix) and move to an alternative from https://pulsar.apache.org/docs/administration-ui"
+            inf "Pulsar Manager: stop and remove it (the Pulsar PMC retired it) and move to an alternative from https://pulsar.apache.org/docs/administration-ui"
             inf "If it was reachable from a network you do not fully trust, treat the Pulsar credential or token signing key it held as compromised and replace it, and check its user list for administrators you did not create."
         }
         inf "Broker: upgrade to 4.0.14, 4.2.5 or 5.0.0 or newer. Until then (ours): empty anonymousUserRole, do not expose the HTTP and WebSocket ports to untrusted clients, and keep the broker behind the proxy with strict network rules."
@@ -397,7 +397,7 @@ main() {
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
     case "$CMD" in -h|--help|help) print_help; exit 0 ;; esac
     echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
-    echo "CVE-2026-105869 and CVE-2026-105942 (fixed in Pulsar 4.0.14, 4.2.5, 5.0.0); CVE-2026-105944 (Pulsar Manager, retired, no fix)"
+    echo "CVE-2026-105869 and CVE-2026-105942 (fixed in Pulsar 4.0.14, 4.2.5, 5.0.0); CVE-2026-105944 (Pulsar Manager, retired)"
     case "$CMD" in
         check) cmd_check "$@" ;;
         *) die "Unknown command: ${CMD} (check|version)" ;;

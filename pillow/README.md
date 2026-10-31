@@ -55,11 +55,11 @@ Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arg
 
 ## How to read the result
 
-- **Both bugs apply:** the version is in both ranges. If `gs` is installed the script prints a critical line for CVE-2026-112900 as well.
-- **Affected by CVE-2026-112900 but no `gs`:** the script prints a warning and says the EPS path is inert on this host. The script still exits `1`, because the same Pillow version is affected by the other fixes in 13.0.0.
-- **Lock file pins** describe what would be installed, not what is running. A pin is a pointer to fix, not proof that a server is vulnerable.
-- **`pillow-heif` and other packages that merely start with "pillow"** are not matched.
-- **Distribution packages.** For copies owned by a `dpkg` or `rpm` package the script reads the package changelog and reports a mention of either CVE, because distributions backport fixes without changing the version string.
+- Both bugs apply: the version is in both ranges. If `gs` is installed the script prints a critical line for CVE-2026-112900 as well.
+- Affected by CVE-2026-112900 but no `gs`: the script prints a warning and says the EPS path is inert on this host. The script still exits `1`, because the same Pillow version is affected by the other fixes in 13.0.0.
+- Lock file pins describe what would be installed, not what is running. A pin points to what to fix. Check the running server for exposure.
+- `pillow-heif` and other packages that merely start with "pillow" are not matched.
+- Distribution packages. For copies owned by a `dpkg` or `rpm` package the script reads the package changelog and reports a mention of either CVE, because distributions backport fixes without changing the version string.
 
 ## Fixing it
 
@@ -71,8 +71,8 @@ Check that your Python version is supported by Pillow 13.x before you pin it. Re
 
 If you cannot upgrade yet:
 
-- **CVE-2026-96639:** open untrusted files with an allowlist of formats, for example `Image.open(f, formats=["JPEG", "PNG", "GIF", "WEBP"])`, which keeps PSD, MPO, DCX and MIC out. Pillow's own security guidance recommends this approach.
-- **CVE-2026-112900:** reject EPS input, or reject any filename that starts with `-` or `@` before it reaches Pillow, or remove Ghostscript from hosts that do not need it. Pillow's guidance also recommends blocking EPS at the application boundary.
+- CVE-2026-96639: open untrusted files with an allowlist of formats, for example `Image.open(f, formats=["JPEG", "PNG", "GIF", "WEBP"])`, which keeps PSD, MPO, DCX and MIC out. Pillow's own security guidance recommends this approach.
+- CVE-2026-112900: reject EPS input, or reject any filename that starts with `-` or `@` before it reaches Pillow, or remove Ghostscript from hosts that do not need it. Pillow's guidance also recommends blocking EPS at the application boundary.
 - For both, run image processing in a sandbox without network access and without sensitive mounts.
 
 ## Sources
@@ -81,15 +81,19 @@ If you cannot upgrade yet:
 - [Pillow 13.0.0 release notes](https://github.com/python-pillow/Pillow/blob/main/docs/releasenotes/13.0.0.rst)
 - [Pillow security handbook](https://pillow.readthedocs.io/en/stable/handbook/security.html)
 
-## Pillow know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update Pillow to 13.0.0, which fixes both flaws.
-- **CVE-2026-112900 needs Ghostscript.** The EPS bug passes a filename to the `gs` binary, so the script reports whether Ghostscript is installed. Command execution needs the attacker to control the filename and the referenced text file.
-- **It reads installed metadata and lock files.** It finds Pillow in Python environments (`dist-info` and `egg-info`) and in lock files and compares versions.
-- **There is no hunt.** No indicators of exploitation have been published.
-- **It also reads running containers.** With no directory argument and `SCAN_CONTAINERS=1` (the default), a read-only probe inside each running docker and podman container finds the installed copies by their `dist-info` and `egg-info` directories and the lock and requirements files that mention the package, and copies only those names and files into a private temporary directory, which the normal check then judges. Whether Ghostscript is installed decides if the EPS flaw (CVE-2026-112900) is reachable, so a copy found in a container is judged by *that container's* `gs`, not the host's. A staged symlink is never kept and the copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
+- The fix. Update Pillow to 13.0.0, which fixes both flaws.
+- CVE-2026-112900 needs Ghostscript. The EPS bug passes a filename to the `gs` binary, so the script reports whether Ghostscript is installed. Command execution needs the attacker to control the filename and the referenced text file.
+- It reads installed metadata and lock files. It finds Pillow in Python environments (`dist-info` and `egg-info`) and in lock files and compares versions.
+- There is no hunt. No indicators of exploitation have been published.
+- It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. In each running container, a read-only probe finds the installed copies by their `dist-info` and `egg-info` folders, plus the lock and requirements files that mention the package. It copies only those names and files into a private temporary folder, and the normal check judges that folder. Whether Ghostscript is installed decides if the EPS flaw (CVE-2026-112900) is reachable, so a copy found in a container is judged by *that container's* `gs`, not the host's. A staged symlink is never kept and the copies are removed on exit. A path shown as `.../docker_NAME/PATH` is the PATH inside the container NAME. It is skipped when you name directories yourself.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

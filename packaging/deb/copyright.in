@@ -4,7 +4,9 @@ Upstream-Contact: @MAINT@
 Source: https://codeberg.org/PrivacySafe/security-patches
  https://github.com/PrivacySafe/security-patches
 Comment: Built and published by PrivacySafe Foundation 501(c)(3) nonprofit
- with the assistance of Ivy Cyber LLC (https://ivycyber.com). If this
+ with the assistance of Ivy Cyber LLC (https://ivycyber.com). Some files
+ were written with the help of an AI model. Each one says so in an
+ Assisted-by line in its header, and its manual page repeats that. If this
  software is helpful, please consider a donation to PrivacySafe Foundation:
  https://privacysafe.foundation
 
@@ -27,4 +29,4 @@ License: CC0-1.0
  .
  On Debian systems, the complete text of the CC0 1.0 Universal license can
  be found in /usr/share/common-licenses/CC0-1.0, and a copy is installed in
- /usr/share/doc/psf-security-packages/LICENSE.
+ /usr/share/doc/psf-security-patches/LICENSE.

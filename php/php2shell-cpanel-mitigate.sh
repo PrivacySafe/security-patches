@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# PHP2Shell interim mitigation for cPanel EasyApache 4  (v1)
+# PHP2Shell mitigation for cPanel EasyApache 4  (v1)
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
@@ -25,7 +25,7 @@
 #   fatal_error_backtraces = 0              PHP 8.5, unpatched builds only
 #   memory_limit = -1                       only with --memory-unlimited, and
 #                                           only on unpatched builds (PHP's own
-#                                           interim measure; it trades the RCE
+#                                           protective measure; it trades the RCE
 #                                           for denial of service, so pair it
 #                                           with a request body cap)
 #   post_max_size / upload_max_filesize     only with --post-max / --upload-max;
@@ -79,13 +79,12 @@
 # a drop-in it wrote. Run check first and review the plan before apply.
 #
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5
 # =============================================================================
 set -euo pipefail
 
 SCRIPT_NAME="php2shell-cpanel-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 
 EA_ROOT="${EA_ROOT:-/opt/cpanel}"
 HOME_ROOT="${HOME_ROOT:-/home}"
@@ -261,7 +260,7 @@ patch_state() {   # <php binary>   sets PATCH_STATE (patched|unpatched) and PATC
 build_dropin() {
     local state="$1" ver="$2" base_post="$3" base_upload="$4" post upload
     echo "$MARKER"
-    echo "; Interim measures for ${CVE_A}, ${CVE_B} and CVE-2026-115560."
+    echo "; Protective measures for ${CVE_A}, ${CVE_B} and CVE-2026-115560."
     echo "; Updating PHP is the only complete fix for the first two."
     echo "; Remove with: ${SCRIPT_NAME} restore"
     echo "session.upload_progress.enabled = 0"
@@ -428,7 +427,7 @@ cmd_check() {
     step "Summary"
     if [[ "$UNPATCHED" -eq 1 ]]; then
         bad "at least one version is unpatched: update the ea-php packages (the only complete fix), then restart Apache and FPM"
-        inf "interim: ${SCRIPT_NAME} apply"
+        inf "protect now: ${SCRIPT_NAME} apply"
         exit 1
     fi
     if [[ "$REVIEW" -eq 1 ]]; then caution "every version is patched, but something above is worth a look"; exit 2; fi

@@ -6,12 +6,14 @@
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
-# Builds a release tarball, a .deb and an .rpm, all named psf-security-packages
-# and versioned by release date: YY.MM.DD-X.Y.Z, for example 26.10.28-1.0.0.
+# Builds a release tarball, a .deb and an .rpm, all named psf-security-patches
+# and versioned by release date: YY.MM.DD-X.Y.Z, for example 26.10.30-1.0.0.
 # In the deb the date is the upstream version and X.Y.Z the revision; in the
 # rpm the date is Version and X.Y.Z is Release. The packages install the whole
 # tree to /opt/psf-security-patches and the php2shell-watch systemd unit to
-# /usr/lib/systemd/system (not enabled). No maintainer scripts are used.
+# /usr/lib/systemd/system (not enabled), and the manual pages and info manual to
+# /usr/share/man and /usr/share/info, and the HTML documentation site to
+# /usr/share/doc/psf-security-patches/html. No maintainer scripts are used.
 #
 # Usage:
 #   packaging/build-release.sh [--date YY.MM.DD] [--rev X.Y.Z] [--out DIR]
@@ -26,7 +28,7 @@
 # =============================================================================
 set -euo pipefail
 
-PKG="psf-security-packages"
+PKG="psf-security-patches"
 MAINT="Sean O'Brien <sean@ivycyber.com>"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATEVER="$(date -u +%y.%m.%d)"
@@ -93,10 +95,29 @@ payload() {
   install -m 0644 "$ROOT/packaging/systemd/php2shell-watch.service" "$1/usr/lib/systemd/system/"
 }
 
+# Manual pages and the info manual, compressed, for both packages.
+install_manuals() {   # $1 = root of the package file system
+  rm -rf "$1/opt/psf-security-patches/man"
+  install -d "$1/usr/share/man/man8" "$1/usr/share/man/man7" "$1/usr/share/info"
+  for f in "$ROOT"/man/man8/*.8; do gzip -9n < "$f" > "$1/usr/share/man/man8/$(basename "$f").gz"; done
+  gzip -9n < "$ROOT/man/man7/psf-security-patches.7" > "$1/usr/share/man/man7/psf-security-patches.7.gz"
+  gzip -9n < "$ROOT/man/psf-security-patches.info" > "$1/usr/share/info/psf-security-patches.info.gz"
+}
+
+# The documentation site, as HTML documentation next to the other package docs.
+install_site() {   # $1 = root of the package file system
+  rm -rf "$1/opt/psf-security-patches/site"
+  [ -d "$ROOT/site" ] || return 0
+  install -d "$1/usr/share/doc/$PKG/html"
+  cp -a "$ROOT/site/." "$1/usr/share/doc/$PKG/html/"
+}
+
 # 3. Debian package.
 if command -v dpkg-deb >/dev/null 2>&1; then
   D="$WORK/deb"
   payload "$D"
+  install_manuals "$D"
+  install_site "$D"
   DOC="$D/usr/share/doc/$PKG"
   install -d "$DOC" "$D/DEBIAN"
   subst "$ROOT/packaging/deb/copyright.in" > "$DOC/copyright"
@@ -124,13 +145,13 @@ if command -v rpmbuild >/dev/null 2>&1; then
   T="$WORK/rpm"
   mkdir -p "$T"/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
   cp "$TARBALL" "$T/SOURCES/${PKG}-${DATEVER}-${REV}.tar.gz"
-  subst "$ROOT/packaging/rpm/psf-security-packages.spec.in" > "$T/SPECS/$PKG.spec"
+  subst "$ROOT/packaging/rpm/psf-security-patches.spec.in" > "$T/SPECS/$PKG.spec"
   rpmbuild -bb --target noarch \
     --define "_topdir $T" \
     --define "_binary_payload w9.xzdio" \
     --define "use_source_date_epoch_as_buildtime 1" \
     --define "clamp_mtime_to_source_date_epoch 1" \
-    --define "_buildhost psf-security-packages" \
+    --define "_buildhost psf-security-patches" \
     "$T/SPECS/$PKG.spec" >"$WORK/rpmbuild.log" 2>&1 || { cat "$WORK/rpmbuild.log" >&2; exit 1; }
   cp "$T/RPMS/noarch/${PKG}-${DATEVER}-${REV}.noarch.rpm" "$OUT/"
   echo "built $OUT/${PKG}-${DATEVER}-${REV}.noarch.rpm"

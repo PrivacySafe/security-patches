@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# PHP2Shell interim mitigation for PHP-FPM 7.0 through 8.5  (v5)
+# PHP2Shell mitigation for PHP-FPM 7.0 through 8.5  (v5)
 # CVE-2026-109618 / CVE-2026-109619, and CVE-2026-115560 (session upload
 # progress, announced 23 Oct 2026, fix due in the next regular PHP release)
 #
@@ -114,7 +114,7 @@ set -euo pipefail
 # installs, so any pasted output or file says which version produced it.
 SCRIPT_NAME="php2shell-mitigate.sh"
 SCRIPT_VERSION="5.2.5"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
@@ -409,7 +409,7 @@ patch_status() {   # [package], default php${PHP_VER}-fpm
         PATCH_HOW="${v}: upstream ${up} < ${PATCHED_VER}; $( [[ "$v" == *sury* ]] && echo "sury ships" || echo "non-Ubuntu builds ship" ) the upstream fix rather than backporting"
         return 1
     fi
-    if [[ $have_cl -eq 1 ]]; then PATCH_HOW="${v}: no fixed release, no known backport, changelog doesn't list the CVEs"; return 1; fi
+    if [[ $have_cl -eq 1 ]]; then PATCH_HOW="${v}: below the first fixed release, no known backport, changelog doesn't list the CVEs"; return 1; fi
     PATCH_HOW="${v}: no changelog to check (docs stripped?) and no known fixed build"; return 2
 }
 is_patched() { patch_status; }
@@ -523,7 +523,7 @@ write_profile() {   # $1 = output path, $2 = mode
 
     cat > "$out" <<AAEOF
 ${MARKER}
-# AppArmor profile for php-fpm ${PHP_VER}: PHP2Shell interim mitigation
+# AppArmor profile for php-fpm ${PHP_VER}: PHP2Shell mitigation
 # Generated $(date -u +%FT%TZ) by ${SCRIPT_NAME} ${SCRIPT_VERSION} (${SELF}). Regenerated on every run:
 # put site-specific rules in ${AA_LOCAL} (never overwritten).
 # Switch modes with: ${SELF} enforce ${HINT} | ${SELF} complain ${HINT}
@@ -705,7 +705,7 @@ cmd_apply() {
 # CVE-2026-115560 is still open
 dropin_full() {
     printf '%s\n' \
-        "; PHP2Shell interim mitigation (${CVES[*]} ${UPLOAD_CVE})" \
+        "; PHP2Shell mitigation (${CVES[*]} ${UPLOAD_CVE})" \
         "; Written by ${SCRIPT_NAME} ${SCRIPT_VERSION}" \
         "; Remove with: ${SELF} cleanup ${HINT}  (once patched)" \
         "session.upload_progress.enabled = Off"
@@ -713,7 +713,7 @@ dropin_full() {
 }
 dropin_upload_only() {
     printf '%s\n' \
-        "; PHP2Shell interim mitigation, reduced: this build is patched for ${CVES[*]}," \
+        "; PHP2Shell mitigation, reduced: this build is patched for ${CVES[*]}," \
         "; but ${UPLOAD_CVE} (session upload progress) is fixed only in a later release." \
         "; Written by ${SCRIPT_NAME} ${SCRIPT_VERSION}." \
         "; Rerun ${SELF} cleanup ${HINT} once it is." \
@@ -1193,7 +1193,7 @@ cmd_hunt() {
 
     step "Hunt summary"
     if [[ $HUNT_FINDINGS -eq 0 ]]; then
-        info "No signatures matched. This is reassuring, not proof: these bugs can corrupt memory silently, and a patched server is the only real fix."
+        info "No signatures matched. These bugs can corrupt memory silently, so a patched server is the fix."
         return 0
     fi
     warn "${HUNT_FINDINGS} signature group(s) matched. None is proof of compromise on its own."
@@ -1202,7 +1202,7 @@ cmd_hunt() {
     echo "    - Correlate crashes with memory_limit fatals and multipart POSTs from the same client IP."
     echo "    - Check the web root for new/modified files, and for new cron jobs, scheduled tasks and accounts."
     echo "    - Preserve web-server and PHP logs before they rotate."
-    echo "    - Apache mod_php hosts: this script's AppArmor profile applies to PHP-FPM only, and the ini drop-in is not a fix for CVE-2026-109618. Patching PHP and restarting Apache is the mitigation; php/edge/ holds optional request and response guards."
+    echo "    - Apache mod_php hosts: this script's AppArmor profile applies to PHP-FPM only, and the ini drop-in is one layer for CVE-2026-109618. Patching PHP and restarting Apache is the fix; php/edge/ holds optional request and response guards."
     echo "    - A process poll misses a shell that starts and exits between samples. To record every program the web-server account starts, load the auditd rule in php/detect/ (or watch Tetragon process_exec events; the filter is there too)."
     echo "    - Patch: the only complete fix is an updated PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35) or your distro's backport."
     echo "    - Caveat (2026-10-22): an allocator double-free was reproduced on 8.5.12 via the CLI server; if you saw the sanitizer/CLI-server signatures above, 8.5.12 may not be the last word on the 8.5 branch. Keep the AppArmor layer enforced and watch for a follow-up release."
@@ -1378,7 +1378,7 @@ legacy_guard_hint() {   # <what>
     [[ "$GUARD_HINT" == 1 ]] || return 0
     if [[ $GUARD_HINT_SHOWN -eq 0 ]]; then
         GUARD_HINT_SHOWN=1
-        echo -e "      ${CYAN}no fix coming for $1?${NC} Third-party option, not part of this project and not"
+        echo -e "      ${CYAN}Need protection for $1?${NC} Third-party option, not part of this project and not"
         echo "      reviewed by us: ${LEGACY_GUARD_URL}"
         echo "      A PHP extension (5.4 to 8.5, any SAPI) that removes the upload-progress handler and"
         echo "      carries a fixed multipart parser. Read it, build it from source rather than using"
@@ -1486,7 +1486,7 @@ check_web() {
         [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: $(echo $refs)"
         [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
         for v in "${modphp[@]+"${modphp[@]}"}"; do
-            caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script (mod_php is the configuration a 2026-10-24 honeypot report confirmed 35 shell executions on; the ini setting is not a fix for CVE-2026-109618 and the AppArmor layer here applies to PHP-FPM only, so upgrade PHP and restart Apache)"
+            caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script (mod_php is the configuration a 2026-10-24 honeypot report confirmed 35 shell executions on; the ini setting is one layer for CVE-2026-109618 and the AppArmor layer here applies to PHP-FPM only, so upgrade PHP and restart Apache)"
             local mrc=0; report_patch "$v" "libapache2-mod-php${v}" apache2 || mrc=$?
             if [[ $mrc -eq 0 ]]; then
                 if grep -lsF "libphp${v}.so (deleted)" /proc/[0-9]*/maps >/dev/null 2>&1; then
@@ -1496,7 +1496,7 @@ check_web() {
                 local modphp_ini="'session.upload_progress.enabled = Off'"
                 dpkg --compare-versions "$v" ge 8.5 && modphp_ini+=" 'fatal_error_backtraces = Off'"
                 soft "Apache is running mod_php ${v}, which isn't patched and isn't covered by this script" \
-                     "Upgrade libapache2-mod-php${v} and restart Apache. Interim: printf '%s\\n' ${modphp_ini} > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2). To filter requests before they reach mod_php, see php/edge/ (optional, tested guards; not a fix)"
+                     "Upgrade libapache2-mod-php${v} and restart Apache. Until then: printf '%s\\n' ${modphp_ini} > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2). To filter requests before they reach mod_php, see php/edge/ (optional guards; the fix is the patched PHP)"
             fi
         done
     fi
@@ -1694,4 +1694,3 @@ fi
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

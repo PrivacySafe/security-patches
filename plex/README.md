@@ -8,9 +8,9 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 **Script:** [`plex/plex2shell-oct2026-check.sh`](plex2shell-oct2026-check.sh)
 
-"Plex2Shell" chains flaws in Plex Media Server into unauthenticated remote code execution: an SSRF on `/player/timeline` (CVE-2026-96652), admin-token theft via `searchOne` (CVE-2026-96654), a second SSRF on the transcode path (CVE-2026-96655), and a file write into the Codecs directory that drops and runs an ELF shared object (CVE-2026-96656). CVE-2026-96651 was fixed in the same release. Plex fixed all of them in Plex Media Server 1.43.3.10861 (3 August 2026). A public proof-of-concept landed on 16 October 2026 and exploitation began the next day: attackers drop an XMRig miner (seen as `mylovelyminer`, fetched as `x12345`) and a reverse-proxy backdoor (`myawesomeproxy`), with traffic to `proxystream[.]st`.
+"Plex2Shell" chains flaws in Plex Media Server into unauthenticated remote code execution. The chain is an SSRF on `/player/timeline` (CVE-2026-96652), admin-token theft via `searchOne` (CVE-2026-96654), a second SSRF on the transcode path (CVE-2026-96655), and a file write into the Codecs directory that drops and runs an ELF shared object (CVE-2026-96656). CVE-2026-96651 was fixed in the same release. Plex fixed all of them in Plex Media Server 1.43.3.10861 (3 August 2026). A public proof-of-concept landed on 16 October 2026 and exploitation began the next day: attackers drop an XMRig miner (seen as `mylovelyminer`, fetched as `x12345`) and a reverse-proxy backdoor (`myawesomeproxy`), with traffic to `proxystream[.]st`.
 
-The fix is to upgrade to 1.43.3.10861 or later, including NAS, Docker and VM installs, and restart, which this script does not do for you. It is read-only. Successful exploitation runs code as the Plex service account, so if this host was internet-exposed and unpatched, treat it as compromised: rebuild from a clean install, rotate the Plex account credentials and server token, and (interim) remove any router port-forwarding to Plex until it is updated. Attackers rotate file names, domains and ports, so a clean hunt is not proof; the version is the reliable signal.
+The fix is to upgrade to 1.43.3.10861 or later, including NAS, Docker and VM installs, and restart, which this script does not do for you. It is read-only. Successful exploitation runs code as the Plex service account, so if this host was internet-exposed and unpatched, treat it as compromised: rebuild from a clean install, rotate the Plex account credentials and server token, and remove any router port-forwarding to Plex until it is updated. Attackers rotate file names, domains and ports, so a clean hunt means none of the published indicators were found. The version is the reliable signal.
 
 ### Plex quick start
 
@@ -52,20 +52,24 @@ The fix is to upgrade to 1.43.3.10861 or later, including NAS, Docker and VM ins
 
 ### Plex patch detection
 
-Plex Media Server versions look like `1.43.3.10861-xxxxxxxxx`; the script reads the numeric build (from the `plexmediaserver` package, or a version file in the install, or inside a container) and compares it to 1.43.3.10861. Anything earlier is vulnerable to Plex2Shell. Plex's own auto-update covers only Windows and macOS, so on GNU/Linux, NAS and Docker you upgrade through your package manager, a container pull and recreate, or a manual download, then confirm the running build.
+Plex Media Server versions look like `1.43.3.10861-xxxxxxxxx`. The script reads the numeric build (from the `plexmediaserver` package, or a version file in the install, or inside a container) and compares it to 1.43.3.10861. Anything earlier is vulnerable to Plex2Shell. Plex's own auto-update covers only Windows and macOS, so on GNU/Linux, NAS and Docker you upgrade through your package manager, a container pull and recreate, or a manual download, then confirm the running build.
 
-### Plex know before you run it
+## Before you run it
 
-- **The fix is upgrading; this script only tells you where you stand.** Upgrade to 1.43.3.10861 or later on every install (NAS, Docker and VM included) and restart.
-- **An exposed, unpatched server should be treated as compromised.** The chain runs code as the Plex service account. Rebuild from a clean install, rotate the Plex account credentials and server token, and remove port-forwarding to Plex until it is updated.
-- **Indicators change.** Attackers rotate file names, domains and ports, so the hunt can miss a renamed payload. A clean hunt is not proof of safety; the version is the reliable signal.
-- **The Codecs listing is a review aid, not a verdict.** Plex's own codecs are ELF shared objects too, so the script lists what changed there recently rather than flagging every shared object as malware.
-- **Containers carry their own Plex.** Pull a fixed image and recreate the container; a restart alone does not change the build.
-- **GNU/Linux only**, and it finds data directories under the scanned paths; point `PLEX_DATA_PATHS` at a library kept elsewhere.
-- **`HUNT_ROOTS`** sets the scratch directories `hunt` searches for payload files and indicator strings (default `/tmp /var/tmp /dev/shm`, plus the Plex data directories it finds).
-- **The script does not report itself.** Its own file names the indicators, so the exact running file is left out of the content search; a different copy of the script saved under a scanned directory is still reported.
+- The fix is upgrading; this script only tells you where you stand. Upgrade to 1.43.3.10861 or later on every install (NAS, Docker and VM included) and restart.
+- An exposed, unpatched server should be treated as compromised. The chain runs code as the Plex service account. Rebuild from a clean install, rotate the Plex account credentials and server token, and remove port-forwarding to Plex until it is updated.
+- Indicators change. Attackers rotate file names, domains and ports, so the hunt can miss a renamed payload. A clean hunt means none of the published indicators were found. The version is the reliable signal.
+- The Codecs listing is a review aid, not a verdict. Plex's own codecs are ELF shared objects too, so the script lists what changed there recently rather than flagging every shared object as malware.
+- Containers carry their own Plex. Pull a fixed image and recreate the container. A restart alone does not change the build.
+- GNU/Linux only , and it finds data directories under the scanned paths. Point `PLEX_DATA_PATHS` at a library kept elsewhere.
+- `HUNT_ROOTS` sets the scratch directories `hunt` searches for payload files and indicator strings (default `/tmp /var/tmp /dev/shm`, plus the Plex data directories it finds).
+- The script does not report itself. Its own file names the indicators, so the exact running file is left out of the content search. A different copy of the script saved under a scanned directory is still reported.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

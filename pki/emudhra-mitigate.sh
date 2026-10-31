@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# eMudhra intermediate CA compromise, interim mitigation  (v1)
+# eMudhra intermediate CA compromise, mitigation  (v1)
 # Disclosed 20 Oct 2026: https://emudhra.we-have-a-problem.com/
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -117,7 +117,7 @@ ATTIME=1790000000
 SELF="$0"
 SCRIPT_NAME="emudhra-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 
 # Every certificate in the trust path, keyed by SHA-256 of its
 # SubjectPublicKeyInfo. Matching on the key catches every certificate for it:
@@ -1671,4 +1671,3 @@ fi
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

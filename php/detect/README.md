@@ -1,10 +1,10 @@
 # PHP2Shell detection content
 
-Part of the [PHP docs](../README.md) in the [PrivacySafe Security Patches](../../README.md) collection. Compensating controls that narrow what a request can do live in [`php/edge/`](../edge/README.md); this folder is about **seeing** an attack. Neither is a fix: the only complete fix is a patched PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35, or your distribution's backport).
+Part of the [PHP docs](../README.md) in the [PrivacySafe Security Patches](../../README.md) collection. Compensating controls that narrow what a request can do live in [`php/edge/`](../edge/README.md). This folder is about **seeing** an attack. Neither is a fix: the only complete fix is a patched PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35, or your distribution's backport).
 
 ## Why this exists
 
-A honeypot report from 24 October 2026 (phpot, 35 confirmed shell executions on single-worker Apache `mod_php`) is unusually specific about what worked as evidence. Its decisive observation was process-level: an Apache worker starting `/bin/sh` as uid 33, matched to a complete HTTP request. Three details matter for anyone watching a real server:
+A honeypot report from 24 October 2026 (phpot: 35 confirmed shell executions on single-worker Apache `mod_php`) shows what counts as real evidence of PHP2Shell. The deciding observation was a process: an Apache worker starting `/bin/sh` as uid 33, matched to a complete HTTP request. Three things matter if you watch a real server:
 
 - The stages of the chain answered HTTP 200, and the final request, the one that starts the shell, could fail to reach the access log because the worker died (about 0.7 seconds after the shell started in the first confirmed case). A missing access-log line is not a sign the request failed.
 - A crash, an out-of-memory error or an oversized cookie alone is not proof of execution. Only an unexpected child process shows that something ran.
@@ -19,7 +19,7 @@ A honeypot report from 24 October 2026 (phpot, 35 confirmed shell executions on 
 | [Outbound connections](#outbound-connections) | Log what the web account connects to, log-only |
 | [Reading the signals together](#reading-the-signals-together) | What each signal does and does not tell you |
 
-`php2shell-mitigate.sh hunt` (5.2.0 and later) and `php2shell-watch.sh` (1.4.0 and later) cover the log and live-process side; see [PHP2Shell hunting for exploitation](../README.md#php2shell-hunting-for-exploitation) and [Watching live](../README.md#watching-live).
+`php2shell-mitigate.sh hunt` (5.2.0 and later) and `php2shell-watch.sh` (1.4.0 and later) cover the log and live-process side. See [PHP2Shell hunting for exploitation](../README.md#php2shell-hunting-for-exploitation) and [Watching live](../README.md#watching-live).
 
 ## auditd
 
@@ -52,7 +52,7 @@ sudo tetra getevents -o json | jq -c '
 
 Run the same filter over your Tetragon JSON export file if you keep one. Verified with jq 1.7 against sample events in this shape: it returns an Apache-to-`sh` and an nginx-to-`curl` event, and ignores an `sshd` shell, an Apache-to-`convert` start, a `process_exec` event with no parent, and non-exec events without erroring. Field names can differ between Tetragon versions, so check them against one real event first.
 
-Two limits. The filter sees direct children only, so a `curl` started by that `sh` shows up as a child of `sh`, not of the web server; the first shell is the signal. And the arguments can carry secrets on hosts whose applications legitimately shell out, so drop the `args` field if you ship these events elsewhere. Network events (`tcp_connect`) come from a Tetragon `TracingPolicy` rather than this process filter; the [outbound-connection rule](#outbound-connections) below covers that side. The phpot report used a `TracingPolicy` to see a shell's `curl` reach `TCP_SYN_SENT` towards an attacker address.
+Two limits. The filter sees direct children only, so a `curl` started by that `sh` shows up as a child of `sh`, not of the web server. The first shell is the signal. And the arguments can carry secrets on hosts whose applications legitimately shell out, so drop the `args` field if you ship these events elsewhere. Network events (`tcp_connect`) come from a Tetragon `TracingPolicy` rather than this process filter. The [outbound-connection rule](#outbound-connections) below covers that side. The phpot report used a `TracingPolicy` to see a shell's `curl` reach `TCP_SYN_SENT` towards an attacker address.
 
 ## Outbound connections
 
@@ -69,7 +69,7 @@ table inet php2shell_egress {
 }
 ```
 
-Save it as a file, check it with `nft -c -f <file>`, load it with `nft -f <file>`, and read it with `journalctl -k | grep php2shell-egress`. It logs only, accepts everything and handles IPv4 only. Loaded on a live nftables (x86-64): the account name resolves to its uid, and both a DNS lookup and a TCP connection made by that account were logged, while the same traffic from a different account was not. It applies to PHP running on the host; a container's traffic crosses the `forward` hook, not `output`.
+Save it as a file, check it with `nft -c -f <file>`, load it with `nft -f <file>`, and read it with `journalctl -k | grep php2shell-egress`. It logs only, accepts everything and handles IPv4 only. Loaded on a live nftables (x86-64): the account name resolves to its uid, and both a DNS lookup and a TCP connection made by that account were logged, while the same traffic from a different account was not. It applies to PHP running on the host. A container's traffic crosses the `forward` hook, not `output`.
 
 Restricting egress for real, so the web account can reach only the hosts it needs (a database, an API, a mail relay, a package mirror), is the strongest compensating control against the call-out step. Build the allow-list from a week of the log-only output first. A drop rule written without that review will break the site.
 
@@ -83,7 +83,7 @@ Restricting egress for real, so the web account can reach only the hosts it need
 | nginx error log: `upstream sent too big header` | Lead | At default buffer sizes nginx refuses a leak-sized `Set-Cookie` with a `502` and this line, which is nginx's counterpart of the oversized response size its default access log cannot show. Large legitimate headers raise it too |
 | No `User-Agent`, a multipart boundary of ten `C` characters, and a fixed header order (Host, Content-Type, Transfer-Encoding or Content-Length, Connection) | Weak | Seen from both source addresses against all three targets in the phpot report: one public client family, trivial to change. The nginx edge log records the boundary in its `ct=` field |
 | The `q<N>=v&q<N>=v&q<N>=v` request fingerprint | Weak | One public client family; both a long form (seven-digit numbers) and a short form (`q0`, `q1`) have been observed. Trivial for an attacker to change |
-| Source addresses from the phpot report | Weak and ageing | A hit means the address touched you, not what it did. They are hosting-provider addresses, and the attempt-only list may include shared ones |
+| Source addresses from the phpot report | Weak and aging | A hit means the address touched you, not what it did. They are hosting-provider addresses, and the attempt-only list may include shared ones |
 | One out-of-memory error, or one worker crash | Not evidence | Extensions crash workers too |
 
 Do not log the cookie value to get the disclosure signal: it is leaked process memory, and your log would keep it. Do not block whole hosting networks because two of their addresses appeared once. An HTTP 200 on one stage does not mean the attempt failed.
@@ -93,6 +93,10 @@ Do not log the cookie value to get the disclosure signal: it is leaked process m
 Treat it as a compromise of everything the web account could read, not as a crash. Preserve the logs and audit events first, rotate the secrets the account could reach (database passwords, API keys, session secrets), rebuild the host or container from a clean image rather than cleaning it in place, and patch PHP before it goes back into service. Command execution inside a container is not a host escape, and the phpot report did not establish one, but its container restrictions (a read-only web root, no `wget`) are what stopped some of the attackers' follow-up steps.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

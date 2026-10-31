@@ -1,4 +1,4 @@
-Package: psf-security-packages
+Package: psf-security-patches
 Version: @FULL@
 Section: admin
 Priority: optional
@@ -6,19 +6,25 @@ Architecture: all
 Maintainer: @MAINT@
 Installed-Size: @SIZE@
 Depends: bash (>= 4.0)
+Replaces: psf-security-packages (<< 26.10.30)
+Conflicts: psf-security-packages (<< 26.10.30)
 Suggests: apparmor-utils, auditd
-Homepage: https://codeberg.org/PrivacySafe/security-patches
-Description: PrivacySafe security checks, hunts and interim mitigations
- Free public domain tools for GNU/Linux servers: check whether you are
- exposed, hunt for signs of exploitation, and apply interim mitigations where
- the vendor fix is not enough. Covers PHP2Shell (CVE-2026-109618 and
- CVE-2026-109619), Nextcloud Collabora, nginx, curl, Brotli, libheif, Ruby
- and GitLab, Plex, LiteLLM, GhostAction and more.
+Homepage: https://privacysafe.app/docs/security-patches/
+Description: PrivacySafe security checks, hunts and protection for serious vulnerabilities
+ Free public domain tools for GNU/Linux servers. For each serious
+ vulnerability they tell you whether you are exposed, look for signs that
+ someone has already used the flaw, and, where there is a safe way to do it,
+ protect the machine until you can update. Covers the October 2026
+ vulnerabilities in vsftpd, the Claude Code extension, Brotli, HAProxy,
+ rsyslog, YOOtheme, Django REST framework, libexpat, baserCMS, Ruby and
+ GitLab, PHP2Shell, WordPress, nginx, Tomcat, the Linux kernel and more.
  .
- Everything installs under /opt/psf-security-patches, plus the
- php2shell-watch systemd unit, which is not enabled automatically. Patching
- is the fix: these tools reduce risk while you patch and help you find out
- whether you were hit.
+ Start with: man psf-security-patches. Every tool has its own manual page
+ (psf-NAME) and the whole set is in the info manual: info psf-security-patches.
  .
- Built and published by PrivacySafe Foundation 501(c)(3) nonprofit with the
- assistance of Ivy Cyber LLC. CC0 1.0 Universal.
+ The tools install under /opt/psf-security-patches, plus the php2shell-watch
+ systemd unit, which is not enabled automatically. Updating is the permanent
+ fix; the tools protect you until then and show whether you were hit.
+ .
+ Built and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with
+ the assistance of Ivy Cyber LLC. CC0 1.0 Universal.

@@ -26,7 +26,7 @@ Software that speaks DTLS: VPN servers such as ocserv, VoIP and WebRTC servers s
 
 ## How the script decides
 
-| Case | Judgement |
+| Case | Judgment |
 |---|---|
 | A distribution package whose changelog names CVE-2026-84782 | Fixed: a backport, whatever the version says |
 | An Ubuntu package, no changelog entry | Compared with the fixed package versions above. Releases not listed are reported as unconfirmed |
@@ -66,14 +66,18 @@ Update the OpenSSL package, then restart the services that use it (`needrestart`
 - [Ubuntu: CVE-2026-84782](https://ubuntu.com/security/CVE-2026-84782)
 - [The Hacker News: OpenSSL fixes a high-severity DTLS flaw](https://thehackernews.com/2026/09/openssl-fixes-high-severity-dtls-flaw.html)
 
-## OpenSSL know before you run it
+## Before you run it
 
-- **This is a check, not a fix.** Update the OpenSSL package, then restart the services that use it (`needrestart` or a reboot). Fixed public releases are 4.0.3, 3.6.5, 3.5.9 and 3.4.8; for 3.0, 1.1.1 and 1.0.2 the fix is available only to premium-support customers, and 3.1 to 3.3 are end of life.
-- **A distribution build is judged by its package.** Ubuntu's fixed builds (26.04: 3.5.5-1ubuntu3.6, 24.04: 3.0.13-0ubuntu3.16, 22.04: 3.0.2-0ubuntu1.30) and the package changelog naming the CVE come first; the upstream version is used only for a build that is not from a package. For other distributions the script says "cannot confirm".
-- **The flaw is only reachable through DTLS.** Ordinary TLS services do not use the vulnerable code, and Node.js has no DTLS API. The script lists the DTLS-capable services it finds running and processes still holding a replaced OpenSSL in memory.
-- **It also reads running containers.** With `SCAN_CONTAINERS=1` (the default) it asks each running docker and podman container for its own distribution, package and `openssl version`, and judges it by the container's rules, not the host's. OpenSSL linked statically into a program, inside or outside a container, is not visible; copies bundled under `/opt`, `/usr/local`, `/srv` and `/home` are listed, and whoever ships that software updates them. There is no hunt.
+- The fix. Update the OpenSSL package, then restart the services that use it (`needrestart` or a reboot). Fixed public releases are 4.0.3, 3.6.5, 3.5.9 and 3.4.8. For 3.0, 1.1.1 and 1.0.2 the fix is available only to premium-support customers, and 3.1 to 3.3 are end of life.
+- A distribution build is judged by its package. Ubuntu's fixed builds (26.04: 3.5.5-1ubuntu3.6, 24.04: 3.0.13-0ubuntu3.16, 22.04: 3.0.2-0ubuntu1.30) and the package changelog naming the CVE come first. The upstream version is used only for a build that is not from a package. For other distributions the script points you to your distribution's advisory.
+- The flaw is only reachable through DTLS. Ordinary TLS services do not use the vulnerable code, and Node.js has no DTLS API. The script lists the DTLS-capable services it finds running and processes still holding a replaced OpenSSL in memory.
+- It also reads running containers. With `SCAN_CONTAINERS=1` (the default) it asks each running docker and podman container for its own distribution, package and `openssl version`, and judges it by the container's rules, not the host's. OpenSSL linked statically into a program, inside or outside a container, is not visible. Copies bundled under `/opt`, `/usr/local`, `/srv` and `/home` are listed, and whoever ships that software updates them. There is no hunt.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

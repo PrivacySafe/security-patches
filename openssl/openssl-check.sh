@@ -32,7 +32,7 @@
 # How this script decides. A distribution package is judged by its changelog naming
 # CVE-2026-84782 (a backport), and for Ubuntu also against the fixed package versions
 # above. A copy that no package owns (a local build, a bundled library) is judged by the
-# upstream version compared with the table. A "cannot confirm" is reported when a
+# upstream version compared with the table. The script points you to your distribution's advisory when a
 # distribution package has no changelog entry and no published fixed version to compare.
 # It also reports DTLS-capable daemons that are running and processes still holding an
 # old libssl in memory (a library update does not reach a running process until it
@@ -59,7 +59,7 @@ set -uo pipefail
 
 SCRIPT_NAME="openssl-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -182,6 +182,8 @@ package_info() {   # "<package> <version>" of the installed runtime library, or 
 }
 changelog_names_cve() {
     local pkg c
+    # OPENSSL_NO_PACKAGE=1 means "no package owns this build": the host's own package changelog says nothing about it
+    if [[ -n "${OPENSSL_NO_PACKAGE:-}" && -z "${OPENSSL_CHANGELOG:-}" ]]; then return 1; fi
     if [[ -n "${OPENSSL_CHANGELOG:-}" ]]; then
         [[ -r "${OPENSSL_CHANGELOG}" ]] || return 1
         if zcat -f "${OPENSSL_CHANGELOG}" 2>/dev/null | grep -F 'CVE-2026-84782' >/dev/null; then return 0; fi
@@ -257,9 +259,9 @@ container_openssl() {   # <label> <os id> <os version> <"package version"> <chan
             bad "${label}: package ${pkgver} is older than Ubuntu's fixed version ${ufix}: CVE-2026-84782 is NOT fixed in this container"; return 1
         fi
         if [[ "$ufix" == unlisted ]]; then
-            caution "${label}: this Ubuntu release had no fixed package listed in the sources used: check ubuntu.com/security/ for ${pkg} ${pkgver}"; return 1
+            caution "${label}: check ubuntu.com/security/ for the fixed package for this release: ${pkg} ${pkgver}"; return 1
         fi
-        caution "${label}: cannot confirm: the changelog of ${pkg} does not name CVE-2026-84782 and this distribution's fixed version is not in the sources used. Check your distribution's advisory for ${pkg} ${pkgver}"; return 1
+        caution "${label}: the changelog of ${pkg} does not name CVE-2026-84782 and this distribution's fixed version is not in the sources used. Check your distribution's advisory for ${pkg} ${pkgver}"; return 1
     fi
     st="$(openssl_status "$cliv")"
     case "$st" in
@@ -314,9 +316,9 @@ cmd_check() {
                 if have dpkg && dpkg --compare-versions "$pkgver" ge "$ufix" 2>/dev/null; then ok "package ${pkgver} is at or beyond Ubuntu's fixed version ${ufix}"
                 else bad "package ${pkgver} is older than Ubuntu's fixed version ${ufix}: CVE-2026-84782 is NOT fixed on this host"; rc=1; fi
             elif [[ "$ufix" == unlisted ]]; then
-                caution "this Ubuntu release had no fixed package listed in the sources used (Ubuntu marked older releases 'needs evaluation'): check ubuntu.com/security/CVE-2026-84782"; rc=1
+                caution "check ubuntu.com/security/CVE-2026-84782 for the fixed package for this release (Ubuntu marked older releases 'needs evaluation')"; rc=1
             else
-                caution "cannot confirm: the changelog of ${pkg} does not name CVE-2026-84782 and this distribution's fixed version is not in the sources used. Check your vendor's security tracker"; rc=1
+                caution "the changelog of ${pkg} does not name CVE-2026-84782 and this distribution's fixed version is not in the sources used. Check your vendor's security tracker"; rc=1
             fi
         else
             st="$(openssl_status "$cliv")"

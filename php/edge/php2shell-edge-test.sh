@@ -48,7 +48,7 @@ set -uo pipefail
 
 SCRIPT_NAME="php2shell-edge-test.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 [[ -t 1 ]] || { RED=''; GREEN=''; YELLOW=''; NC=''; }

@@ -6,7 +6,7 @@
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
-# The psf-security-packages deb and rpm install this file but do not enable it:
+# The psf-security-patches deb and rpm install this file but do not enable it:
 #   systemctl daemon-reload && systemctl enable --now php2shell-watch
 #   journalctl -fu php2shell-watch     # watch it
 # =============================================================================

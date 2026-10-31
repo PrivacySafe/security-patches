@@ -2,26 +2,26 @@
 
 Part of the [PrivacySafe Security Patches](../README.md) collection.
 
-<a name="nodejs-october-2026-interim-mitigation"></a>
+<a name="nodejs-october-2026-mitigation"></a>
 
-## Node.js October 2026 Interim Mitigation
+## Node.js October 2026 Mitigation
 
 **Scripts:** [`node/node-oct2026-mitigate.sh`](node-oct2026-mitigate.sh), [`node/brotli-guard.cjs`](brotli-guard.cjs)
 
-Node.js 22.23.4, 24.22.1 and 26.12.1 (21 October 2026) fix ten CVEs. The serious one is **CVE-2026-111497**, an out-of-bounds write in the Brotli decoder that can lead to remote code execution. Any code that decodes attacker-controlled Brotli reaches it, and on an unfixed runtime that includes every `fetch()`, because fetch decodes `Content-Encoding: br` responses on its own. Node lines 25 and older are end of life and get no fix.
+Node.js 22.23.4, 24.22.1 and 26.12.1 (21 October 2026) fix ten CVEs. The serious one is **CVE-2026-111497**, an out-of-bounds write in the Brotli decoder that can lead to remote code execution. Any code that decodes attacker-controlled Brotli reaches it, and on an unfixed runtime that includes every `fetch()`, because fetch decodes `Content-Encoding: br` responses on its own. Node lines 25 and older are end of life: move to 22.23.4, 24.22.1 or 26.12.1.
 
 CVE-2026-111497 is also known as Broccoli2Shell (it was first called Node2Shell). It is rated High by Node.js and 9.2 Critical by GitHub. Three kinds of code reach it on an unfixed runtime:
 
-- **Anything that fetches a URL.** Built-in `fetch()` decodes the response, so any server you talk to can send the payload.
-- **Anything that accepts request bodies.** Express 5.0.0 to 5.3.0 and body-parser 2.0.0 to 2.3.0 inflate Brotli request bodies in parsers such as `raw()` and `json()`. Express and body-parser do not contain the bug, so upgrading them does not help. A bare `node:http` server does not decode bodies by itself.
-- **Anything that calls the decoder directly:** `zlib.brotliDecompress*()` and `createBrotliDecompress()`, including libraries that use them on archives, caches or queue messages.
+- Anything that fetches a URL. Built-in `fetch()` decodes the response, so any server you talk to can send the payload.
+- Anything that accepts request bodies. Express 5.0.0 to 5.3.0 and body-parser 2.0.0 to 2.3.0 inflate Brotli request bodies in parsers such as `raw()` and `json()`. Express and body-parser do not contain the bug, so upgrading them does not help. A bare `node:http` server does not decode bodies by itself.
+- Anything that calls the decoder directly: `zlib.brotliDecompress*()` and `createBrotliDecompress()`, including libraries that use them on archives, caches or queue messages.
 
-Node.js bundles its own Brotli, so the system `libbrotli` does not matter for Node; only the Node.js version does. You can read the bundled version with `node -p "process.versions.brotli"`. The Imperva Red Team has run attacker-supplied code on the official, unmodified Node.js 24.22.0 arm64 GNU/Linux image, through both a fetched response and an Express request body, so treat this as exploitable. Node.js has published no workaround of its own: upgrading the runtime is the only complete fix, and the guard below is our interim measure for services you cannot upgrade yet. After upgrading, restart every process and rebuild every container image, because a running process keeps the old decoder until it restarts.
+Node.js bundles its own Brotli, so the system `libbrotli` does not matter for Node. Only the Node.js version does. You can read the bundled version with `node -p "process.versions.brotli"`. The Imperva Red Team has run attacker-supplied code on the official, unmodified Node.js 24.22.0 arm64 GNU/Linux image, through both a fetched response and an Express request body, so treat this as exploitable. Node.js has published no workaround of its own: upgrading the runtime is the only complete fix, and the guard below is our protective measure for services you cannot upgrade yet. After upgrading, restart every process and rebuild every container image, because a running process keeps the old decoder until it restarts.
 
 We wrote these for the Node services we couldn't upgrade the same day. There are two parts:
 
-1. **`brotli-guard.cjs`** is a small file Node loads before your application, through `--require`. It makes Node's Brotli decoder refuse to run, for CommonJS and ES modules alike, and stops `fetch()` asking servers for `br`. Compression keeps working, and so do gzip and deflate. A blocked decode fails the way corrupt input does, so code that already copes with a bad compressed body copes with this too. On a fixed runtime it goes idle by itself.
-2. **`node-oct2026-mitigate.sh`** finds every Node runtime and process on the host, tells you which are exposed, finds the code that decodes Brotli, and loads the guard into systemd services for you. It checks the guard works on each service's own runtime before installing it, and rolls back if the service won't start with it.
+1. `brotli-guard.cjs` is a small file Node loads before your application, through `--require`. It makes Node's Brotli decoder refuse to run, for CommonJS and ES modules alike, and stops `fetch()` asking servers for `br`. Compression keeps working, and so do gzip and deflate. A blocked decode fails the way corrupt input does, so code that already copes with a bad compressed body copes with this too. On a fixed runtime it goes idle by itself.
+2. `node-oct2026-mitigate.sh` finds every Node runtime and process on the host, tells you which are exposed, finds the code that decodes Brotli, and loads the guard into systemd services for you. It checks the guard works on each service's own runtime before installing it, and rolls back if the service won't start with it.
 
 ### Node.js quick start
 
@@ -105,10 +105,10 @@ sudo ./node-oct2026-mitigate.sh unguard --unit myapp
 
 ### What `check` looks at
 
-1. **Runtimes on disk.** Everything on `PATH`, the usual system locations (`/usr/bin`, `/usr/local/bin`, `/opt`, snap), and every user's version manager: nvm, n, fnm, volta, asdf and mise.
-2. **Running processes.** Every Node process, including renamed copies of the binary, with its user and systemd unit. It flags a process whose binary was replaced on disk since it started, because it still runs the old code until you restart it.
-3. **Container images.** Images in Docker or Podman whose metadata declares `NODE_VERSION`, which covers the official `node` images and most images built on them. It reads image metadata only; nothing is started. Images that install Node another way aren't detected.
-4. **Places it can't see.** Electron apps bundle their own Node and need an update from their vendor. The fixed Node releases also update Node's built-in CA store for the eMudhra compromise; see [below](../pki/README.md#emudhra-intermediate-ca-compromise-interim-mitigation).
+1. Runtimes on disk. Everything on `PATH`, the usual system locations (`/usr/bin`, `/usr/local/bin`, `/opt`, snap), and every user's version manager: nvm, n, fnm, volta, asdf and mise.
+2. Running processes. Every Node process, including renamed copies of the binary, with its user and systemd unit. It flags a process whose binary was replaced on disk since it started, because it still runs the old code until you restart it.
+3. Container images. Images in Docker or Podman whose metadata declares `NODE_VERSION`, which covers the official `node` images and most images built on them. It reads image metadata only. Nothing is started. Images that install Node another way aren't detected.
+4. Places it can't see. Electron apps bundle their own Node and need an update from their vendor. The fixed Node releases also update Node's built-in CA store for the eMudhra compromise; see [below](../pki/README.md#emudhra-intermediate-ca-compromise-mitigation).
 
 The script reads each Node version from the binary's contents instead of running it, so root never executes a binary planted in a user's `~/.nvm` or inside a container. It only runs a binary when it can't read the version, and only if root owns it and nobody else can write to it.
 
@@ -116,9 +116,9 @@ The script reads each Node version from the binary's contents instead of running
 
 For each runtime, three checks run in order, and the first that applies decides:
 
-1. **`FIXED_BUILDS`.** Distro builds you list as fixed, for a backport the script doesn't know about. A build only counts for the same upstream version.
-2. **Changelog.** For a runtime installed from a Debian or Ubuntu package, the package changelog names CVE-2026-111497. The changelog only counts if its newest entry is the installed version. This catches a distro that backports the fix to an end-of-life line without changing the upstream version, for example to the Node 20 a stable release ships.
-3. **Upstream version.** The runtime is at or above the first fixed release for its line: 22.23.4, 24.22.1 or 26.12.1. Lines 25 and older have no fixed release, so without a backport they read as not fixed.
+1. `FIXED_BUILDS`. Distro builds you list as fixed, for a backport the script doesn't know about. A build only counts for the same upstream version.
+2. Changelog. For a runtime installed from a Debian or Ubuntu package, the package changelog names CVE-2026-111497. The changelog only counts if its newest entry is the installed version. This catches a distro that backports the fix to an end-of-life line without changing the upstream version, for example to the Node 20 a stable release ships.
+3. Upstream version. The runtime is at or above the first fixed release for its line: 22.23.4, 24.22.1 or 26.12.1. Lines 25 and older read as not fixed unless a backport is present.
 
 The result is *fixed*, *not fixed*, or *unknown*. *Unknown* means the version couldn't be read, usually because the script wasn't run as root.
 
@@ -149,7 +149,7 @@ Its behavior is set through the environment:
 
 ### Node.js hunting for exploitation
 
-A crash in Node's Brotli decoder doesn't show in application logs; it shows as a dead process. `hunt` reads the journal and system logs, never changes anything, and reports what it finds:
+A crash in Node's Brotli decoder doesn't show in application logs. It shows as a dead process. `hunt` reads the journal and system logs, never changes anything, and reports what it finds:
 
 ```bash
 sudo ./node-oct2026-mitigate.sh hunt
@@ -157,7 +157,7 @@ sudo ./node-oct2026-mitigate.sh hunt
 
 It looks for Node segfaults and protection faults in the kernel log, V8 fatal errors, Brotli decoder frames in crash backtraces, services killed by `SIGSEGV`, `SIGABRT` or `SIGBUS`, and every decode the guard blocked. `HUNT_SINCE` sets how far back it reads.
 
-A match is a lead, not proof. Buggy native addons crash Node too, and a segfaulting service may not be running Node at all. A crash in the Brotli decoder on an unfixed runtime is worth treating as an incident: check what the process could reach (secrets in its environment, database credentials, API tokens) and rotate them. A blocked decode on a route attackers can reach tells you which request to look at.
+A match tells you exactly where to look. Buggy native addons crash Node too, and a segfaulting service may not be running Node at all. A crash in the Brotli decoder on an unfixed runtime is worth treating as an incident: check what the process could reach (secrets in its environment, database credentials, API tokens) and rotate them. A blocked decode on a route attackers can reach tells you which request to look at.
 
 ### Node.js configuration
 
@@ -170,22 +170,26 @@ A match is a lead, not proof. Buggy native addons crash Node too, and a segfault
 | `GUARD_DST` | `/usr/local/lib/privacysafe/brotli-guard.cjs` | Where `guard` installs the guard |
 | `HUNT_SINCE` | `2026-10-14` | How far back `hunt` reads the journal |
 
-### Node.js know before you run it
+## Before you run it
 
-- **This is not a patch.** Upgrade to Node.js 22.23.4, 24.22.1 or 26.12.1, restart, then run `unguard`. Node 25 and older will never be fixed; move to a supported line.
-- **The guard only covers CVE-2026-111497.** The other nine CVEs (TLS hostname checks, DNS, keep-alive sockets, the permission model, ZipFile, random value caching) have no workaround here.
-- **The guard covers Node's decoder as reached from JavaScript.** A native addon that calls the bundled Brotli library directly isn't covered, and neither is code that saved a reference to the zlib functions before the guard loaded. That's why it must load first.
-- **Anything that really needs Brotli will fail.** A service that fetches from a server sending Brotli whatever it's asked for, or accepts Brotli-encoded request bodies, gets a decode error until you upgrade. Run with `BROTLI_GUARD=log` first if you're not sure.
-- **`guard` refuses when an `EnvironmentFile` sets `NODE_OPTIONS`**, because that would silently override the drop-in. Add `--require=/usr/local/lib/privacysafe/brotli-guard.cjs` there yourself.
-- **Processes that reset `NODE_OPTIONS`** won't carry the guard. Some wrapper scripts, pm2 ecosystem files and containers do this. `guard` warns when it can't confirm the guard is live.
-- **Single executable applications and startup snapshots must be rebuilt** with a fixed Node (CVE-2026-106074). Treat `crypto.randomUUID()` and `randomInt()` values they produced as guessable, and rotate any that need to be secret.
-- **Containers get their own fix.** Each image carries its own Node. Rebuild on a fixed base image; `check` lists the images it can see.
-- **GNU/Linux only.** `check`, `scan` and `hunt` run on any GNU/Linux; `guard` and `unguard` need systemd.
-- **Drop-ins** go to `/etc/systemd/system/<unit>.d/50-privacysafe-brotli-guard.conf`, and each records the script version that wrote it.
-- **A pre-release is not the release.** `v24.22.1-pre`, `-rc.0` and `-nightly…` are builds made before 24.22.1, so at a fix version they are reported as unknown and the check exits `2`; one past the fix version is fixed. A runtime that cannot be read (including one the script declines to execute because of who owns it) is reported as unknown and no longer ends the run.
-- **Runtimes are found anywhere on `PATH`**, as well as in the usual install locations and the common version-manager directories.
+- This is not a patch. Upgrade to Node.js 22.23.4, 24.22.1 or 26.12.1, restart, then run `unguard`. Node 25 and older will never be fixed; move to a supported line.
+- The guard only covers CVE-2026-111497. The other nine CVEs, CVE-2026-105481, CVE-2026-105482, CVE-2026-105483, CVE-2026-106069, CVE-2026-106070, CVE-2026-106071, CVE-2026-106072, CVE-2026-106073 and CVE-2026-106074 (TLS hostname checks, DNS, keep-alive sockets, the permission model, ZipFile, random value caching), have no workaround here.
+- The guard covers Node's decoder as reached from JavaScript. A native addon that calls the bundled Brotli library directly isn't covered, and neither is code that saved a reference to the zlib functions before the guard loaded. That's why it must load first.
+- Anything that really needs Brotli will fail. A service that fetches from a server sending Brotli whatever it's asked for, or accepts Brotli-encoded request bodies, gets a decode error until you upgrade. Run with `BROTLI_GUARD=log` first if you're not sure.
+- `guard` refuses when an `EnvironmentFile` sets `NODE_OPTIONS` , because that would silently override the drop-in. Add `--require=/usr/local/lib/privacysafe/brotli-guard.cjs` there yourself.
+- Processes that reset `NODE_OPTIONS` won't carry the guard. Some wrapper scripts, pm2 ecosystem files and containers do this. `guard` warns when it can't confirm the guard is live.
+- Single executable applications and startup snapshots must be rebuilt with a fixed Node (CVE-2026-106074). Treat `crypto.randomUUID()` and `randomInt()` values they produced as guessable, and rotate any that need to be secret.
+- Containers get their own fix. Each image carries its own Node. Rebuild on a fixed base image. `check` lists the images it can see.
+- GNU/Linux only. `check`, `scan` and `hunt` run on any GNU/Linux; `guard` and `unguard` need systemd.
+- Drop-ins go to `/etc/systemd/system/<unit>.d/50-privacysafe-brotli-guard.conf`, and each records the script version that wrote it.
+- A pre-release is not the release. `v24.22.1-pre`, `-rc.0` and `-nightly…` are builds made before 24.22.1, so at a fix version they are reported as unknown and the check exits `2`. One past the fix version is fixed. A runtime that cannot be read (including one the script declines to execute because of who owns it) is reported as unknown and no longer ends the run.
+- Runtimes are found anywhere on `PATH` , as well as in the usual install locations and the common version-manager directories.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

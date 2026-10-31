@@ -2,7 +2,7 @@
 
 Part of the [PrivacySafe Security Patches](../README.md) collection.
 
-## eMudhra Intermediate CA Compromise Interim Mitigation
+## eMudhra Intermediate CA Compromise Mitigation
 
 **Script:** [`pki/emudhra-mitigate.sh`](emudhra-mitigate.sh)
 
@@ -10,8 +10,8 @@ On 20 October 2026 it was [disclosed](https://emudhra.we-have-a-problem.com/) th
 
 The intermediates reach the store through two roots: emSign ECC Root CA - G3, which cross-signs emSign Root TLS CA - G3, and Sectigo's AAA Certificate Services, which cross-signs all eight. This script:
 
-1. **Distrusts those roots in the system store**, using `!` lines in `/etc/ca-certificates.conf`, and rebuilds it. It finds affected certificates by public key, not file name, so it also catches copies someone added by hand to `/usr/local/share/ca-certificates` or `/etc/ssl/certs`. It moves those out of the store into the backup directory.
-2. **Proves the store rejects all of them.** The script embeds the 16 published intermediate certificates and checks each against its published SHA-256 before using it. After every change it tests all 16 against the bundle file, the hash directory, and OpenSSL's built-in default paths. It also checks the bundle holds none of the affected certificates, because Go and GnuTLS will treat a lone intermediate in the store as a trust anchor.
+1. Distrusts those roots in the system store , using `!` lines in `/etc/ca-certificates.conf`, and rebuilds it. It finds affected certificates by public key, not file name, so it also catches copies someone added by hand to `/usr/local/share/ca-certificates` or `/etc/ssl/certs`. It moves those out of the store into the backup directory.
+2. Proves the store rejects all of them. The script embeds the 16 published intermediate certificates and checks each against its published SHA-256 before using it. After every change it tests all 16 against the bundle file, the hash directory, and OpenSSL's built-in default paths. It also checks the bundle holds none of the affected certificates, because Go and GnuTLS will treat a lone intermediate in the store as a trust anchor.
 
 The script is designed so it can't break your CA store or leave you exposed by mistake. It checks that the rebuilt bundle lost only affected certificates and still has hash links, and rolls back if not. If `TEST_HOSTS` is set, it checks those hosts before and after so you see any collateral breakage immediately. `cleanup` never removes the distrust unless the store still rejects every compromised intermediate without it, and re-applies it if not.
 
@@ -74,16 +74,16 @@ Set `TEST_HOSTS` to the hosts your server actually talks to: APIs, package mirro
 
 Before changing anything, the script checks your server in this order and prints what it found:
 
-1. **Operating system.** The same set as PHP2Shell: Debian, Ubuntu, Trisquel, the derivatives the check knows by name, and anything whose `ID_LIKE` names Debian or Ubuntu. It works out the base release so it can compare against the right fixed `ca-certificates` build. Other systems are refused with a pointer to their workaround on the disclosure page.
-2. **System CA store.** The `ca-certificates` version and its patch status (see [Patch detection](#emudhra-patch-detection)). It lists every affected certificate it finds, whether shipped, already distrusted, or added by hand, and tests the current bundle.
-3. **Other CA stores.** This run doesn't fix these, so they're reported with the command that does:
-   - **Java.** The system keystore follows the store; other JDKs carry their own `cacerts`.
-   - **Bundled CA files** such as Python certifi, vendored pip and Homebrew, found under `SCAN_PATHS`. Debian's patched certifi reads the system store and is recognized as such.
-   - **Node.js.** It ships its own roots unless started with `--use-openssl-ca`.
-   - **NSS builtin roots**, unless `libnssckbi` is p11-kit.
-   - **Overrides.** `SSL_CERT_FILE` or `SSL_CERT_DIR` set in `/etc/environment` or `/etc/profile.d`.
-   - **Separate environments.** Containers, snaps and Flatpaks.
-4. **System.** Root, OpenSSL, the self-check of the embedded certificates, the init system (for restart hints), and required tools.
+1. Operating system. The same set as PHP2Shell: Debian, Ubuntu, Trisquel, the derivatives the check knows by name, and anything whose `ID_LIKE` names Debian or Ubuntu. It works out the base release so it can compare against the right fixed `ca-certificates` build. Other systems are refused with a pointer to their workaround on the disclosure page.
+2. System CA store. The `ca-certificates` version and its patch status (see [Patch detection](#emudhra-patch-detection)). It lists every affected certificate it finds, whether shipped, already distrusted, or added by hand, and tests the current bundle.
+3. Other CA stores. This run doesn't fix these, so they're reported with the command that does:
+   - Java. The system keystore follows the store. Other JDKs carry their own `cacerts`.
+   - Bundled CA files such as Python certifi, vendored pip and Homebrew, found under `SCAN_PATHS`. Debian's patched certifi reads the system store and is recognized as such.
+   - Node.js. It ships its own roots unless started with `--use-openssl-ca`.
+   - NSS builtin roots , unless `libnssckbi` is p11-kit.
+   - Overrides. `SSL_CERT_FILE` or `SSL_CERT_DIR` set in `/etc/environment` or `/etc/profile.d`.
+   - Separate environments. Containers, snaps and Flatpaks.
+4. System. Root, OpenSSL, the self-check of the embedded certificates, the init system (for restart hints), and required tools.
 
 **Hard blockers** always stop the run: a distribution that isn't Debian-based, `ca-certificates` or `update-ca-certificates` missing, no `openssl`, a failed self-check, missing tools, or not running as root for `apply`, `restore` or `cleanup`.
 
@@ -97,7 +97,7 @@ Before changing anything, the script checks your server in this order and prints
 
 For `ca-certificates`, three checks run in order, and any one is enough:
 
-1. **Fixed build for your release.** These are the builds from the disclosure page:
+1. Fixed build for your release. These are the builds from the disclosure page:
 
    | Release | Fixed build |
    |---|---|
@@ -107,8 +107,8 @@ For `ca-certificates`, three checks run in order, and any one is enough:
    | Ubuntu 22.04, 24.04, 26.04, 26.10 | `20260816ubuntu0.XX.YY.1` |
 
    It only compares against the build for your own release, because Debian 12 and 13 share the upstream version `20250419`.
-2. **`FIXED_BUILDS`.** Builds you add, such as an Ubuntu ESM or Debian LTS update. A build only counts for the same upstream version.
-3. **Changelog.** The package changelog names Launchpad bug 2171507 or Debian bug 1151413, both from the disclosure page. The changelog only counts if its newest entry is the installed version. (CVE-2026-111943 is deliberately *not* used here: that CVE is the Go standard library's own `crypto/x509` denylist, fixed in Go 1.26.10 / 1.27.3, so a `ca-certificates` changelog won't cite it. See the Go note below.)
+2. `FIXED_BUILDS`. Builds you add, such as an Ubuntu ESM or Debian LTS update. A build only counts for the same upstream version.
+3. Changelog. The package changelog names Launchpad bug 2171507 or Debian bug 1151413, both from the disclosure page. The changelog only counts if its newest entry is the installed version. (CVE-2026-111943 is deliberately *not* used here: that CVE is the Go standard library's own `crypto/x509` denylist, fixed in Go 1.26.10 / 1.27.3, so a `ca-certificates` changelog won't cite it. See the Go note below.)
 
 The result is *patched*, *not patched*, or *unknown*. The store tests decide what actually happens: `cleanup` checks the patch status first, but it removes the distrust only if the store still rejects every intermediate without it.
 
@@ -124,19 +124,23 @@ A fixed store isn't enough on its own, because a long-running process keeps the 
 | `SCAN_DEPTH` | `9` | How deep that scan goes |
 | `JAVA_STOREPASS` | `changeit` | Password for the Java keystores |
 
-### eMudhra know before you run it
+## Before you run it
 
-- **This is not a patch.** Upgrade `ca-certificates` when your distribution ships the fix, then run `cleanup`.
-- **It distrusts two whole roots, not just the eight intermediates.** The system store can only drop roots, so every site whose chain ends at emSign ECC Root CA - G3 or AAA Certificate Services fails verification until you run `cleanup` or `restore`. Set `TEST_HOSTS` and check `status` after applying. If the store already rejects every compromised intermediate, for example because a patched package cut the path, `apply` leaves those two roots trusted.
-- **Your browsers are already protected.** Firefox, Chrome, Edge and Safari block these intermediates themselves. This script is for everything else on your servers.
-- **Other CA stores are reported, not changed.** Python certifi, Node.js, other JDKs and NSS builtins need their own updates. The report prints the command for each. Programs that compile their roots in, such as Rust's webpki-roots and Electron apps, can't be detected and need updating. One common case is [uv](https://github.com/astral-sh/uv), the Python package manager: Plone's 6.2.2.1 release notes tell uv users to upgrade to 0.13.4 for this incident. For a Node.js or Electron app you can't immediately upgrade, the [`kill-emudhra`](https://github.com/IAmJSD/kill-emudhra) package distrusts the eight intermediates from inside the process by their public-key hash, as a stopgap until you reach a fixed Node.js (22.23.4 / 24.22.1 / 26.12.1) or Electron (44.9.1 / 43.8.1 / 42.11.16).
-- **Go binaries need their own fix.** A Go program built with CGO reads the system store this script fixes, but a pure-Go build carries Go's own certificate verifier, which got a built-in denylist for these intermediates in Go 1.26.10 and 1.27.3 ([CVE-2026-111943](https://pkg.go.dev/vuln/GO-2026-6809)). Rebuild such binaries with a fixed toolchain; this script's check reminds you if a `go` toolchain is present but can't tell which existing binaries are affected.
-- **Containers get their own fix.** Each image carries its own `ca-certificates`. Rebuild images on patched bases; running this inside a container fixes that container only.
-- **The distrust survives package upgrades and `dpkg-reconfigure ca-certificates`.** Both keep `!` lines in `/etc/ca-certificates.conf`. Check with `status` after any upgrade anyway.
-- **Debian, Ubuntu, Trisquel and their derivatives only.** Fedora/RHEL, openSUSE, Arch, Alpine, NixOS, FreeBSD and macOS need a different approach. See the [disclosure page](https://emudhra.we-have-a-problem.com/#linux).
-- **Backups** of everything the script touches go to `/var/backups/emudhra-mitigation/<timestamp>-<pid>/`, so two runs in the same second never share a directory. A certificate file the script moves out of `/usr/local/share/ca-certificates` or `/etc/ssl/certs` is kept under a numbered name (`01-root.crt`, `02-root.crt`), so two different files with the same name from different directories cannot overwrite each other, and `restore` puts each one back where it came from. The record of what it changed is `/var/lib/emudhra-mitigation/state`.
+- This is not a patch. Upgrade `ca-certificates` when your distribution ships the fix, then run `cleanup`.
+- It distrusts two whole roots, not just the eight intermediates. The system store can only drop roots, so every site whose chain ends at emSign ECC Root CA - G3 or AAA Certificate Services fails verification until you run `cleanup` or `restore`. Set `TEST_HOSTS` and check `status` after applying. If the store already rejects every compromised intermediate, for example because a patched package cut the path, `apply` leaves those two roots trusted.
+- Your browsers are already protected. Firefox, Chrome, Edge and Safari block these intermediates themselves. This script is for everything else on your servers.
+- Other CA stores are reported, not changed. Python certifi, Node.js, other JDKs and NSS builtins need their own updates. The report prints the command for each. Programs that compile their roots in, such as Rust's webpki-roots and Electron apps, can't be detected and need updating. One common case is [uv](https://github.com/astral-sh/uv), the Python package manager: Plone's 6.2.2.1 release notes tell uv users to upgrade to 0.13.4 for this incident. If you can't upgrade a Node.js or Electron app right away, the [`kill-emudhra`](https://github.com/IAmJSD/kill-emudhra) package distrusts the eight intermediates from inside the process, by their public-key hash. That protects the process until you reach a fixed Node.js (22.23.4, 24.22.1 or 26.12.1) or Electron (44.9.1, 43.8.1 or 42.11.16).
+- Go binaries need their own fix. A Go program built with CGO reads the system store this script fixes, but a pure-Go build carries Go's own certificate verifier, which got a built-in denylist for these intermediates in Go 1.26.10 and 1.27.3 ([CVE-2026-111943](https://pkg.go.dev/vuln/GO-2026-6809)). Rebuild such binaries with a fixed toolchain. This script's check reminds you if a `go` toolchain is present but can't tell which existing binaries are affected.
+- Containers get their own fix. Each image carries its own `ca-certificates`. Rebuild images on patched bases. Running this inside a container fixes that container only.
+- The distrust survives package upgrades and `dpkg-reconfigure ca-certificates`. Both keep `!` lines in `/etc/ca-certificates.conf`. Check with `status` after any upgrade anyway.
+- Debian, Ubuntu, Trisquel and their derivatives only. Fedora/RHEL, openSUSE, Arch, Alpine, NixOS, FreeBSD and macOS need a different approach. See the [disclosure page](https://emudhra.we-have-a-problem.com/#linux).
+- Backups of everything the script touches go to `/var/backups/emudhra-mitigation/<timestamp>-<pid>/`, so two runs in the same second never share a directory. A certificate file the script moves out of `/usr/local/share/ca-certificates` or `/etc/ssl/certs` is kept under a numbered name (`01-root.crt`, `02-root.crt`), so two different files with the same name from different directories cannot overwrite each other, and `restore` puts each one back where it came from. The record of what it changed is `/var/lib/emudhra-mitigation/state`.
 
 ---
+
+## ⚠️ Important notice
+
+These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.
 
 ## 🏛️ Support PrivacySafe Foundation
 

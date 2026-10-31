@@ -24,9 +24,9 @@
 # judges it, and hunts for the known compromise indicators. Successful
 # exploitation runs code as the Plex service account, so if this host was
 # exposed and unpatched, treat it as compromised: rebuild from a clean install,
-# rotate the Plex account credentials and server token, and (interim) remove
+# rotate the Plex account credentials and server token, and remove
 # any router port-forwarding to Plex until it is updated. Attackers rotate file
-# names, domains and ports, so a clean hunt is not proof; the version is.
+# names, domains and ports, so a clean hunt means none of the published indicators were found; the version is the reliable signal.
 #
 # Usage:
 #   ./plex2shell-oct2026-check.sh [command]
@@ -74,7 +74,7 @@ IOC_NET='proxystream\.st|217\.60\.194\.116|91\.92\.40\.202|176\.65\.139\.228|45\
 IOC_BANNER='agree to the potential external use of your internet traffic'
 SCRIPT_NAME="plex2shell-oct2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-28"
+SCRIPT_DATE="2026-10-30"
 SELF="$0"
 
 # ---------- output -----------------------------------------------------------
@@ -240,8 +240,8 @@ cmd_hunt() {
     fi
 
     echo
-    echo "  Attackers rotate file names, domains and ports, so a clean hunt is not proof of"
-    echo "  safety; the Plex version is. If anything matched, or this host was exposed and"
+    echo "  Attackers rotate file names, domains and ports, so a clean hunt means none of the published indicators were found;"
+    echo "  the Plex version is the reliable signal. If anything matched, or this host was exposed and"
     echo "  unpatched, treat it as compromised: rebuild from a clean install, rotate the Plex"
     echo "  account credentials and server token, and remove port-forwarding until updated."
     return "$found"
@@ -263,4 +263,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5
