@@ -42,9 +42,10 @@
 # =============================================================================
 set -euo pipefail
 
-SCRIPT_VERSION="1.0.1"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-02"
 case "${1:-}" in
-  -V|--version|version) echo "php-session-audit.sh ${SCRIPT_VERSION}"; exit 0 ;;
+  -V|--version|version) echo "php-session-audit.sh ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;;
   -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$0"; exit 0 ;;
   "") ;;
   *) echo "php-session-audit.sh: unknown argument: $1 (try --help)" >&2; exit 2 ;;
@@ -61,6 +62,16 @@ ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
 caution() { echo -e "  ${YELLOW}!${NC} $*"; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# limited_view WHAT: a hunt run without root sees only what this account can read. Say so where a reader
+# would otherwise take "none" for a clean result. Says nothing when running as root. Always returns 0,
+# so it is safe under set -e.
+limited_view() {
+    is_root && return 0
+    if command -v sudo >/dev/null 2>&1; then caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it with sudo: sudo ${SELF_CMD}"
+    else caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it as root."; fi
+}
 
 RESULT=0
 echo "php-session-audit.sh ${SCRIPT_VERSION} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
@@ -155,6 +166,8 @@ audit_sapi() {   # <version> <sapi dir name>
 }
 
 step "Configured session settings"
+
+limited_view "web roots and PHP session folders"
 shopt -s nullglob
 for d in /etc/php/*/; do
     v="$(basename "$d")"
@@ -260,3 +273,4 @@ fi
 exit "$RESULT"
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

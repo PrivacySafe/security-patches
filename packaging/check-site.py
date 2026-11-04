@@ -10,7 +10,7 @@
 # the site loads nothing from other sites, images have alt text, each page
 # has one h1 and a title, tags balance, and no page uses a dash character.
 #
-#   python3 packaging/check-site.py [site]
+#   python3 packaging/check-site.py SITE_DIR
 #   python3 packaging/check-site.py --webroot /path/to/privacysafe-app-site
 #
 # The second form checks the whole docs/ tree of the privacysafe.app site: links
@@ -37,7 +37,8 @@ from urllib.parse import unquote
 
 ARGS = sys.argv[1:]; WEBROOT = None
 if ARGS[:1] == ["--webroot"]: WEBROOT = os.path.abspath(ARGS[1]); ARGS = ARGS[2:]
-SITE = os.path.join(WEBROOT, "docs") if WEBROOT else os.path.abspath(ARGS[0] if ARGS else os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "site"))
+if not WEBROOT and not ARGS: sys.exit("usage: check-site.py SITE_DIR   or   check-site.py --webroot SITE_ROOT\nCheck docs/ for the repository copy, or any other generated site folder.")
+SITE = os.path.join(WEBROOT, "docs") if WEBROOT else os.path.abspath(ARGS[0])
 NO_SCRIPT_OK = {"php/detect/index.html"}                        # detection rules: there is no script to describe
 NESTED_OK = {"php/index.html", "claude-code-vsx/index.html"}      # these pages have sections under Before you run it
 ALLOWED_EXTERNAL = {"https://privacysafe.click/js/script.js"} if WEBROOT else set()
@@ -146,10 +147,14 @@ for name, pr in sorted(pages.items()):
         if re.search(r'<h2 id="(important-notice|support-privacysafe-foundation)"', pr.raw): bad(name, "the README footer leaked onto a tool page")
         md = re.search(r'<meta\b(?=[^>]*\bname="description")[^>]*\bcontent="([^"]*)"', pr.raw)
         if not (md and 20 <= len(md.group(1)) <= 400): bad(name, "meta description is missing or the wrong length")
-    if WEBROOT:
-        for what, rx in (("the documentation row", r'class="docs-subnav"'), ("the ecosystem card", r'id="ecosystem"'), ("the footer", r'class="footer-community"'), ("the Get PrivacySafe button", r'href="/#download"')):
-            if not re.search(rx, pr.raw): bad(name, f"page has no {what}")
-for f in (("css/docs.css", "js/docs.js") if WEBROOT else ("assets/site.css", "assets/site.js")):
+    # the header row, the ecosystem card and the footer are the privacysafe.app ones on every page, online and offline
+    for what, rx in (("the documentation row", r'class="docs-subnav"'), ("the ecosystem card", r'id="ecosystem"'), ("the footer", r'class="footer-community"'),
+                     ("the Get PrivacySafe button", r'href="/#download"' if WEBROOT else r'href="https://privacysafe\.app/#download"')):
+        if not re.search(rx, pr.raw): bad(name, f"page has no {what}")
+    if not WEBROOT:
+        for img in ("privacysafe-logo.svg", "ivy-logo-horizontal-white.svg", "logo-foundation.svg", "bitsontape-avatar.png"):
+            if f"assets/img/{img}" not in pr.raw: bad(name, f"the offline page does not use its local copy of {img}")
+for f in (("css/docs.css", "js/docs.js") if WEBROOT else ("assets/ps-base.css", "assets/docs.css", "assets/site.js")):
     if os.path.exists(os.path.join(SITE, f)) and any(ch in open(os.path.join(SITE, f), encoding="utf-8").read() for ch in DASHES): bad(f, "contains a dash character")
 print(f"checked {len(pages)} pages in {SITE}")
 if problems:

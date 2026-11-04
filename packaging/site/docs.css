@@ -199,7 +199,9 @@ html { scroll-padding-top: 96px; }
 /* search and filters (shown only when the script runs) */
 .js-only { display: none; }
 .js .js-only { display: block; }
-.side-search { position: relative; margin-bottom: 12px; }
+.docs-side { scroll-padding-top: 76px; }   /* the menu scrolls to the current page; keep it clear of the pinned search box */
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }   /* text for screen readers only */
+.side-search { position: sticky; top: 0; z-index: 3; margin: 0 0 12px; padding: 2px 0 10px; border-radius: 24px; background: rgba(26,25,22,.9); }   /* stays at the top when the menu scrolls to the current page */
 .docs input[type="search"] { width: 100%; min-height: 44px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: #20201D; color: var(--text); font-size: 16px; }
 .docs input[type="search"]:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; border-color: var(--orange); }
 .docs input[type="search"]::placeholder { color: var(--quiet); opacity: 1; }
@@ -254,3 +256,5 @@ html { scroll-padding-top: 96px; }
 .doc svg.ico { display: inline-block; width: 1em; height: 1em; vertical-align: -.14em; flex: 0 0 auto; }
 .doc h2 > svg.ico:first-child, .doc h3 > svg.ico:first-child { margin-right: .5em; color: var(--orange); }
 .doc a svg.ico, .doc strong svg.ico { color: inherit; }
+
+/* Assisted-by: Claude Sonnet 5.5 */

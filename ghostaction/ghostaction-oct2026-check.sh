@@ -79,8 +79,8 @@ GA_NET='my-github\.com|my-gitlab\.com|193\.32\.204\.199'
 # Prune these heavy/irrelevant directories from the scan.
 PRUNE=(node_modules .git .cache .venv venv site-packages .mypy_cache dist build .next)
 SCRIPT_NAME="ghostaction-oct2026-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 REF="https://opensourcemalware.com/blog/ghostaction-attack-escalates"
 
@@ -305,3 +305,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

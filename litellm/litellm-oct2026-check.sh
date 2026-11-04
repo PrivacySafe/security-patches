@@ -82,8 +82,8 @@ SITE_MARKERS='privcollect|PRIVCOLLECT|letters9813|remote_code_loader|litellm\.de
 NET_MARKERS='litellm\.dev|letters9813|remote_code_loader|/codepy|pythonclient-test'
 TMP_MARKERS=(/tmp/.pc_once_* /tmp/remote_code_loader.lock)
 SCRIPT_NAME="litellm-oct2026-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 REF="https://github.com/BerriAI/litellm/issues/47826"
 
@@ -298,3 +298,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

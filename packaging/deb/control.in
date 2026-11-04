@@ -6,6 +6,7 @@ Architecture: all
 Maintainer: @MAINT@
 Installed-Size: @SIZE@
 Depends: bash (>= 4.0)
+Recommends: python3 (>= 3.8)
 Replaces: psf-security-packages (<< 26.10.30)
 Conflicts: psf-security-packages (<< 26.10.30)
 Suggests: apparmor-utils, auditd
@@ -14,13 +15,18 @@ Description: PrivacySafe security checks, hunts and protection for serious vulne
  Free public domain tools for GNU/Linux servers. For each serious
  vulnerability they tell you whether you are exposed, look for signs that
  someone has already used the flaw, and, where there is a safe way to do it,
- protect the machine until you can update. Covers the October 2026
- vulnerabilities in vsftpd, the Claude Code extension, Brotli, HAProxy,
- rsyslog, YOOtheme, Django REST framework, libexpat, baserCMS, Ruby and
+ protect the machine until you can update. Covers the October and
+ November 2026 vulnerabilities in vsftpd, BTCPay Server, the Claude Code
+ extension, Brotli, HAProxy,
+ rsyslog, YOOtheme, Django REST framework, Expat, baserCMS, Ruby and
  GitLab, PHP2Shell, WordPress, nginx, Tomcat, the Linux kernel and more.
  .
  Start with: man psf-security-patches. Every tool has its own manual page
  (psf-NAME) and the whole set is in the info manual: info psf-security-patches.
+ .
+ On Red Hat family hosts, psf-rhsa (man psf-rhsa) finds Red Hat's security
+ advisories for a CVE and checks the installed packages against Red Hat's
+ fixes. It needs python3, which is recommended, not required.
  .
  The tools install under /opt/psf-security-patches, plus the php2shell-watch
  systemd unit, which is not enabled automatically. Updating is the permanent

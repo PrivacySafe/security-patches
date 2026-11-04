@@ -60,8 +60,8 @@ ROOTS_GIVEN="${ROOTS:+1}"   # ROOTS set by the user means they chose where to lo
 ROOTS="${ROOTS:-/home /root /srv /var/www /opt /usr/local}"
 MAX_DEPTH="${MAX_DEPTH:-9}"
 SCRIPT_NAME="openapi-codegen-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -70,7 +70,16 @@ info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
 die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
-ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# limited_view WHAT: a hunt run without root sees only what this account can read. Say so where a reader
+# would otherwise take "none" for a clean result. Says nothing when running as root. Always returns 0,
+# so it is safe under set -e.
+limited_view() {
+    is_root && return 0
+    if command -v sudo >/dev/null 2>&1; then caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it with sudo: sudo ${SELF_CMD}"
+    else caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it as root."; fi
+}
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
 caution() { echo -e "  ${YELLOW}!${NC} $*"; }
@@ -171,16 +180,15 @@ container_run() {   # <staged directory> : the generator in one container, judge
     return "$rc"
 }
 
-# shellcheck disable=SC2120
 cmd_check() {
     local rc=0 crc=0 _s
-    if [[ $# -eq 0 && -z "${ROOTS_GIVEN:-}" && "${SCAN_CONTAINERS:-1}" == 1 ]]; then
+    if [[ -z "${ROOTS_GIVEN:-}" && "${SCAN_CONTAINERS:-1}" == 1 ]]; then
         stage_probe "$OPENAPI_PROBE"
         for _s in ${STAGED_DIRS[@]:+"${STAGED_DIRS[@]}"}; do
             container_run "$_s" || crc=1
         done
     fi
-    cmd_check_host "$@" || rc=$?
+    cmd_check_host || rc=$?
     if [[ $crc -eq 1 && $rc -eq 0 ]]; then rc=1; fi
     return "$rc"
 }
@@ -191,8 +199,9 @@ cmd_check_host() {
     [[ -n "$roots" ]] || die "None of the ROOTS exist: ${ROOTS}"
 
     step "Projects that depend on ${PKG}"
+
+    limited_view "project folders"
     n=0
-    # shellcheck disable=SC2086
     while IFS= read -r f; do
         [[ -n "$f" ]] || continue
         grep -q "$PKG" "$f" 2>/dev/null || continue
@@ -213,11 +222,11 @@ cmd_check_host() {
                 v="$(grep -oE "${PKG}@[0-9][0-9A-Za-z.+-]*" "$f" | head -1 | sed -E "s/.*@//")"
                 report_version "$f (lockfile)" "$v"; case $? in 1) exposed=1 ;; 2) unknownz=1 ;; esac ;;
         esac
-    done < <(for r in $roots; do
+    done < <(while IFS= read -r r; do
                 find "$r" -maxdepth "$MAX_DEPTH" -type d -name node_modules -prune -o \
                      -type f \( -name package.json -o -name package-lock.json -o -name npm-shrinkwrap.json \
                                 -o -name yarn.lock -o -name pnpm-lock.yaml \) -print 2>/dev/null
-             done)
+             done <<<"$roots")
     [[ $n -gt 0 ]] || inf "no package.json or lockfile under ${roots//$'\n'/ } mentions ${PKG}"
 
     step "Installed copies"

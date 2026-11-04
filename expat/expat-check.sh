@@ -54,12 +54,12 @@
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="expat-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 FIXED_VERSION="2.9.1"
 
@@ -86,7 +86,6 @@ ver_lt() {
     if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
     [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
 }
-ver_ge() { ! ver_lt "$1" "$2"; }
 is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
 # distro_mentions FILE CVE...
@@ -239,16 +238,15 @@ container_run() {   # <staged directory> : libexpat in one container, judged by 
     return "$rc"
 }
 
-# shellcheck disable=SC2120
 cmd_check() {
     local rc=0 crc=0 _s
-    if [[ $# -eq 0 && "${SCAN_CONTAINERS:-1}" == 1 ]]; then
+    if [[ "${SCAN_CONTAINERS:-1}" == 1 ]]; then
         stage_probe "$EXPAT_PROBE"
         for _s in ${STAGED_DIRS[@]:+"${STAGED_DIRS[@]}"}; do
             container_run "$_s" || crc=1
         done
     fi
-    cmd_check_host "$@" || rc=$?
+    cmd_check_host || rc=$?
     if [[ $crc -eq 1 && $rc -eq 0 ]]; then rc=1; fi
     return "$rc"
 }

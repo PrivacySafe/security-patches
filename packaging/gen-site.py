@@ -11,10 +11,16 @@
 # short guide to how the tools work, the install guide, one page per tool with
 # an at-a-glance box, one page per manual page, and a search that works
 # offline. The site needs no server, loads nothing from other sites and has no
-# tracking. Open site/index.html in a browser, or put the folder on any web
-# server.
+# tracking. Open index.html in the output folder in a browser, or put the folder on
+# any web server. The repository keeps the standalone site in docs/
+# (python3 packaging/gen-site.py --out docs), so it can be browsed in the repository and
+# served by Codeberg or GitHub Pages. The READMEs are the source. --out replaces the whole
+# folder it names. packaging/build-release.sh stops when docs/ is out of date and installs
+# the same pages with the packages, and the privacysafe.app docs are built from the same READMEs.
 #
-#   python3 packaging/gen-site.py [--out site] [--release 26.10.30-1.0.0] [--date 2026-10-30] [--base-path /docs/]
+#   python3 packaging/gen-site.py --out DIR [--release 26.11.02-1.0.0] [--date 2026-11-02] [--base-path /docs/]
+#
+# Without --release and --date it uses the newest dated heading of CHANGELOG.md.
 #
 # --base-path is the folder the site is served from on your host (for example
 # /security-patches/, or / at the root). It is only used to make 404.html work
@@ -24,8 +30,7 @@
 # Needs Python 3 and markdown-it-py with linkify-it-py
 # (python3 -m pip install markdown-it-py linkify-it-py). It follows CommonMark, the
 # same rules GitHub and Codeberg use, so the pages render as the READMEs do there.
-# Run it after you change a README, the changelog or a script header, then run
-# packaging/check-site.py and commit the result.
+# Run packaging/check-site.py on the result.
 #
 # Assisted-by: Claude Sonnet 5.5
 # =============================================================================
@@ -35,8 +40,14 @@ from markdown_it import MarkdownIt
 import psf_icons as I
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "site")
-RELEASE = "26.10.30-1.0.0"; DATE = "2026-10-30"; BASE_PATH = ""; THEME = "standalone"; DOCS_ROOT = None; BASE_URL = ""
+def newest_release():
+    """The newest dated heading of CHANGELOG.md, as (YYYY-MM-DD, YY.MM.DD-1.0.0). A release build passes its own."""
+    for line in open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8"):
+        m = re.match(r"## (\d{4})-(\d{2})-(\d{2})\b", line)
+        if m: return f"{m.group(1)}-{m.group(2)}-{m.group(3)}", f"{m.group(1)[2:]}.{m.group(2)}.{m.group(3)}-1.0.0"
+    sys.exit("CHANGELOG.md has no dated heading")
+OUT = None
+DATE, RELEASE = newest_release(); BASE_PATH = ""; THEME = "standalone"; DOCS_ROOT = None; BASE_URL = ""
 a = sys.argv[1:]
 while a:
     if a[0] == "--out": OUT = os.path.abspath(a[1]); a = a[2:]
@@ -46,14 +57,15 @@ while a:
     elif a[0] == "--theme": THEME = a[1]; a = a[2:]
     elif a[0] == "--docs-root": DOCS_ROOT = os.path.abspath(a[1]); a = a[2:]
     elif a[0] == "--base-url": BASE_URL = a[1]; a = a[2:]
-    else: sys.exit("usage: gen-site.py [--out DIR] [--release X] [--date YYYY-MM-DD] [--base-path /folder/]")
+    else: sys.exit("usage: gen-site.py --out DIR [--release X] [--date YYYY-MM-DD] [--base-path /folder/]")
 LONGDATE = datetime.date.fromisoformat(DATE).strftime("%-d %B %Y")
 APP = THEME == "privacysafe-app"
 if THEME not in ("standalone", "privacysafe-app"): sys.exit("--theme is standalone or privacysafe-app")
 if APP:
     BASE_URL = BASE_URL or "https://privacysafe.app/docs/security-patches/"
     if DOCS_ROOT: OUT = os.path.join(DOCS_ROOT, "security-patches")
-    import psdocs_layout as L
+import psdocs_layout as L
+if OUT is None: sys.exit("usage: gen-site.py --out DIR [--release X] [--date YYYY-MM-DD] [--base-path /folder/]\nWrite the repository copy to docs/. Any other folder works too.")
 REPO = "https://codeberg.org/PrivacySafe/security-patches"
 SRC = REPO + "/src/branch/main/"
 SITE = "PrivacySafe Security Patches"
@@ -65,7 +77,7 @@ CATEGORIES = [
     ("Operating system, libraries and runtimes", "The kernel, system libraries, language runtimes and the certificate store.",
      ["linux-kernel", "openssl", "curl", "expat", "brotli", "heif", "pillow", "node", "php", "php/detect", "php/edge", "ruby", "pki"]),
     ("Content management and web applications", "WordPress, Joomla, Drupal and the other sites and services you host.",
-     ["wordpress", "wordpress-pt", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex"]),
+     ["wordpress", "wordpress-pt", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex", "btcpayserver"]),
     ("Developer platforms, tools and supply chain", "Developer machines, build and CI systems, frameworks and packages.",
      ["claude-code-vsx", "ghostaction", "litellm", "openapi", "storybook", "jupyter", "sentry", "nextjs", "laravel", "django", "sagemaker", "gitea", "gitlab", "jenkins"]),
 ]
@@ -82,7 +94,7 @@ NAMES = {  # short names for the menu and the cards
     "nextjs": "Next.js Server Actions", "jupyter": "Jupyter and nbconvert", "yootheme": "YOOtheme Pro",
     "incus": "Incus", "storybook": "Storybook", "zammad": "Zammad", "rsyslog": "rsyslog", "vsftpd": "vsftpd",
     "tomcat": "Apache Tomcat", "gitea": "Gitea", "ghostaction": "GhostAction", "litellm": "LiteLLM", "pillow": "Pillow",
-    "openapi": "openapi-typescript-codegen", "laravel": "Laravel TokenGuard", "nginx-ui": "nginx-ui",
+    "openapi": "openapi-typescript-codegen", "laravel": "Laravel TokenGuard", "nginx-ui": "nginx-ui", "btcpayserver": "BTCPay Server",
 }
 RELATED = [["php", "php/detect", "php/edge"], ["wordpress", "wordpress-pt"], ["node", "brotli"], ["ruby", "gitlab"], ["nextjs", "sentry"], ["grav", "craft"]]
 FACT_KEYS = [("Fixed", "The fix"), ("Move to", "The fix"), ("Remedy", "The fix"), ("Severity", "Severity"), ("Exploited", "Exploited")]
@@ -171,6 +183,7 @@ DOCS = {
     "CODE_OF_CONDUCT.md": ("code-of-conduct.html", "Code of conduct"), "CONTRIBUTING.md": ("contributing.html", "Contributing"),
     "CONTRIBUTOR_GUIDELINES.md": ("contributor-guidelines.html", "Contributor guidelines"), "CONTRIBUTORS.md": ("contributors.html", "Contributors"),
     "VALUES.md": ("values.html", "Values"), "AI_POLICY.md": ("ai-policy.html", "AI policy"),
+    "REDHAT-ADVISORIES.md": ("redhat-advisories.html", "Red Hat advisories"),
 }
 DOCS = {k: v for k, v in DOCS.items() if exists(k)}
 
@@ -206,13 +219,14 @@ for line in rs.get(NEWEST, "").split("\n"):
         iso = datetime.datetime.strptime(f"{m.group(1)} {m.group(2)} 2026", "%d %B %Y").date().isoformat()
         newest_rows.append({"iso": iso, "label": m.group(3), "dir": home_dir(m.group(4)), "anchor": m.group(5) or "", "what": re.sub(r"[`*]|\[([^\]]*)\]\([^)]*\)", lambda mm: mm.group(1) or "", what)})
 
-scripts = []
+scripts = []; ps_scripts = []     # bash scripts, and the PowerShell companions a few tools have for Windows
 for dp, dn, fn in os.walk(ROOT):
     rel = os.path.relpath(dp, ROOT)
     if rel.startswith(("packaging", ".git", "site", "man", "dist")): continue
     for f in fn:
         if f.endswith(".sh"): scripts.append(posixpath.join(rel, f) if rel != "." else f)
-scripts.sort()
+        if f.endswith(".ps1"): ps_scripts.append(posixpath.join(rel, f) if rel != "." else f)
+scripts.sort(); ps_scripts.sort()
 def man_name(p): return "psf-" + posixpath.basename(p)[:-3]
 _help = {}
 def helptext(p):
@@ -331,12 +345,10 @@ def nav_html(cur_out):
     new_dirs = []
     for _, _, d, _ in newest:
         if d in tool_dirs and d not in new_dirs: new_dirs.append(d)
-    search = ""
-    if APP:
-        search = ('<div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label>'
-                  '<input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" '
-                  'aria-controls="search-results" data-index="/docs/security-patches/assets/search-index.js" data-base="/docs/security-patches/">'
-                  '<div id="search-results" role="listbox" hidden></div></div>')
+    search = ('<div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label>'
+              '<input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" '
+              'aria-controls="search-results"' + (' data-index="/docs/security-patches/assets/search-index.js" data-base="/docs/security-patches/"' if APP else '') + '>'
+              '<div id="search-results" role="listbox" hidden></div></div>')
     o = ['<nav class="docs-side" aria-label="Security Patches">' + search + '<details class="side-box" open><summary>Menu</summary><ul class="start">']
     o += [link(l, p) for l, p in START]
     o.append("</ul>")
@@ -360,6 +372,8 @@ CSP = ("default-src 'none'; img-src 'self' data:; style-src 'self'; font-src 'se
 
 def canon(out):
     return BASE_URL + (out[:-len("index.html")] if out.endswith("index.html") else out)
+
+PAGE_LICENSE = '<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p>'
 
 def page_html_app(out, title, body, toc, desc, crumbs, footer_nav, wide, crumb):
     is_home = out == "index.html"; here = posixpath.dirname(out) or "."
@@ -388,17 +402,41 @@ def page_html_app(out, title, body, toc, desc, crumbs, footer_nav, wide, crumb):
                       copyright_note="Security Patches software and documentation CC0 1.0 Universal. Site source AGPL-3.0-or-later.",
                       license_url="https://creativecommons.org/publicdomain/zero/1.0/")
     html_out += L.topbar("Security Patches")
-    lic = '<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p>'
+    lic = PAGE_LICENSE
     html_out += (f'<div class="doc-page"><div class="wrap doc-layout{"" if toc_html else " no-toc"}">{nav_html(out)}\n'
                  f'<main id="top">{cr}\n<article class="doc{" wide" if wide else ""}">{body}{lic}{footer_nav}</article></main>\n{toc_html}</div></div>\n')
     if is_home: html_out += L.cta_band()
     return html_out + L.footer()
 
-def page_html(out, title, body, toc=None, desc="", crumbs=None, footer_nav="", wide=False, crumb=None):
-    if APP: return page_html_app(out, title, body, toc, desc, crumbs, footer_nav, wide, crumb)
-    depth = out.count("/"); root = "../" * depth
+SITE_URL = "https://privacysafe.app"
+
+def offline_chrome(h, root):
+    """The privacysafe.app header, call to action and footer for the offline copy: the images, icons and styles are local,
+    and every link to the main site is a plain link to https://privacysafe.app (nothing is loaded from it)."""
+    img = root + "assets/img/"
+    for f in ("privacysafe-logo.svg", "ivy-logo-horizontal-white.svg", "logo-foundation.svg", "bitsontape-avatar.png"):
+        h = h.replace(f'src="/img/{f}"', f'src="{img}{f}"')
+    h = h.replace('href="/"', f'href="{SITE_URL}/"')
+    for a in ("download", "apps", "identity", "trust"): h = h.replace(f'href="/#{a}"', f'href="{SITE_URL}/#{a}"')
+    h = h.replace('<a href="/docs/" aria-current="true">Docs</a>', f'<a href="{SITE_URL}/docs/" rel="noopener noreferrer" target="_blank">Docs</a>')
+    h = h.replace('<span aria-hidden="true" class="ico ico-download-arrow"></span>', I.svg("download"))
+    for cls, name in (("ico-mastodon", "mastodon"), ("ico-bluesky", "bluesky"), ("ico-twitter-x", "x-twitter"), ("ico-linkedin", "linkedin"), ("ico-youtube", "youtube"), ("ico-instagram", "instagram")):
+        h = h.replace(f'<span aria-hidden="true" class="ico {cls}"></span>', I.svg(name))
+    return h
+
+def offline_subnav(out, root):
+    items = [("Home", "index.html"), ("Tools", "tools.html"), ("CVEs", "cves.html"), ("How it works", "how-it-works.html"), ("Install", "install.html"), ("Manual pages", "man/index.html")]
+    cur = out
+    if out.startswith("man/"): cur = "man/index.html"
+    elif out in {tool_out(d) for d in tool_dirs}: cur = "tools.html"
+    li = "".join('<li><a href="%s%s"%s>%s</a></li>' % (root, h, ' aria-current="page"' if h == cur else "", n) for n, h in items)
+    li += '<li><a href="%s/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online %s</a></li>' % (SITE_URL, L.EXT_ICON)
+    return '<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul>%s</ul></div></nav>\n' % li
+
+def page_html_offline(out, title, body, toc, desc, crumbs, footer_nav, wide, crumb):
+    depth = out.count("/"); root = "../" * depth; is_home = out == "index.html"
     cr = ""
-    if out != "index.html":
+    if not is_home:
         cr = '<nav class="crumbs" aria-label="Breadcrumb"><a href="%sindex.html">Home</a>' % root
         for label, link in (crumbs or []):
             cr += ' / <a href="%s">%s</a>' % (esc(posixpath.relpath(link, posixpath.dirname(out) or ".")), esc(label))
@@ -407,24 +445,22 @@ def page_html(out, title, body, toc=None, desc="", crumbs=None, footer_nav="", w
     if toc and len(toc) > 2:
         toc_html = '<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul>%s</ul></aside>' % "".join(
             '<li class="l%d"><a href="#%s">%s</a></li>' % (lv, esc(i), esc(n)) for lv, n, i in toc)
-    head_title = SITE if out == "index.html" else f"{title} | {SITE}"
-    return f'''<!doctype html>
-<html lang="en" data-root="{root}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="theme-color" content="#0b5cc7"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="{esc(CSP)}">
-<title>{esc(head_title)}</title><meta name="description" content="{esc(desc or SITE)}">
-<link rel="icon" href="{root}assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="{root}assets/site.css"><script>{JS_FLAG}</script></head>
-<body><a class="skip" href="#main">Skip to content</a>
-<header class="top"><a class="brand" href="{root}index.html"><img src="{root}assets/privacysafe_horizontal_logo_lock_reg_padded.svg" alt="PrivacySafe" height="28"><span>Security Patches</span></a>
-<nav class="topnav" aria-label="Main"><a href="{root}tools.html">Tools</a><a href="{root}cves.html">CVEs</a><a href="{root}how-it-works.html">How it works</a><a href="{root}install.html">Install</a><a href="{root}man/index.html">Manual pages</a></nav>
-<div class="search js-only"><label class="sr" for="site-search">Search the documentation</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div></header>
-<div class="layout{"" if toc_html else " no-toc"}">{nav_html(out)}
-<main id="main" tabindex="-1">{cr}
-<article class="doc{" wide" if wide else ""}">{body}{footer_nav}</article></main>
-{toc_html}</div>
-<footer class="foot"><p>{esc(SITE)} {esc(RELEASE)}, {esc(LONGDATE)}. Written and published by PrivacySafe Foundation, a 501(c)(3) nonprofit, with the assistance of Ivy Cyber LLC. CC0 1.0 Universal: use it, copy it, change it.</p>
-<p><a href="{root}license.html">License and notice</a> | <a href="{root}security.html">Security policy</a> | <a href="{REPO}/issues">Report a problem</a> | <a href="https://privacysafe.app">Get PrivacySafe</a> | <a href="https://privacysafe.foundation">Support PrivacySafe Foundation</a> | <a href="{REPO}">Source on Codeberg</a></p></footer>
-<script src="{root}assets/site.js" defer></script></body></html>
-'''
+    head_title = SITE if is_home else f"{title} | {SITE}"
+    head = (f'<!doctype html>\n<html lang="en" data-root="{root}">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+            f'<meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">\n'
+            f'<title>{esc(head_title)}</title><meta name="description" content="{esc(desc or SITE)}">\n'
+            f'<link rel="icon" href="{root}assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="{root}assets/ps-base.css"><link rel="stylesheet" href="{root}assets/docs.css"><script>{JS_FLAG}</script></head>\n')
+    top = L.topbar("Security Patches")
+    top = re.sub(r'<nav aria-label="Documentation sections" class="docs-subnav">.*?</nav>\n?', lambda m: offline_subnav(out, root), top, flags=re.S)
+    page = (f'<div class="doc-page"><div class="wrap doc-layout{"" if toc_html else " no-toc"}">{nav_html(out)}\n'
+            f'<main id="top">{cr}\n<article class="doc{" wide" if wide else ""}">{body}{PAGE_LICENSE}{footer_nav}</article></main>\n{toc_html}</div></div>\n')
+    if is_home: page += L.cta_band()
+    tail = L.footer().replace("</body>", f'<script src="{root}assets/site.js" defer></script></body>')
+    return head + offline_chrome(top + page + tail, root)
+
+def page_html(out, title, body, toc=None, desc="", crumbs=None, footer_nav="", wide=False, crumb=None):
+    if APP: return page_html_app(out, title, body, toc, desc, crumbs, footer_nav, wide, crumb)
+    return page_html_offline(out, title, body, toc, desc, crumbs, footer_nav, wide, crumb)
 
 # ---------------------------------------------------------------- pages
 pages = []
@@ -460,7 +496,7 @@ _logo = read("privacysafe_horizontal_logo_lock_reg_padded.svg")
 _logo = re.sub(r'(<g\b[^>]*?)\saria-label="[^"]*"', r"\1", _logo)   # the page gives the image its alt text; aria-label on <g> is not valid
 if not APP: open(os.path.join(OUT, "assets", "privacysafe_horizontal_logo_lock_reg_padded.svg"), "w", encoding="utf-8").write(_logo)
 if not APP: open(os.path.join(OUT, ".nojekyll"), "w").close()
-if not APP: open(os.path.join(OUT, "assets", "favicon.svg"), "w").write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#0b5cc7"/><path d="M32 10l18 7v13c0 12-8 20-18 24C22 50 14 42 14 30V17z" fill="#fff"/><path d="M26 31l5 5 9-11" fill="none" stroke="#0b5cc7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+if not APP: open(os.path.join(OUT, "assets", "favicon.svg"), "w").write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#FB521F"/><path d="M32 10l18 7v13c0 12-8 20-18 24C22 50 14 42 14 30V17z" fill="#fff"/><path d="M26 31l5 5 9-11" fill="none" stroke="#0b5cc7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>')
 
 # ---- home
 lead = [p for p in re.split(r"\n\s*\n", pre) if p.strip() and not p.strip().startswith(("<", "#", "---")) and "support" not in p.lower()[:40]]
@@ -531,6 +567,14 @@ Type the command every time. Two tools do something else when you give none: `ph
 
 The Claude Code extension tool also has `update`, `keys`, `clean`, `block` and `unblock`; its page explains each one.
 
+## Root and sudo
+
+Commands that change the machine need root. Run them from a named admin account with `sudo`, for example `sudo ./haproxy-check.sh mitigate`, and not from a root login, because sudo records who made the change. If you forget, the tool stops and prints the exact `sudo` command to run, or says to run it as root when sudo is not installed. If you start a change from the root account while sudo is available, the tool prints a one-line note and carries on. `PSF_NO_ROOT_NOTE=1` hides the note.
+
+`check` and `hunt` run without root, but a plain account cannot read other users' files, protected logs or the container runtime. A hunt says so instead of calling the result clean, and a few exit with `2` when no log could be read. Run them with `sudo` for the full answer.
+
+Tools that work per user, such as the Claude Code extension's `update`, `keys` and `clean`, should run as the account that uses the editor, not with sudo.
+
 The four steps to follow, in order, are on the [home page](README.md#start-here).
 
 ## What `mitigate` does before it changes anything
@@ -560,6 +604,7 @@ A hunt match tells you where to look. A clean hunt means none of the published i
 | `SCAN_CONTAINERS=0` | Skip running docker and podman containers. By default a tool also checks them when you do not name a directory. |
 | `STATE_DIR=/path` | Where a tool keeps its backups and rollback record. Each tool's page names its default. |
 | `--dry-run` | Show what a change would do and change nothing. |
+| `PSF_NO_ROOT_NOTE=1` | Hide the one-line note that a change was started from the root account. |
 
 ## Where things are
 
@@ -645,6 +690,7 @@ DOC_DESC = {  # one description for each policy page, so no two pages share one
     "contributors.html": "The people and organizations behind PrivacySafe Security Patches.",
     "values.html": "The principles that guide how PrivacySafe Security Patches is written and shared.",
     "ai-policy.html": "How AI tools may be used when you contribute to PrivacySafe Security Patches.",
+    "redhat-advisories.html": "The Red Hat security advisories for the CVEs the PrivacySafe Security Patches tools cover, by tool and by CVE.",
 }
 for src, (out, title) in DOCS.items():
     h, toc = render_md(re.sub(r"^# .+\n", "", read(src), count=1))
@@ -690,6 +736,8 @@ def glance(d):
         if dflt in CHANGERS:
             run += f'<p class="warn"><strong>Type the command every time.</strong> Run with no command, this script does <code>{dflt}</code>, which changes the system.</p>'
         blocks.append(f'<div class="scr"><code>{esc(posixpath.basename(s))}</code> ({mp}, <a href="{SRC}{s}">source</a>)<br>{"; ".join(parts)}{run}</div>')
+    for ps in [x for x in ps_scripts if posixpath.dirname(x) == d]:
+        blocks.append(f'<div class="scr"><code>{esc(posixpath.basename(ps))}</code> (for Windows, in PowerShell; <a href="{SRC}{ps}">source</a>)<br>reads only: <code>check</code><pre><code>powershell -ExecutionPolicy Bypass -File .\\{esc(posixpath.basename(ps))}</code></pre></div>')
     if blocks:
         hint = ""
         if any("--dry-run" in helptext(s) and any(c in CHANGERS for c in commands_of(helptext(s))) for s in mine):
@@ -758,6 +806,9 @@ if APP:
             os.makedirs(os.path.join(DOCS_ROOT, sub), exist_ok=True)
             shutil.copy(os.path.join(ROOT, "packaging", "site", f), os.path.join(DOCS_ROOT, sub, f))
 else:
-    for f in ("site.css", "site.js"):
+    for f in ("ps-base.css", "docs.css", "site.js"):
         shutil.copy(os.path.join(ROOT, "packaging", "site", f), os.path.join(OUT, "assets", f))
+    os.makedirs(os.path.join(OUT, "assets", "img"), exist_ok=True)
+    for f in sorted(os.listdir(os.path.join(ROOT, "packaging", "site", "img"))):
+        shutil.copy(os.path.join(ROOT, "packaging", "site", "img", f), os.path.join(OUT, "assets", "img", f))
 print(f"site written to {OUT}: {len(pages)} pages, {len(tool_dirs)} tool pages, {len(scripts)} manual pages, {len(order)} CVEs")

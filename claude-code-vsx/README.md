@@ -6,7 +6,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 ## Claude Code Extension SSH Backdoor
 
-**Script:** [`claude-code-vsx/claude-code-vsx-oct2026-check.sh`](claude-code-vsx-oct2026-check.sh)
+**Scripts:** [`claude-code-vsx/claude-code-vsx-oct2026-check.sh`](claude-code-vsx-oct2026-check.sh) for GNU/Linux and macOS, and [`claude-code-vsx/claude-code-vsx-oct2026-check.ps1`](claude-code-vsx-oct2026-check.ps1) for Windows
 
 On 29 October 2026 a maliciously modified copy of the Claude Code extension for VS Code was served from the Cursor extension marketplace. [Cursor's notice](https://cursor.com/blog/claude-code-extension-security-notice) names versions 2.1.312 and 2.1.313 and a window of about 2:27am to 1:35pm Pacific time. Cursor says up to 5,000 machines were affected. Anthropic says it was not involved in building, publishing or hosting the tampered build. The code added to `extension.js` runs as soon as the editor loads the extension, with no action from the user.
 
@@ -46,21 +46,45 @@ The extension is only the delivery vehicle. On loading it:
 - tries to switch the local SSH server on, which Cursor says fails on most machines because it needs administrator rights;
 - sends the host name, user name, operating system, public IP address, git email and the **names** (not the values) of environment variables that look like secrets to `http://134.209.82.225:8099/beacon`.
 
-Because all of that lives outside the extension, an update does not clean it. Every piece needs its own check, which is what this script does.
+On Windows the same pieces are `%USERPROFILE%\.config\smt.cmd` and `smtk`, a `.stk_` copy in `%TEMP%`, the `SysMon` task (set to run as SYSTEM) and a fallback `sysmon.cmd` in the Startup folder. Cursor's own check also looks in `C:\ProgramData\ssh\administrators_authorized_keys`, the file the Windows SSH server reads for administrator accounts.
 
-### Platform coverage: macOS and GNU/Linux
+Because all of that lives outside the extension, an update does not clean it. Every piece needs its own check, which is what these scripts do.
+
+### Platform coverage: GNU/Linux, macOS and Windows
 
 | Platform | What Cursor's notice provides | What this tool provides |
 |---|---|---|
 | macOS | A one-line `grep` for the key, and `remediate-macos.sh` (run as the affected user, not as root) | `check`, `hunt`, `clean` and `block` (it prints the `pf` command on macOS), run as yourself or as root for every account. Covers the `com.apple.sysmond` LaunchAgent (and a loaded launchd job), `$TMPDIR` and `/private/var/folders` key copies, the Code, Cursor, VSCodium and Windsurf package caches under `Library/Application Support`, and a `log show` search for the key |
 | GNU/Linux | The indicators (`/tmp/.stk_*`, the `@reboot` cron line) but **no check or remediation script**: the notice names macOS and Windows | `check`, `hunt`, `clean` and `block` (nftables or iptables). Covers the crontab line (removing it, or the whole crontab if it becomes empty), `.vscode`, `.cursor`, `.vscode-server`, `.cursor-server`, code-server, openvscode-server and Theia folders, the `auth.log`, `secure` and systemd journal hunt, and every account when run as root |
-| Windows | A PowerShell check and `remediate-windows.ps1` | Not covered. Use Cursor's script |
+| Windows | A PowerShell check for the key, and `remediate-windows.ps1` (run from PowerShell as Administrator; it cleans every profile) | [`claude-code-vsx-oct2026-check.ps1`](#windows), a read-only check. It removes nothing: use Cursor's script for that |
 
-What this adds beyond a `grep` for the word `svc-telemetry`: the key is matched by its key text and by both fingerprints as well as by its comment, so a key whose comment was changed is still found. Every other key in `authorized_keys` is listed so an unknown one stands out. 2.1.312 is judged by the content of `extension.js`, because a legitimate 2.1.312 exists. The check is read-only, `hunt` looks for evidence of a login, and `clean` moves files into a backup folder with a manifest instead of deleting them.
+What this adds beyond a `grep` for the word `svc-telemetry`: the key is matched by its key text and by both fingerprints as well as by its comment, so a key whose comment was changed is still found. The key is appended without a newline, so in a file that did not end in one it shares a line with a real key. Cutting out the whole line would delete that real key, so `clean` cuts out only the attacker's text and keeps the rest of the line. Every other key in `authorized_keys` is listed so an unknown one stands out. 2.1.312 is judged by the content of `extension.js`, because a legitimate 2.1.312 exists. The check is read-only, `hunt` looks for evidence of a login, and `clean` moves files into a backup folder with a manifest instead of deleting them.
 
 Cursor's macOS script is a vendor tool and a good first choice if you want the vendor's own cleanup. Cursor documents that it removes the malicious extension, the persistence, the running tunnel processes and the attacker's key, and exits non-zero if anything remains. This tool is open (CC0), works on both platforms, and is meant to be read before it is run.
 
-macOS: the LaunchAgent and launchd persistence checks, the `$TMPDIR` key copies and the macOS `block` instructions follow the vendors' published macOS indicators. `check` changes nothing, so start there.
+macOS: the LaunchAgent and launchd persistence checks, the `$TMPDIR` key copies and the macOS `block` instructions follow the vendors' published macOS indicators. `clean` boots the launchd job out of both the `gui` and the `user` domain, including when the job is still loaded but its file is gone. `check` changes nothing, so start there.
+
+### Windows
+
+The rest of this collection is for GNU/Linux. This attack hit developer laptops, so there is also a Windows check, [`claude-code-vsx-oct2026-check.ps1`](claude-code-vsx-oct2026-check.ps1). It is read only and changes nothing. It runs in Windows PowerShell 5.1 and in PowerShell 7, and checking your own account needs no administrator rights.
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/claude-code-vsx/claude-code-vsx-oct2026-check.ps1 -OutFile claude-code-vsx-oct2026-check.ps1
+notepad claude-code-vsx-oct2026-check.ps1
+powershell -ExecutionPolicy Bypass -File .\claude-code-vsx-oct2026-check.ps1
+```
+
+Read it first (the second line opens it), then run it. Windows blocks unsigned scripts by default, so `-ExecutionPolicy Bypass` applies to that one run only. Open PowerShell with **Run as Administrator** to check every profile on the machine and to read `C:\ProgramData\ssh\administrators_authorized_keys`. Without it the check says what it could not read and does not call the result clean. It exits `0` when nothing is found, `1` when the backdoor or a bad build is found, and `2` when something could not be read.
+
+It looks for:
+
+- the extension folder under every editor folder in a profile (`.vscode`, `.cursor`, `.windsurf`, `.kiro` and any other folder that holds `extensions`), judged by what is inside `extension.js`, and cached or downloaded packages with a known bad hash;
+- the attacker's key in each profile's `.ssh\authorized_keys` and in `C:\ProgramData\ssh\administrators_authorized_keys`, by key text, comment and fingerprint. It reads the bytes, so it finds the key in a UTF-8 file, in a UTF-16 file (what Windows PowerShell writes), and in a UTF-16 file the attacker appended UTF-8 to. It says when the key shares a line with a real key;
+- `%USERPROFILE%\.config\smt.cmd` and `smtk`, the `.stk_` key copies in each temp folder and one folder below it (Remote Desktop hosts keep a numbered folder for each session), and `sysmon.cmd` in the Startup folder;
+- a scheduled task named `SysMon`, or any task, that runs the implant;
+- tunnel processes, a connection to `134.209.82.225`, and whether an SSH server answers on `127.0.0.1`, which is where the tunnel arrives.
+
+To remove what it finds, close every editor and run Cursor's `remediate-windows.ps1` from PowerShell opened as Administrator. The version of that script we reviewed (30 October) cleans each profile's `.ssh\authorized_keys`, but it does not open `C:\ProgramData\ssh\administrators_authorized_keys`, which Cursor's own check reads. If our check flags that file, open it in an editor started as Administrator and delete only the attacker's key (the whole line, or just the attacker's part of a line that holds a real key), then run the check again. Also confirm that the OpenSSH Server is one you meant to run: the payload tries to turn it on, and the check lists whether the `sshd` service exists. If the server was running, its log is in Event Viewer under Applications and Services Logs, OpenSSH, Operational.
 
 ### Claude Code extension quick start
 
@@ -109,10 +133,18 @@ macOS: the LaunchAgent and launchd persistence checks, the `$TMPDIR` key copies 
 | `hunt` | Read-only. Searches the SSH server logs (`/var/log/auth.log`, `/var/log/secure`, rotated `.gz` files, the systemd journal, and the macOS unified log) for a login with the attacker's key, which arrives from `127.0.0.1` or `::1`, and lists recent changes under `~/.ssh`, `~/.config` and the LaunchAgents folder. Exits `0` if no login evidence is found, `1` if some is |
 | `update [--yes] [--and-clean] [--dry-run]` | The vendor's fix, with questions first (see above): check, then ask before installing Claude Code through each editor that has it, check again, then offer `clean` if the backdoor is found. Does not remove the backdoor by itself |
 | `keys` | Read-only. Lists the private keys in each account's `~/.ssh` (type, fingerprint, last change, passphrase-protected or not, and the `Host` entries in `~/.ssh/config` that use each key, so you know where the new key has to go) without printing key material, and counts the agent sockets in `~/.ssh/agent`. Nothing is blocked or copied |
-| `clean` | Stops the tunnel processes, unloads and removes the persistence, removes the attacker's key line from `authorized_keys` (keeping a backup and the file's owner and mode), and moves the implant files and the bad extension folders into a backup folder. Nothing is deleted. `--reinstall` then installs the extension again through any editor command line it finds (`code`, `cursor`, `codium`, `windsurf`). `--dry-run` shows the plan. Re-checks afterwards and exits `1` if anything remains |
+| `clean` | Stops the tunnel processes, unloads and removes the persistence, removes the attacker's key from `authorized_keys` (only the attacker's text when it shares a line with a real key, keeping a backup and the file's owner and mode), and moves the implant files and the bad extension folders into a backup folder. Nothing is deleted. `--reinstall` then installs the extension again through any editor command line it finds (`code`, `cursor`, `codium`, `windsurf`). `--dry-run` shows the plan. Re-checks afterwards and exits `1` if anything remains |
 | `block` | GNU/Linux, as root. Drops outbound traffic to `134.209.82.225` with nftables or iptables. On macOS it prints the `pf` command instead. `--dry-run` shows the command |
 | `unblock` | Removes the rule that `block` added. Verified with nftables and with iptables: with the address made local, connections to it were dropped after `block`, other destinations were unaffected, and `unblock` restored them |
 | `version` | Prints the script version. Every command prints it on its first line too |
+
+`block` and `unblock` change the firewall and need root. Run them with `sudo`. `update`, `keys` and `clean` work per user, so run those as the account that uses the editor, not with `sudo`. The script prints the exact command if you forget:
+
+```bash
+sudo ./claude-code-vsx-oct2026-check.sh block --dry-run
+sudo ./claude-code-vsx-oct2026-check.sh block
+sudo ./claude-code-vsx-oct2026-check.sh unblock
+```
 
 ### SSH keys and the agent folder
 
@@ -145,7 +177,7 @@ The same applies to the editor and assistant flaws reported on 29 October 2026, 
 - A user's own reverse tunnel is left alone. A process is stopped only if its command line names the attacker's address, the `.stk_` or `.smtk` key files, or the `.config/.smt` loop. A file named like an implant but without its content is listed for review and is not touched.
 - Only Claude Code extension folders are examined. Other extensions are not read, so a different extension altered by the same actor would not be found by name. The key, file, process and network checks are not tied to one extension.
 - A clean result means the published indicators were not found. Cursor updated its indicators on 30 October. One other write-up lists a different `darwin-arm64` package hash for 2.1.313 without calling it modified. That hash is not used. Add indicators as vendors publish them with `EXTRA_KEY_BLOBS`, `EXTRA_FPRS` and `EXTRA_SHA256`.
-- Windows is not covered. Use the PowerShell remediation script in Cursor's notice, which also removes the `SysMon` task and the Startup-folder script. The osquery and Microsoft Defender queries in the references below can hunt across a fleet.
+- Windows has a read-only check, `claude-code-vsx-oct2026-check.ps1`, and no cleanup of its own. Use the PowerShell remediation script in Cursor's notice, which also removes the `SysMon` task and the Startup-folder script, and see [Windows](#windows) for the one file it leaves alone. The osquery and Microsoft Defender queries in the references below can hunt across a fleet.
 - macOS. The script works with bash 3.2, which is what macOS ships, and follows the vendors' macOS file layout.
 - Run as root to check every account. As a normal user it checks only your own account. Files other users own cannot be read, and the script says so and exits `2` instead of reporting clean.
 

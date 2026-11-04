@@ -114,8 +114,8 @@ PHP_BROTLI_FIXED="${PHP_BROTLI_FIXED:-0.21.1}"
 # Date the list of unfixed bundlers in cmd_check was last reviewed.
 BUNDLED_REVIEWED="2026-10-25"
 SCRIPT_NAME="brotli-oct2026-check.sh"
-SCRIPT_VERSION="1.3.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.3.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 UPSTREAM="https://github.com/google/brotli"
 
@@ -132,6 +132,16 @@ inf()     { echo -e "  • $*"; }
 caution() { echo -e "  ${YELLOW}!${NC} $*"; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# limited_view WHAT: a hunt run without root sees only what this account can read. Say so where a reader
+# would otherwise take "none" for a clean result. Says nothing when running as root. Always returns 0,
+# so it is safe under set -e.
+limited_view() {
+    is_root && return 0
+    if command -v sudo >/dev/null 2>&1; then caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it with sudo: sudo ${SELF_CMD}"
+    else caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it as root."; fi
+}
 ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 state_word() { case "$1" in 0) echo -e "${GREEN}fixed${NC}" ;; 1) echo -e "${RED}vulnerable${NC}" ;; *) echo -e "${YELLOW}unknown${NC}" ;; esac; }
 branch_fixed_for() { local n="${BRANCH_FIXED:-}"; if [[ -n "$n" ]]; then for p in $n; do [[ "${p%%:*}" == "$1" ]] && { echo "${p#*:}"; return; }; done; fi; echo "${BRANCH_FIXED_DEFAULT[$1]:-}"; }
@@ -239,7 +249,7 @@ line_state() {   # <ver> "<fixed...>" [major|minor]
         fi
     done
     # Newer than every listed fix is fixed; otherwise no fix for this line.
-    local newest; newest="$(printf '%s\n' $list | sort -V | tail -1)"
+    local newest; newest="$(tr -s ' \t' '\n' <<<"$list" | sort -V | tail -1)"
     if ver_ge "$base" "$newest"; then
         if [[ -n "$pre" && "$base" == "$newest" ]]; then echo "2|${v} is a pre-release build made before ${newest} was released: it may not carry the fix"
         else echo "0|${v} is newer than ${newest}"; fi
@@ -487,6 +497,7 @@ cmd_check() {
 # ---------- hunt -------------------------------------------------------------
 cmd_hunt() {
     step "Hunting for Brotli decoder crashes since ${HUNT_SINCE}"
+    limited_view
     local jr; jr="$(mktemp)"
     # shellcheck disable=SC2064
     trap "rm -f '$jr'" RETURN
@@ -546,3 +557,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

@@ -18,7 +18,7 @@ Django REST framework (DRF) is the standard toolkit for building web APIs on Dja
 | Needs | Nothing: every API view does content negotiation, so any reachable endpoint is a target | Code, an integration or a script that revokes tokens by calling `.delete()` on a `TokenProxy` instance. DRF's own `TokenAdmin.delete_model` is not affected, and neither is deleting through `Token.objects` |
 | Fixed | 3.18.2 | 3.18.2 |
 
-**The Accept header cost also involves Django.** The Debian description says the cost comes from Django's header parameter parser together with DRF's repeated parsing. Django fixed its own quadratic-time parser separately in **5.2.18, 6.0.9 and 6.1.2**. Updating DRF alone may not remove all of the cost, so the script also reports the neighbouring Django version.
+**The Accept header cost also involves Django.** The Debian description says the cost comes from Django's header parameter parser together with DRF's repeated parsing. Django fixed its own quadratic-time parser separately in **5.2.18, 6.0.9 and 6.1.2**. Updating DRF alone may not remove all of the cost, so the script also reports the neighboring Django version.
 
 ## Quick start
 
@@ -49,19 +49,27 @@ Django REST framework (DRF) is the standard toolkit for building web APIs on Dja
 
 | Command | What it does |
 |---|---|
-| `check [DIR ...]` (default) | Finds installed copies (`djangorestframework-*.dist-info` and `.egg-info`) and declared pins (`requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock`, `Pipfile.lock`). For pins it looks at the project's Python files for `rest_framework.authtoken` and `TokenProxy`; for installed copies it reads the neighbouring `Django` version |
+| `check [DIR ...]` (default) | Finds installed copies (`djangorestframework-*.dist-info` and `.egg-info`) and declared pins (`requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock`, `Pipfile.lock`). For pins it looks at the project's Python files for `rest_framework.authtoken` and `TokenProxy`; for installed copies it reads the neighboring `Django` version |
 | `mitigate [--server-name NAME] [--dir DIR] [--dry-run] [--reload] [--force]` | **Changes the host (root).** The protective measure below, applied to nginx: answers 406 to an `Accept` header of 1024 characters or more. Acts only when an affected copy is found. Adds a `map` block right after `http {` and an include at the top of every server block that proxies (`proxy_pass`, `uwsgi_pass` or `scgi_pass`; use `--server-name` to limit it to your API), checked with `nginx -t`; if nginx rejects the result, everything is undone at once. Reloads nothing unless you add `--reload`. nginx only |
 | `rollback [--dry-run] [--reload]` | Removes what `mitigate` added and restores the files it edited |
 | `version` | Prints the script version |
 
 Exit codes: `0` nothing affected, `1` an affected copy or pin was found, `2` bad arguments.
 
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./drf-check.sh mitigate --dry-run
+sudo ./drf-check.sh mitigate
+sudo ./drf-check.sh rollback
+```
+
 ## How to read the result
 
 - Affected version: upgrade (`pip install --upgrade 'djangorestframework>=3.18.2'`) and check that your Django version is supported by 3.18.x.
 - The second warning (CVE-2026-114137) appears for 3.12.0 and later. It only matters if `rest_framework.authtoken` is installed. For a project the script checks its source. For an installed copy it cannot map the environment to a project, so check the `INSTALLED_APPS` of the apps that use it.
 - `TokenProxy` found in the project: revocations made through it did nothing on an affected version. Treat those tokens as still live.
-- Neighbouring Django below 5.2.18, 6.0.9 or 6.1.2: update it as well. An unsupported series (3.2, 4.2, 5.0, 5.1) was not evaluated by Django, so assume it is affected.
+- Neighboring Django below 5.2.18, 6.0.9 or 6.1.2: update it as well. An unsupported series (3.2, 4.2, 5.0, 5.1) was not evaluated by Django, so assume it is affected.
 - Look-alike packages such as `djangorestframework-simplejwt` and `djangorestframework-stubs` are not DRF and are ignored, including when they are listed before DRF in a lock file.
 - Distribution packages: the script reads the package changelog for a mention of either CVE.
 

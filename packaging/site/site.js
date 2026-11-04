@@ -111,3 +111,5 @@
   });
   document.addEventListener('click', function (e) { if (!out.contains(e.target) && e.target !== input) out.hidden = true; });
 })();
+
+// Assisted-by: Claude Sonnet 5.5

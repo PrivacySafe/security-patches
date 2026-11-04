@@ -51,12 +51,12 @@
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="gitea-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -82,40 +82,7 @@ ver_lt() {
     if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
     [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
 }
-ver_ge() { ! ver_lt "$1" "$2"; }
-is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
-# distro_mentions FILE CVE...
-# Distributions often backport a fix without changing the upstream version
-# string. This looks at the changelog of the package that owns FILE.
-#   return 0: changelog mentions one of the CVE ids (DISTRO_HIT, DISTRO_PKG set)
-#   return 1: FILE is package-managed but the changelog does not mention them
-#   return 2: FILE is not owned by a dpkg or rpm package
-DISTRO_PKG=""; DISTRO_HIT=""
-distro_mentions() {
-    local f real pkg="" cl="" c id
-    f="$1"; shift
-    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
-    if have dpkg; then
-        pkg="$(dpkg -S "$real" 2>/dev/null | head -n1 | cut -d: -f1)"
-        if [[ -n "$pkg" ]]; then
-            for c in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/${pkg}/changelog.gz"; do
-                [[ -r "$c" ]] && cl+="$(zcat "$c" 2>/dev/null)"
-            done
-        fi
-    fi
-    if [[ -z "$pkg" ]] && have rpm; then
-        pkg="$(rpm -qf "$real" 2>/dev/null | head -n1)"
-        [[ "$pkg" == *"not owned"* ]] && pkg=""
-        [[ -n "$pkg" ]] && cl="$(rpm -q --changelog "$pkg" 2>/dev/null)"
-    fi
-    [[ -n "$pkg" ]] || return 2
-    DISTRO_PKG="$pkg"
-    for id in "$@"; do
-        if grep -qF "$id" <<<"$cl"; then DISTRO_HIT="$id"; return 0; fi
-    done
-    return 1
-}
 
 # Print the help text: everything between the first two ===== lines of this file.
 print_help() { awk 'f && /^# =+$/ {exit} f {sub(/^# ?/,""); print} /^# =+$/ {f=1}' "$SELF"; }
@@ -154,7 +121,7 @@ ini_files() {
 
 # value of key in [section], case-insensitive on section and key; values are returned but callers decide what to show
 ini_value() {   # file section key
-    awk -v sec="$(tr 'A-Z' 'a-z' <<<"$2")" -v key="$(tr 'A-Z' 'a-z' <<<"$3")" '
+    awk -v sec="$(tr '[:upper:]' '[:lower:]' <<<"$2")" -v key="$(tr '[:upper:]' '[:lower:]' <<<"$3")" '
         /^[[:space:]]*[;#]/ {next}
         /^[[:space:]]*\[/ {s=tolower($0); gsub(/[[:space:]\[\]]/,"",s); cur=s; next}
         cur==sec { line=$0; sub(/^[[:space:]]+/,"",line); n=index(line,"="); if(n>0){k=tolower(substr(line,1,n-1)); gsub(/[[:space:]]/,"",k)
@@ -280,7 +247,7 @@ cmd_check_host() {
             continue
         fi
         inf "a user certificate authority IS trusted (SSH_TRUSTED_USER_CA_KEYS is set; its value is not shown)"
-        policy="$(tr 'A-Z' 'a-z' <<<"${allow:-}")"
+        policy="$(tr '[:upper:]' '[:lower:]' <<<"${allow:-}")"
         if [[ "$policy" == *anything* ]]; then
             bad "SSH_AUTHORIZED_PRINCIPALS_ALLOW includes 'anything': any user can register another person's public-key line as a principal and authenticate as them"
         else

@@ -82,6 +82,8 @@
 #   BACKUP_ROOT=/var/backups/libheif-oct2026
 #                                     where harden and mw-harden keep the backup
 #                                     of each config file they change
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -105,8 +107,8 @@ MW_HEIF_MIMES=("image/heif" "image/heic" "image/avif" "image/heif-sequence" "ima
 HUNT_SINCE="${HUNT_SINCE:-2026-07-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="libheif-oct2026-check.sh"
-SCRIPT_VERSION="1.1.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.1.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 ADVISORY="https://www.hacktron.ai/blog/hacking-openai"
 MARKER="managed-by: libheif-oct2026-check"
@@ -128,8 +130,36 @@ bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
 caution() { echo -e "  ${YELLOW}!${NC} $*"; }
 
-is_root() { [[ $EUID -eq 0 ]]; }
 have() { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
+}
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
+}
+# limited_view WHAT: a hunt run without root sees only what this account can read. Say so where a reader
+# would otherwise take "none" for a clean result. Says nothing when running as root. Always returns 0,
+# so it is safe under set -e.
+limited_view() {
+    is_root && return 0
+    if command -v sudo >/dev/null 2>&1; then caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it with sudo: sudo ${SELF_CMD}"
+    else caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it as root."; fi
+}
 ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 state_word() { case "$1" in 0) echo -e "${GREEN}fixed${NC}" ;; 1) echo -e "${RED}vulnerable${NC}" ;; *) echo -e "${YELLOW}unknown${NC}" ;; esac; }
 
@@ -465,7 +495,6 @@ cmd_policy() {
 }
 
 # ---------- harden / unharden (the only writes this script makes) ------------
-need_root() { is_root || die "${1} needs root (it edits a config file owned by another user). Re-run with sudo"; }
 
 backup_file() {   # <path> -> prints backup path
     # Every backup gets its own private directory (mode 0700): two runs in the same second must not
@@ -514,7 +543,7 @@ strip_block() {   # <file>
 }
 
 cmd_harden() {
-    need_root harden
+    need_root "harden edits a config file owned by another user" ""
     step "Hardening ImageMagick against HEIF/AVIF decoding"
     local -a files=()
     mapfile -t files < <(policy_files)
@@ -568,7 +597,7 @@ cmd_harden() {
 }
 
 cmd_unharden() {
-    need_root unharden
+    need_root "unharden edits a config file owned by another user" ""
     step "Removing the managed HEIF/AVIF block"
     local -a files=()
     mapfile -t files < <(policy_files)
@@ -633,7 +662,7 @@ mw_insert() {   # <stripped-file> <block-text>  -> writes combined to stdout
 }
 
 cmd_mw_harden() {
-    need_root mw-harden
+    need_root "mw-harden edits a config file owned by another user" ""
     step "Blocking HEIF/HEIC/AVIF uploads in MediaWiki"
     local -a files=()
     mapfile -t files < <(mw_installs)
@@ -668,7 +697,7 @@ cmd_mw_harden() {
 }
 
 cmd_mw_unharden() {
-    need_root mw-unharden
+    need_root "mw-unharden edits a config file owned by another user" ""
     step "Removing the MediaWiki HEIF upload block"
     local -a files=()
     mapfile -t files < <(mw_installs)
@@ -695,6 +724,7 @@ cmd_mw_unharden() {
 # ---------- hunt -------------------------------------------------------------
 cmd_hunt() {
     step "Hunting for image-processor crashes since ${HUNT_SINCE}"
+    limited_view
     local jr; jr="$(mktemp)"
     # shellcheck disable=SC2064
     trap "rm -f '$jr'" RETURN
@@ -756,6 +786,34 @@ case "$CMD" in
     *) die "Unknown command: $CMD (check|policy|harden|unharden|mw-harden|mw-unharden|hunt|version)" ;;
 esac
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "harden unharden mw-harden mw-unharden" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

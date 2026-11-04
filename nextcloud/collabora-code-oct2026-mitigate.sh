@@ -62,6 +62,8 @@
 #   BACKUP_ROOT=/var/backups/collabora-code-oct2026
 #   HUNT_SINCE="2026-09-01"           how far back hunt reads the journal
 #   HUNT_LOGS="/srv/app/log/*.log"    extra access-log globs for hunt
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -81,8 +83,8 @@ STUB_MARKER="PRIVACYSAFE-COLLABORA-STUB"
 KNOWN_SHELL_SHA256="4b9fbd0663fbfd6028fc216ed18e0d6ef3ae498a7fdc97083e4b0ce3cec40562"
 KNOWN_IPS="139.28.18.122 89.38.98.50"
 SCRIPT_NAME="collabora-code-oct2026-mitigate.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 ADVISORY="https://github.com/CollaboraOnline/online/security/advisories/GHSA-g3vx-3m76-fghh"
 FORCE=0
@@ -94,12 +96,16 @@ info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
 die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
+# Temporary files are registered here and removed when the script ends, however it ends.
+PSF_TMP=()
+trap '[[ ${#PSF_TMP[@]} -eq 0 ]] || rm -f "${PSF_TMP[@]}"' EXIT
 ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
 bad()     { echo -e "  ${RED}✗${NC} $*"; }
 inf()     { echo -e "  • $*"; }
 caution() { echo -e "  ${YELLOW}!${NC} $*"; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
 ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 is_root() { [[ "$(id -u)" -eq 0 ]]; }
 
@@ -189,6 +195,7 @@ cmd_check() {
 write_stub() {   # <proxy.php path>
     local proxy="$1" tmp
     tmp="$(mktemp)"
+    PSF_TMP+=("$tmp")
     cat >"$tmp" <<PHP
 <?php
 // ${STUB_MARKER} ${CVE}
@@ -336,6 +343,34 @@ case "$CMD" in
     *) die "Unknown command: $CMD (check|apply|restore|status|hunt|version)" ;;
 esac
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "apply restore" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

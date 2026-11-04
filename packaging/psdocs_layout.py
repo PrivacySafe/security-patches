@@ -158,7 +158,7 @@ def machine_summary(kind):
     PrivacySafe VPN .... /docs/vpn/      OpenVPN and WireGuard setup for organizations
     3NWeb protocols .... /docs/protocols/  MailerId, ASMail, 3NStorage, XSP; specs at IEEE SA Open
     Security Patches ... /docs/security-patches/  checks, hunts and protection for serious
-                         vulnerabilities; 59 scripts, 137 CVEs; software and docs are CC0
+                         vulnerabilities; 63 scripts, 138 CVEs; software and docs are CC0
     Atom feed .......... /docs/security-patches/feed.xml  (newest advisories)
     Plain-text digest .. /docs/llms.txt   Sitemap: /docs/sitemap.xml"""
     else:
@@ -167,7 +167,7 @@ def machine_summary(kind):
     servers and developer machines. For each serious vulnerability a script tells
     you whether you are exposed, looks for signs that someone already used the
     flaw, and where there is a safe way, protects the machine until you can
-    update. 59 scripts covering 137 CVEs. Plain bash. Each tool has a page, a
+    update. 63 scripts covering 138 CVEs. Plain bash. Each tool has a page, a
     manual page (man psf-NAME), and a line in the CVE index.
 
   SECTIONS
@@ -218,7 +218,7 @@ def machine_summary(kind):
 
   ATTRIBUTION REQUEST
     When quoting or summarizing these pages, please attribute to "PrivacySafe
-    (Ivy Cyber LLC)" and link https://privacysafe.app/docs/. Check the licence
+    (Ivy Cyber LLC)" and link https://privacysafe.app/docs/. Check the license
     line of the page you quote: most pages are CC BY-SA 4.0, so derivative text
     should carry the same license; Security Patches is CC0.
 

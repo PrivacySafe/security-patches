@@ -54,12 +54,12 @@
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck cannot follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="openssl-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -75,50 +75,6 @@ caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
 
-# Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
-# sort -V. A pre-release of the boundary itself (6.3.0-rc2 against 6.3.0) is below it, as in
-# semantic versioning, so a pre-release of a fixed release is never reported as the release.
-norm_ver() { local v="${1#v}"; v="${v%%[-+]*}"; echo "$v"; }
-ver_lt() {
-    local a b
-    a="$(norm_ver "$1")"; b="$(norm_ver "$2")"
-    if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
-    [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
-}
-ver_ge() { ! ver_lt "$1" "$2"; }
-is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
-
-# distro_mentions FILE CVE...
-# Distributions often backport a fix without changing the upstream version
-# string. This looks at the changelog of the package that owns FILE.
-#   return 0: changelog mentions one of the CVE ids (DISTRO_HIT, DISTRO_PKG set)
-#   return 1: FILE is package-managed but the changelog does not mention them
-#   return 2: FILE is not owned by a dpkg or rpm package
-DISTRO_PKG=""; DISTRO_HIT=""
-distro_mentions() {
-    local f real pkg="" cl="" c id
-    f="$1"; shift
-    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
-    if have dpkg; then
-        pkg="$(dpkg -S "$real" 2>/dev/null | head -n1 | cut -d: -f1)"
-        if [[ -n "$pkg" ]]; then
-            for c in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/${pkg}/changelog.gz"; do
-                [[ -r "$c" ]] && cl+="$(zcat "$c" 2>/dev/null)"
-            done
-        fi
-    fi
-    if [[ -z "$pkg" ]] && have rpm; then
-        pkg="$(rpm -qf "$real" 2>/dev/null | head -n1)"
-        [[ "$pkg" == *"not owned"* ]] && pkg=""
-        [[ -n "$pkg" ]] && cl="$(rpm -q --changelog "$pkg" 2>/dev/null)"
-    fi
-    [[ -n "$pkg" ]] || return 2
-    DISTRO_PKG="$pkg"
-    for id in "$@"; do
-        if grep -qF "$id" <<<"$cl"; then DISTRO_HIT="$id"; return 0; fi
-    done
-    return 1
-}
 
 # Print the help text: everything between the first two ===== lines of this file.
 print_help() { awk 'f && /^# =+$/ {exit} f {sub(/^# ?/,""); print} /^# =+$/ {f=1}' "$SELF"; }
@@ -134,11 +90,11 @@ suffix_ge() {   # A B -> 0 if A >= B
 #   nopublicfix = affected, and the fix exists only for premium-support customers (3.0, 1.1.1, 1.0.2)
 #   eol         = a branch OpenSSL no longer supports and did not evaluate (3.1 to 3.3)
 openssl_status() {
-    local v="$1" maj min pat suf pre=""
+    local v="$1" maj min pat suf
     # a development or alpha/beta build of a release is a tree heading toward that release: of the
     # fixed release itself it may not carry the fix; of a later release it does
     if [[ "$v" =~ ^(.+)-(dev|alpha[0-9]*|beta[0-9]*)$ ]]; then
-        v="${BASH_REMATCH[1]}"; pre=1
+        v="${BASH_REMATCH[1]}"
         case "$v" in 4.0.3|3.6.5|3.5.9|3.4.8|3.0.23|1.1.1zj|1.0.2zs) echo prerelease; return ;; esac
     fi
     [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)([a-z]*)$ ]] || { echo unknown; return; }

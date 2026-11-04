@@ -83,8 +83,8 @@ SCAN_CONTAINERS="${SCAN_CONTAINERS:-1}"
 HUNT_SINCE="${HUNT_SINCE:-2026-10-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="curl-oct2026-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 UPSTREAM="https://curl.se/docs/CVE-2026-92392.html"
 
@@ -101,6 +101,16 @@ inf()     { echo -e "  • $*"; }
 caution() { echo -e "  ${YELLOW}!${NC} $*"; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# limited_view WHAT: a hunt run without root sees only what this account can read. Say so where a reader
+# would otherwise take "none" for a clean result. Says nothing when running as root. Always returns 0,
+# so it is safe under set -e.
+limited_view() {
+    is_root && return 0
+    if command -v sudo >/dev/null 2>&1; then caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it with sudo: sudo ${SELF_CMD}"
+    else caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it as root."; fi
+}
 ver_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 state_word() { case "$1" in 0) echo -e "${GREEN}fixed${NC}" ;; 1) echo -e "${RED}vulnerable${NC}" ;; *) echo -e "${YELLOW}unknown${NC}" ;; esac; }
 
@@ -293,6 +303,7 @@ cmd_check() {
 # ---------- hunt -------------------------------------------------------------
 cmd_hunt() {
     step "Hunting for curl/libcurl crashes since ${HUNT_SINCE}"
+    limited_view
     local jr; jr="$(mktemp)"
     # shellcheck disable=SC2064
     trap "rm -f '$jr'" RETURN
@@ -352,3 +363,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

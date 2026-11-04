@@ -54,6 +54,14 @@ By default it searches `/var/www /srv /home /opt /usr/share`. Pass directories t
 | `rollback [--dry-run] [--reload]` | Removes what `mitigate` added and restores the files it edited |
 | `version` | Prints the script version |
 
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./joomla-check.sh mitigate --allow 203.0.113.0/24 --dry-run
+sudo ./joomla-check.sh mitigate --allow 203.0.113.0/24
+sudo ./joomla-check.sh rollback
+```
+
 ## Mitigation: restrict the administrator path
 
 Most of these flaws need a logged-in account, so limiting who can reach the login reduces the exposure. Run `./joomla-check.sh mitigate --allow 203.0.113.0/24 --dry-run`, then again without `--dry-run` and with `--reload`. Verified on nginx 1.24: from an address outside the list, `/administrator/index.php`, `/administrator/` and `/ADMINISTRATOR/index.php` get 403. From loopback the request still reaches the PHP handler. `/index.php` and static files are unaffected; `rollback` restores the original behavior. On Apache 2.4.58 the same restriction answered 403 from a non-allowed address and 200 from loopback on every virtual host.

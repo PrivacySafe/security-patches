@@ -105,15 +105,15 @@
 #      KERNEL_RELEASE, KERNEL_VERSION_STRING   override uname -r and uname -v
 #      KERNEL_MODULES_FILE, KERNEL_PROC_SYS    override /proc/modules and /proc/sys
 #      KERNEL_BUILTIN_FILE   override /lib/modules/<release>/modules.builtin
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30); the lock is STATE_DIR/.lock
 # =============================================================================
 
-# Commands run as "cmd_${CMD}", which shellcheck cannot follow
-# shellcheck disable=SC2317,SC2329,SC2034
 set -uo pipefail
 
 SCRIPT_NAME="linux-kernel-lpe-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/linux-kernel}"
 
@@ -130,6 +130,27 @@ bad()     { echo -e "  ${RED}CRIT${NC}  $*"; }
 caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
+}
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
+}
 
 # Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
 # sort -V. A pre-release of the boundary itself (6.3.0-rc2 against 6.3.0) is below it, as in
@@ -141,39 +162,16 @@ ver_lt() {
     if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
     [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
 }
-ver_ge() { ! ver_lt "$1" "$2"; }
-is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
-# distro_mentions FILE CVE...
-# Distributions often backport a fix without changing the upstream version
-# string. This looks at the changelog of the package that owns FILE.
-#   return 0: changelog mentions one of the CVE ids (DISTRO_HIT, DISTRO_PKG set)
-#   return 1: FILE is package-managed but the changelog does not mention them
-#   return 2: FILE is not owned by a dpkg or rpm package
-DISTRO_PKG=""; DISTRO_HIT=""
-distro_mentions() {
-    local f real pkg="" cl="" c id
-    f="$1"; shift
-    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
-    if have dpkg; then
-        pkg="$(dpkg -S "$real" 2>/dev/null | head -n1 | cut -d: -f1)"
-        if [[ -n "$pkg" ]]; then
-            for c in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/${pkg}/changelog.gz"; do
-                [[ -r "$c" ]] && cl+="$(zcat "$c" 2>/dev/null)"
-            done
-        fi
-    fi
-    if [[ -z "$pkg" ]] && have rpm; then
-        pkg="$(rpm -qf "$real" 2>/dev/null | head -n1)"
-        [[ "$pkg" == *"not owned"* ]] && pkg=""
-        [[ -n "$pkg" ]] && cl="$(rpm -q --changelog "$pkg" 2>/dev/null)"
-    fi
-    [[ -n "$pkg" ]] || return 2
-    DISTRO_PKG="$pkg"
-    for id in "$@"; do
-        if grep -qF "$id" <<<"$cl"; then DISTRO_HIT="$id"; return 0; fi
-    done
-    return 1
+
+# take_lock: one change at a time. Two runs that change this host together would interleave their backup
+# and manifest writes, so the second waits (PSF_LOCK_WAIT seconds, default 30) and then stops. The lock is
+# released when the script exits.
+take_lock() {
+    have flock || return 0
+    mkdir -p "$STATE_DIR" 2>/dev/null || return 0
+    { exec 9>"${STATE_DIR}/.lock"; } 2>/dev/null || return 0
+    flock -w "${PSF_LOCK_WAIT:-30}" 9 || die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: ${STATE_DIR}/.lock): wait for it to finish, then run it again"
 }
 
 # Print the help text: everything between the first two ===== lines of this file.
@@ -355,7 +353,7 @@ lm_sysctl_set() {   # path-under-proc-sys value
 }
 
 cmd_mitigate() {
-    local userns=0 mods="" force=0 rc=0 rel ps m st line keys="" lines="" sd md mf cnt=0 did=0 mt
+    local userns=0 mods="" force=0 rc=0 rel ps m st line lines="" sd md mf did=0 mt
     local -a want=() mlines=()
     LM_DRY=0
     while [[ $# -gt 0 ]]; do
@@ -373,7 +371,7 @@ cmd_mitigate() {
             case " $lm_valid_mods " in *" $m "*) want+=("$m") ;; *) die "not a module this tool knows: ${m} (${lm_valid_mods// /,})" ;; esac
         done
     fi
-    [[ $LM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    [[ $LM_DRY -eq 1 ]] || need_root "mitigate changes the host"
     rel="${KERNEL_RELEASE:-$(uname -r)}"; ps="${KERNEL_PROC_SYS:-/proc/sys}"
     step "Is this kernel affected?"
     if cmd_check >/dev/null 2>&1; then
@@ -382,6 +380,7 @@ cmd_mitigate() {
     else bad "check finds kernel ${rel} affected or no vendor backport is confirmed: applying the measures you chose"; fi
     if [[ $LM_DRY -eq 0 ]]; then
         mkdir -p "$STATE_DIR" || die "cannot create ${STATE_DIR}"
+        take_lock
         LM_MANIFEST="${STATE_DIR}/manifest.txt"; touch "$LM_MANIFEST"
     else LM_MANIFEST=/dev/null; step "Dry run: nothing will be changed"; fi
     sd="${SYSCTL_D:-/etc/sysctl.d}"; md="${MODPROBE_D:-/etc/modprobe.d}"
@@ -442,14 +441,14 @@ cmd_rollback() {
     done
     LM_MANIFEST="${STATE_DIR}/manifest.txt"
     [[ -s "$LM_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
-    [[ $LM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    [[ $LM_DRY -eq 1 ]] || { need_root "rollback changes the host"; take_lock; }
     step "Rolling back"
     while IFS= read -r line; do
         kind="${line%%|*}"; rest="${line#*|}"
         case "$kind" in
             sysctl) path="${rest%%|*}"; old="${rest#*|}"
                 if [[ -z "$old" ]]; then caution "${path//\//.}: previous value unknown, left alone"; rc=1; continue; fi
-                if [[ $LM_DRY -eq 1 ]]; then echo "  would set ${path//\//.}=${old}"; else printf '%s\n' "$old" >"$ps/$path" 2>/dev/null && ok "restored ${path//\//.}=${old}" || { bad "could not write ${path}"; rc=1; }; fi ;;
+                if [[ $LM_DRY -eq 1 ]]; then echo "  would set ${path//\//.}=${old}"; elif printf '%s\n' "$old" >"$ps/$path" 2>/dev/null; then ok "restored ${path//\//.}=${old}"; else bad "could not write ${path}"; rc=1; fi ;;
             file) f="$rest"; if [[ $LM_DRY -eq 1 ]]; then echo "  would remove ${f}"; else rm -f "$f" && ok "removed ${f}"; fi ;;
         esac
     done <"$LM_MANIFEST"

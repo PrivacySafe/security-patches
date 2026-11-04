@@ -61,6 +61,13 @@ This script does not run the update or removal for you, since that is an app-sto
 | `hunt` | Read-only. Scans the app folders for planted web shells (`shx*.php`, a known shell by SHA-256, and any file that runs commands from request input) and the web server access logs for the exploitation markers (`proxy.php` requests with `%2e%2e`, `$(` or `${IFS}`, and the known attacker IPs). Exits `0` if nothing matched, `1` if it found something, `2` if there was no app folder and no readable log (nothing was searched) |
 | `version` | Prints the script version. Every command prints it on its first line too |
 
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./collabora-code-oct2026-mitigate.sh apply
+sudo ./collabora-code-oct2026-mitigate.sh restore
+```
+
 ### Why `apply` edits `proxy.php` rather than disabling the app
 
 Because disabling the app does nothing: the web server serves `proxy.php` directly, outside Nextcloud. Neutralizing that one file closes the exploited path at once, no matter how the app is enabled or which web server is in front, and it is reversible (`restore`) and self-healing (an app update to 26.4.303 replaces the stub with the fixed `proxy.php`). The fix is to update the app to 26.4.303 or later, or remove it.

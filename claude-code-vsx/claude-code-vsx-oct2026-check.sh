@@ -123,8 +123,8 @@
 #          --copy-keys, --drop-agent-keys (clean, and the clean step of update)
 #
 # Run it as your own user to check your own account. Run it as root to check
-# every account on the machine. It works on GNU/Linux and macOS. It does not
-# cover Windows: use the remediation script in Cursor's notice there.
+# every account on the machine. It works on GNU/Linux and macOS. Windows has its own
+# check, claude-code-vsx-oct2026-check.ps1 in this folder (PowerShell, read only).
 #
 # Env overrides:
 #   NO_NOTICE=1                       leave out the upfront notice about the vendor's fix
@@ -143,6 +143,8 @@
 #   HUNT_LOG_DAYS=4                   how many days of macOS log to search
 #   LOOPBACK_PORT=22                  port to probe on 127.0.0.1
 #   PLATFORM=Linux|Darwin             override the detected platform
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -150,8 +152,8 @@
 set -euo pipefail
 
 SCRIPT_NAME="claude-code-vsx-oct2026-check.sh"
-SCRIPT_VERSION="1.2.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.3.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 REF="https://cursor.com/blog/claude-code-extension-security-notice"
 FIXED_VER="2.1.314"
@@ -194,11 +196,35 @@ info()    { say "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { say "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
 die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
+# Temporary files are registered here and removed when the script ends, however it ends.
+PSF_TMP=()
+trap '[[ ${#PSF_TMP[@]} -eq 0 ]] || rm -f "${PSF_TMP[@]}"' EXIT
 ok()      { say "  ${GREEN}✓${NC} $*"; }
 bad()     { say "  ${RED}✗${NC} $*"; }
 inf()     { say "  • $*"; }
 caution() { say "  ${YELLOW}!${NC} $*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
+}
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
+}
 
 # ---------- findings ---------------------------------------------------------
 N_EXPOSED=0      # a bad extension is or was on disk
@@ -207,14 +233,14 @@ N_UNREAD=0       # something could not be read
 N_REVIEW=0       # looks related but is not proven
 R_EXT=(); R_FILES=(); R_PLISTS=(); R_AK=(); R_PIDS=(); R_CRON=(); EXT_VERS=()
 reset_records() {
-    N_EXPOSED=0; N_COMP=0; N_UNREAD=0; N_REVIEW=0
+    N_EXPOSED=0; N_COMP=0; N_UNREAD=0; N_REVIEW=0; LAUNCHD_LOADED=0
     R_EXT=(); R_FILES=(); R_PLISTS=(); R_AK=(); R_PIDS=(); R_CRON=(); EXT_VERS=()
 }
 
 # ---------- small helpers ----------------------------------------------------
 # print the items of a colon-separated list, one per line (items may contain spaces)
 split_list() { local IFS=:; local x; for x in $1; do [[ -n "$x" ]] && printf '%s\n' "$x"; done; return 0; }
-lc() { printf '%s' "$1" | tr 'A-Z' 'a-z'; }
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
 sha256_of() {
     if have sha256sum; then sha256sum "$1" 2>/dev/null | awk '{print $1}' || true
@@ -222,13 +248,15 @@ sha256_of() {
     elif have openssl; then openssl dgst -sha256 "$1" 2>/dev/null | awk '{print $NF}' || true
     fi
 }
-in_list() { local x needle="$1"; shift; for x in "$@"; do [[ "$x" == "$needle" ]] && return 0; done; return 1; }
+# in_list NEEDLE "LIST": is NEEDLE one of the words of the space separated LIST (split without globbing)
+in_list() { local x needle="$1"; local -a words; read -ra words <<<"$2"; for x in "${words[@]+"${words[@]}"}"; do [[ "$x" == "$needle" ]] && return 0; done; return 1; }
 
 # fingerprint of the public key on one authorized_keys line (empty if unknown)
 key_fpr() {
     have ssh-keygen || return 0
     local t out
     t="$(mktemp "${TMPDIR:-/tmp}/vsxkey.XXXXXX" 2>/dev/null)" || return 0
+    PSF_TMP+=("$t")
     printf '%s\n' "$1" >"$t"
     out="$(ssh-keygen -l -f "$t" </dev/null 2>/dev/null | awk 'NR==1 {print $2}' || true)"
     rm -f "$t"
@@ -239,7 +267,26 @@ file_fpr() {
     have ssh-keygen || return 0
     ssh-keygen -l -f "$1" </dev/null 2>/dev/null | awk 'NR==1 {print $2}' || true
 }
-fpr_is_ioc() { [[ -n "$1" ]] && in_list "$1" $FPRS; }
+fpr_is_ioc() { [[ -n "$1" ]] && in_list "$1" "$FPRS"; }
+
+# The planted key is appended without a newline. When authorized_keys did not end in one, the
+# key shares a line with a real key, and cutting out the whole line would delete that real key.
+# Prints the line with only the attacker's key text taken out (its svc-telemetry comment too).
+# Returns 1 when the line holds no such text: it matched by comment or fingerprint, so it is
+# the attacker's key on a line of its own.
+strip_attacker_key() {
+    local line="$1" b before after
+    for b in $KEY_BLOBS; do
+        [[ "$line" == *"ssh-ed25519 $b"* ]] || continue
+        while [[ "$line" == *"ssh-ed25519 $b"* ]]; do
+            before="${line%%"ssh-ed25519 $b"*}"; after="${line#*"ssh-ed25519 $b"}"
+            case "$after" in " svc-telemetry"*) after="${after# svc-telemetry}" ;; esac
+            line="${before}${after}"
+        done
+        printf '%s' "$line"; return 0
+    done
+    return 1
+}
 
 # true if the line is the attacker's key, by key text, comment or fingerprint
 ioc_key_line() {
@@ -308,7 +355,7 @@ scan_extensions() {
                 if [[ ! -r "$f" ]]; then N_UNREAD=$((N_UNREAD + 1)); caution "cannot read ${f}"; continue; fi
                 js_ok=1
                 sha="$(sha256_of "$f")"
-                if [[ -n "$sha" ]] && in_list "$sha" $JS_SHA256; then hit=1; reason="extension.js has the known backdoored SHA-256"; break; fi
+                if [[ -n "$sha" ]] && in_list "$sha" "$JS_SHA256"; then hit=1; reason="extension.js has the known backdoored SHA-256"; break; fi
                 if grep -qF "$C2_IP" "$f" 2>/dev/null; then hit=1; reason="extension.js contains the C2 address ${C2_IP}"; break; fi
                 if grep -qF "svc-telemetry" "$f" 2>/dev/null; then hit=1; reason="extension.js contains the svc-telemetry key comment"; break; fi
             done < <(find "$d" -maxdepth 3 -type f -name extension.js 2>/dev/null)
@@ -342,7 +389,7 @@ scan_packages() {
         while IFS= read -r f; do
             [[ -n "$f" && -r "$f" ]] || continue
             sha="$(sha256_of "$f")"
-            if [[ -n "$sha" ]] && in_list "$sha" $VSIX_SHA256; then
+            if [[ -n "$sha" ]] && in_list "$sha" "$VSIX_SHA256"; then
                 bad "extension package with a known bad hash: ${f}"
                 N_EXPOSED=$((N_EXPOSED + 1)); R_FILES+=("$f")
             fi
@@ -352,7 +399,7 @@ scan_packages() {
 
 # ---------- scan: SSH keys ---------------------------------------------------
 scan_keys() {
-    local home="$1" f line t n fp bad_here
+    local home="$1" f line t n fp bad_here rest
     for f in "$home/.ssh/authorized_keys" "$home/.ssh/authorized_keys2"; do
         [[ -e "$f" ]] || continue
         if [[ ! -r "$f" ]]; then N_UNREAD=$((N_UNREAD + 1)); caution "cannot read ${f}"; continue; fi
@@ -364,6 +411,9 @@ scan_keys() {
             if ioc_key_line "$t"; then
                 bad_here=1
                 bad "the attacker's key is in ${f}: $(printf '%s' "$t" | awk '{print substr($0,1,60)}')..."
+                if rest="$(strip_attacker_key "$t")" && [[ -n "${rest//[[:space:]]/}" ]]; then
+                    caution "that line also holds another key: the attacker's key was appended without a newline. 'clean' cuts out only the attacker's part and keeps the other key"
+                fi
             else
                 fp="$(key_fpr "$t")"
                 inf "key in ${f}: ${fp:-fingerprint unavailable} $(printf '%s' "$t" | awk '{print substr($NF,1,40)}')"
@@ -521,12 +571,13 @@ scan_loopback() {
     return 0
 }
 
+LAUNCHD_LOADED=0
 scan_launchd_loaded() {
     [[ "$PLATFORM" == "Darwin" ]] || return 0
     have launchctl || return 0
     if grep -qF 'com.apple.sysmond' <<<"$(launchctl list 2>/dev/null)"; then
         bad "launchd has com.apple.sysmond loaded (not a real Apple label)"
-        N_COMP=$((N_COMP + 1))
+        N_COMP=$((N_COMP + 1)); LAUNCHD_LOADED=1
     fi
     return 0
 }
@@ -584,7 +635,7 @@ verdict() {
         inf "Your own SSH private keys: '${SELF} keys' lists which are not protected by a passphrase."
     fi
     [[ $N_REVIEW -eq 0 ]] || warn "${N_REVIEW} item(s) look related and need a look by hand (marked above)."
-    inf "This checks this operating system only. On Windows, use Cursor's remediation script (${REF})."
+    inf "This checks this operating system only. On Windows, run claude-code-vsx-oct2026-check.ps1 from this folder, and see Cursor's remediation script (${REF})."
 }
 
 cmd_check() {
@@ -862,19 +913,29 @@ quarantine_item() {
 }
 
 clean_keys() {
-    local f="$1" tmp line t removed=0 name
+    local f="$1" tmp line t rest removed=0 shared=0 name
     qdir_init
     if [[ "$DRY" -eq 1 ]]; then inf "would remove the attacker's key line(s) from ${f} (backup kept)"; return 0; fi
     name="$(printf '%s' "$f" | tr '/ ' '__')"
     cp -p "$f" "${QDIR}/items/${name}.bak" 2>/dev/null || { caution "could not back up ${f}; leaving it alone"; return 0; }
     tmp="$(mktemp "${TMPDIR:-/tmp}/vsxkeys.XXXXXX")" || { caution "no temp file; leaving ${f} alone"; return 0; }
+    PSF_TMP+=("$tmp")
     while IFS= read -r line || [[ -n "$line" ]]; do
         t="${line#"${line%%[![:space:]]*}"}"
-        if [[ -n "$t" && "${t:0:1}" != "#" ]] && ioc_key_line "$t"; then removed=$((removed + 1)); continue; fi
+        if [[ -n "$t" && "${t:0:1}" != "#" ]] && ioc_key_line "$t"; then
+            removed=$((removed + 1))
+            # only the attacker's text goes when the line also holds a real key
+            if rest="$(strip_attacker_key "$line")" && [[ -n "${rest//[[:space:]]/}" ]] && ! ioc_key_line "$rest"; then
+                printf '%s\n' "$rest"; shared=$((shared + 1))
+            fi
+            continue
+        fi
         printf '%s\n' "$line"
     done <"$f" >"$tmp"
     # write back through the original file so its owner and mode stay as they were
-    if cat "$tmp" >"$f" 2>/dev/null; then info "removed ${removed} key line(s) from ${f}; original kept as ${QDIR}/items/${name}.bak"
+    if cat "$tmp" >"$f" 2>/dev/null; then
+        info "removed ${removed} key line(s) from ${f}; original kept as ${QDIR}/items/${name}.bak"
+        [[ $shared -eq 0 ]] || info "${shared} of them shared a line with another key: only the attacker's part was cut out, and that other key is intact"
     else caution "could not write ${f} (permissions?); the original is untouched and a copy is in ${QDIR}/items/${name}.bak"; fi
     rm -f "$tmp"
 }
@@ -927,9 +988,30 @@ unload_plist() {
     uid=""; [[ -n "$owner" ]] && uid="$(id -u "$owner" 2>/dev/null || true)"
     if [[ -n "$uid" && "$(id -u)" -eq 0 ]]; then
         launchctl bootout "gui/${uid}/com.apple.sysmond" 2>/dev/null || launchctl unload "$p" 2>/dev/null || true
+        launchctl bootout "user/${uid}/com.apple.sysmond" 2>/dev/null || true
     else
         launchctl bootout "gui/$(id -u)/com.apple.sysmond" 2>/dev/null || launchctl unload "$p" 2>/dev/null || true
+        launchctl bootout "user/$(id -u)/com.apple.sysmond" 2>/dev/null || true
     fi
+}
+
+# The job can stay loaded after its plist is gone, in the gui or the user domain of an account.
+unload_loaded_job() {
+    local h o u uids
+    [[ "$PLATFORM" == "Darwin" ]] && have launchctl || return 0
+    if [[ "$DRY" -eq 1 ]]; then inf "would boot com.apple.sysmond out of launchd (gui and user domains)"; return 0; fi
+    uids="$(id -u)"
+    if [[ "$(id -u)" -eq 0 ]]; then
+        while IFS= read -r h; do
+            [[ -n "$h" ]] || continue
+            o="$(home_owner "$h")"; [[ -n "$o" ]] && uids="$uids $(id -u "$o" 2>/dev/null || true)"
+        done < <(list_homes)
+    fi
+    for u in $uids; do
+        launchctl bootout "gui/${u}/com.apple.sysmond" 2>/dev/null || true
+        launchctl bootout "user/${u}/com.apple.sysmond" 2>/dev/null || true
+    done
+    inf "asked launchd to unload com.apple.sysmond (gui and user domains)"
 }
 
 reinstall_extension() {
@@ -952,7 +1034,7 @@ cmd_clean() {
     local i e total
     umask 077
     QUIET=1; scan_all; QUIET=0
-    total=$(( ${#R_EXT[@]} + ${#R_FILES[@]} + ${#R_AK[@]} + ${#R_PIDS[@]} + ${#R_CRON[@]} ))
+    total=$(( ${#R_EXT[@]} + ${#R_FILES[@]} + ${#R_AK[@]} + ${#R_PIDS[@]} + ${#R_CRON[@]} + LAUNCHD_LOADED ))
     echo
     if [[ $total -eq 0 ]]; then
         info "nothing to clean: no bad extension, implant file, key, cron entry or process was found"
@@ -968,8 +1050,9 @@ cmd_clean() {
     step "1. Stop the tunnel and retry loop"
     kill_all_pids
     step "2. Remove persistence"
-    [[ $(( ${#R_PLISTS[@]} + ${#R_CRON[@]} )) -gt 0 ]] || inf "no LaunchAgent or crontab entry found"
+    [[ $(( ${#R_PLISTS[@]} + ${#R_CRON[@]} + LAUNCHD_LOADED )) -gt 0 ]] || inf "no LaunchAgent or crontab entry found"
     i=0; while [[ $i -lt ${#R_PLISTS[@]} ]]; do unload_plist "${R_PLISTS[$i]}"; i=$((i + 1)); done
+    [[ "$LAUNCHD_LOADED" -eq 0 ]] || unload_loaded_job
     i=0; while [[ $i -lt ${#R_CRON[@]} ]]; do clean_cron "${R_CRON[$i]}"; i=$((i + 1)); done
     step "3. Remove the attacker's key"
     [[ ${#R_AK[@]} -gt 0 ]] || inf "the attacker's key is not in any authorized_keys file"
@@ -1011,8 +1094,8 @@ notice() {
 ver_ge() {
     local a="${1%%[!0-9.]*}" b="${2%%[!0-9.]*}" a1 a2 a3 b1 b2 b3
     local IFS=.
-    set -- $a; a1="${1:-0}"; a2="${2:-0}"; a3="${3:-0}"
-    set -- $b; b1="${1:-0}"; b2="${2:-0}"; b3="${3:-0}"
+    read -r a1 a2 a3 <<<"$a"; a1="${a1:-0}"; a2="${a2:-0}"; a3="${a3:-0}"   # IFS is a dot here
+    read -r b1 b2 b3 <<<"$b"; b1="${b1:-0}"; b2="${b2:-0}"; b3="${b3:-0}"
     [[ "$a1" -gt "$b1" ]] && return 0; [[ "$a1" -lt "$b1" ]] && return 1
     [[ "$a2" -gt "$b2" ]] && return 0; [[ "$a2" -lt "$b2" ]] && return 1
     [[ "$a3" -ge "$b3" ]]
@@ -1121,7 +1204,7 @@ cmd_block() {
         echo "      echo 'block drop out quick to ${C2_IP}' | sudo pfctl -a com.apple/psf_claude_vsx -f -   # then: sudo pfctl -e"
         exit 0
     fi
-    [[ "$DRY" -eq 1 || "$(id -u)" -eq 0 ]] || die "block needs root (run it with sudo)"
+    [[ "$DRY" -eq 1 ]] || need_root "block changes the firewall"
     if have nft; then
         if [[ "$DRY" -eq 0 ]] && nft list table inet "$NFT_TABLE" >/dev/null 2>&1; then info "the nftables rule is already in place"; exit 0; fi
         run nft add table inet "$NFT_TABLE"
@@ -1140,7 +1223,7 @@ cmd_block() {
 }
 cmd_unblock() {
     [[ "$PLATFORM" == "Linux" ]] || { warn "nothing to remove: block applies no rules on ${PLATFORM}"; exit 0; }
-    [[ "$DRY" -eq 1 || "$(id -u)" -eq 0 ]] || die "unblock needs root (run it with sudo)"
+    [[ "$DRY" -eq 1 ]] || need_root "unblock changes the firewall"
     if have nft && { [[ "$DRY" -eq 1 ]] || nft list table inet "$NFT_TABLE" >/dev/null 2>&1; }; then run nft delete table inet "$NFT_TABLE"; info "removed the nftables rule"
     elif have iptables && { [[ "$DRY" -eq 1 ]] || iptables -C OUTPUT -d "$C2_IP" -j DROP 2>/dev/null; }; then run iptables -D OUTPUT -d "$C2_IP" -j DROP; info "removed the iptables rule"
     else info "no rule from this script was found"; fi
@@ -1176,6 +1259,33 @@ case "$CMD" in
     *) die "Unknown command: $CMD (check|hunt|update|keys|clean|block|unblock|version)" ;;
 esac
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "clean update keys block unblock" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Sonnet 5.5

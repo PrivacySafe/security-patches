@@ -53,6 +53,14 @@ The Webform module does not sufficiently exclude certain format templates from t
 
 Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arguments.
 
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./drupal-core-check.sh mitigate --dry-run
+sudo ./drupal-core-check.sh mitigate
+sudo ./drupal-core-check.sh rollback
+```
+
 ## How to read the result
 
 - Affected version: update, even if the configuration scan finds nothing. The configuration condition is how the advisory limits the code execution path, not a reason to leave the module unpatched.

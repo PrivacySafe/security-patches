@@ -1,0 +1,131 @@
+{
+ "_comment": "Which Red Hat advisories go into which README. cves: shown in full, or summarized when a CVE has more than 20 advisories and the README has no focus; summary: shown as counts only; point: a CVE whose advisories are listed in another README; focus: a package pattern listed first, and the only ones listed for a CVE with many advisories; matrix: the kernel layout; note: one sentence about what the advisories are for; label: how other READMEs name this one.",
+ "_excluded": [
+  "README.md",
+  "gitlab/README.md"
+ ],
+ "_excluded_why": "The main README points at the index document. GitLab only cites the Ruby flaws, and Omnibus GitLab bundles its own Ruby.",
+ "_known_outside_window": [
+  "RHSA-2026:0605",
+  "RHSA-2026:0606",
+  "RHSA-2026:0608"
+ ],
+ "_known_outside_window_why": "January advisories the vsftpd README names, before the Red Hat list starts.",
+ "bind/README.md": {
+  "cves": [
+   "CVE-2026-94300"
+  ]
+ },
+ "brotli/README.md": {
+  "cves": [
+   "CVE-2026-111497"
+  ],
+  "focus": "brotli",
+  "note": "Firefox, Thunderbird and other packages that bundle the Brotli decoder carry the same CVE; they are counted, not listed.",
+  "label": "Brotli"
+ },
+ "curl/README.md": {
+  "cves": [
+   "CVE-2026-92392"
+  ]
+ },
+ "haproxy/README.md": {
+  "cves": [
+   "CVE-2026-110353"
+  ],
+  "note": "The only advisory is for a 3.0 build, although HAProxy gives 3.1 as the first affected line: `check` says so for a 3.0 build that is a Red Hat one."
+ },
+ "jenkins/README.md": {
+  "cves": [
+   "CVE-2026-92123",
+   "CVE-2026-92125"
+  ],
+  "note": "These are the OpenShift Jenkins images, not the RHEL packages."
+ },
+ "linux-kernel/README.md": {
+  "cves": [
+   "CVE-2026-53266",
+   "CVE-2026-68121",
+   "CVE-2026-74469",
+   "CVE-2026-80844",
+   "CVE-2026-81000",
+   "CVE-2026-98432"
+  ],
+  "matrix": true
+ },
+ "nginx/README.md": {
+  "cves": [
+   "CVE-2026-15176",
+   "CVE-2026-95101",
+   "CVE-2026-97205",
+   "CVE-2026-97629"
+  ]
+ },
+ "node/README.md": {
+  "cves": [
+   "CVE-2026-105481",
+   "CVE-2026-105482",
+   "CVE-2026-105483",
+   "CVE-2026-106069",
+   "CVE-2026-106071",
+   "CVE-2026-106072",
+   "CVE-2026-106073",
+   "CVE-2026-106074"
+  ],
+  "focus": "^nodejs",
+  "point": {
+   "CVE-2026-111497": "../brotli/README.md#red-hat-advisories"
+  }
+ },
+ "openssl/README.md": {
+  "cves": [
+   "CVE-2026-84782"
+  ],
+  "focus": "openssl",
+  "note": "Other packages that bundle OpenSSL carry the same CVE; they are counted, not listed."
+ },
+ "php/README.md": {
+  "cves": [
+   "CVE-2026-109618",
+   "CVE-2026-109619"
+  ],
+  "label": "PHP"
+ },
+ "php/edge/README.md": {
+  "point": {
+   "CVE-2026-109618": "../README.md#red-hat-advisories",
+   "CVE-2026-109619": "../README.md#red-hat-advisories"
+  }
+ },
+ "pillow/README.md": {
+  "cves": [
+   "CVE-2026-112900"
+  ]
+ },
+ "pki/README.md": {
+  "summary": [
+   "CVE-2026-111943"
+  ],
+  "note": "This is the Go standard library flaw named above, so the advisories are for Go programs, not for the certificate store."
+ },
+ "ruby/README.md": {
+  "cves": [
+   "CVE-2026-110264",
+   "CVE-2026-97229",
+   "CVE-2026-89078",
+   "CVE-2026-93577"
+  ]
+ },
+ "storybook/README.md": {
+  "cves": [
+   "CVE-2026-114126"
+  ],
+  "note": "Red Hat's advisories for this CVE are for Grafana, not for a package called Storybook."
+ },
+ "tomcat/README.md": {
+  "cves": [
+   "CVE-2026-101356",
+   "CVE-2026-103119"
+  ]
+ }
+}

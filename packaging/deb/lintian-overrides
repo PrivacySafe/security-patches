@@ -4,3 +4,14 @@ psf-security-patches: dir-or-file-in-opt [opt/psf-security-patches/*]
 # emudhra-mitigate.sh only reads /var/lib/dpkg/info/*.list, read-only, to learn
 # which files a package owns. It never writes to the dpkg database.
 psf-security-patches: uses-dpkg-database-directly [opt/psf-security-patches/pki/emudhra-mitigate.sh]
+# The manual pages describe scripts that live under /opt/psf-security-patches, not in PATH, so
+# lintian finds no command of that name. The pages are meant to be read with man psf-NAME.
+psf-security-patches: spare-manual-page [usr/share/man/man8/psf-*.8.gz]
+# rhsa.py is the Red Hat advisory checker. It needs only Python 3 and python3 is a Recommends: every other tool
+# needs only bash, so the package must install without it.
+psf-security-patches: python-script-but-no-python-dep [opt/psf-security-patches/rhsa/rhsa.py]
+# The READMEs under /opt belong to the tree each tool is run from. The same documentation is also
+# installed under /usr/share/doc.
+psf-security-patches: package-contains-documentation-outside-usr-share-doc [opt/psf-security-patches/*]
+
+# Assisted-by: Claude Sonnet 5.5
