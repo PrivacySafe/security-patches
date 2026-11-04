@@ -57,7 +57,7 @@ fail() { echo -e "  ${RED}FAIL${NC}  $*"; FAILS=$((FAILS + 1)); }
 note() { echo -e "  ${YELLOW}note${NC}  $*"; }
 die()  { echo "$*" >&2; exit 2; }
 
-usage() { sed -n '/^# Usage:/,/^# Exit codes/p' "$0" | sed '$d;s/^# \{0,1\}//'; }
+usage() { sed -n '/^# PHP2Shell edge guard tester/,/^# Exit codes/p' "$0" | sed '$d;s/^# \{0,1\}//'; }
 
 EXPECT="block"; ALLOW=""; LOGFILE=""; HOSTHDR=""; INSECURE=""; URL=""
 while [[ $# -gt 0 ]]; do

@@ -133,8 +133,125 @@ A fixed store isn't enough on its own, because a long-running process keeps the 
 - Go binaries need their own fix. A Go program built with CGO reads the system store this script fixes, but a pure-Go build carries Go's own certificate verifier, which got a built-in denylist for these intermediates in Go 1.26.10 and 1.27.3 ([CVE-2026-111943](https://pkg.go.dev/vuln/GO-2026-6809)). Rebuild such binaries with a fixed toolchain. This script's check reminds you if a `go` toolchain is present but can't tell which existing binaries are affected.
 - Containers get their own fix. Each image carries its own `ca-certificates`. Rebuild images on patched bases. Running this inside a container fixes that container only.
 - The distrust survives package upgrades and `dpkg-reconfigure ca-certificates`. Both keep `!` lines in `/etc/ca-certificates.conf`. Check with `status` after any upgrade anyway.
-- Debian, Ubuntu, Trisquel and their derivatives only. Fedora/RHEL, openSUSE, Arch, Alpine, NixOS, FreeBSD and macOS need a different approach. See the [disclosure page](https://emudhra.we-have-a-problem.com/#linux).
+- Debian, Ubuntu, Trisquel and their derivatives only. Fedora/RHEL, openSUSE, Arch, Alpine, NixOS and FreeBSD need a different approach. macOS has its own script, [below](#emudhra-on-macos). See the [disclosure page](https://emudhra.we-have-a-problem.com/#linux).
 - Backups of everything the script touches go to `/var/backups/emudhra-mitigation/<timestamp>-<pid>/`, so two runs in the same second never share a directory. A certificate file the script moves out of `/usr/local/share/ca-certificates` or `/etc/ssl/certs` is kept under a numbered name (`01-root.crt`, `02-root.crt`), so two different files with the same name from different directories cannot overwrite each other, and `restore` puts each one back where it came from. The record of what it changed is `/var/lib/emudhra-mitigation/state`.
+
+
+<a name="emudhra-on-macos"></a>
+
+## eMudhra on macOS
+
+**Script:** [`pki/emudhra-macos-mitigate.sh`](emudhra-macos-mitigate.sh)
+
+macOS blocks the compromised eMudhra intermediates in apps that use Apple's own networking and security frameworks, such as the browsers. The command line tools that ship with macOS and with the Xcode Command Line Tools, `curl`, `git`, `python3`, `ruby`, `perl` and `openssl`, are different: they verify certificates against `/etc/ssl/cert.pem` without checking revocation, and that file still contains the roots the intermediates chain to. Apple's [support page](https://support.apple.com/en-us/149555) says it will update the file in a future release, and that a macOS update can replace a file you edited. Hosted macOS CI runners are affected the same way, and so is anything on them that uses Homebrew's `curl` or `git`, because their images disable Homebrew updates and so keep the old `ca-certificates`.
+
+This script does what Apple's support page and the [disclosure page](https://emudhra.we-have-a-problem.com/#macos-curl) describe, with a backup, a check and a way back. It cuts the root out of the bundle with the same `awk` command and writes the file with the same `install -m 0644 -o root -g wheel` command as Apple's steps:
+
+1. `check` reports whether emSign ECC Root CA - G3 and AAA Certificate Services are still in the system bundle and in Homebrew's, the Homebrew `ca-certificates` version against the first fixed one, and whether the built-in `pip` uses the system file. `--online` also connects to the disclosure site's test hosts.
+2. `apply` backs up the bundle, removes emSign ECC Root CA - G3 from it, and proves the root is gone. `--include-aaa` also removes AAA Certificate Services. Like Apple's steps it keeps a copy next to the file as `cert.pem.orig`, and when a macOS update has replaced the file it refreshes that copy instead of keeping the stale one.
+3. `rollback` puts the original bundle back.
+
+### macOS quick start
+
+1. Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.
+
+   ```bash
+   # BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+   # BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+   # curl -fLO "$BASE/pki/emudhra-macos-mitigate.sh"
+   curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-macos-mitigate.sh
+   ```
+
+2. Read it before running it, then make it executable.
+
+   ```bash
+   less emudhra-macos-mitigate.sh
+   chmod +x emudhra-macos-mitigate.sh
+   ```
+
+3. See whether you are exposed. This changes nothing and needs no root. Add `--online` to test against the live hosts.
+
+   ```bash
+   ./emudhra-macos-mitigate.sh check
+   ./emudhra-macos-mitigate.sh check --online
+   ```
+
+4. See the change, then make it. Run it from an admin account with `sudo`.
+
+   ```bash
+   sudo ./emudhra-macos-mitigate.sh apply --dry-run
+   sudo ./emudhra-macos-mitigate.sh apply
+   ```
+
+5. Update Homebrew as your own user, not with `sudo`. The script never runs `brew`.
+
+   ```bash
+   brew update && brew upgrade ca-certificates
+   ```
+
+### macOS commands
+
+| Command | What it does |
+|---|---|
+| `check [--online] [--cert-file FILE]` (default) | Read-only. Exits `0` when neither root is in the bundle, `1` when emSign ECC Root CA - G3 is present, an old Homebrew `ca-certificates` is installed or a test host accepted the connection, `2` when only AAA Certificate Services remains or the bundle could not be read in full |
+| `apply [--include-aaa] [--pip] [--dry-run] [--cert-file FILE]` | **Changes the host (root).** Backs up the bundle to `/var/lib/psf-security-patches/emudhra-macos/`, removes the root, and checks the result. If the check fails it puts the original back. `--pip` points the built-in `pip` at the system file |
+| `rollback [--dry-run] [--force]` | Puts the original bundle back and removes the `pip` line. This re-exposes you. It refuses when the bundle has changed since `apply`, for example after a macOS update, unless you pass `--force` |
+| `version` | Prints the script version. Every command prints it on its first line too |
+
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./emudhra-macos-mitigate.sh apply --dry-run
+sudo ./emudhra-macos-mitigate.sh apply
+sudo ./emudhra-macos-mitigate.sh rollback
+```
+
+### macOS on hosted runners
+
+A hosted macOS runner has passwordless `sudo`, so a workflow step can apply the change before anything else makes a TLS connection. Pin the script by its SHA-256, taken from the release you reviewed, so a changed copy is refused. The download itself goes over the system's own trust, which is the thing being fixed, and the hash is what protects it.
+
+```yaml
+- name: Distrust the compromised eMudhra root
+  run: |
+    curl -fsSLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-macos-mitigate.sh
+    echo "${{ vars.EMUDHRA_MACOS_SHA256 }}  emudhra-macos-mitigate.sh" | shasum -a 256 -c -
+    chmod +x emudhra-macos-mitigate.sh
+    sudo ./emudhra-macos-mitigate.sh apply
+    ./emudhra-macos-mitigate.sh check --online
+    brew update && brew upgrade ca-certificates
+```
+
+### macOS configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CERT_FILE` | `/etc/ssl/cert.pem` | The bundle to check and change |
+| `STATE_DIR` | `/var/lib/psf-security-patches/emudhra-macos` | Backups and the record that `rollback` reads |
+| `BREW_PREFIX` | *(detected)* | Where Homebrew is installed: `/opt/homebrew`, `/usr/local` or Linuxbrew |
+| `CURL_BIN` | *(system curl)* | The `curl` that `--online` uses, besides `/usr/bin/curl` and Homebrew's |
+| `LIVE_HOSTS` | *(the four hosts on the disclosure page)* | Replaces the hosts `--online` connects to |
+| `PSF_NO_ROOT_NOTE` | *(unset)* | `1` hides the note that a change was started from the root account |
+
+### macOS before you run it
+
+- This is not a patch. Apple will ship its own fix. When it does, `check` tells you, and `rollback` is safe to run only if you want your old file back.
+- It removes a whole root, not just the intermediates. emSign ECC Root CA - G3 covers the direct chains. The six Sectigo cross-signed intermediates chain to AAA Certificate Services instead, and removing that root can break unaffected sites that chain to it, so it is off unless you pass `--include-aaa`. `check` exits `2` while only that root remains, so the decision stays visible.
+- It cuts a block only when the block's certificate has the published SHA-256 fingerprint of the root (`86A1ECBA...BE6B` for emSign ECC Root CA - G3, `D7A7A0FB...9EF4` for AAA Certificate Services), the certificate count drops by exactly the number removed, and OpenSSL can still read every remaining certificate. Otherwise it changes nothing and points you to the manual steps. A header line is any `===` or `###` line that ends with the root's name, so a different order of the subject fields still matches.
+- It will not tell you a bundle is clean if it cannot read it. OpenSSL reads nothing at all from a bundle that has one damaged certificate, which would make both roots look absent, so `check` exits `2` and says how many certificates it could read, and `apply` refuses.
+- A macOS update may replace `/etc/ssl/cert.pem` and bring the root back. Apple says so, and reports of macOS 27.2 say it did. Run `check` after each update and `apply` again. `rollback` after that skips the records the update made stale instead of putting an out-of-date bundle back. If macOS refuses the write, the original is untouched.
+- The browsers and Apple's own frameworks are already protected and are not changed. Homebrew has its own bundle, which `check` reports but `apply` does not change: on a Mac Homebrew builds it from the certificates your Keychain trusts plus Mozilla's list, so versions before 2026-09-25_1 still include both roots, and from that release on its post-install step leaves them out by public key. Update it with `brew upgrade ca-certificates` as your own user. Other bundled copies of the roots, such as Python `certifi`, Node.js, Go and Java, need their own updates; see the [disclosure page](https://emudhra.we-have-a-problem.com/#developers).
+- `--pip` appends one line to the system Python's `sitecustomize.py`, as the disclosure page describes. `rollback` removes exactly that line, and the file too if the script created it.
+
+<!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->
+## Red Hat advisories
+
+Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-03) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on [Red Hat's CVE database](https://access.redhat.com/security/security-updates/#/cve).
+
+This is the Go standard library flaw named above, so the advisories are for Go programs, not for the certificate store.
+
+- [CVE-2026-111943](https://access.redhat.com/security/cve/CVE-2026-111943): 163 advisories, 2026-10-20 to 2026-11-03; 159 important, 4 critical; by stream, RHEL 8 21, RHEL 9 42, RHEL 10 21, Hummingbird 50, RHEL 8 (el8ost) 1, RHEL 8 (el8sat) 1, RHEL 9 (el9ost) 2, RHEL 9 (el9sat) 3, container image 22; most often `rhc` (10), `grafana-pcp` (9), `grafana` (9), `golang` (7). All of them: [Red Hat's CVE page](https://access.redhat.com/security/cve/CVE-2026-111943).
+
+<!-- rhsa:end -->
 
 ---
 

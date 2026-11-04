@@ -73,8 +73,8 @@ IOC_NAMES='x12345|mylovelyminer|myawesomeproxy'
 IOC_NET='proxystream\.st|217\.60\.194\.116|91\.92\.40\.202|176\.65\.139\.228|45\.194\.92\.222'
 IOC_BANNER='agree to the potential external use of your internet traffic'
 SCRIPT_NAME="plex2shell-oct2026-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 
 # ---------- output -----------------------------------------------------------
@@ -263,3 +263,4 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

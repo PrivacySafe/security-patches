@@ -85,6 +85,14 @@ On rsyslog 8.2312.0, `rsyslogd -N1` accepts every form the rewrite produces (leg
 
 Exit codes: `0` no unprotected untrusted value in a dynaFile path, `1` at least one was found or could not be judged, `2` bad arguments.
 
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./rsyslog-dynafile-audit.sh mitigate --dry-run
+sudo ./rsyslog-dynafile-audit.sh mitigate
+sudo ./rsyslog-dynafile-audit.sh rollback
+```
+
 ## How it classifies properties
 
 - Treated as untrusted: `hostname`, `source`, `fromhost`, `programname`, `app-name`, `syslogtag`, `msg`, `rawmsg`, `procid`, `msgid`, `structured-data`, `protocol-version`, and any message variable starting `$!`.

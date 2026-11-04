@@ -20,7 +20,7 @@ The information at the above URL refers to this policy. Researchers who submit t
 
 ## <a name="scope">Scope</a>
 
-This policy applies to current PrivacySafe source repositories and public-facing systems owned, maintained, or administered by Ivy Cyber and PrivacySafe Foundation, including: 
+This policy applies to current PrivacySafe source repositories and public-facing systems owned, maintained, or administered by Ivy Cyber and PrivacySafe Foundation, including:
 
 * `privacysafe.app`
 * `download.privacysafe.app`

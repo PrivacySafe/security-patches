@@ -103,6 +103,8 @@
 # Debian/Ubuntu/Trisquel layout (distro packages, ondrej/sury PPA). Each version gets
 # its own drop-in, profile, local override and backups; a failure on one
 # version doesn't stop the others.
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -113,8 +115,8 @@ set -euo pipefail
 # Printed at the top of every run and written into everything the script
 # installs, so any pasted output or file says which version produced it.
 SCRIPT_NAME="php2shell-mitigate.sh"
-SCRIPT_VERSION="5.2.5"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="5.2.6"
+SCRIPT_DATE="2026-11-02"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
@@ -184,6 +186,27 @@ info()  { echo -e "${GREEN}[+]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
 step()  { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
 die()   { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
+}
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
+}
 
 # ---------- service manager --------------------------------------------------
 # systemd when it's PID 1; otherwise service(8) + init scripts (sysvinit or
@@ -468,7 +491,7 @@ patch_target() {
 
 global_preflight() {
     step "Preflight"
-    [[ $EUID -eq 0 ]] || die "Must run as root (sudo $SELF)"
+    need_root "this changes the host" ""
     command -v dpkg-query >/dev/null || die "Debian/Ubuntu (dpkg) layout required"
     if ! command -v apparmor_parser >/dev/null && [[ $CMD == apply ]]; then
         apt-get install -y --no-install-recommends apparmor || die "Could not install apparmor"
@@ -948,7 +971,7 @@ hunt_procs() {
         p="${d#/proc/}"
         { read -r c < "$d/comm"; } 2>/dev/null || continue
         { read -r line < "$d/stat"; } 2>/dev/null || continue
-        rest="${line##*) }"; set -- $rest; pp="${2:-0}"
+        rest="${line##*) }"; read -r _ pp _ <<<"$rest"; pp="${pp:-0}"
         comm[$p]="$c"; ppid[$p]="$pp"
     done
     for p in "${!comm[@]}"; do
@@ -1483,7 +1506,7 @@ check_web() {
         shopt -u nullglob
         inf "Apache: ${ver:-installed}, ${st}${mpm:+, MPM ${mpm}}"
         local refs; refs="$(fpm_refs /etc/apache2/sites-enabled /etc/apache2/conf-enabled)"
-        [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: $(echo $refs)"
+        [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: ${refs//$'\n'/ }"
         [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
         for v in "${modphp[@]+"${modphp[@]}"}"; do
             caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script (mod_php is the configuration a 2026-10-24 honeypot report confirmed 35 shell executions on; the ini setting is one layer for CVE-2026-109618 and the AppArmor layer here applies to PHP-FPM only, so upgrade PHP and restart Apache)"
@@ -1506,7 +1529,7 @@ check_web() {
         ver="$(/usr/sbin/nginx -v 2>&1 | sed -n 's/^nginx version: //p' || true)"
         inf "nginx: ${ver:-installed}, ${st}"
         local refs; refs="$(fpm_refs /etc/nginx)"
-        [[ -z "$refs" ]] || inf "  → php-fpm via fastcgi_pass: $(echo $refs)"
+        [[ -z "$refs" ]] || inf "  → php-fpm via fastcgi_pass: ${refs//$'\n'/ }"
         [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
         if grep -rqE '^[[:space:]]*fastcgi_pass[[:space:]]+[^;/]+:[0-9]+' /etc/nginx 2>/dev/null; then
             caution "nginx has TCP fastcgi_pass upstream(s) - can't map those to a PHP version; check pool 'listen =' lines"
@@ -1519,7 +1542,7 @@ check_web() {
         bin="$(command -v "$name" 2>/dev/null || true)"; [[ -n "$bin" ]] || continue
         any=1; st="$(svc_state "$name")"
         local refs; refs="$(fpm_refs "/etc/${name}")"
-        inf "${name}: ${st}${refs:+ → php-fpm $(echo $refs)}"
+        inf "${name}: ${st}${refs:+ → php-fpm ${refs//$'\n'/ }}"
         [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
     done
 
@@ -1543,7 +1566,7 @@ check_system() {
     section "4/4  System"
     if [[ $EUID -ne 0 ]]; then
         if [[ $CMD == check ]]; then caution "Not root - some results may be incomplete"
-        else hard "Must run as root (sudo $SELF $CMD)"; fi
+        else hard "Must run as root: sudo ${SELF_CMD}"; fi
     else
         ok "Running as root"
     fi
@@ -1691,6 +1714,34 @@ if [[ "$CMD" == apply ]]; then
 fi
 [[ ${#FAILED[@]} -eq 0 ]] || exit 1
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "apply enforce complain cleanup remove *" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

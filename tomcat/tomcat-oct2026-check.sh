@@ -67,15 +67,17 @@
 # output and its configuration (secrets are redacted inside the container before anything is
 # copied) into a private temporary directory, and this script then runs once per container, in
 # isolation, against that copy. Paths shown as .../docker_NAME/... are inside the container NAME.
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="tomcat-oct2026-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/tomcat}"
 
@@ -91,6 +93,27 @@ bad()     { echo -e "  ${RED}CRIT${NC}  $*"; }
 caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
+}
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
+}
 
 # Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
 # sort -V. A pre-release of the boundary itself (6.3.0-rc2 against 6.3.0) is below it, as in
@@ -103,7 +126,6 @@ ver_lt() {
     [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
 }
 ver_ge() { ! ver_lt "$1" "$2"; }
-is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
 # distro_mentions FILE CVE...
 # Distributions often backport a fix without changing the upstream version
@@ -493,7 +515,7 @@ tm_restart() {
 }
 
 cmd_mitigate() {
-    local ajp=0 http2=0 root ver f n t1 rc=0 changed=0 skipped=0 line did_any=0 sk
+    local ajp=0 http2=0 root ver f n t1 rc=0 changed=0 skipped=0 line sk
     local -a roots=() posroots=()
     TM_DRY=0; TM_RESTART=0
     while [[ $# -gt 0 ]]; do
@@ -506,7 +528,7 @@ cmd_mitigate() {
     done
     local defaulted=0
     if [[ $ajp -eq 0 && $http2 -eq 0 ]]; then http2=1; defaulted=1; fi
-    [[ $TM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    [[ $TM_DRY -eq 1 ]] || need_root "mitigate changes the host"
     have xmllint || have python3 || die "need xmllint or python3 to check that server.xml is still well-formed afterwards: refusing to edit without it"
     if [[ ${#posroots[@]} -gt 0 ]]; then roots=("${posroots[@]}")
     else while IFS= read -r root; do [[ -n "$root" ]] && roots+=("$root"); done < <(discover_roots); fi
@@ -545,7 +567,7 @@ cmd_mitigate() {
             else
                 if ! tm_backup "$f"; then bad "${f}: could not back it up, left alone"; rm -f "$t1"; rc=1; continue; fi
                 cat "$t1" >"$f" || { rc=1; rm -f "$t1"; continue; }
-                if tm_xml_ok "$f"; then ok "${f}: commented out the connector element(s); the file is still well-formed"; changed=1; did_any=1
+                if tm_xml_ok "$f"; then ok "${f}: commented out the connector element(s); the file is still well-formed"; changed=1
                 else
                     bad "${f}: the result is NOT well-formed XML: restoring the original now"
                     cat "$(grep -F "conf|${f}|" "$TM_MANIFEST" | head -n1 | sed 's/.*|//')" >"$f"; rc=1
@@ -576,7 +598,7 @@ cmd_rollback() {
     done
     TM_MANIFEST="${STATE_DIR}/manifest.txt"
     [[ -s "$TM_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
-    [[ $TM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    [[ $TM_DRY -eq 1 ]] || need_root "rollback changes the host"
     step "Rolling back"
     while IFS= read -r line; do
         [[ "$line" == conf\|* ]] || continue
@@ -605,6 +627,33 @@ main() {
         *) die "Unknown command: ${CMD} (check|mitigate|rollback|version)" ;;
     esac
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "mitigate rollback" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Sonnet 5.5

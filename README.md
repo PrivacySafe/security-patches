@@ -15,7 +15,9 @@ Security mitigations and auditing tools shared for the public good.
 
 This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. We publish these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
-**59 scripts addressing 137 CVEs across 68 software projects and 10 programming languages, plus 5 other global security incidents.**
+**63 scripts addressing 138 CVEs across 69 software projects and 10 programming languages, plus 6 other global security incidents.**
+
+**Documentation:** open [`docs/index.html`](docs/index.html) in a browser for the offline site (every tool, a CVE index, a glossary and the manual pages in HTML), or read it online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/). The packages also install a manual page for every tool (`man psf-<tool>`) and an info manual.
 
 > 💚 If this work is helpful, please consider [supporting PrivacySafe Foundation](https://privacysafe.foundation), a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, and public-interest privacy and security research.
 
@@ -36,6 +38,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [Ruby and GitLab Regexp](ruby/README.md#ruby-and-gitlab-regexp-check) | Ruby runtimes, Ruby apps and GitLab on GNU/Linux | CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264 | Read-only check and audit |
 | [libheif HEIF/AVIF Decoder](heif/README.md#libheif-heifavif-decoder-check) | libheif, ImageMagick and Discourse on GNU/Linux | [writeup](https://www.hacktron.ai/blog/hacking-openai); DSA-6417-1 | Check, audit and ImageMagick coder mitigation |
 | [eMudhra CA Compromise](pki/README.md#emudhra-intermediate-ca-compromise-mitigation) | System CA store on Debian/Ubuntu/Trisquel and derivatives | [disclosure](https://emudhra.we-have-a-problem.com/); Go: CVE-2026-111943 | Mitigation |
+| [eMudhra CA Compromise on macOS](pki/README.md#emudhra-on-macos) | macOS system CA bundle `/etc/ssl/cert.pem` and Homebrew `ca-certificates` | [disclosure](https://emudhra.we-have-a-problem.com/#macos-curl); [Apple](https://support.apple.com/en-us/149555) | Check and mitigation |
 | [curl HTTP/2 upload](curl/README.md#curl-http2-upload-use-after-free-check) | curl and libcurl on GNU/Linux | CVE-2026-92392 | Read-only check and audit |
 | [openapi-typescript-codegen](openapi/README.md#openapi-typescript-codegen-code-injection-check) | Projects, CI jobs and generated TypeScript clients on GNU/Linux | CVE-2026-108551 | Read-only check and generated-code scan |
 | [Nextcloud Collabora Built-in CODE](nextcloud/README.md#nextcloud-collabora-built-in-code-command-injection) | Nextcloud with the richdocumentscode app on GNU/Linux | CVE-2026-110447 | Mitigation, check and hunt |
@@ -43,9 +46,10 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [LiteLLM supply-chain compromise](litellm/README.md#litellm-11070-supply-chain-compromise) | litellm in Python environments and containers on GNU/Linux | [incident](https://github.com/BerriAI/litellm/issues/47826) (litellm 1.107.0, no CVE) | Detect, hunt and contain |
 | [Plex Media Server Plex2Shell](plex/README.md#plex-media-server-plex2shell-rce-chain) | Plex Media Server on GNU/Linux | CVE-2026-96651, CVE-2026-96652, CVE-2026-96654, CVE-2026-96655, CVE-2026-96656 | Read-only check and hunt |
 | [GhostAction developer-machine stealer](ghostaction/README.md#ghostaction-developer-machine-stealer) | Git repositories and developer machines on GNU/Linux | [incident](https://opensourcemalware.com/blog/ghostaction-attack-escalates) (campaign, no CVE) | Scan, hunt and contain |
-| [Claude Code extension SSH backdoor](claude-code-vsx/README.md#claude-code-extension-ssh-backdoor) | Claude Code extension 2.1.312 and 2.1.313 served by the Cursor marketplace (29 October 2026); developer machines on GNU/Linux and macOS (Cursor's notice publishes scripts for macOS and Windows only) | [incident](https://cursor.com/blog/claude-code-extension-security-notice) (no CVE) | Check, hunt, clean and block |
+| [Claude Code extension SSH backdoor](claude-code-vsx/README.md#claude-code-extension-ssh-backdoor) | Claude Code extension 2.1.312 and 2.1.313 served by the Cursor marketplace (29 October 2026); developer machines on GNU/Linux, macOS and Windows (Cursor's notice publishes scripts for macOS and Windows only; the Windows script here is a read-only check) | [incident](https://cursor.com/blog/claude-code-extension-security-notice) (no CVE) | Check, hunt, clean and block (Windows: check) |
 | [vsftpd FTPS data channel hijack](vsftpd/README.md#vsftpd-ftps-data-channel-hijack) | vsftpd 3.0.5 and older with FTPS enabled on a standalone listener, GNU/Linux | CVE-2026-119568, CVE-2025-14242 (Red Hat family packages) | Check, mitigation, optional hardening and rollback |
 | [WordPress XSS2Shell](wordpress/README.md#wordpress-xss2shell-check) | WordPress Core sites and their web server logs on GNU/Linux | CVE-2026-64638 | Read-only check, audit and hunt |
+| [BTCPay Server hot wallet thefts](btcpayserver/README.md#btcpay-server-check) | BTCPay Server 2.4.1 and earlier, on a Docker host or any server you can reach by address; GNU/Linux | No CVE (1 November 2026) | Check, recovery plan, evidence archive, hunt, hardening review and a Tor option; `--strict` and `--json` |
 | [WordPress plugins October 2026](wordpress/README.md#wordpress-plugins-october-2026-check) | LiteSpeed Cache, Rank Math PRO, OttoKit, SureCart, LatePoint, Amelia, Profile Builder and Bricksforge (exploited upload to code execution) in WordPress installs on GNU/Linux | CVE-2026-113500, CVE-2026-111862, CVE-2026-110372, CVE-2026-112241, CVE-2026-110653, CVE-2026-112327, CVE-2026-112242, CVE-2026-85097 | Check, hunt, plugin deactivation (`mitigate`) and rollback |
 | [Apache Tomcat October 2026](tomcat/README.md#apache-tomcat-october-2026-check) | Apache Tomcat 9.0, 10.1 and 11.0 on GNU/Linux | CVE-2026-103119, CVE-2026-101356 | Check, mitigation (`mitigate --ajp\|--http2`) and rollback |
 | [Laravel TokenGuard](laravel/README.md#laravel-tokenguard-check) | Laravel apps on GNU/Linux | CVE-2026-114509 | Read-only check and protective middleware |
@@ -78,6 +82,8 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [Zammad session hijack and privilege escalation](zammad/README.md#zammad-check) | Zammad 6.3.0 to 6.5.4: session hijack to code execution as the zammad user, chained to root, exploited in the wild | CVE-2026-102489, CVE-2026-102490 | Read-only check and hunt |
 | [Linux kernel ebtables SNAT](linux-kernel/README.md#linux-kernel-check) | The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild | CVE-2026-53266 | Read-only check |
 | [Linux kernel local root quartet](linux-kernel/README.md#linux-kernel-lpe-check) | The Linux kernel on every distribution: four local privilege escalations with public exploits (IPsec AH6, TUN/TAP, PPPoE, SCTP), each fixed at a different release per branch | CVE-2026-80844, CVE-2026-81000, CVE-2026-68121, CVE-2026-74469 | Check, opt-in protective measures (`mitigate`) and rollback |
+| [Linux kernel IPv4 TCP use-after-free](linux-kernel/README.md#linux-kernel-ireq-opt-check) | The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener | CVE-2026-98432 | Check, hunt and reversible reductions |
+| [Linux kernel module blocker](linux-kernel/README.md#linux-kernel-module-block) | The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback | CVE-2026-80844, CVE-2026-81000, CVE-2026-68121, CVE-2026-74469, CVE-2026-53266, CVE-2026-98432 | List, check and reversible blocks |
 | [nginx-ui restricted-directive bypass](nginx-ui/README.md#nginx-ui-check) | nginx-ui below 2.4.1: a logged-in user can bypass the restricted-directive check, which leads to code execution where nginx loads njs, Perl or Lua | CVE-2026-84316, CVE-2026-84317, CVE-2026-84318, CVE-2026-84319 | Read-only check and hunt |
 | [Joomla core, September 2026 release](joomla/README.md#joomla-check) | Joomla 4.0.0 to 5.4.8 and 6.0.0 to 6.1.3: 16 core fixes, two rated High (directory deletion, SSRF) | CVE-2026-90915, CVE-2026-92222, CVE-2026-92227 and others | Check, administrator path restriction (`mitigate --allow`) and rollback |
 | [OpenSSL DTLS heap disclosure](openssl/README.md#openssl-check) | OpenSSL 4.0, 3.6, 3.5, 3.4, 3.0, 1.1.1 and 1.0.2 before their fixed releases: a High flaw reachable through DTLS | CVE-2026-84782 | Read-only check |
@@ -87,22 +93,26 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [nginx-ui directive injection](nginx-ui/README.md#nginx-ui-check) | nginx-ui below 2.4.1: authenticated directive injection leading to RCE when nginx loads njs/Perl/Lua | CVE-2026-84316, CVE-2026-84317, CVE-2026-84318 | Read-only check |
 | [wp2shell, WordPress core RCE](wordpress/README.md#wp2shell-check) | WordPress core 6.8.0 to 6.8.5, 6.9.0 to 6.9.4 and 7.0.0 to 7.0.1: unauthenticated remote code execution, exploited in the wild | CVE-2026-63030, CVE-2026-60137 | Check, hunt, batch-route block (`mitigate`) and rollback |
 
+### Red Hat advisories
+
+Where Red Hat has published an advisory for a CVE a tool covers, the tool's README has a **Red Hat advisories** section with the advisory, the fixed package release and the RHEL stream, and [REDHAT-ADVISORIES.md](REDHAT-ADVISORIES.md) lists them all by tool and by CVE. A Red Hat build is judged by its RPM release, not by the upstream version number. The packages install a checker for this, `rhsa.py` (`man psf-rhsa`): `find` lists the advisories for a CVE and `verify --rpm` compares every installed package with Red Hat's fix, within one stream and one version line, and says "check by hand" when it cannot judge. See [`packaging/rhsa/`](packaging/rhsa/README.md).
+
 ## 📥 Install from a package
 
-Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.10.30-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
+Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.02-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
 
 | File | For |
 |---|---|
-| `psf-security-patches_26.10.30-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
-| `psf-security-patches-26.10.30-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
-| `psf-security-patches-26.10.30-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
+| `psf-security-patches_26.11.02-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
+| `psf-security-patches-26.11.02-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
+| `psf-security-patches-26.11.02-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
 
 Check the files against the release's `SHA256SUMS-<version>.txt` before installing, then:
 
 ```bash
-sha256sum -c SHA256SUMS-26.10.30-1.0.0.txt
-sudo apt install ./psf-security-patches_26.10.30-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.10.30-1.0.0.noarch.rpm    # RPM family
+sha256sum -c SHA256SUMS-26.11.02-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.02-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.02-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/php/php2shell-mitigate.sh check             # read only
 ```
 
@@ -111,12 +121,13 @@ Each file also has a detached GPG signature, `FILE.asc`. Import the release key 
 ### Where things go
 
 - **`/opt/psf-security-patches/`** holds the whole tree: each tool in its own folder (`php/`, `nginx/`, `curl/` and so on) with its README, plus the governance documents and a `VERSION` file. Run the scripts from there.
+- **`/opt/psf-security-patches/rhsa/rhsa.py`** is the Red Hat advisory checker, with its data and its README. On a Red Hat family host, `/opt/psf-security-patches/rhsa/rhsa.py verify --rpm` checks every installed package against Red Hat's published fixes, and `man psf-rhsa` documents it. It is a Python 3 program; the index of what it knows is [REDHAT-ADVISORIES.md](REDHAT-ADVISORIES.md).
 - **`/usr/lib/systemd/system/php2shell-watch.service`** is the live watcher's unit, pointed at the `/opt` path. It is installed but not enabled; see [Watching live](php/README.md#watching-live).
-- **Manual pages and an info manual:** `man psf-security-patches` is the overview, and every tool has its own page named after its script, such as `man psf-haproxy-check`. `info psf-security-patches` has the same material as one manual. The pages are generated from each script's own `--help` text, so they always match the tool, and the sources are in [`man/`](man/).
-- **Documentation website:** it is online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/), and the packages install an offline copy: open `/usr/share/doc/psf-security-patches/html/index.html` in a browser (on RPM systems the folder is `psf-security-patches-<version>`). It starts with the newest vulnerabilities, groups the tools by kind of software, has a CVE index, a page on how the tools work, a glossary, one page per tool and per manual page, and a search that works offline. The offline copy loads nothing from other sites. The source is the [`site/`](site/) folder of the repository, built by `packaging/gen-site.py`.
+- **Manual pages and an info manual:** `man psf-security-patches` is the overview, and every tool has its own page named after its script, such as `man psf-haproxy-check`. `info psf-security-patches` has the same material as one manual. The pages are built from each script's own `--help` text when a release is built, so they always match the tool.
+- **Documentation website:** it is online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/), and the packages install an offline copy: open `/usr/share/doc/psf-security-patches/html/index.html` in a browser (on RPM systems the folder is `psf-security-patches-<version>`). It starts with the newest vulnerabilities, groups the tools by kind of software, has a CVE index, a page on how the tools work, a glossary, one page per tool and per manual page, and a search that works offline. The offline copy loads nothing from other sites. It is built from the READMEs in this repository, so the READMEs are the documentation.
 - **License files:** `LICENSE` and `NOTICE` come with the package (`/usr/share/doc/psf-security-patches/` on Debian, `/usr/share/licenses/` on RPM systems), and the `.deb` carries a `copyright` file. Everything is CC0 1.0 Universal.
 
-Installing runs nothing: there are no install or removal scripts. The only dependencies are bash 4.0 or newer and coreutils.
+Installing runs nothing: there are no install or removal scripts. The only dependencies are bash 4.0 or newer and coreutils. The Red Hat advisory checker also needs Python 3.8 or newer, which the packages recommend and do not require, so every other tool installs and runs without it.
 
 ### Upgrading and removing
 
@@ -131,9 +142,15 @@ Removing the package deletes only the files it installed. It does not undo what 
 
 Each tool still targets the systems named in its own README: for example the PHP2Shell AppArmor mitigation is for Debian-family systems, and the cPanel variant is for EasyApache 4. See [`packaging/`](packaging/README.md) for how releases are built and verified.
 
+**Root and sudo.** Commands that change a machine (`mitigate`, `rollback` and the tool-specific ones) need root. Run them from a named admin account with `sudo`, for example `sudo ./haproxy-check.sh mitigate`, not from a root login: sudo records who made the change. A tool that is started without root says so and prints the exact `sudo` command to run, and a tool started from the root account while sudo is available prints a one-line note and carries on (`PSF_NO_ROOT_NOTE=1` hides it). A hunt run without root sees only what that account can read, and says so instead of calling the result clean. The Claude Code extension tool's `update`, `clean` and `keys` work per user: run them as the account that uses the editor, not with sudo.
+
 ## 🗓️ Updates
 
 See the [changelog](CHANGELOG.md) for new tools and changes, newest first.
+
+## 🔒 One change at a time
+
+A tool that changes the host (`mitigate`, `rollback`, `harden`, `block`, `apply` and the like) takes a lock first, so two runs started together, from a script or from two terminals, cannot overwrite each other's backups and manifests. The second run waits `PSF_LOCK_WAIT` seconds (default 30) and then stops with exit 2 and says why. The lock file is `STATE_DIR/.lock`, or `/var/lib/psf-security-patches/<tool>/.lock`. A dry run, `--help` and `version` never wait. The lock is held by a waiting `flock` process, not by the tool, so a service the tool starts does not keep it. Where `flock` is missing (macOS) nothing is locked. A tool whose default command changes the host (`php2shell-mitigate.sh`, `emudhra-mitigate.sh`) locks when it is run with no command, too. The two PHP2Shell tools and `emudhra-mitigate.sh` exit 1 instead of 2, as they do for every fatal error.
 
 ---
 

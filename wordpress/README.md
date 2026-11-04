@@ -193,6 +193,14 @@ Exit codes: `0` nothing affected or nothing found, `1` affected or to review (ch
 
 A pre-release of a fixed release (`7.9.2-rc1` against a fix in 7.9.2) counts as below it, as in semantic versioning, so it is never reported as the release.
 
+`mitigate` and `rollback` change the plugins on the host. Run them with `sudo` from an admin account, or as the site's own user (set `WPM_ALLOW_NONROOT=1`), so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./wordpress-plugins-oct2026-check.sh mitigate --all-affected --dry-run
+sudo ./wordpress-plugins-oct2026-check.sh mitigate --all-affected
+sudo ./wordpress-plugins-oct2026-check.sh rollback
+```
+
 ### Reading the Rank Math result
 
 - 3.0.123 whose files changed inside the window: likely the tainted package.
@@ -307,6 +315,14 @@ By default it searches `/var/www /srv /home /opt /usr/share/wordpress /usr/share
 | `version` | Prints the script version |
 
 Env: `STATE_DIR` (default `/var/lib/psf-security-patches/wp2shell`) holds the backups and manifest. `HUNT_SINCE` (`YYYY-MM-DD`, default `2026-07-17`) sets the date for file changes. `WP2S_LOGS` names web server logs (space separated paths or globs) when they are not in the usual places.
+
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./wordpress-wp2shell-check.sh mitigate --dry-run
+sudo ./wordpress-wp2shell-check.sh mitigate
+sudo ./wordpress-wp2shell-check.sh rollback
+```
 
 ## How the check decides
 

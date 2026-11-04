@@ -66,12 +66,12 @@
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="pulsar-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -97,40 +97,8 @@ ver_lt() {
     if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
     [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
 }
-ver_ge() { ! ver_lt "$1" "$2"; }
 is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
-# distro_mentions FILE CVE...
-# Distributions often backport a fix without changing the upstream version
-# string. This looks at the changelog of the package that owns FILE.
-#   return 0: changelog mentions one of the CVE ids (DISTRO_HIT, DISTRO_PKG set)
-#   return 1: FILE is package-managed but the changelog does not mention them
-#   return 2: FILE is not owned by a dpkg or rpm package
-DISTRO_PKG=""; DISTRO_HIT=""
-distro_mentions() {
-    local f real pkg="" cl="" c id
-    f="$1"; shift
-    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
-    if have dpkg; then
-        pkg="$(dpkg -S "$real" 2>/dev/null | head -n1 | cut -d: -f1)"
-        if [[ -n "$pkg" ]]; then
-            for c in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/${pkg}/changelog.gz"; do
-                [[ -r "$c" ]] && cl+="$(zcat "$c" 2>/dev/null)"
-            done
-        fi
-    fi
-    if [[ -z "$pkg" ]] && have rpm; then
-        pkg="$(rpm -qf "$real" 2>/dev/null | head -n1)"
-        [[ "$pkg" == *"not owned"* ]] && pkg=""
-        [[ -n "$pkg" ]] && cl="$(rpm -q --changelog "$pkg" 2>/dev/null)"
-    fi
-    [[ -n "$pkg" ]] || return 2
-    DISTRO_PKG="$pkg"
-    for id in "$@"; do
-        if grep -qF "$id" <<<"$cl"; then DISTRO_HIT="$id"; return 0; fi
-    done
-    return 1
-}
 
 # Print the help text: everything between the first two ===== lines of this file.
 print_help() { awk 'f && /^# =+$/ {exit} f {sub(/^# ?/,""); print} /^# =+$/ {f=1}' "$SELF"; }
@@ -285,7 +253,7 @@ cmd_check() {
 
 cmd_check_host() {
     local -a dirs=() existing=()
-    local rc=0 d f base ver root st conf any_conf ex nbrokers=0 nmgr=0 l
+    local rc=0 d f base ver root st conf any_conf ex nbrokers=0 nmgr=0 l pm_img
     if [[ $# -gt 0 ]]; then dirs=("$@"); else dirs=(/opt /srv /usr/local /var/lib /etc /home /root); fi
     for d in "${dirs[@]}"; do [[ -d "$d" ]] && existing+=("$d"); done
     step "Looking for Apache Pulsar brokers"
@@ -365,12 +333,17 @@ cmd_check_host() {
         inf "listener on a Pulsar Manager port: ${l}"
         [[ "$l" == *"reachable from the network"* ]] && { warn "a listener on 7750 or 9527 is reachable from the network: if that is Pulsar Manager, anyone who can reach it can take it over"; }
     done < <(listeners_on 7750 9527)
-    if have docker && timeout 5 docker ps -a --format '{{.Image}}' >/tmp/.psf_pm_img 2>/dev/null; then
-        while IFS= read -r l; do
-            [[ -n "$l" ]] || continue
-            nmgr=$((nmgr+1)); bad "a container uses a Pulsar Manager image: ${l}"; rc=1
-        done < <(grep -iE 'pulsar-manager' /tmp/.psf_pm_img)
-        rm -f /tmp/.psf_pm_img
+    if have docker; then
+        pm_img="$(mktemp "${TMPDIR:-/tmp}/psf-pm.XXXXXX")" || pm_img=""
+        if [[ -n "$pm_img" ]] && timeout 5 docker ps -a --format '{{.Image}}' >"$pm_img" 2>/dev/null; then
+            while IFS= read -r l; do
+                [[ -n "$l" ]] || continue
+                nmgr=$((nmgr+1)); bad "a container uses a Pulsar Manager image: ${l}"; rc=1
+            done < <(grep -iE 'pulsar-manager' "$pm_img")
+        else
+            inf "docker is installed but this account cannot use it, so container images were not checked (run it with sudo, or join the docker group)"
+        fi
+        [[ -n "$pm_img" ]] && rm -f "$pm_img"
     fi
     [[ $nmgr -eq 0 ]] && ok "no Pulsar Manager found (jars, running processes, container images)"
 

@@ -64,6 +64,14 @@ Exit codes: `0` nothing affected or nothing found, `1` an affected or unreadable
 
 It reads the standard WordPress theme header (`style.css`, `Version:`) and the Joomla template manifest (`templateDetails.xml`, `<version>`). If it cannot read a version it says so and exits `1`. The YOOtheme dashboard also shows the version.
 
+Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
+
+```bash
+sudo ./yootheme-check.sh mitigate --dry-run
+sudo ./yootheme-check.sh mitigate
+sudo ./yootheme-check.sh rollback
+```
+
 ## What the hunt looks for
 
 | Where | Indicator |

@@ -87,15 +87,17 @@
 #
 # Env: HUNT_SINCE (YYYY-MM-DD, default 2026-07-17) for file changes;
 #      WP2S_LOGS (space separated paths or globs) to name web server logs.
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="wordpress-wp2shell-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/wp2shell}"
 
@@ -106,56 +108,36 @@ info()    { echo -e "${GREEN}[+]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 step()    { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
 die()     { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 2; }
+# Temporary files are registered here and removed when the script ends, however it ends.
+PSF_TMP=()
+trap '[[ ${#PSF_TMP[@]} -eq 0 ]] || rm -f "${PSF_TMP[@]}"' EXIT
 ok()      { echo -e "  ${GREEN}check${NC} $*"; }
 bad()     { echo -e "  ${RED}CRIT${NC}  $*"; }
 caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
-
-# Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
-# sort -V. A pre-release of the boundary itself (6.3.0-rc2 against 6.3.0) is below it, as in
-# semantic versioning, so a pre-release of a fixed release is never reported as the release.
-norm_ver() { local v="${1#v}"; v="${v%%[-+]*}"; echo "$v"; }
-ver_lt() {
-    local a b
-    a="$(norm_ver "$1")"; b="$(norm_ver "$2")"
-    if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
-    [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
 }
-ver_ge() { ! ver_lt "$1" "$2"; }
-is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
-
-# distro_mentions FILE CVE...
-# Distributions often backport a fix without changing the upstream version
-# string. This looks at the changelog of the package that owns FILE.
-#   return 0: changelog mentions one of the CVE ids (DISTRO_HIT, DISTRO_PKG set)
-#   return 1: FILE is package-managed but the changelog does not mention them
-#   return 2: FILE is not owned by a dpkg or rpm package
-DISTRO_PKG=""; DISTRO_HIT=""
-distro_mentions() {
-    local f real pkg="" cl="" c id
-    f="$1"; shift
-    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
-    if have dpkg; then
-        pkg="$(dpkg -S "$real" 2>/dev/null | head -n1 | cut -d: -f1)"
-        if [[ -n "$pkg" ]]; then
-            for c in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/${pkg}/changelog.gz"; do
-                [[ -r "$c" ]] && cl+="$(zcat "$c" 2>/dev/null)"
-            done
-        fi
-    fi
-    if [[ -z "$pkg" ]] && have rpm; then
-        pkg="$(rpm -qf "$real" 2>/dev/null | head -n1)"
-        [[ "$pkg" == *"not owned"* ]] && pkg=""
-        [[ -n "$pkg" ]] && cl="$(rpm -q --changelog "$pkg" 2>/dev/null)"
-    fi
-    [[ -n "$pkg" ]] || return 2
-    DISTRO_PKG="$pkg"
-    for id in "$@"; do
-        if grep -qF "$id" <<<"$cl"; then DISTRO_HIT="$id"; return 0; fi
-    done
-    return 1
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
 }
+
 
 # Print the help text: everything between the first two ===== lines of this file.
 print_help() { awk 'f && /^# =+$/ {exit} f {sub(/^# ?/,""); print} /^# =+$/ {f=1}' "$SELF"; }
@@ -221,7 +203,7 @@ scan_batch_block() {
 # ---------- check ------------------------------------------------------------
 cmd_check() {
     local -a dirs=() existing=() roots=()
-    local rc=0 found=0 d f root ver st sqli batch eff
+    local rc=0 found=0 d f root ver st sqli batch
     if [[ $# -gt 0 ]]; then dirs=("$@"); else dirs=(/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress); fi
     for d in "${dirs[@]}"; do [[ -d "$d" ]] && existing+=("$d"); done
     step "Looking for WordPress"
@@ -300,18 +282,19 @@ cmd_check() {
 
 # ---------- hunt -------------------------------------------------------------
 cmd_hunt() {
+    local unread=0
     local -a dirs=() existing=() logs=() roots=()
-    local rc=0 d f root since="${HUNT_SINCE:-2026-07-17}" nlog=0 total=0 sus=0 n m g lead=0
+    local rc=0 d f root since="${HUNT_SINCE:-2026-07-17}" nlog=0 total=0 sus=0 n m g
     if [[ $# -gt 0 ]]; then dirs=("$@"); else dirs=(/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress); fi
     for d in "${dirs[@]}"; do [[ -d "$d" ]] && existing+=("$d"); done
     step "Hunting for wp2shell exploitation (changes since ${since})"
     # web server logs
     if [[ -n "${WP2S_LOGS:-}" ]]; then
         # shellcheck disable=SC2206
-        for g in $WP2S_LOGS; do for f in $g; do [[ -f "$f" ]] && logs+=("$f"); done; done
+        for g in $WP2S_LOGS; do for f in $g; do if [[ -f "$f" ]]; then if [[ -r "$f" ]]; then logs+=("$f"); else unread=$((unread+1)); fi; fi; done; done
     else
         for g in /var/log/nginx/access.log* /var/log/nginx/*access*.log* /var/log/apache2/access.log* /var/log/apache2/*access*.log* /var/log/httpd/access_log* /var/log/httpd/*access*log* /var/log/angie/access.log*; do
-            for f in $g; do [[ -f "$f" ]] && logs+=("$f"); done
+            for f in $g; do if [[ -f "$f" ]]; then if [[ -r "$f" ]]; then logs+=("$f"); else unread=$((unread+1)); fi; fi; done
         done
     fi
     # remove duplicates
@@ -369,7 +352,9 @@ cmd_hunt() {
         fi
     done
     step "Verdict"
-    if [[ $rc -eq 0 ]]; then
+    if [[ $rc -eq 0 && $unread -gt 0 ]]; then
+        warn "No strong lead in the logs that could be read, but ${unread} log file(s) could not be read by this user, so this is not a clean result. Run it with sudo: sudo ${SELF_CMD}"; rc=2
+    elif [[ $rc -eq 0 ]]; then
         info "No strong lead found: none of the published indicators were found."
     else
         warn "Strong leads found. Treat the site as possibly compromised: update core, then in the database look for administrator accounts you did not create (wp user list --role=administrator) and for unexpected customize_changeset posts, review wp-content/plugins and mu-plugins, and rotate the database password, the salts in wp-config.php and every administrator password."
@@ -466,6 +451,7 @@ w2_nginx_apply() {
         echo "  would write ${ss}:"; printf '%s\n' "$server_text" | sed 's/^/      /'
     fi
     tmp="$(mktemp "${TMPDIR:-/tmp}/psfng.XXXXXX")" || return 1
+    PSF_TMP+=("$tmp")
     for f in "${files[@]}"; do
         if [[ -n "$http_text" ]]; then
             already=0; grep -qF "$sh" "$f" && already=1
@@ -559,7 +545,7 @@ cmd_mitigate() {
         esac
         shift
     done
-    [[ $W2_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    [[ $W2_DRY -eq 1 ]] || need_root "mitigate changes the host"
     [[ ${#dirs[@]} -gt 0 ]] || dirs=(/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress)
     step "Is there an exposed WordPress?"
     if cmd_check "${dirs[@]}" >/dev/null 2>&1; then
@@ -602,7 +588,7 @@ cmd_rollback() {
     done
     W2_MANIFEST="${STATE_DIR}/manifest.txt"
     [[ -s "$W2_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
-    [[ $W2_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    [[ $W2_DRY -eq 1 ]] || need_root "rollback changes the host"
     step "Rolling back"
     w2_rollback_core || rc=1
     if [[ $W2_DRY -eq 0 && $rc -eq 0 ]]; then
@@ -627,6 +613,33 @@ main() {
         *) die "Unknown command: ${CMD} (check|hunt|mitigate|rollback|version)" ;;
     esac
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "mitigate rollback" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Sonnet 5.5

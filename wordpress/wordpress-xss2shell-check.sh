@@ -56,7 +56,7 @@
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 CVE="CVE-2026-64638"
@@ -68,9 +68,10 @@ WP_ROOTS="${WP_ROOTS:-/var/www /srv/www /srv/www/html /opt/wordpress}"
 HUNT_SINCE="${HUNT_SINCE:-2026-08-07}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 CURL_OPTS="${CURL_OPTS:-}"
+read -ra CURL_ARR <<<"$CURL_OPTS"   # split once, without globbing; used as "${CURL_ARR[@]}"
 SCRIPT_NAME="wordpress-xss2shell-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 # one private temp file (mode 0600, from mktemp) for HTTP response bodies; removed on every exit path
 P2S_TMP=""
@@ -111,13 +112,13 @@ detect_wp_version() {   # <base_url> -> version or empty
     # shellcheck disable=SC2086
     local resp; resp="$(curl -sSL --max-time 15 --max-redirs 3 \
         -A "Mozilla/5.0 XSS2Shell-Check/${SCRIPT_VERSION}" \
-        ${CURL_OPTS} "${url}/" 2>/dev/null || true)"
+        "${CURL_ARR[@]+"${CURL_ARR[@]}"}" "${url}/" 2>/dev/null || true)"
     local ver; ver="$(extract_version "$resp")"
     [[ -n "$ver" ]] && { echo "$ver"; return; }
     # Fallback: OPML endpoint often exposes the version
     local opml; opml="$(curl -sSL --max-time 10 --max-redirs 2 \
         -A "Mozilla/5.0 XSS2Shell-Check/${SCRIPT_VERSION}" \
-        ${CURL_OPTS} "${url}/wp-links-opml.php" 2>/dev/null || true)"
+        "${CURL_ARR[@]+"${CURL_ARR[@]}"}" "${url}/wp-links-opml.php" 2>/dev/null || true)"
     grep -oE 'generator="WordPress/[0-9]+\.[0-9.]*"' <<<"$opml" \
         | grep -oE '[0-9]+\.[0-9.]+' | head -1
 }
@@ -137,7 +138,7 @@ probe_reflection() {   # <base_url> -> 0 if reflected, 1 if clean, 2 if error
         -X POST \
         --data-urlencode "log=${PROBE}" \
         -d "pwd=x&wp-submit=Log+In&redirect_to=%2Fwp-admin%2F&testcookie=1" \
-        ${CURL_OPTS} "${url}/wp-login.php" 2>/dev/null)" || return 2
+        "${CURL_ARR[@]+"${CURL_ARR[@]}"}" "${url}/wp-login.php" 2>/dev/null)" || return 2
     [[ -n "$resp" ]] || return 2
     # All three must match (same logic as the verified Nuclei template)
     if grep -qF 'id="ajaxurl"' <<<"$resp" && \
@@ -226,7 +227,7 @@ cmd_audit() {
     # an unreachable target cannot be audited: that is an error (exit 2), never a clean result
     local reach
     # shellcheck disable=SC2086
-    reach="$(curl -sS --max-time 10 --max-redirs 5 -L ${CURL_OPTS} -o /dev/null -w '%{http_code}' "${url}/" 2>/dev/null || true)"
+    reach="$(curl -sS --max-time 10 --max-redirs 5 -L "${CURL_ARR[@]+"${CURL_ARR[@]}"}" -o /dev/null -w '%{http_code}' "${url}/" 2>/dev/null || true)"
     [[ -n "$reach" && "$reach" != "000" ]] || die "${url} did not answer (no HTTP response): nothing was audited"
 
     local rc=0
@@ -264,7 +265,7 @@ cmd_audit() {
         local scode body
         scode="$(curl -sSL --max-time 10 --max-redirs 0 \
             -A "Mozilla/5.0 XSS2Shell-Check/${SCRIPT_VERSION}" \
-            ${CURL_OPTS} -o "${P2S_TMP}" -w '%{http_code}' \
+            "${CURL_ARR[@]+"${CURL_ARR[@]}"}" -o "${P2S_TMP}" -w '%{http_code}' \
             "${url}${path}" 2>/dev/null || echo "000")"
         body="$(head -c 512 "${P2S_TMP}" 2>/dev/null || true)"
         if [[ "$scode" == "200" ]]; then
@@ -283,7 +284,7 @@ cmd_audit() {
     local xrpc_code
     xrpc_code="$(curl -sSL --max-time 10 --max-redirs 0 \
         -A "Mozilla/5.0 XSS2Shell-Check/${SCRIPT_VERSION}" \
-        ${CURL_OPTS} -o "${P2S_TMP}" -w '%{http_code}' \
+        "${CURL_ARR[@]+"${CURL_ARR[@]}"}" -o "${P2S_TMP}" -w '%{http_code}' \
         "${url}/xmlrpc.php" 2>/dev/null || echo "000")"
     local xrpc_body; xrpc_body="$(head -c 256 "${P2S_TMP}" 2>/dev/null || true)"
     if [[ "$xrpc_code" == "405" ]] || \
@@ -295,7 +296,7 @@ cmd_audit() {
     # shellcheck disable=SC2086
     local raw_hdrs; raw_hdrs="$(curl -sSL --max-time 10 --max-redirs 3 \
         -A "Mozilla/5.0 XSS2Shell-Check/${SCRIPT_VERSION}" \
-        ${CURL_OPTS} -D - -o /dev/null "${url}/" 2>/dev/null || true)"
+        "${CURL_ARR[@]+"${CURL_ARR[@]}"}" -D - -o /dev/null "${url}/" 2>/dev/null || true)"
     for hdr in "${SECURITY_HDRS[@]}"; do
         if echo "$raw_hdrs" | grep -i "^${hdr}:" >/dev/null; then
             ok "header present: ${hdr}"
@@ -309,7 +310,7 @@ cmd_audit() {
     local rest_code rest_body
     rest_code="$(curl -sSL --max-time 10 --max-redirs 2 \
         -A "Mozilla/5.0 XSS2Shell-Check/${SCRIPT_VERSION}" \
-        ${CURL_OPTS} -o "${P2S_TMP}" -w '%{http_code}' \
+        "${CURL_ARR[@]+"${CURL_ARR[@]}"}" -o "${P2S_TMP}" -w '%{http_code}' \
         "${url}/wp-json/wp/v2/users" 2>/dev/null || echo "000")"
     rest_body="$(head -c 1024 "${P2S_TMP}" 2>/dev/null || true)"
     if [[ "$rest_code" == "200" ]] && echo "$rest_body" | grep -F '"slug"' >/dev/null; then
@@ -379,7 +380,7 @@ cmd_hunt() {
     fi
     inf "Checking ${#logfiles[@]} log file(s) and ${#plugin_dirs[@]} plugin directory(ies)"
 
-    local found=0 n
+    local n
 
     # 1: POST bursts to wp-login.php: the XSS stage sends crafted login forms
     n=0
@@ -388,7 +389,7 @@ cmd_hunt() {
               | awk '{s+=$1} END{print s+0}')"
     fi
     if [[ "${n:-0}" -gt 100 ]]; then
-        found=1; rc=1
+        rc=1
         warn "wp-login.php POST burst: ${n} requests -- possible XSS probe or brute-force"
         { grep -hE 'POST .*wp-login\.php' "${logfiles[@]}" 2>/dev/null || true; } \
             | tail -5 | sed 's/^/      /'
@@ -405,7 +406,7 @@ cmd_hunt() {
               | awk '{s+=$1} END{print s+0}')"
     fi
     if [[ "${n:-0}" -gt 0 ]]; then
-        found=1; rc=1
+        rc=1
         warn "authorize-application.php: ${n} request(s) -- not normally accessed directly"
         { grep -hE 'authorize-application\.php' "${logfiles[@]}" 2>/dev/null || true; } \
             | tail -5 | sed 's/^/      /'
@@ -420,7 +421,7 @@ cmd_hunt() {
                 "${logfiles[@]}" 2>/dev/null || true; } | awk '{s+=$1} END{print s+0}')"
     fi
     if [[ "${n:-0}" -gt 0 ]]; then
-        found=1; rc=1
+        rc=1
         warn "Plugin upload requests: ${n} -- review each; unexpected uploads indicate compromise"
         { grep -hE 'POST .*update\.php.*upload-plugin' "${logfiles[@]}" 2>/dev/null || true; } \
             | tail -5 | sed 's/^/      /'
@@ -435,7 +436,7 @@ cmd_hunt() {
                 "${logfiles[@]}" 2>/dev/null || true; } | awk '{s+=$1} END{print s+0}')"
     fi
     if [[ "${n:-0}" -gt 0 ]]; then
-        found=1; rc=1
+        rc=1
         warn "Direct plugin PHP access (200): ${n} -- review for webshell calls"
         { grep -hE '"GET .*wp-content/plugins/[^/]+/[^/]+\.php[^/]*" 200' \
                 "${logfiles[@]}" 2>/dev/null || true; } | tail -5 | sed 's/^/      /'
@@ -452,7 +453,7 @@ cmd_hunt() {
         if [[ -n "$new_php" ]]; then
             local flagged="$new_php"
             if [[ -n "$flagged" ]]; then
-                found=1; rc=1
+                rc=1
                 warn "PHP files modified/created in plugin directories since ${HUNT_SINCE}:"
                 echo "$flagged" | sed 's/^/      /'
                 inf "Review each. Webshell dropped via XSS2Shell chain has no marker, so any unexpected file is worth checking."
@@ -478,7 +479,7 @@ cmd_hunt() {
         n="$( { grep -hcE '(PHP Fatal|PHP Warning.*call_user_func|system\(|passthru\(|shell_exec\()' \
                 "${debuglogs[@]}" 2>/dev/null || true; } | awk '{s+=$1} END{print s+0}')"
         if [[ "${n:-0}" -gt 0 ]]; then
-            found=1; rc=1
+            rc=1
             warn "Suspicious entries in WordPress debug.log: ${n}"
             { grep -hE '(PHP Fatal|PHP Warning.*call_user_func|system\(|passthru\(|shell_exec\()' \
                 "${debuglogs[@]}" 2>/dev/null || true; } | tail -5 | sed 's/^/      /'

@@ -55,12 +55,12 @@
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="trafficserver-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -76,18 +76,6 @@ caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
 
-# Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
-# sort -V. A pre-release of the boundary itself (6.3.0-rc2 against 6.3.0) is below it, as in
-# semantic versioning, so a pre-release of a fixed release is never reported as the release.
-norm_ver() { local v="${1#v}"; v="${v%%[-+]*}"; echo "$v"; }
-ver_lt() {
-    local a b
-    a="$(norm_ver "$1")"; b="$(norm_ver "$2")"
-    if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
-    [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
-}
-ver_ge() { ! ver_lt "$1" "$2"; }
-is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
 # distro_mentions FILE CVE...
 # Distributions often backport a fix without changing the upstream version

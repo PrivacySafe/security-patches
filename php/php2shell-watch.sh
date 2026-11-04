@@ -55,9 +55,10 @@
 
 set -uo pipefail
 
-SCRIPT_VERSION="1.4.3"
+SCRIPT_VERSION="1.4.4"
+SCRIPT_DATE="2026-11-02"
 case "${1:-}" in
-  -V|--version|version) echo "php2shell-watch.sh ${SCRIPT_VERSION}"; exit 0 ;;
+  -V|--version|version) echo "php2shell-watch.sh ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;;
   -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$0"; exit 0 ;;
   "") ;;
   *) echo "php2shell-watch.sh: unknown argument: $1 (try --help; settings are environment variables)" >&2; exit 2 ;;
@@ -104,11 +105,25 @@ PROC_ALLOW="${PROC_ALLOW:-}"
 COOKIE_MAX="${COOKIE_MAX:-4096}"
 RESP_BYTES_MAX="${RESP_BYTES_MAX:-500000}"
 
-shopt -s nullglob
-# shellcheck disable=SC2206
-FILES=($GLOBS)
-shopt -u nullglob
+# GLOBS is a space separated list of patterns; compgen -G expands each one and yields nothing for a pattern with no match
+FILES=()
+read -ra _watch_globs <<<"$GLOBS"
+for _g in "${_watch_globs[@]}"; do
+    while IFS= read -r _f; do FILES+=("$_f"); done < <(compgen -G "$_g" || true)
+done
 [ "${#FILES[@]}" -gt 0 ] || { echo "no log files found; set LOGS=\"file ...\"" >&2; exit 1; }
+# A log this user cannot read would only make tail complain: say so, once, and follow the rest.
+READABLE=(); UNREADABLE=()
+for f in "${FILES[@]}"; do if [ -r "$f" ]; then READABLE+=("$f"); else UNREADABLE+=("$f"); fi; done
+FILES=("${READABLE[@]+"${READABLE[@]}"}")
+if [ "${#UNREADABLE[@]}" -gt 0 ]; then
+  SUDO_HINT="run it as root"; command -v sudo >/dev/null 2>&1 && SUDO_HINT="run it with sudo: sudo $0"
+  echo "php2shell-watch: ${#UNREADABLE[@]} log file(s) exist but this user cannot read them, so nothing in them will be seen: $SUDO_HINT" >&2
+fi
+[ "${#FILES[@]}" -gt 0 ] || { echo "php2shell-watch: no readable log file; nothing to follow" >&2; exit 2; }
+if [ "$(id -u)" -ne 0 ]; then
+  echo "php2shell-watch: not running as root, so processes that belong to other users are not watched" >&2
+fi
 
 # Signatures (same as the mitigate script's hunt), with label and severity.
 # The last three cover the serialized-object variant seen 2026-10-21: a PHP
@@ -288,7 +303,7 @@ proc_watch() {
       p="${d#/proc/}"
       { read -r c < "$d/comm"; } 2>/dev/null || continue
       { read -r line < "$d/stat"; } 2>/dev/null || continue
-      rest="${line##*) }"; set -- $rest; pp="${2:-0}"
+      rest="${line##*) }"; read -r _ pp _ <<<"$rest"; pp="${pp:-0}"
       comm[$p]="$c"; ppid[$p]="$pp"
     done
     for p in "${!comm[@]}"; do
@@ -443,3 +458,4 @@ done
 cleanup
 
 # Assisted-by: Claude Opus 5.5
+# Assisted-by: Claude Sonnet 5.5

@@ -61,12 +61,12 @@
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck cannot follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="wordpress-pt-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -81,6 +81,7 @@ bad()     { echo -e "  ${RED}CRIT${NC}  $*"; }
 caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
 
 # Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
 # sort -V. A pre-release of the boundary itself (6.3.0-rc2 against 6.3.0) is below it, as in
@@ -92,40 +93,7 @@ ver_lt() {
     if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
     [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
 }
-ver_ge() { ! ver_lt "$1" "$2"; }
-is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
-# distro_mentions FILE CVE...
-# Distributions often backport a fix without changing the upstream version
-# string. This looks at the changelog of the package that owns FILE.
-#   return 0: changelog mentions one of the CVE ids (DISTRO_HIT, DISTRO_PKG set)
-#   return 1: FILE is package-managed but the changelog does not mention them
-#   return 2: FILE is not owned by a dpkg or rpm package
-DISTRO_PKG=""; DISTRO_HIT=""
-distro_mentions() {
-    local f real pkg="" cl="" c id
-    f="$1"; shift
-    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
-    if have dpkg; then
-        pkg="$(dpkg -S "$real" 2>/dev/null | head -n1 | cut -d: -f1)"
-        if [[ -n "$pkg" ]]; then
-            for c in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/${pkg}/changelog.gz"; do
-                [[ -r "$c" ]] && cl+="$(zcat "$c" 2>/dev/null)"
-            done
-        fi
-    fi
-    if [[ -z "$pkg" ]] && have rpm; then
-        pkg="$(rpm -qf "$real" 2>/dev/null | head -n1)"
-        [[ "$pkg" == *"not owned"* ]] && pkg=""
-        [[ -n "$pkg" ]] && cl="$(rpm -q --changelog "$pkg" 2>/dev/null)"
-    fi
-    [[ -n "$pkg" ]] || return 2
-    DISTRO_PKG="$pkg"
-    for id in "$@"; do
-        if grep -qF "$id" <<<"$cl"; then DISTRO_HIT="$id"; return 0; fi
-    done
-    return 1
-}
 
 # Print the help text: everything between the first two ===== lines of this file.
 print_help() { awk 'f && /^# =+$/ {exit} f {sub(/^# ?/,""); print} /^# =+$/ {f=1}' "$SELF"; }
@@ -276,15 +244,16 @@ cmd_check() {
 }
 
 cmd_hunt() {
+    local unread=0
     local rc=0 n f nlog=0 g total=0
     step "Hunting for CVE-2026-87902 exploitation in web server logs"
     local -a logs=()
     if [[ -n "${WPT_LOGS:-}" ]]; then
         # shellcheck disable=SC2206
-        for g in $WPT_LOGS; do for f in $g; do [[ -f "$f" ]] && logs+=("$f"); done; done
+        for g in $WPT_LOGS; do for f in $g; do if [[ -f "$f" ]]; then if [[ -r "$f" ]]; then logs+=("$f"); else unread=$((unread+1)); fi; fi; done; done
     else
         for g in /var/log/nginx/access.log* /var/log/nginx/*access*.log* /var/log/apache2/access.log* /var/log/apache2/*access*.log* /var/log/httpd/access_log* /var/log/httpd/*access*log* /var/log/angie/access.log*; do
-            for f in $g; do [[ -f "$f" ]] && logs+=("$f"); done
+            for f in $g; do if [[ -f "$f" ]]; then if [[ -r "$f" ]]; then logs+=("$f"); else unread=$((unread+1)); fi; fi; done
         done
     fi
     if [[ ${#logs[@]} -eq 0 ]]; then
@@ -312,7 +281,9 @@ cmd_hunt() {
         inf "a POST body is not recorded in an access log, and the public exploits send the payload in the body: a quiet log does not rule out an attempt"
     fi
     step "Verdict"
-    if [[ $rc -eq 0 ]]; then info "No strong lead found: none of the published indicators were found."
+    if [[ $rc -eq 0 && $unread -gt 0 ]]; then
+        warn "No strong lead in the logs that could be read, but ${unread} log file(s) could not be read by this user, so this is not a clean result. Run it with sudo: sudo ${SELF_CMD}"; rc=2
+    elif [[ $rc -eq 0 ]]; then info "No strong lead found: none of the published indicators were found."
     else warn "Strong lead found. If the site was not updated at the time, look for PHP files outside the theme and plugin directories and for new administrator accounts."; fi
     return "$rc"
 }

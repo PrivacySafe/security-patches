@@ -82,15 +82,17 @@
 # directory, and this script runs once per container in isolation against that copy. The hunt
 # command does not look inside containers. Paths shown as .../docker_NAME/... are inside the
 # container NAME.
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
-# shellcheck disable=SC2317,SC2329,SC2034
+# shellcheck disable=SC2317,SC2329
 set -uo pipefail
 
 SCRIPT_NAME="yootheme-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-10-30"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-02"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/yootheme}"
 
@@ -106,6 +108,35 @@ bad()     { echo -e "  ${RED}CRIT${NC}  $*"; }
 caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 have()    { command -v "$1" >/dev/null 2>&1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
+}
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
+}
+# limited_view WHAT: a hunt run without root sees only what this account can read. Say so where a reader
+# would otherwise take "none" for a clean result. Says nothing when running as root. Always returns 0,
+# so it is safe under set -e.
+limited_view() {
+    is_root && return 0
+    if command -v sudo >/dev/null 2>&1; then caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it with sudo: sudo ${SELF_CMD}"
+    else caution "not running as root: ${1:-files and logs} that belong to other users or to system services may not be readable, so a clean result covers only what this account can see. Run it as root."; fi
+}
 
 # Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
 # sort -V. A pre-release of the boundary itself (6.3.0-rc2 against 6.3.0) is below it, as in
@@ -117,40 +148,8 @@ ver_lt() {
     if [[ "$a" == "$b" ]]; then [[ "${1#v}" =~ ^[0-9][0-9.]*-(alpha|beta|rc|dev|pre) ]]; return; fi
     [[ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" == "$a" ]]
 }
-ver_ge() { ! ver_lt "$1" "$2"; }
 is_semver() { [[ "$(norm_ver "$1")" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)*$ ]]; }
 
-# distro_mentions FILE CVE...
-# Distributions often backport a fix without changing the upstream version
-# string. This looks at the changelog of the package that owns FILE.
-#   return 0: changelog mentions one of the CVE ids (DISTRO_HIT, DISTRO_PKG set)
-#   return 1: FILE is package-managed but the changelog does not mention them
-#   return 2: FILE is not owned by a dpkg or rpm package
-DISTRO_PKG=""; DISTRO_HIT=""
-distro_mentions() {
-    local f real pkg="" cl="" c id
-    f="$1"; shift
-    real="$(readlink -f "$f" 2>/dev/null || echo "$f")"
-    if have dpkg; then
-        pkg="$(dpkg -S "$real" 2>/dev/null | head -n1 | cut -d: -f1)"
-        if [[ -n "$pkg" ]]; then
-            for c in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/${pkg}/changelog.gz"; do
-                [[ -r "$c" ]] && cl+="$(zcat "$c" 2>/dev/null)"
-            done
-        fi
-    fi
-    if [[ -z "$pkg" ]] && have rpm; then
-        pkg="$(rpm -qf "$real" 2>/dev/null | head -n1)"
-        [[ "$pkg" == *"not owned"* ]] && pkg=""
-        [[ -n "$pkg" ]] && cl="$(rpm -q --changelog "$pkg" 2>/dev/null)"
-    fi
-    [[ -n "$pkg" ]] || return 2
-    DISTRO_PKG="$pkg"
-    for id in "$@"; do
-        if grep -qF "$id" <<<"$cl"; then DISTRO_HIT="$id"; return 0; fi
-    done
-    return 1
-}
 
 # Print the help text: everything between the first two ===== lines of this file.
 print_help() { awk 'f && /^# =+$/ {exit} f {sub(/^# ?/,""); print} /^# =+$/ {f=1}' "$SELF"; }
@@ -384,6 +383,7 @@ cmd_hunt() {
         hunt_logs || rc=1
     fi
     step "Verdict"
+    limited_view
     if [[ $rc -eq 0 ]]; then
         info "No indicator found: none of the published indicators were found."
     else
@@ -538,7 +538,7 @@ cmd_mitigate() {
         esac
         shift
     done
-    [[ $YM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "mitigate changes the host: run it as root, or add --dry-run to see what it would do"
+    [[ $YM_DRY -eq 1 ]] || need_root "mitigate changes the host"
     [[ ${#dirs[@]} -gt 0 ]] || dirs=(/var/www /srv /opt /home)
     step "Looking for YOOtheme"
     local -a existing=(); for dir in "${dirs[@]}"; do [[ -d "$dir" ]] && existing+=("$dir"); done
@@ -590,7 +590,7 @@ cmd_rollback() {
     done
     YM_MANIFEST="${STATE_DIR}/manifest.txt"
     [[ -s "$YM_MANIFEST" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
-    [[ $YM_DRY -eq 1 || "${EUID:-$(id -u)}" -eq 0 ]] || die "rollback changes the host: run it as root, or add --dry-run"
+    [[ $YM_DRY -eq 1 ]] || need_root "rollback changes the host"
     step "Rolling back"
     while IFS= read -r line; do
         kind="${line%%|*}"
@@ -624,6 +624,33 @@ main() {
         *) die "Unknown command: ${CMD} (check|hunt|mitigate|rollback|version)" ;;
     esac
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "mitigate rollback" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Sonnet 5.5
