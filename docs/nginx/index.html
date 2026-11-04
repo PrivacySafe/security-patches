@@ -73,6 +73,7 @@
 <li><a href="../vsftpd/index.html">vsftpd</a></li>
 </ul></details>
 <details class="grp"><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../apt/index.html">APT</a></li>
 <li><a href="../brotli/index.html">Brotli</a></li>
 <li><a href="../curl/index.html">curl</a></li>
 <li><a href="../pki/index.html">eMudhra CA compromise</a></li>
@@ -121,7 +122,7 @@
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>nginx</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#servers-proxies-and-network-services">Servers, proxies and network services</a></p><h1>nginx: October 2026 security release</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">nginx and njs on GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-15176</span>, <span class="nw">CVE-2026-93479</span>, <span class="nw">CVE-2026-95101</span>, <span class="nw">CVE-2026-97205</span>, <span class="nw">CVE-2026-97629</span>, <span class="nw">CVE-2026-101019</span></span> <details class="more"><summary>and 1 more</summary><span class="nw">CVE-2026-101025</span></details></dd><dt>Script</dt><dd><div class="scr"><code>nginx-oct2026-check.sh</code> (<a href="../man/psf-nginx-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/nginx/nginx-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/nginx/nginx-oct2026-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#servers-proxies-and-network-services">Servers, proxies and network services</a></p><h1>nginx: October 2026 security release</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">nginx and njs on GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-15176</span>, <span class="nw">CVE-2026-42533</span>, <span class="nw">CVE-2026-93479</span>, <span class="nw">CVE-2026-95101</span>, <span class="nw">CVE-2026-97205</span>, <span class="nw">CVE-2026-97629</span></span> <details class="more"><summary>and 2 more</summary><span class="nw">CVE-2026-101019</span>, <span class="nw">CVE-2026-101025</span></details></dd><dt>Script</dt><dd><div class="scr"><code>nginx-oct2026-check.sh</code> (<a href="../man/psf-nginx-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/nginx/nginx-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/nginx/nginx-oct2026-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside>
 <h2 id="nginx-october-2026-check">nginx October 2026 Check</h2>
 <p>nginx 1.30.6 (stable) and 1.31.7 (mainline), released 14 October 2026, <a href="https://nginx.org/en/security_advisories.html">fix five flaws</a>. Three are memory bugs in a worker process (a crash, and possibly code execution): <span class="nw">CVE-2026-15176</span> (<code>alias</code> with a <code>rewrite</code>), <span class="nw">CVE-2026-93479</span> (a regex <code>map</code> whose captures are used by <code>root</code> or <code>log_format</code>), and <span class="nw">CVE-2026-97205</span> (<code>aio</code> with SSI). One forges a TLS session that can bypass client-certificate checks (<span class="nw">CVE-2026-97629</span>, in the automatic rotation of session-ticket keys). One slips extra bytes into a proxied request (<span class="nw">CVE-2026-95101</span>, HTTP/3). The <code>njs</code> JavaScript module separately shipped 1.0.2 with two XML-module fixes (<span class="nw">CVE-2026-101019</span>, <span class="nw">CVE-2026-101025</span>). nginx rates all five medium. F5 scores the three memory bugs 9.2 (critical), the TLS flaw 8.3, and the HTTP/3 flaw 6.9. None was reported exploited as of mid-October 2026.</p>
 <p>Each flaw needs a specific directive, so a vulnerable nginx version is not necessarily reachable. <code>check</code> and <code>hunt</code> change nothing. <code>check</code> reports the nginx and njs versions on the host and in containers, and audits the running configuration with <code>nginx -T</code> for the directive combination each flaw needs, printing F5's workaround for the ones you are exposed to. The fix is to upgrade to 1.30.6 or 1.31.7 (or your distribution's backport) and reload. Nginx publishes fixes for those two branches only, so an older branch such as 1.28 stays in the affected range unless your distribution backported the patches. <code>mitigate</code> applies the three simple workarounds for you, with a backup and an automatic undo; the others need an administrator to read the configuration.</p>
@@ -190,6 +191,11 @@ sudo ./nginx-oct2026-check.sh rollback
 </code></pre>
 <h3 id="nginx-patch-detection">nginx patch detection</h3>
 <p>nginx fixes land on the two current branches only: 1.30.6 (stable) and 1.31.7 (mainline). The script judges a version accordingly. A 1.30.x build is fixed at 1.30.6, a 1.31.x build at 1.31.7, and anything 1.32.0 or newer is fixed. An older branch (1.28 and earlier) upgrades to 1.30.6 or 1.31.7. For an nginx installed from a Debian or Ubuntu package, the package build and changelog are checked first (<code>FIXED_BUILDS</code> plus the changelog naming one of the CVEs), because a distribution can backport the fix while keeping the upstream version number. <code>njs</code> is judged against 1.0.2.</p>
+<h3 id="nginx-and-cve-2026-42533-july">nginx and <span class="nw">CVE-2026-42533</span> (July)</h3>
+<p>A separate, critical flaw was fixed three months before this release. <span class="nw">CVE-2026-42533</span> is a heap buffer overflow in nginx's script engine, the code that builds strings from variables for <code>set</code>, <code>rewrite</code>, <code>proxy_pass</code> and similar directives (CVSS 4.0 score 9.2). It is reached when a <code>map</code> does regular expression matching and a string expression uses captures that the map changed, or when a non-cacheable variable changes between the length pass and the copy pass of a script. Open source nginx 0.9.6 through 1.30.3 and 1.31.2 are affected, and 1.30.4 (stable) and 1.31.3 (mainline), released on 15 July 2026, fix it. A public proof of concept was reported on 27 July.</p>
+<p>This tool does not audit for it by name. Its version bar, 1.30.6 and 1.31.7, is newer than that fix, so an nginx that passes <code>check</code> has it, and a distribution package is judged by its changelog for the October flaws. If you can only apply the July fix, 1.30.4 or 1.31.3, or your distribution's backport, closes that flaw and not the five of October.</p>
+<p><strong>A reported regression in the Red Hat family backport.</strong> On 4 November a downstream distribution reported that the backport of the <span class="nw">CVE-2026-42533</span> fix in Red Hat family packages makes nginx answer a small share of requests with HTTP 500 and log <code>[alert] ... no buffer space in script copy</code>. It happens on configurations where a <code>set</code> or <code>rewrite</code> uses a variable from a <code>map</code> marked <code>volatile</code> whose value itself contains variables. The report traces it to nested script evaluation overwriting a global buffer end that the backport uses to avoid changing nginx's ABI, and describes the upstream fix as keeping that end per script engine, so only the Red Hat family backport is described as affected. It was reported to Red Hat as RHEL-300689, and Red Hat's packages did not have a fix when it was written. We have not reproduced it.</p>
+<p>What to do: keep the <span class="nw">CVE-2026-42533</span> fix, because the flaw is critical and reachable without a login. If you see that alert, look for a <code>volatile</code> map used in a <code>set</code> or <code>rewrite</code>. The report notes that a map without <code>volatile</code> is computed once and does not nest, which changes how often the value is recomputed, so check that before you rely on it. <code>check</code> prints an information line, and changes no verdict or exit code, when the running configuration has a <code>volatile</code> map on a Red Hat family host.</p>
 <h3 id="nginx-configuration-audit">nginx configuration audit</h3>
 <p>The valuable part. Each of the five flaws needs a particular directive combination, so the script runs <code>nginx -T</code> and reports, per flaw, whether your configuration reaches it:</p>
 <ul>
@@ -287,6 +293,7 @@ sudo ./nginx-oct2026-check.sh rollback
 <p>Verified on nginx 1.24 serving TLS: the audit reported <span class="nw">CVE-2026-97629</span> and <span class="nw">CVE-2026-97205</span>. After <code>mitigate --tickets-off --aio-off</code> and a reload the TLS 1.2 handshake no longer issued a session ticket, pages were served as before and the audit reported nothing exposed. <code>rollback</code> restored the file exactly. A configuration that does not validate is left untouched.</p>
 <h2 id="before-you-run-it">Before you run it</h2>
 <ul>
+<li>Updating for the July flaw, <span class="nw">CVE-2026-42533</span>, is covered by this tool's version bar. A Red Hat family build with that fix has a reported regression for configurations that use a <code>volatile</code> map (see the section above); keep the fix.</li>
 <li>The fix. Upgrade to 1.30.6 or 1.31.7 (or your distribution's backport) and reload. Upgrade njs to 1.0.2. The config audit tells you which workarounds apply in the meantime.</li>
 <li>A vulnerable version is not always reachable. Each flaw needs its directive, which is why the config audit matters. A build with none of the five directives configured is not a path, though upgrading is still the right move.</li>
 <li><code>check</code> reads the configuration with <code>nginx -T</code>, which is nginx's own configuration test. If the configuration does not pass that test, nginx writes the error to its own error log, exactly as it does when you run the command yourself.</li>
@@ -310,17 +317,87 @@ sudo ./nginx-oct2026-check.sh rollback
 </thead>
 <tbody>
 <tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:46012">RHSA-2026:46012</a></td>
+<td>2026-07-26</td>
+<td>Important</td>
+<td><code>nginx-1.30.4-2.hum1</code> (Hummingbird)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:66542">RHSA-2026:66542</a></td>
+<td>2026-09-11</td>
+<td>Important</td>
+<td><code>nginx-1.20.1-28.el9_8.6</code> (RHEL 9.8)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:67283">RHSA-2026:67283</a></td>
+<td>2026-09-14</td>
+<td>Moderate</td>
+<td><code>nginx-1.26.3-9.module+el9.8.0+24845+a897661e.4</code> (RHEL 9.8)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:67308">RHSA-2026:67308</a></td>
+<td>2026-09-14</td>
+<td>Moderate</td>
+<td><code>nginx-1.24.0-7.module+el9.8.0+24846+e7eec568.5</code> (RHEL 9.8)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:67314">RHSA-2026:67314</a></td>
+<td>2026-09-14</td>
+<td>Important</td>
+<td><code>nginx-1.26.3-6.el10_2.7</code> (RHEL 10.2)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:67315">RHSA-2026:67315</a></td>
+<td>2026-09-14</td>
+<td>Moderate</td>
+<td><code>nginx-1.24.0-3.module+el8.10.0+24848+0300f002.5</code> (RHEL 8.10)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:79357">RHSA-2026:79357</a></td>
+<td>2026-10-08</td>
+<td>Important</td>
+<td><code>costmanagement/costmanagement-ui-rhel10</code> (container image)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
 <td><a href="https://access.redhat.com/errata/RHSA-2026:83427">RHSA-2026:83427</a></td>
 <td>2026-10-15</td>
 <td>Important</td>
 <td><code>nginx-1.30.6-1.hum1</code> (Hummingbird)</td>
 <td><span class="nw">CVE-2026-15176</span>, <span class="nw">CVE-2026-95101</span>, <span class="nw">CVE-2026-97205</span>, <span class="nw">CVE-2026-97629</span></td>
 </tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:93467">RHSA-2026:93467</a></td>
+<td>2026-11-02</td>
+<td>Important</td>
+<td><code>nginx-1.20.1-22.el9_6.7</code> (RHEL 9.6)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:93468">RHSA-2026:93468</a></td>
+<td>2026-11-02</td>
+<td>Important</td>
+<td><code>nginx-1.20.1-16.el9_4.7</code> (RHEL 9.4)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:93472">RHSA-2026:93472</a></td>
+<td>2026-11-02</td>
+<td>Important</td>
+<td><code>nginx-1.20.1-14.el9_2.7</code> (RHEL 9.2)</td>
+<td><span class="nw">CVE-2026-42533</span></td>
+</tr>
 </tbody>
 </table></div>
 <!-- rhsa:end -->
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/nginx/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../nextcloud/index.html">&larr; Nextcloud Collabora</a><a rel="next" href="../nginx-ui/index.html">nginx-ui &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#nginx-october-2026-check">nginx October 2026 Check</a></li><li class="l3"><a href="#nginx-quick-start">nginx quick start</a></li><li class="l3"><a href="#nginx-commands">nginx commands</a></li><li class="l3"><a href="#nginx-patch-detection">nginx patch detection</a></li><li class="l3"><a href="#nginx-configuration-audit">nginx configuration audit</a></li><li class="l3"><a href="#nginx-configuration">nginx configuration</a></li><li class="l3"><a href="#nginx-workarounds-mitigate">nginx workarounds: mitigate</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#nginx-october-2026-check">nginx October 2026 Check</a></li><li class="l3"><a href="#nginx-quick-start">nginx quick start</a></li><li class="l3"><a href="#nginx-commands">nginx commands</a></li><li class="l3"><a href="#nginx-patch-detection">nginx patch detection</a></li><li class="l3"><a href="#nginx-and-cve-2026-42533-july">nginx and CVE-2026-42533 (July)</a></li><li class="l3"><a href="#nginx-configuration-audit">nginx configuration audit</a></li><li class="l3"><a href="#nginx-configuration">nginx configuration</a></li><li class="l3"><a href="#nginx-workarounds-mitigate">nginx workarounds: mitigate</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

@@ -73,6 +73,7 @@
 <li><a href="../vsftpd/index.html">vsftpd</a></li>
 </ul></details>
 <details class="grp"><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../apt/index.html">APT</a></li>
 <li><a href="../brotli/index.html">Brotli</a></li>
 <li><a href="../curl/index.html">curl</a></li>
 <li><a href="../pki/index.html">eMudhra CA compromise</a></li>
@@ -145,7 +146,13 @@ nginx version is not necessarily reachable. &quot;check&quot; and &quot;hunt&quo
 reports the nginx and njs versions on the host (and in containers), and audits the
 running configuration (nginx -T) for the directive combination each flaw
 needs, with F5&#x27;s workaround for the ones you are exposed to; it
-changes nothing. The fix is to upgrade to 1.30.6 / 1.31.7 (or your distro&#x27;s
+changes nothing. CVE-2026-42533, a critical script engine overflow fixed on 15 July in
+1.30.4 / 1.31.3, is not audited by name: this tool&#x27;s version bar is newer, so an nginx that
+passes &quot;check&quot; has that fix. A downstream distribution reported on 4 November that the Red
+Hat family backport of that fix makes nginx answer a share of requests with HTTP 500 when a
+set or rewrite uses a variable from a map marked volatile; &quot;check&quot; prints an information
+line (no exit code change) when the running configuration has such a map on a Red Hat
+family host. The fix is to upgrade to 1.30.6 / 1.31.7 (or your distro&#x27;s
 backport) and reload. &quot;mitigate&quot; is the only command that edits nginx.conf, and only
 for the three simple workarounds you choose, with a copy of every file and an
 automatic undo if nginx rejects the result; the others need an administrator.
@@ -204,6 +211,8 @@ Env overrides:
                                     main configuration file, and the files to edit
   NGINX_T=1                         1 = run &quot;nginx -T&quot; for the config audit
                                     (0 to skip it)
+  OS_RELEASE=/etc/os-release        names the distribution; check prints a note about a reported
+                                    regression only on a Red Hat family host (see below)
   HUNT_SINCE=&quot;2026-10-01&quot;           how far back hunt reads the journal
   HUNT_LOGS=&quot;/var/log/nginx/*.log&quot;  extra log globs for hunt
      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
