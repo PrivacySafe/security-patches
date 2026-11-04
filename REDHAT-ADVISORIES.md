@@ -14,7 +14,7 @@ How to use it: a Red Hat build is judged by its RPM release, not by the upstream
 | [haproxy](haproxy/README.md#red-hat-advisories) | 1 | 1 | 2026-10-16 | 2026-10-16 |
 | [jenkins](jenkins/README.md#red-hat-advisories) | 2 | 11 | 2026-10-22 | 2026-10-22 |
 | [linux-kernel](linux-kernel/README.md#red-hat-advisories) | 6 | 66 | 2026-07-08 | 2026-11-03 |
-| [nginx](nginx/README.md#red-hat-advisories) | 4 | 1 | 2026-10-15 | 2026-10-15 |
+| [nginx](nginx/README.md#red-hat-advisories) | 5 | 11 | 2026-07-26 | 2026-11-02 |
 | [node](node/README.md#red-hat-advisories) | 8 | 5 | 2026-10-22 | 2026-10-29 |
 | [openssl](openssl/README.md#red-hat-advisories) | 1 | 31 | 2026-08-17 | 2026-10-29 |
 | [php](php/README.md#red-hat-advisories) | 2 | 20 | 2026-10-21 | 2026-10-26 |
@@ -47,6 +47,7 @@ How to use it: a Red Hat build is judged by its RPM release, not by the upstream
 | [CVE-2026-112900](https://access.redhat.com/security/cve/CVE-2026-112900) | [pillow](pillow/README.md#red-hat-advisories) | 1 | Critical | 2026-10-30 | 2026-10-30 |
 | [CVE-2026-114126](https://access.redhat.com/security/cve/CVE-2026-114126) | [storybook](storybook/README.md#red-hat-advisories) | 3 | Important | 2026-10-23 | 2026-10-23 |
 | [CVE-2026-15176](https://access.redhat.com/security/cve/CVE-2026-15176) | [nginx](nginx/README.md#red-hat-advisories) | 1 | Important | 2026-10-15 | 2026-10-15 |
+| [CVE-2026-42533](https://access.redhat.com/security/cve/CVE-2026-42533) | [nginx](nginx/README.md#red-hat-advisories) | 10 | Important | 2026-07-26 | 2026-11-02 |
 | [CVE-2026-53266](https://access.redhat.com/security/cve/CVE-2026-53266) | [linux-kernel](linux-kernel/README.md#red-hat-advisories) | 23 | Critical | 2026-07-08 | 2026-10-29 |
 | [CVE-2026-68121](https://access.redhat.com/security/cve/CVE-2026-68121) | [linux-kernel](linux-kernel/README.md#red-hat-advisories) | 32 | Critical | 2026-09-24 | 2026-10-29 |
 | [CVE-2026-74469](https://access.redhat.com/security/cve/CVE-2026-74469) | [linux-kernel](linux-kernel/README.md#red-hat-advisories) | 24 | Important | 2026-09-24 | 2026-10-22 |

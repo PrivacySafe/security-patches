@@ -15,7 +15,7 @@ Security mitigations and auditing tools shared for the public good.
 
 This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. We publish these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
-**63 scripts addressing 138 CVEs across 69 software projects and 10 programming languages, plus 6 other global security incidents.**
+**64 scripts addressing 140 CVEs across 70 software projects and 10 programming languages, plus 6 other global security incidents.**
 
 **Documentation:** open [`docs/index.html`](docs/index.html) in a browser for the offline site (every tool, a CVE index, a glossary and the manual pages in HTML), or read it online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/). The packages also install a manual page for every tool (`man psf-<tool>`) and an info manual.
 
@@ -84,6 +84,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [Linux kernel local root quartet](linux-kernel/README.md#linux-kernel-lpe-check) | The Linux kernel on every distribution: four local privilege escalations with public exploits (IPsec AH6, TUN/TAP, PPPoE, SCTP), each fixed at a different release per branch | CVE-2026-80844, CVE-2026-81000, CVE-2026-68121, CVE-2026-74469 | Check, opt-in protective measures (`mitigate`) and rollback |
 | [Linux kernel IPv4 TCP use-after-free](linux-kernel/README.md#linux-kernel-ireq-opt-check) | The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener | CVE-2026-98432 | Check, hunt and reversible reductions |
 | [Linux kernel module blocker](linux-kernel/README.md#linux-kernel-module-block) | The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback | CVE-2026-80844, CVE-2026-81000, CVE-2026-68121, CVE-2026-74469, CVE-2026-53266, CVE-2026-98432 | List, check and reversible blocks |
+| [APT package downloads](apt/README.md#apt-nov2026-check) | Debian, Ubuntu and their derivatives: APT before the fixed release of its line (3.0.4, 2.6.2, 2.8.4 and others), when it follows redirects and retries downloads | CVE-2026-109518 | Check, hunt, stopgap (`mitigate`) and rollback |
 | [nginx-ui restricted-directive bypass](nginx-ui/README.md#nginx-ui-check) | nginx-ui below 2.4.1: a logged-in user can bypass the restricted-directive check, which leads to code execution where nginx loads njs, Perl or Lua | CVE-2026-84316, CVE-2026-84317, CVE-2026-84318, CVE-2026-84319 | Read-only check and hunt |
 | [Joomla core, September 2026 release](joomla/README.md#joomla-check) | Joomla 4.0.0 to 5.4.8 and 6.0.0 to 6.1.3: 16 core fixes, two rated High (directory deletion, SSRF) | CVE-2026-90915, CVE-2026-92222, CVE-2026-92227 and others | Check, administrator path restriction (`mitigate --allow`) and rollback |
 | [OpenSSL DTLS heap disclosure](openssl/README.md#openssl-check) | OpenSSL 4.0, 3.6, 3.5, 3.4, 3.0, 1.1.1 and 1.0.2 before their fixed releases: a High flaw reachable through DTLS | CVE-2026-84782 | Read-only check |
@@ -99,20 +100,20 @@ Where Red Hat has published an advisory for a CVE a tool covers, the tool's READ
 
 ## 📥 Install from a package
 
-Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.02-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
+Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.04-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
 
 | File | For |
 |---|---|
-| `psf-security-patches_26.11.02-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
-| `psf-security-patches-26.11.02-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
-| `psf-security-patches-26.11.02-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
+| `psf-security-patches_26.11.04-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
+| `psf-security-patches-26.11.04-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
+| `psf-security-patches-26.11.04-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
 
 Check the files against the release's `SHA256SUMS-<version>.txt` before installing, then:
 
 ```bash
-sha256sum -c SHA256SUMS-26.11.02-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.02-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.02-1.0.0.noarch.rpm    # RPM family
+sha256sum -c SHA256SUMS-26.11.04-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.04-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.04-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/php/php2shell-mitigate.sh check             # read only
 ```
 

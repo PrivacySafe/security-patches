@@ -153,7 +153,7 @@ set -uo pipefail
 
 SCRIPT_NAME="vsftpd-ftps-ticket-check.sh"
 SCRIPT_VERSION="1.1.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/vsftpd}"
 CVE="CVE-2026-119568"

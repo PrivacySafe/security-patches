@@ -71,7 +71,7 @@ CURL_OPTS="${CURL_OPTS:-}"
 read -ra CURL_ARR <<<"$CURL_OPTS"   # split once, without globbing; used as "${CURL_ARR[@]}"
 SCRIPT_NAME="wordpress-xss2shell-check.sh"
 SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 # one private temp file (mode 0600, from mktemp) for HTTP response bodies; removed on every exit path
 P2S_TMP=""
