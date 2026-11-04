@@ -12,7 +12,7 @@
 # repository: packaging/build-release.sh builds them into the packages. Run this by
 # hand to read the result:
 #
-#   python3 packaging/gen-docs.py --out DIR [--date 2026-11-02] [--release 26.11.02-1.0.0]
+#   python3 packaging/gen-docs.py --out DIR [--date 2026-11-04] [--release 26.11.04-1.0.0]
 #
 # Writes DIR/man8/psf-NAME.8, DIR/man7/psf-security-patches.7 and
 # DIR/psf-security-patches.texi. If makeinfo is installed it also writes
@@ -42,6 +42,7 @@ LONGDATE = datetime.date.fromisoformat(DATE).strftime("%-d %B %Y")
 URL = "https://codeberg.org/PrivacySafe/security-patches"
 
 NEWEST = [  # (date, script, what happened)
+ ("4 November 2026", "apt/apt-nov2026-check.sh", "APT package downloads swapped after verification (CVE-2026-109518)"),
  ("2 November 2026", "btcpayserver/btcpayserver-nov2026-check.sh", "BTCPay Server hot wallet thefts on 2.4.1 and earlier (no CVE)"),
  ("30 October 2026", "vsftpd/vsftpd-ftps-ticket-check.sh", "vsftpd FTPS data channel hijack (CVE-2026-119568) and a denial of service in Red Hat family packages (CVE-2025-14242)"),
  ("29 October 2026", "claude-code-vsx/claude-code-vsx-oct2026-check.sh", "the tampered Claude Code extension served from Cursor's marketplace (no CVE)"),

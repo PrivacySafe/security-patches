@@ -58,7 +58,7 @@ import urllib.parse
 import urllib.request
 
 VERSION = "1.0.0"
-DATE = "2026-11-02"
+DATE = "2026-11-03"
 HERE = os.path.dirname(os.path.abspath(__file__))
 API = "https://access.redhat.com/hydra/rest/securitydata/cvrf.json"
 INDEX = os.path.join(HERE, "data", "rhsa-index.json")

@@ -18,7 +18,7 @@
 # folder it names. packaging/build-release.sh stops when docs/ is out of date and installs
 # the same pages with the packages, and the privacysafe.app docs are built from the same READMEs.
 #
-#   python3 packaging/gen-site.py --out DIR [--release 26.11.02-1.0.0] [--date 2026-11-02] [--base-path /docs/]
+#   python3 packaging/gen-site.py --out DIR [--release 26.11.04-1.0.0] [--date 2026-11-04] [--base-path /docs/]
 #
 # Without --release and --date it uses the newest dated heading of CHANGELOG.md.
 #
@@ -75,7 +75,7 @@ CATEGORIES = [
     ("Servers, proxies and network services", "Web servers, proxies, name servers, FTP, logging, databases and container hosts.",
      ["nginx", "nginx-ui", "haproxy", "tomcat", "trafficserver", "bind", "vsftpd", "rsyslog", "couchdb", "pulsar", "incus"]),
     ("Operating system, libraries and runtimes", "The kernel, system libraries, language runtimes and the certificate store.",
-     ["linux-kernel", "openssl", "curl", "expat", "brotli", "heif", "pillow", "node", "php", "php/detect", "php/edge", "ruby", "pki"]),
+     ["linux-kernel", "apt", "openssl", "curl", "expat", "brotli", "heif", "pillow", "node", "php", "php/detect", "php/edge", "ruby", "pki"]),
     ("Content management and web applications", "WordPress, Joomla, Drupal and the other sites and services you host.",
      ["wordpress", "wordpress-pt", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex", "btcpayserver"]),
     ("Developer platforms, tools and supply chain", "Developer machines, build and CI systems, frameworks and packages.",
@@ -88,7 +88,7 @@ NAMES = {  # short names for the menu and the cards
     "php/detect": "PHP2Shell detection rules", "php/edge": "PHP2Shell edge guards", "heif": "libheif", "expat": "libexpat",
     "pulsar": "Apache Pulsar", "sentry": "Sentry for Next.js", "magento": "Magento and Adobe Commerce",
     "plex": "Plex Media Server", "pki": "eMudhra CA compromise", "haproxy": "HAProxy", "node": "Node.js", "nginx": "nginx",
-    "curl": "curl", "openssl": "OpenSSL", "roundcube": "Roundcube", "trafficserver": "Apache Traffic Server",
+    "curl": "curl", "apt": "APT", "openssl": "OpenSSL", "roundcube": "Roundcube", "trafficserver": "Apache Traffic Server",
     "wordpress-pt": "WordPress path traversal", "bind": "BIND 9", "couchdb": "CouchDB", "craft": "Craft CMS",
     "basercms": "baserCMS", "claude-code-vsx": "Claude Code extension backdoor", "sagemaker": "SageMaker SDK",
     "nextjs": "Next.js Server Actions", "jupyter": "Jupyter and nbconvert", "yootheme": "YOOtheme Pro",
@@ -103,6 +103,7 @@ SYNONYMS = {  # words people type that the page itself does not use; added to th
     "install.html": "checksum checksums sha256 verify download apt dnf deb rpm package uninstall remove removal upgrade",
     "how-it-works.html": "docker podman containers exit code exit codes dry run dry-run rollback mitigate hunt check settings environment variable state backups root",
     "cves.html": "cve number identifier vulnerability",
+    "apt/index.html": "debian ubuntu package manager apt-get dpkg updates mirror proxy retries",
     "glossary.html": "meaning means definition what is explained terms abbreviation acronym kev cwe rce xss ssrf dos lpe eol",
 }
 HUBS = {"index.html", "tools.html", "cves.html", "man/index.html", "changelog.html", "about.html"}   # long lists that mention everything
@@ -773,7 +774,21 @@ for s in scripts:
     add(f"man/{n}.html", f"{n}(8)", body, crumbs=[("Manual pages", "man/index.html")], kind="Manual page",
         desc=first if len(first) >= 20 else f"Manual page for {n}, a PrivacySafe security script: {labels.get(d, d)}.")
     rows_m.append((n, first))
-intro = ('<h1>Manual pages</h1><p>Every script has a manual page, installed with the packages. Start with <code>man psf-security-patches</code> for the overview, then <code>man psf-NAME</code> for a tool, or read the whole set with <code>info psf-security-patches</code>. The pages below show the same text each script prints for <code>--help</code>.</p>'
+RHSA = os.path.join(ROOT, "packaging", "rhsa", "rhsa.py")
+if os.path.exists(RHSA):
+    def _rh(*a):
+        r = subprocess.run([sys.executable, RHSA, *a], capture_output=True, text=True, timeout=30, env=dict(os.environ, COLUMNS="72"))
+        return r.stdout.replace("optional arguments:", "options:").rstrip("\n")
+    _top = _rh("--help")
+    _cmds = re.search(r"\{([a-z,]+)\}", _top).group(1).split(",")
+    _t = _top + "\n\n" + "\n\n".join(_rh(c, "--help") for c in _cmds)
+    _first = "Find Red Hat security advisories and check installed packages against them."
+    body = (f'<h1>psf-rhsa(8)</h1><p class="meta">Program: <code>/opt/psf-security-patches/rhsa/rhsa.py</code>. The advisories it finds are listed on the <a href="../redhat-advisories.html">Red Hat advisories</a> page. '
+            f'<a href="{SRC}packaging/rhsa/rhsa.py">Source</a>. With the package installed: <code>man psf-rhsa</code>.</p><pre class="manual">{esc(_t)}</pre>')
+    add("man/psf-rhsa.html", "psf-rhsa(8)", body, crumbs=[("Manual pages", "man/index.html")], kind="Manual page", desc=_first)
+    rows_m.append(("psf-rhsa", _first))
+    rows_m.sort()
+intro = ('<h1>Manual pages</h1><p>Every script, and the Red Hat advisory checker, has a manual page, installed with the packages. Start with <code>man psf-security-patches</code> for the overview, then <code>man psf-NAME</code> for a tool, or read the whole set with <code>info psf-security-patches</code>. The pages below show the same text each script prints for <code>--help</code>.</p>'
          '<p class="js-only"><label class="sr" for="tool-filter">Filter the manual pages</label><input id="tool-filter" type="search" placeholder="Filter, for example nginx or CVE-2026-110353" autocomplete="off"></p><p class="status js-only" id="filter-status" role="status" aria-live="polite"></p>'
          '<div class="table-wrap"><table class="tools-table"><thead><tr><th>Page</th><th>What it covers</th></tr></thead><tbody>')
 intro += "".join(f'<tr><td><a href="{n}.html">{esc(n)}(8)</a></td><td>{esc(t)}</td></tr>' for n, t in rows_m) + "</tbody></table></div>"

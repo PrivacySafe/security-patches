@@ -102,7 +102,7 @@ Streams and packages are read from package names, because Red Hat's list has no 
 
 ```
 list: 7577 advisories for 5662 CVEs, 2026-04-01 to 2026-11-03 (Red Hat security advisories (RHSA), redhat_rhsa_2026-04-01_to_2026-11-03.csv)
-index: 386 advisories for 36 CVEs; severity {'important': 344, 'critical': 41, 'moderate': 1}
+index: 396 advisories for 37 CVEs; severity {'important': 351, 'critical': 41, 'moderate': 4}
 ```
 
 ---
