@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en" data-root="../">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
+<title>PHP: PHP2Shell and session audit | PrivacySafe Security Patches</title><meta name="description" content="PHP-FPM 7.0 through 8.5 on Debian/Ubuntu/Trisquel and derivatives">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<body class="docs">
+<a class="skip-link" href="#top">Skip to main content</a>
+<header class="topbar">
+<div aria-label="Site navigation" class="wrap nav">
+<a aria-label="PrivacySafe home" class="brand header-brand" href="https://privacysafe.app/">
+<img alt="PrivacySafe" class="brand-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+</a>
+<nav aria-label="Primary" class="navlinks">
+<a href="https://privacysafe.app/#download">Download</a>
+<a href="https://privacysafe.app/#apps">Apps</a>
+<a href="https://privacysafe.app/#identity">Identity</a>
+<a href="https://privacysafe.app/#trust">Trust</a>
+<a href="https://privacysafe.app/docs/" rel="noopener noreferrer" target="_blank">Docs</a>
+<a href="https://privacysafe.social" rel="noopener noreferrer" target="_blank">Social</a>
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+</nav>
+<div class="nav-actions">
+<a class="btn soft" href="https://privacysafe.app/#apps">Learn More</a>
+<a class="btn primary" href="https://privacysafe.app/#download">Get PrivacySafe</a>
+<a aria-label="Download" class="btn hamb" href="https://privacysafe.app/#download">
+<svg class="ico ico-download" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.900 2.800h2.200v9.100l3.300-3.300 1.600 1.600L12 16.100 6 10.200l1.600-1.600 3.300 3.300V2.800zM4 18.400h16v2.200H4v-2.200z"/></svg>
+</a>
+</div>
+</div>
+</header>
+<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul><li><a href="../index.html">Home</a></li><li><a href="../tools.html" aria-current="page">Tools</a></li><li><a href="../cves.html">CVEs</a></li><li><a href="../how-it-works.html">How it works</a></li><li><a href="../install.html">Install</a></li><li><a href="../man/index.html">Manual pages</a></li><li><a href="https://privacysafe.app/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online <svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg></a></li></ul></div></nav>
+<div class="doc-page"><div class="wrap doc-layout"><nav class="docs-side" aria-label="Security Patches"><div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div><details class="side-box" open><summary>Menu</summary><ul class="start">
+<li><a href="../index.html">Home</a></li>
+<li><a href="../how-it-works.html">How the tools work</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../install.html">Install and update</a></li>
+<li><a href="../tools.html">All tools</a></li>
+<li><a href="../cves.html">Find a CVE</a></li>
+<li><a href="../man/index.html">Manual pages</a></li>
+<li><a href="../changelog.html">Changelog</a></li>
+<li><a href="../security.html">Security policy</a></li>
+<li><a href="../about.html">About and support</a></li>
+</ul>
+<details class="grp"><summary>Newest: 22 October to 2 November 2026</summary><ul>
+<li><a href="../linux-kernel/index.html">3 Oct: Linux kernel</a></li>
+<li><a href="../pki/index.html">2 Oct: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../vsftpd/index.html">30 Oct: vsftpd</a></li>
+<li><a href="../claude-code-vsx/index.html">29 Oct: Claude Code extension backdoor</a></li>
+<li><a href="../brotli/index.html">25 Oct: Brotli</a></li>
+<li><a href="../grav/index.html">24 Oct: Grav</a></li>
+<li><a href="detect/index.html">24 Oct: PHP2Shell detection rules</a></li>
+<li><a href="../basercms/index.html">23 Oct: baserCMS</a></li>
+<li><a href="../openapi/index.html">23 Oct: openapi-typescript-codegen</a></li>
+<li><a href="../ruby/index.html">23 Oct: Ruby and GitLab regexp</a></li>
+<li><a href="../django/index.html">22 Oct: Django REST framework</a></li>
+<li><a href="../expat/index.html">22 Oct: libexpat</a></li>
+<li><a href="../haproxy/index.html">22 Oct: HAProxy</a></li>
+<li><a href="../rsyslog/index.html">22 Oct: rsyslog</a></li>
+<li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
+</ul></details>
+<details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../pulsar/index.html">Apache Pulsar</a></li>
+<li><a href="../tomcat/index.html">Apache Tomcat</a></li>
+<li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
+<li><a href="../bind/index.html">BIND 9</a></li>
+<li><a href="../couchdb/index.html">CouchDB</a></li>
+<li><a href="../haproxy/index.html">HAProxy</a></li>
+<li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../nginx/index.html">nginx</a></li>
+<li><a href="../nginx-ui/index.html">nginx-ui</a></li>
+<li><a href="../rsyslog/index.html">rsyslog</a></li>
+<li><a href="../vsftpd/index.html">vsftpd</a></li>
+</ul></details>
+<details class="grp" open><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../brotli/index.html">Brotli</a></li>
+<li><a href="../curl/index.html">curl</a></li>
+<li><a href="../pki/index.html">eMudhra CA compromise</a></li>
+<li><a href="../expat/index.html">libexpat</a></li>
+<li><a href="../heif/index.html">libheif</a></li>
+<li><a href="../linux-kernel/index.html">Linux kernel</a></li>
+<li><a href="../node/index.html">Node.js</a></li>
+<li><a href="../openssl/index.html">OpenSSL</a></li>
+<li><a href="index.html" aria-current="page">PHP2Shell</a></li>
+<li><a href="detect/index.html">PHP2Shell detection rules</a></li>
+<li><a href="edge/index.html">PHP2Shell edge guards</a></li>
+<li><a href="../pillow/index.html">Pillow</a></li>
+<li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
+</ul></details>
+<details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../basercms/index.html">baserCMS</a></li>
+<li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
+<li><a href="../craft/index.html">Craft CMS</a></li>
+<li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../grav/index.html">Grav</a></li>
+<li><a href="../joomla/index.html">Joomla</a></li>
+<li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
+<li><a href="../nextcloud/index.html">Nextcloud Collabora</a></li>
+<li><a href="../plex/index.html">Plex Media Server</a></li>
+<li><a href="../roundcube/index.html">Roundcube</a></li>
+<li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
+<li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
+<li><a href="../zammad/index.html">Zammad</a></li>
+</ul></details>
+<details class="grp"><summary>Developer platforms, tools and supply chain</summary><ul>
+<li><a href="../claude-code-vsx/index.html">Claude Code extension backdoor</a></li>
+<li><a href="../django/index.html">Django REST framework</a></li>
+<li><a href="../ghostaction/index.html">GhostAction</a></li>
+<li><a href="../gitea/index.html">Gitea</a></li>
+<li><a href="../gitlab/index.html">GitLab</a></li>
+<li><a href="../jenkins/index.html">Jenkins plugins</a></li>
+<li><a href="../jupyter/index.html">Jupyter and nbconvert</a></li>
+<li><a href="../laravel/index.html">Laravel TokenGuard</a></li>
+<li><a href="../litellm/index.html">LiteLLM</a></li>
+<li><a href="../nextjs/index.html">Next.js Server Actions</a></li>
+<li><a href="../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../sagemaker/index.html">SageMaker SDK</a></li>
+<li><a href="../sentry/index.html">Sentry for Next.js</a></li>
+<li><a href="../storybook/index.html">Storybook</a></li>
+</ul></details>
+</details></nav>
+<main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>PHP2Shell</span></nav>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>PHP: PHP2Shell and session audit</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff"><strong>PHP2Shell:</strong> PHP-FPM 7.0 through 8.5 on Debian/Ubuntu/Trisquel and derivatives</div><div class="aff"><strong>PHP2Shell live watch:</strong> PHP-FPM, Apache and nginx logs on any GNU/Linux; optional systemd unit</div><div class="aff"><strong>PHP2Shell on cPanel:</strong> cPanel/WHM servers running EasyApache 4 PHP (ea-php74 to ea-php85), any handler</div><div class="aff"><strong>PHP session audit:</strong> Any PHP host</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span>, <span class="nw">CVE-2026-115560</span></span></dd><dt>Scripts</dt><dd><div class="scr"><code>php-session-audit.sh</code> (<a href="../man/psf-php-session-audit.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/php-session-audit.sh">source</a>)<br><pre tabindex="0"><code>/opt/psf-security-patches/php/php-session-audit.sh</code></pre></div><div class="scr"><code>php2shell-cpanel-mitigate.sh</code> (<a href="../man/psf-php2shell-cpanel-mitigate.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/php2shell-cpanel-mitigate.sh">source</a>)<br>reads only: <code>check</code>, <code>status</code>; can change the system: <code>apply</code>, <code>restore</code>, <code>cleanup</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/php/php2shell-cpanel-mitigate.sh check</code></pre></div><div class="scr"><code>php2shell-mitigate.sh</code> (<a href="../man/psf-php2shell-mitigate.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/php2shell-mitigate.sh">source</a>)<br>reads only: <code>check</code>, <code>status</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>apply</code>, <code>enforce</code>, <code>complain</code>, <code>cleanup</code>, <code>remove</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/php/php2shell-mitigate.sh check</code></pre><p class="warn"><strong>Type the command every time.</strong> Run with no command, this script does <code>apply</code>, which changes the system.</p></div><div class="scr"><code>php2shell-watch.sh</code> (<a href="../man/psf-php2shell-watch.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/php2shell-watch.sh">source</a>)<br><pre tabindex="0"><code>/opt/psf-security-patches/php/php2shell-watch.sh</code></pre></div></dd><dt>Related</dt><dd><a href="detect/index.html">PHP2Shell detection rules</a>, <a href="edge/index.html">PHP2Shell edge guards</a></dd></dl></aside><h2 id="php2shell-mitigation">PHP2Shell Mitigation</h2>
+<p>We published this script before upstream fixes became available for two zero-day vulnerabilities in PHP. It adds two layers of defense to every installed PHP-FPM from 7.0 through 8.5:</p>
+<ol>
+<li>An ini drop-in that turns off <code>session.upload_progress</code>. It is one layer of protection. The patched PHP release is the complete fix.</li>
+<li>An AppArmor profile that stops FPM from executing shells and other binaries. This is the layer that keeps a successful exploit from turning into remote code execution. The profile is built from each version's own FPM config (log paths, sessions, sockets, extension directory), so it fits your server instead of a generic template. It lets FPM signal readiness to systemd, which every Debian, Ubuntu and sury unit requires (<code>Type=notify</code>). Where the parser supports it (AppArmor 3.0 and later), it declares <code>abi &lt;abi/3.0&gt;</code>, so the rules mean the same thing on Ubuntu and Debian 13.</li>
+</ol>
+<p>The script includes checks and rollback procedures intended to reduce the risk of service disruption. It syntax-checks each profile before installing it. Then it tests FPM with a config check, a restart, a reload, and a socket check. Under systemd it also checks that the unit didn't restart itself during the test. PHP 8.4 and later units use <code>Restart=on-failure</code>, which can make a crash-looping FPM look active. If FPM won't come up, it falls back to complain mode, and if that still fails, it unloads the profile. Each PHP version is handled on its own, so a problem with one never blocks the others.</p>
+<h3 id="php2shell-quick-start">PHP2Shell quick start</h3>
+<ol>
+<li>
+<p>Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.</p>
+<pre tabindex="0"><code class="language-bash"># BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO &quot;$BASE/php/php2shell-mitigate.sh&quot;
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/php/php2shell-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Read it before running it. Always.</p>
+<pre tabindex="0"><code class="language-bash">less php2shell-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Make it executable.</p>
+<pre tabindex="0"><code class="language-bash">chmod +x php2shell-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Check the environment. This changes nothing and needs no root.</p>
+<pre tabindex="0"><code class="language-bash">./php2shell-mitigate.sh check
+</code></pre>
+</li>
+<li>
+<p>Apply, to every installed PHP-FPM, in complain mode.</p>
+<pre tabindex="0"><code class="language-bash">sudo ./php2shell-mitigate.sh
+</code></pre>
+</li>
+</ol>
+<p>The repository lives on <a href="https://github.com/PrivacySafe/security-patches">GitHub</a> and <a href="https://codeberg.org/PrivacySafe/security-patches">Codeberg</a>. To confirm both serve the same script, compare checksums:</p>
+<pre tabindex="0"><code class="language-bash">sha256sum php2shell-mitigate.sh
+curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/php/php2shell-mitigate.sh | sha256sum
+</code></pre>
+<p>Every command begins with an environment check and refuses to proceed on unsupported systems. See <a href="#php2shell-environment-check">Environment check</a>.</p>
+<p>New profiles start in <strong>complain mode</strong>, which logs but does not block. Let real traffic run, then review and enforce:</p>
+<pre tabindex="0"><code class="language-bash">sudo ./php2shell-mitigate.sh status     # what the profile would have blocked
+sudo ./php2shell-mitigate.sh enforce    # start blocking
+</code></pre>
+<p>If <code>status</code> lists paths your app legitimately needs, such as an uploads or cache directory, add them to <code>/etc/apparmor.d/local/usr.sbin.php-fpm&lt;version&gt;</code> and rerun the script. That file is never overwritten.</p>
+<h3 id="php2shell-commands">PHP2Shell commands</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code></td>
+<td>Environment report only. Changes nothing and doesn't need root. Exits <code>0</code> if clear, <code>1</code> on a hard blocker, <code>2</code> if <code>--ignore-env</code> would be needed</td>
+</tr>
+<tr>
+<td><code>apply</code> (default)</td>
+<td>Installs the drop-in and profile, then tests FPM</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>Shows mitigation state and the AppArmor events logged under the current profile (since it was last written, at most 24 hours)</td>
+</tr>
+<tr>
+<td><code>enforce</code></td>
+<td>Switches to enforce mode. Refuses if complain mode logged accesses you haven't handled (override with <code>--force</code>)</td>
+</tr>
+<tr>
+<td><code>complain</code></td>
+<td>Switches back to log-only mode</td>
+</tr>
+<tr>
+<td><code>hunt</code></td>
+<td>Read-only log triage. Scans PHP-FPM, Apache and nginx logs for the memory-corruption crashes these bugs cause (including AddressSanitizer/debug-build double-free and use-after-free backtraces, and crashes through the built-in CLI server, <code>php -S</code>), and for signs of exploitation. Changes nothing, doesn't need root. Exits <code>0</code> if nothing matched, <code>1</code> if it found something to look at</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version. Every other command prints it on its first line too</td>
+</tr>
+<tr>
+<td><code>cleanup</code></td>
+<td>Removes the ini drop-in once you're patched, except <code>session.upload_progress.enabled = Off</code>, which stays until the build is also fixed for <span class="nw">CVE-2026-115560</span> (set <code>PATCHED_115560_X_Y</code> once PHP names the release, or the package changelog naming the CVE is enough; <code>--force</code> removes it anyway). The AppArmor profile is left loaded, since it confines FPM against the next bug too (the patch doesn't). Once patched, either switch it on for real with <code>enforce</code>, or take it out with <code>remove</code></td>
+</tr>
+<tr>
+<td><code>remove</code></td>
+<td>Removes the AppArmor profile entirely: unloads it from the kernel, deletes the profile, the <code>local/</code> override and any disable symlink, then confirms <code>aa-status</code> no longer lists FPM. Leaves the ini drop-in (that's <code>cleanup</code>'s job) and needs no patch. Refuses to touch a profile this script didn't create</td>
+</tr>
+</tbody>
+</table></div>
+<p>Add <code>--php 8.2</code> to any command to act on a single version.</p>
+<h3 id="php2shell-environment-check">PHP2Shell environment check</h3>
+<p>Before changing anything, the script checks your server in this order and prints what it found:</p>
+<ol>
+<li>Operating system. Debian, Ubuntu and Trisquel are supported, and so is any derivative. The check recognizes Linux Mint, Pop!_OS, elementary OS, Zorin OS, KDE neon, Kali, Raspberry Pi OS, PureOS, Parrot, deepin, TUXEDO OS, Devuan, MX Linux, antiX, SparkyLinux, Q4OS, Peppermint, BunsenLabs and siduction by name. It also accepts anything else whose <code>ID_LIKE</code> names Debian or Ubuntu, or that has <code>/etc/debian_version</code>. A derivative never stops the run. The check also reports the base release and the PHP version it ships.</li>
+<li>PHP. Every PHP-FPM under <code>/usr/sbin</code>, its package version, whether it came from your distro or the ondrej/sury repository, and whether it's patched (see <a href="#php2shell-patch-detection">Patch detection</a>). It flags PHP it can't protect: versions outside <code>SUPPORTED_VERS</code>, PHP-FPM built outside dpkg, LiteSpeed's <code>lsphp</code>, and Ubuntu 14.04's <code>php5</code> packages (reported against the ESM Legacy fix). Where no package fix is coming, it points to a third-party extension. See <a href="#before-you-run-it">Know before you run it</a>.</li>
+<li>Web servers. Apache and nginx (plus angie, lighttpd and caddy), whether each is running, and which PHP-FPM version each one actually sends traffic to.</li>
+<li>System. Root, the init system, containers, AppArmor in the kernel, SELinux, and required tools. Without systemd (sysvinit or OpenRC, as on Devuan, MX and antiX), the script uses <code>service</code> and the PHP-FPM init scripts. It reads AppArmor events from <code>audit.log</code>, <code>kern.log</code> and <code>dmesg</code>.</li>
+</ol>
+<p>Problems fall into two groups. <strong>Hard blockers</strong> always stop the run: a distribution that isn't Debian-based, no way to restart FPM (no systemd and no init script), no AppArmor in the kernel for <code>apply</code>, <code>enforce</code> or <code>complain</code>, not running as root, or no supported PHP-FPM. <strong>Soft blockers</strong> stop the run until you've looked at them, and <code>--ignore-env</code> lets you proceed:</p>
+<ul>
+<li>Apache running an <strong>unpatched</strong> mod_php. PHP inside Apache is not covered by this script, so you'd get a clean summary while Apache stays exposed. The report prints the upgrade and a one-line drop-in. Patched mod_php is only reported.</li>
+<li>Your running web server only uses PHP-FPM versions this run won't touch, for example nginx serving everything from PHP 8.4.</li>
+</ul>
+<p><code>--ignore-env</code> doesn't affect <code>--force</code>, and <code>--force</code> doesn't skip the environment check.</p>
+<h3 id="php2shell-patch-detection">PHP2Shell patch detection</h3>
+<p>For each PHP version, the report, <code>status</code> and <code>cleanup</code> say whether the installed package is fixed. Three checks run in order, and any one is enough:</p>
+<ol>
+<li>Upstream version. The package is at or above the first fixed release: 8.2.35, 8.3.36, 8.4.27 or 8.5.12. This covers Debian, which ships the new upstream release (for example <code>8.4.27-1~deb13u1</code> in DSA-6574-1), and the sury repository.</li>
+<li>Known distro backport. Ubuntu backports fixes without changing the upstream version, so <code>8.3.6-0ubuntu0.24.04.13</code> is fixed even though it says 8.3.6. The script carries the fixed builds from USN-8948 for 16.04 through 26.10 and compares the full version. On 14.04, whose <code>php5</code> packages Ubuntu also fixed (<code>5.5.9+dfsg-1ubuntu4.29+esm18</code>, ESM Legacy), the environment check reports whether <code>php5-fpm</code>, <code>libapache2-mod-php5</code> and <code>php5-cgi</code> carry the fix, but doesn't mitigate them. Add builds as they're published with <code>FIXED_BUILDS</code>.</li>
+<li>Changelog. The package changelog names both CVEs. This catches backports the script doesn't know about. The changelog only counts if its newest entry is the installed version.</li>
+</ol>
+<p>If none of those finds a fix, a build below the first fixed release counts as <em>not patched</em> unless it's an Ubuntu build. sury and Debian ship the new upstream release rather than backporting. Their older upstream versions are therefore unfixed even when there is no changelog to read, as on Docker images.</p>
+<p>The result is <em>patched</em>, <em>not patched</em>, or <em>unknown</em>. <em>Unknown</em> usually means an Ubuntu build on a minimized image that dropped <code>/usr/share/doc</code>, with no entry in the table. Package dates aren't used: distributions prepare embargoed fixes before the public release, and a later unrelated rebuild doesn't contain the fix.</p>
+<p>A patched package isn't enough on its own, because a running FPM keeps executing the old binary until it restarts. The script checks for FPM processes still running a binary that dpkg has replaced, and for Apache holding an old <code>libphp*.so</code>, and tells you which service to restart.</p>
+<h3 id="php2shell-hunting-for-exploitation">PHP2Shell hunting for exploitation</h3>
+<p>These vulnerabilities affect PHP below the application layer, so application logs may contain little evidence. Possible indicators include memory-corruption crashes and unexpected commands executed by PHP worker processes. <code>hunt</code> reads your logs (never changes anything) and reports both:</p>
+<pre tabindex="0"><code class="language-bash">sudo ./php2shell-mitigate.sh hunt
+</code></pre>
+<p>It looks for crashed PHP-FPM and Apache workers (segfault, abort, bus error), allocator panics, and crash backtraces that name the Zend allocator (<code>attempting double-free</code>, <code>heap-use-after-free</code>, the <code>__zend_free</code> and <code>_efree</code> frames in <code>zend_alloc.c</code>). It also looks for crashes in PHP's built-in CLI server, bursts of <code>memory_limit</code> fatals (php2shell's out-of-memory trigger), the <code>PHP_SESSION_UPLOAD_PROGRESS</code> field, PHP processes that ran a shell or download tool, and, if a profile from this script is loaded, any exec attempt it logged. A <code>double free detected</code> message can also come from a separate unpatched PHP bug. Where log lines are dated it prints a rough before/after split around the disclosure date, so a spike stands out.</p>
+<p>It also covers the serialized-object variant of the upload-progress attack seen on 2026-10-21, where a PHP gadget chain is sent in the upload-progress field, lands in the session file, and fires on the next page load. The object travels in the POST body and sits in the session file, and a log tailer can see neither. So <code>hunt</code> and <code>php2shell-watch.sh</code> catch this one only when it surfaces an error. That can be the <code>p2s:s</code> campaign marker reaching a log (the broken probe command echoes it under bash), a shell spawned by a worker that then fails, or the object failing to deserialize (<code>unserialize()</code> errors, incomplete-class and session-decode failures). A silent, successful chain leaves nothing in the logs. The payload in the session file is the ground truth, so check <code>session.save_path</code> directly if you suspect this.</p>
+<p>A separate crash signature turned up on 2026-10-22: the same allocator double-free (<code>free</code> -&gt; <code>__zend_free</code> -&gt; <code>_efree</code> in <code>zend_alloc.c</code>), reported by AddressSanitizer and reproduced through PHP's built-in CLI server (<code>php -S</code>) with a crafted POST body. Two things make it easy to miss. First, a sanitizer or debug build phrases the double-free differently from the <code>double free detected</code> line a release build prints, so the older allocator pattern didn't catch it. <code>hunt</code> now matches the ASan verdict lines and the Zend allocator frames as well. Second, the CLI server writes its crash backtrace to the process's <strong>stderr</strong> rather than a logfile, so neither <code>hunt</code> nor the watcher sees it unless you redirect <code>php -S</code> (or FPM) stderr into one of the scanned files. Most important, it reproduced on <strong>8.5.12</strong>, the release this script otherwise treats as fixed. It is unconfirmed on a stock release build and may be a distinct bug, so the script's patched baseline is unchanged. If you want your hosts to stop reading 8.5.12 as safe, set <code>PATCHED_8_5=8.5.13</code> (or the real fixed release once one ships) and the mitigations stay applied. The AppArmor layer confines PHP-FPM only. It does not wrap the <code>php</code> CLI binary, so on the dev server the only real defenses are patching PHP and not exposing <code>php -S</code> to untrusted traffic.</p>
+<p>That crash can also come from a PHP bug that has nothing to do with php2shell. php-src issue <a href="https://github.com/php/php-src/issues/24488">24488</a> describes a double free in the garbage collector involving SimpleXML objects. A third party's release notes put it on 8.4.27 and 8.5.12, the two releases that carry the 21 October fixes, call it introduced there, and say PHP has approved a fix. It is not established that it is the same defect as the double free above. So a double-free crash on 8.4.27 or 8.5.12 deserves a look but is not by itself evidence of exploitation, and it is not a reason to go back to an unfixed PHP. If a <code>hunt</code> hit names SimpleXML, start with that issue, and check it for its current status. The same notes mention a use-after-free in <code>unserialize()</code> when a destructor calls <code>unserialize()</code> or <code>session_decode()</code> (php-src issue 24481) on current releases; its status is not established.</p>
+<p>A match tells you exactly where to look. Buggy extensions crash workers too, and the upload-progress field appears in legitimate forms. Compare the counts against a quiet period, correlate crashes with memory-limit fatals and multipart POSTs from the same client, and check the web root for new files. Applying this script's AppArmor profile in complain mode first makes <code>hunt</code> more useful, because it turns any FPM attempt to run a binary into a logged signal.</p>
+<p><code>hunt</code> also checks the indicators from a 24 October 2026 honeypot report by the phpot project (<a href="https://github.com/0x4D31/honeypot-data/blob/main/reports/php2shell/2026-10-24-confirmed-rce.md">the phpot report</a>) that tied 35 Apache-parent <code>/bin/sh</code> starts to complete HTTP requests on single-worker Apache <code>mod_php</code> running PHP 8.4.26, which is below the 8.4.27 fix. Read them as leads ordered by strength. The strongest are process-level: a shell or fetch tool running now under a web or PHP worker (with its TCP peers), repeated pre-script out-of-memory errors from one client, and proof-style files (<code>id</code> output) in temp directories and web roots. Weaker signals are the request fingerprint, traffic from known source addresses, and leak-sized responses. The fingerprint is <code>?q0=v&amp;q1=v&amp;q2=v...</code> in its short form or <code>?q0000000=v&amp;q0000001=v...</code> in its long form, and both are matched. The addresses are the two the phpot report confirmed (<code>HUNT_IPS</code>) and two that sent exploit-shaped requests with no shell seen (<code>HUNT_ATTEMPT_IPS</code>, attempt indicators only). A leak-sized response is a <code>PHPSESSID</code> value thousands of characters long (the disclosure stage returned one of 819,200 bytes decoded, about 2 MB on the wire) or a POST whose logged response is half a megabyte or more. The size lead works only in a log that counts header bytes (Apache <code>%O</code>, which is the Debian and Ubuntu default, or nginx <code>$bytes_sent</code>), and <code>hunt</code> never prints a cookie value, because it is leaked process memory. On nginx, whose default access log cannot show response header size, the matching lead is the <code>upstream sent too big header</code> error in its error log. If the auditd rule from <a href="detect/index.html"><code>php/detect/</code></a> is loaded, <code>hunt</code> also reads the program starts it recorded, the one way to see a shell that started and exited between process samples.</p>
+<p>None of these is proof on its own. The phpot report's final request could fail to reach the access log because the worker died, so a missing line is not evidence that nothing ran, and an HTTP 200 on one stage is not evidence the attempt failed.</p>
+<h3 id="watching-live">Watching live</h3>
+<p><code>hunt</code> is a one-shot scan. To watch continuously, the standalone <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/php2shell-watch.sh"><code>php/php2shell-watch.sh</code></a> follows the same logs with <code>tail -F</code> and prints one line per hit, so a sysadmin can leave it running and watch the output:</p>
+<pre tabindex="0"><code class="language-bash">sudo nohup ./php2shell-watch.sh &gt;/var/log/php2shell-watch.log 2&gt;&amp;1 &amp;
+tail -f /var/log/php2shell-watch.log
+</code></pre>
+<p>It survives log rotation, prints a count summary on stop, and changes nothing. A <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/php2shell-watch.service">systemd unit</a> is included for running it as a managed service (<code>journalctl -fu php2shell-watch</code>). The same caveat applies: a hit is a lead to investigate.</p>
+<p>Since 2026-10-23 it also carries two signals ReliaQuest reported from lab reproduction of <span class="nw">CVE-2026-109618</span>. First, a memory error that ends with <code>in Unknown on line 0</code>. During exploitation PHP reports the failure before an application file is in scope, so the error names no file. That is a stronger tell than an ordinary memory-limit fatal, and because the failed allocation can be small, the signal does not depend on its size. Second, a correlation: a POST that returns HTTP 500 followed within a few seconds by the worker that handled it crashing, tied together by the worker PID appearing in both logs. The watch arms a PID when an access-log line shows a POST with a 500 status, and raises an <code>ALERT</code> if a same-PID crash (<code>zend_mm_heap corrupted</code>, <code>AH00052</code>, an abort/segfault signal, or <code>in Unknown on line 0</code>) lands within <code>CORRELATE_WINDOW</code> seconds (default 10). This needs an access log that records the PID among the watched files. For Apache that means <code>%P</code> in the <code>LogFormat</code>. With no access log present the correlation stays off and the per-line signatures still work. The default log set now includes the common access-log paths for this reason.</p>
+<p>The watcher also runs a process watch: it samples <code>/proc</code> once a second and reports a new shell or tool (<code>sh</code>, <code>curl</code>, <code>wget</code>, PHP CLI and similar) whose ancestry includes a web server or PHP worker, which was the phpot report's strongest signal. It is a poller, so it can miss a process that lives less than the interval, and a shell whose worker has already died is re-parented and no longer links to it (the phpot report's worker crashed about 0.7 seconds after starting the shell). The auditd rule in <a href="detect/index.html"><code>php/detect/</code></a> has no such gap. Set <code>PROCS=0</code> to turn the watch off, or <code>PROC_ALLOW</code> to ignore an application that legitimately shells out. A flagged process shows its TCP peers, for example <code>[tcp: SYN-SENT-&gt;203.0.113.9:8080]</code>. Two more signals work from logs and need no access-log line: a pre-script out-of-memory error followed by a crash of the same worker (the shape of the confirmed chain), and repeated pre-script out-of-memory errors from one client. It also matches the short numbered request fingerprint, raises a <code>LEAD</code> for a POST with a very large response or a <code>PHPSESSID</code> value thousands of characters long, and flags the edge cookie guard's log line and nginx's <code>upstream sent too big header</code> error.</p>
+<p>Two of those alerts, the per-client burst and the same-worker chain, need the error-log line to carry the worker PID and the client address. Apache's own error log does. PHP's own <code>error_log</code> file format (<code>[23-Oct-2026 09:08:35 UTC] PHP Fatal error: ...</code>) carries neither, so those two alerts cannot fire from it, although the single-line signature still does. Under <code>mod_php</code>, leave <code>error_log</code> unset so PHP errors go to Apache's error log. The watcher prints a one-time <code>NOTE</code> when it sees an out-of-memory line it cannot attribute, and <code>hunt</code> says how many such lines it could not count.</p>
+<h3 id="php2shell-configuration">PHP2Shell configuration</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WEB_ROOTS</code></td>
+<td><code>/var/www /srv/www</code></td>
+<td>Read-only document roots</td>
+</tr>
+<tr>
+<td><code>WRITABLE_PATHS</code></td>
+<td><em>(empty)</em></td>
+<td>Paths your app writes to, such as uploads</td>
+</tr>
+<tr>
+<td><code>PATCHED_X_Y</code> (for example <code>PATCHED_8_4</code>)</td>
+<td><code>8.2.35</code>, <code>8.3.36</code>, <code>8.4.27</code>, <code>8.5.12</code>; empty for 7.0-8.1</td>
+<td>First fixed upstream release for each branch</td>
+</tr>
+<tr>
+<td><code>PHP_VER</code></td>
+<td><em>(empty)</em></td>
+<td>The same as <code>--php X.Y</code>. An exported <code>PHP_VER</code> in your environment therefore limits the run to that version</td>
+</tr>
+<tr>
+<td><code>GUARD_HINT</code></td>
+<td><code>1</code></td>
+<td>Set to <code>0</code> to stop the environment check pointing to the third-party extension for PHP this script can't cover</td>
+</tr>
+<tr>
+<td><code>PATCHED_115560_X_Y</code></td>
+<td><em>(empty)</em></td>
+<td>First release fixing <span class="nw">CVE-2026-115560</span> for branch X.Y. Until set, only a changelog naming the CVE counts</td>
+</tr>
+<tr>
+<td><code>SUPPORTED_VERS</code></td>
+<td><code>7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5</code></td>
+<td>Versions the script will touch</td>
+</tr>
+<tr>
+<td><code>FIXED_BUILDS</code></td>
+<td><em>(empty)</em></td>
+<td>Extra fixed distro builds, space-separated full versions, for example a Debian LTS 7.4 update</td>
+</tr>
+<tr>
+<td><code>HUNT_IPS</code></td>
+<td><code>15.204.59.70 162.35.99.94</code></td>
+<td>Source addresses reported in confirmed exploitation. An aging indicator: a hit means the address touched you, not what it did. Empty turns it off</td>
+</tr>
+<tr>
+<td><code>HUNT_ATTEMPT_IPS</code></td>
+<td><code>104.28.208.84 144.48.4.242</code></td>
+<td>Addresses that sent exploit-shaped requests with no shell seen: attempt indicators, not confirmed RCE, and shared addresses are possible. Empty turns it off</td>
+</tr>
+<tr>
+<td><code>PROOF_SINCE</code></td>
+<td><code>2026-10-01</code></td>
+<td><code>hunt</code>'s proof-file scan ignores older files</td>
+</tr>
+<tr>
+<td><code>HUNT_PROC_ALLOW</code></td>
+<td><code>rotatelogs|cronolog|logger</code></td>
+<td>Regex on the command line: <code>hunt</code>'s live process check ignores matches</td>
+</tr>
+<tr>
+<td><code>COOKIE_MAX</code></td>
+<td><code>4096</code></td>
+<td>Flag a <code>PHPSESSID</code> value this many characters long, in a log that records response cookies. <code>0</code> turns it off. Also read by <code>php2shell-watch.sh</code></td>
+</tr>
+<tr>
+<td><code>RESP_BYTES_MAX</code></td>
+<td><code>500000</code></td>
+<td>Flag a POST whose logged response is this many bytes. Needs a log that counts header bytes. <code>0</code> turns it off. Also read by <code>php2shell-watch.sh</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>php2shell-watch.sh</code> reads its own variables, each documented at the top of the script: <code>LOGS</code>, <code>WATCH_IPS</code>, <code>PROCS</code>, <code>PROC_INTERVAL</code>, <code>PROC_CMD_MAX</code>, <code>PROC_ALLOW</code>, <code>CORRELATE_WINDOW</code>, <code>CHAIN_WINDOW</code>, <code>OOM_CLIENT_THRESHOLD</code>, <code>OOM_CLIENT_WINDOW</code>, <code>COOKIE_MAX</code> and <code>RESP_BYTES_MAX</code>.</p>
+<p>When no upstream fixed version is set for a branch, the script checks your distro's changelog for both CVEs instead. That catches backported fixes from Ubuntu, Debian, and the ondrej/sury PPAs, which often keep the old version number.</p>
+<h3 id="php2shell-on-cpanel-easyapache-4">PHP2Shell on cPanel (EasyApache 4)</h3>
+<p><code>php2shell-mitigate.sh</code> assumes Debian-family packages and does not touch a cPanel server's EasyApache 4 PHP (<code>/opt/cpanel/ea-php74</code> to <code>ea-php85</code>). <code>php2shell-cpanel-mitigate.sh</code> covers it, under any handler (<code>mod_php</code>, PHP-FPM, CGI or LSAPI). It writes one drop-in per PHP version, named so that it loads after every other file in that version's <code>php.d</code> directory and therefore wins over <code>php.ini</code> and the MultiPHP INI Editor. It never edits <code>php.ini</code>.</p>
+<ol>
+<li>
+<p>Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.</p>
+<pre tabindex="0"><code class="language-bash"># BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO &quot;$BASE/php/php2shell-cpanel-mitigate.sh&quot;
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/php/php2shell-cpanel-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Read it before running it. Always.</p>
+<pre tabindex="0"><code class="language-bash">less php2shell-cpanel-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Make it executable.</p>
+<pre tabindex="0"><code class="language-bash">chmod +x php2shell-cpanel-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>See what you have. This changes nothing.</p>
+<pre tabindex="0"><code class="language-bash">sudo ./php2shell-cpanel-mitigate.sh check
+</code></pre>
+</li>
+<li>
+<p>If a version is unpatched and you cannot update the <code>ea-php</code> packages today, apply the drop-in. This restarts Apache and any running <code>ea-php</code> FPM pools. Add <code>--no-restart</code> to do that yourself at a time you choose.</p>
+<pre tabindex="0"><code class="language-bash">sudo ./php2shell-cpanel-mitigate.sh apply
+</code></pre>
+</li>
+</ol>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code> (default)</td>
+<td>Read-only report, and the file <code>apply</code> would write for each version</td>
+</tr>
+<tr>
+<td><code>apply</code></td>
+<td>Writes the drop-in for every version, confirms PHP reports the values, and restarts Apache and FPM</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>What is in place now, and whether any web server or FPM process still runs with the old settings</td>
+</tr>
+<tr>
+<td><code>restore</code></td>
+<td>Removes the drop-ins this script wrote</td>
+</tr>
+<tr>
+<td><code>cleanup</code></td>
+<td>Once a version is patched, reduces its drop-in to the single line <span class="nw">CVE-2026-115560</span> still needs (<code>--force</code> does this for an unpatched version too)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The options are <code>--post-max SIZE</code>, <code>--upload-max SIZE</code>, <code>--memory-unlimited</code>, <code>--no-restart</code>, <code>--no-scan</code> and <code>--force</code>; <code>--help</code> describes each.</p>
+<p>What the drop-in sets:</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>When</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session.upload_progress.enabled = 0</code></td>
+<td>Every version, patched or not</td>
+<td><span class="nw">CVE-2026-115560</span> is not fixed by the 21 October releases</td>
+</tr>
+<tr>
+<td><code>fatal_error_backtraces = 0</code></td>
+<td>PHP 8.5, unpatched builds only</td>
+<td>Removes the fatal-error-backtrace variant</td>
+</tr>
+<tr>
+<td><code>memory_limit = -1</code></td>
+<td>Only with <code>--memory-unlimited</code>, unpatched builds only</td>
+<td>PHP's own protective measure; it trades the remote code execution for denial of service, so pair it with a request body cap (see <a href="edge/index.html"><code>php/edge/</code></a>)</td>
+</tr>
+<tr>
+<td><code>post_max_size</code>, <code>upload_max_filesize</code></td>
+<td>Only with <code>--post-max</code> (and <code>--upload-max</code>)</td>
+<td>Capped to the smaller of the current value and your ceiling; never raised. A chunked request can pass <code>post_max_size</code>, so this narrows the exposure and does not close it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Besides the version table, <code>check</code> reports:</p>
+<ul>
+<li>the PHP handler of each version, read from WHM when <code>whmapi1</code> is present (a version it cannot place shows as <code>unknown</code>);</li>
+<li>whether each version is patched, by version number or because its package changelog names both CVEs. An end-of-life branch counts as unpatched unless a changelog names both;</li>
+<li>settings elsewhere that can undo the drop-in: FPM pool entries, and <code>.htaccess</code> <code>php_value</code> and <code>php_flag</code> lines and <code>.user.ini</code> files under the home directories (a <code>php.ini</code> in a home directory loads before the drop-in, so the drop-in wins over it);</li>
+<li>Apache <code>RLimitMEM</code> and <code>RLimitCPU</code>. They limit processes Apache itself forks (CGI, suEXEC, suPHP), and PHP's advisory warns against an address-space limit as a memory cap, because a failed allocation sends PHP down the vulnerable path. WHM regenerates <code>httpd.conf</code>, so change them in WHM, not by hand.</li>
+</ul>
+<p><code>check</code> exits 0 when every version is patched and nothing needs review, 1 when an unpatched version is present, and 2 when everything is patched but something above is worth a look.</p>
+<p>Limits:</p>
+<ul>
+<li><code>check</code> prints the exact plan before <code>apply</code> makes any change, and <code>restore</code> reverts a drop-in it wrote.</li>
+<li>The drop-in loses to settings applied later: <code>.htaccess</code> and <code>.user.ini</code> values, and FPM pool values. <code>check</code> lists them. The script does not change them.</li>
+<li><code>apply</code> restarts Apache through cPanel's <code>restartsrv_httpd</code>, which interrupts connections briefly. LiteSpeed's own workers are not restarted: restart LiteSpeed yourself.</li>
+<li>The <a href="edge/index.html">Apache edge guard</a> can be added through WHM's Apache include editor, so that cPanel keeps it when it regenerates <code>httpd.conf</code>.</li>
+<li>A release candidate, beta or dev build is never treated as the fixed release. A build reporting <code>8.4.27RC1</code>, <code>8.4.27beta2</code> or <code>8.4.27-dev</code> comes before 8.4.27, so it reads as unpatched. Only a build above the fixed number, or one whose package changelog names both CVEs, reads as patched.</li>
+</ul>
+<h3 id="edge-guards-and-detection-content">Edge guards and detection content</h3>
+<p>Two optional folders sit beside the scripts. Both are compensating controls, not fixes. <a href="edge/index.html"><code>php/edge/</code></a> has Apache (server configuration or <code>.htaccess</code>) and nginx guards, and a curl-based tester for them (<code>php2shell-edge-test.sh</code>). The guards reject a multipart POST to a path that takes no uploads (log-only until you enforce) and, on Apache, replace an oversized <code>Set-Cookie</code>, plus guidance on a request body size limit, measured against the phpot report's stage sizes. They were verified with real PHP handlers (Apache 2.4.58 with <code>mod_php</code>, nginx 1.24.0 with PHP-FPM). They matter most for Apache <code>mod_php</code>, which the AppArmor layer does not confine. <a href="detect/index.html"><code>php/detect/</code></a> has an auditd rule that records every program the web-server account starts, a Tetragon filter for the same signal, a log-only outbound-connection rule, and a table of how strong each signal is. The auditd rule and the nftables rule load on a live kernel.</p>
+<h3 id="how-exploitable-is-it-and-since-when">How exploitable is it, and since when</h3>
+<p>PHP's advisory says complete remote code execution for <span class="nw">CVE-2026-109618</span> was validated over HTTP against Apache <code>mod_php</code> with default PHP input and memory limits, and that PHP validated remote code execution against PHP-FPM for <span class="nw">CVE-2026-109619</span> (as quoted by HeroDevs and Rescana). Wiz demonstrated chains against stock WordPress, Drupal and Joomla images (as summarized by Corgea), and the phpot honeypot report recorded 35 Apache-parent shell starts on single-worker <code>mod_php</code> running PHP 8.4.26. The phpot report found the observed chain consistent with <span class="nw">CVE-2026-109618</span> and did not establish a <span class="nw">CVE-2026-109619</span> path. Early claims that the public proofs of concept were fake or hard to use did not hold up.</p>
+<p>Exploitation may have begun before the release. Amazon Threat Intelligence reported a PHP2Shell exploitation attempt in its MadPot honeypot telemetry dating to 17 October 2026, four days before the 21 October fix (<a href="https://aws.amazon.com/blogs/security/amazon-threat-intelligence-identifies-php2shell-exploitation-prior-to-public-disclosure-in-madpot/">AWS Security Blog</a>). Treat 17 October as the start of exploitation and start log hunting there, not on 21 October. <code>hunt</code>'s dated before and after split uses 17 October as its baseline (set <code>HUNT_SINCE</code> to change it), so a count from before that date is your quiet baseline.</p>
+<h3 id="php-protective-measures-and-what-they-cost">PHP protective measures and what they cost</h3>
+<p>PHP's advisories name protective measures beyond the ones <code>php2shell-mitigate.sh</code> applies. PHP says they &quot;reduce exposure to specific attack paths but do not make an installation safe&quot;, and its releases state that updating is the only complete fix. The table lists each measure, what it addresses, what it costs, and whether this script applies it. The details come from PHP's advisories (<a href="https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w"><span class="nw">CVE-2026-109618</span></a> and <a href="https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp"><span class="nw">CVE-2026-109619</span></a>) as summarized by HeroDevs and Corgea. Check the advisories for their exact wording before relying on a setting.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Measure</th>
+<th>What it addresses</th>
+<th>Cost or risk</th>
+<th>Applied by this script?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>memory_limit = -1</code>, set administratively (<code>php_admin_value</code> or the main <code>php.ini</code>, not <code>.user.ini</code>), every worker restarted, and confirmed that no pool, directory or application setting restores a finite limit</td>
+<td>Removes the out-of-memory condition <span class="nw">CVE-2026-109618</span> depends on</td>
+<td>Trades the RCE for denial of service: one request can consume all memory. Pair it with a body cap</td>
+<td>No. A host-wide memory decision is yours</td>
+</tr>
+<tr>
+<td><code>session.upload_progress.enabled = 0</code></td>
+<td>The upload-progress producer and consumer paths, and the cookie-disclosure path</td>
+<td>Breaks upload progress bars</td>
+<td>Yes (the drop-in)</td>
+</tr>
+<tr>
+<td><code>fatal_error_backtraces = 0</code> (PHP 8.5)</td>
+<td>The fatal-error-backtrace variant</td>
+<td>Loses backtraces in fatal errors</td>
+<td>Yes, on 8.5</td>
+</tr>
+<tr>
+<td>A conservative <code>post_max_size</code>, plus a cap on the decoded body at the web server</td>
+<td>A multipart request with no usable <code>Content-Length</code> can pass <code>post_max_size</code></td>
+<td>Refuses large uploads</td>
+<td>Guidance in <a href="edge/index.html"><code>php/edge/</code></a></td>
+</tr>
+<tr>
+<td>A lower <code>max_input_nesting_level</code>; bounds on <code>max_input_vars</code>, multipart parts and headers per part</td>
+<td>Limits the structures that consume memory cheaply. <code>max_file_uploads</code> does not count empty file controls</td>
+<td>May break unusual forms</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Block <code>multipart/form-data</code> where the application takes none</td>
+<td>Removes the request shape the out-of-memory producers use</td>
+<td>Breaks uploads</td>
+<td>The multipart guard in <code>php/edge/</code>, log-only first</td>
+</tr>
+<tr>
+<td>Remove per-request INI overrides that emit diagnostics (<code>.htaccess</code> <code>php_value</code>, <code>PHP_VALUE</code>)</td>
+<td>A consumer of stale error state before request initialization</td>
+<td>Per-application changes</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>pm.max_requests = 1</code> on FPM pools that can absorb it</td>
+<td>Limits stale state surviving across requests</td>
+<td>A large performance cost</td>
+<td>No</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Do not</strong> use <code>RLIMIT_AS</code>, <code>RLIMIT_DATA</code>, <code>ulimit -v</code> or systemd <code>LimitAS</code> as a stand-in for <code>memory_limit</code>. Per the same summaries they make <code>mmap()</code> fail, which sends PHP back down the vulnerable <code>longjmp()</code> path. This project sets no such limit. The advisories do not address cgroup memory limits, so test one before relying on it.</p>
+<p>Which server API is exposed: for <span class="nw">CVE-2026-109618</span>, PHP says complete remote code execution was validated over HTTP against Apache <code>mod_php</code>, and that source analysis supports PHP-FPM as susceptible, with no complete FPM exploit at publication. For <span class="nw">CVE-2026-109619</span>, PHP says it validated remote code execution against PHP-FPM as well (as quoted by Rescana). Treat FPM as exposed, and <code>mod_php</code> as the higher priority.</p>
+<h3 id="before-you-run-it">Before you run it</h3>
+<ul>
+<li>This is not a patch. PHP released fixes on 21 October 2026 in 8.5.12, 8.4.27, 8.3.36 and 8.2.35, and distributions are shipping backports under their own version numbers. Upgrade, then run <code>cleanup</code>.</li>
+<li>The profile blocks <code>mail()</code> , because PHP runs sendmail through <code>/bin/sh</code>. It also blocks ImageMagick delegates. If your app sends mail, use SMTP from PHP.</li>
+<li>PHP 7.0 through 8.1 are past upstream end of life. PHP fixed only 8.2 through 8.5. For older branches a fix can only come as a distro or PPA backport, such as Debian LTS, Ubuntu ESM or the sury PPA. Without one, this mitigation is permanent, so plan your upgrade.</li>
+<li>PHP 5.x is reported affected but not covered. The environment check flags it, and on Ubuntu 14.04 tells you whether the ESM Legacy fix is installed.</li>
+<li>Checking by hand, check the package your server actually runs. <code>apt list '?installed ?name(^php[0-9.]+$)'</code> lists the <code>php8.3</code>-style metapackages, which a server with only <code>php8.3-fpm</code> or <code>libapache2-mod-php8.3</code> may not have installed. Query those packages directly: <code>dpkg-query -W 'php*-fpm' 'libapache2-mod-php*'</code>.</li>
+<li>Debian, Ubuntu, Trisquel and their derivatives only , with systemd, sysvinit or OpenRC. RHEL, Remi, and other SELinux-based layouts need a different approach. The environment check refuses to run on them.</li>
+<li>PHP-FPM only. Apache mod_php and LiteSpeed lsphp are reported but not mitigated. mod_php is a demonstrated exploitation surface for this bug, and the AppArmor profile cannot reach PHP running inside Apache, so on a mod_php host the fix is to upgrade <code>libapache2-mod-php&lt;version&gt;</code> and restart Apache, not this profile. On a cPanel server with EasyApache 4 PHP, use <a href="#php2shell-on-cpanel-easyapache-4">the cPanel script</a>.</li>
+<li>For PHP nothing here covers and no package will fix (an end-of-life branch with no distro backport, PHP 5, unpatched mod_php, PHP built outside dpkg), the environment check points to <a href="https://github.com/HOSTED-POWER/php_uploadprogress_guard">php_uploadprogress_guard</a>, a third-party PHP extension (5.4 to 8.5, any SAPI) that removes the session upload-progress handler and carries a fixed multipart parser. It's not part of this project and we haven't reviewed it. It runs inside every PHP process, so read the source, build it yourself rather than installing the prebuilt binaries, and test on staging. Upgrading remains the fix. <code>GUARD_HINT=0</code> turns the pointer off.</li>
+<li>Every server API that serves web requests is in scope , not only PHP-FPM and <code>mod_php</code>: PHP's advisory names <code>php-cgi</code>, FrankenPHP and LiteSpeed as well. What this project covers is limited to what its scripts and guards say they cover.</li>
+<li>PHP inside other products (control panels, network and security appliances, management consoles, container images) can bundle its own copy. Updating the system PHP package does not touch it, and <code>php2shell-mitigate.sh</code> only reads packages. The fix there is the vendor's update or a rebuilt image, so check the vendor's advisory, and look for PHP binaries outside the package manager.</li>
+<li>Rely on the crash and error-log signatures <code>hunt</code> looks for, and on patching. The demonstrated exploits run against stock production settings with <code>display_errors</code> off, so a successful attempt need not surface as a visible PHP error in a response or an application log.</li>
+<li>Backups of everything the script touches go to <code>/var/backups/php2shell/&lt;timestamp&gt;-&lt;pid&gt;/&lt;version&gt;/</code>. The process id keeps two runs in the same second from sharing a directory and overwriting the first backup. <code>remove</code> keeps the profile, your local override and any disable link under separate names (<code>usr.sbin.php-fpmX.Y</code>, <code>local.usr.sbin.php-fpmX.Y</code>, <code>disable.usr.sbin.php-fpmX.Y</code>), so the site-specific rules you added to the local override survive the removal.</li>
+<li>If the AppArmor profile fails to parse during <code>apply</code>, no profile is installed or changed, but the <code>session.upload_progress</code> drop-in written in step 1 stays in place: it only turns a feature off, so it is left on purpose.</li>
+</ul>
+<h3 id="why-cleanup-leaves-the-apparmor-profile-loaded">Why <code>cleanup</code> leaves the AppArmor profile loaded</h3>
+<p>That's deliberate. The patch fixes these bugs. The profile confines PHP-FPM against the next one, which no patch does. After <code>cleanup</code> you choose: <code>enforce</code> to start blocking (review <code>status</code> first), or <code>remove</code> to unload the profile and delete its files. Until you pick one, it stays in complain mode and only logs.</p>
+<h3 id="php--v-and-backported-fixes"><code>php -v</code> and backported fixes</h3>
+<p><code>php -v</code> reports PHP's upstream version, never the distro build, so Ubuntu's <code>8.3.6-0ubuntu0.24.04.13</code> shows as plain 8.3.6. The script reads the package build with dpkg and prints it in every patch verdict. To check by hand: <code>dpkg-query -W -f='${Version}\n' php8.3-fpm</code> (or <code>libapache2-mod-php8.3</code> for mod_php).</p>
+
+<h2 id="php-session-audit-cve-2026-115560">PHP Session Audit (<span class="nw">CVE-2026-115560</span>)</h2>
+<p><strong>Script:</strong> <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/php-session-audit.sh"><code>php/php-session-audit.sh</code></a></p>
+<p><span class="nw">CVE-2026-115560</span> needs three things at once: <code>session.serialize_handler</code> set to <code>php_binary</code> or <code>php_serialize</code> in config, application code switching it to <code>php</code> at runtime before <code>session_start()</code>, and session upload progress left on. Turning upload progress off closes it, and <code>php2shell-mitigate.sh</code> does that.</p>
+<p>Status as of PHP's 23 October advisory, as reported by <a href="https://cybernews.com/security/php2shell-attacks-php-new-vulnerabilities-found/">Cybernews</a>: the PHP Foundation considers the setup unlikely in practice, so it is handling this CVE in the regular release cycle and will publish a full advisory with the next release. It has not yet named the affected versions or given a severity score, and it has reported no exploitation of this CVE. Its advice is to keep <code>session.upload_progress.enabled = 0</code> until that release, and an application that already has it off needs nothing more for this issue. This is why <code>PATCHED_115560_X_Y</code> has no default: set it yourself once PHP names the fixed release for your branch. Check <a href="https://www.php.net/">php.net</a> for the current position.</p>
+<p>This read-only script tells you whether the other two conditions exist, so you know whether you were exposed:</p>
+<ul>
+<li>the configured handler and upload-progress setting for every PHP-FPM version and pool, and for mod_php;</li>
+<li>per-directory overrides in Apache config, <code>.htaccess</code> and <code>.user.ini</code>;</li>
+<li>code under <code>WEB_ROOTS</code> that switches the serializer through <code>ini_set()</code> or <code>session_start([...])</code>;</li>
+<li>a <code>session.save_path</code> shared by pools with different serializers.</li>
+</ul>
+<pre tabindex="0"><code class="language-bash">WEB_ROOTS=&quot;/var/www /srv&quot; ./php-session-audit.sh
+</code></pre>
+<p>Exits <code>0</code> if nothing matched, <code>1</code> if all three conditions are present, <code>2</code> for a partial match worth reviewing. The code scan is a grep: it finds literal switches, and flags non-literal ones for you to check.</p>
+<!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->
+<h2 id="red-hat-advisories">Red Hat advisories</h2>
+<p>Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-03) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on <a href="https://access.redhat.com/security/security-updates/#/cve">Red Hat's CVE database</a>.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Advisory</th>
+<th>Released</th>
+<th>Severity</th>
+<th>Package and stream</th>
+<th>CVEs on this page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87070">RHSA-2026:87070</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>php-8.3.36-1.el10_2</code> (RHEL 10.2)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87071">RHSA-2026:87071</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>php8.4-8.4.27-1.el10_2</code> (RHEL 10.2)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87072">RHSA-2026:87072</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>php-8.2.35-1.module+el9.8.0+25111+a1450321</code> (RHEL 9.8); <code>php-pecl-apcu-5.1.23-1.module+el9.7.0+24111+199d2cc4</code> (RHEL 9.7); <code>php-pecl-rrd-2.0.3-4.module+el9.7.0+24111+199d2cc4</code> (RHEL 9.7); and 2 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87073">RHSA-2026:87073</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>libzip-1.7.3-1.module+el8.10.0+20770+a5eca186</code> (RHEL 8.10); <code>php-8.2.35-1.module+el8.10.0+25110+f67151d2</code> (RHEL 8.10); <code>php-pear-1.10.14-1.module+el8.10.0+20770+a5eca186</code> (RHEL 8.10); and 4 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87079">RHSA-2026:87079</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>php-8.3.36-1.module+el9.8.0+25109+6886e21a</code> (RHEL 9.8); <code>php-pecl-apcu-5.1.23-1.module+el9.8.0+24343+756b4fcd</code> (RHEL 9.8); <code>php-pecl-redis6-6.1.0-3.module+el9.8.0+24343+756b4fcd</code> (RHEL 9.8); and 3 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87080">RHSA-2026:87080</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>libzip-1.6.1-1.module+el8.10.0+22485+a3539972</code> (RHEL 8.10); <code>php-7.4.33-8.module+el8.10.0+25117+30337cca</code> (RHEL 8.10); <code>php-pear-1.10.13-1.module+el8.10.0+22485+a3539972</code> (RHEL 8.10); and 4 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87151">RHSA-2026:87151</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>php-8.0.30-8.el9_8.1</code> (RHEL 9.8)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:87414">RHSA-2026:87414</a></td>
+<td>2026-10-21</td>
+<td>Important</td>
+<td><code>php-8.5.12-1.hum1</code> (Hummingbird)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88532">RHSA-2026:88532</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>libzip-1.6.1-1.module+el8.3.0+6678+b09f589e</code> (RHEL 8.3); <code>php-7.4.33-1.module+el8.8.0+25148+55cf9df9.2</code> (RHEL 8.8); <code>php-pear-1.10.13-1.module+el8.7.0+15127+a450a8db</code> (RHEL 8.7); and 4 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88533">RHSA-2026:88533</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-pear-1.10.13-1.module+el8.6.0+16577+0788886f</code> (RHEL 8.6); <code>php-pecl-apcu-5.1.18-1.module+el8.3.0+6678+b09f589e</code> (RHEL 8.3); <code>php-pecl-rrd-2.0.1-1.module+el8.3.0+6678+b09f589e</code> (RHEL 8.3); and 4 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88561">RHSA-2026:88561</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-8.3.19-1.el10_0.2</code> (RHEL 10.0)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88565">RHSA-2026:88565</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>libzip-1.6.1-1.module+el8.3.0+6678+b09f589e</code> (RHEL 8.3); <code>php-7.4.6-5.module+el8.4.0+25156+e0c98721.3</code> (RHEL 8.4); <code>php-pear-1.10.13-1.module+el8.4.0+16578+ed65e99e</code> (RHEL 8.4); and 4 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88659">RHSA-2026:88659</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-8.0.30-1.el9_2.2</code> (RHEL 9.2)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88693">RHSA-2026:88693</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-5.4.16-48.el7_9.1</code> (RHEL 7.9)</td>
+<td><span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88720">RHSA-2026:88720</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-8.0.30-3.el9_6.2</code> (RHEL 9.6)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88725">RHSA-2026:88725</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-8.0.30-1.el9_4.2</code> (RHEL 9.4)</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88834">RHSA-2026:88834</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-8.2.28-1.module+el9.6.0+25176+d8415d54.4</code> (RHEL 9.6); <code>php-pecl-apcu-5.1.23-1.module+el9.4.0+20748+b46899d2</code> (RHEL 9.4); <code>php-pecl-rrd-2.0.3-4.module+el9.4.0+20748+b46899d2</code> (RHEL 9.4); and 2 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:88835">RHSA-2026:88835</a></td>
+<td>2026-10-23</td>
+<td>Important</td>
+<td><code>php-8.2.13-1.module+el9.4.0+25177+88c847cf.4</code> (RHEL 9.4); <code>php-pecl-apcu-5.1.23-1.module+el9.4.0+20748+b46899d2</code> (RHEL 9.4); <code>php-pecl-rrd-2.0.3-4.module+el9.4.0+20748+b46899d2</code> (RHEL 9.4); and 2 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:89111">RHSA-2026:89111</a></td>
+<td>2026-10-26</td>
+<td>Important</td>
+<td><code>php-8.3.19-1.module+el9.6.0+25160+f8b750a4.3</code> (RHEL 9.6); <code>php-pecl-apcu-5.1.23-1.module+el9.6.0+22647+1741ae35</code> (RHEL 9.6); <code>php-pecl-redis6-6.1.0-2.module+el9.6.0+22647+1741ae35</code> (RHEL 9.6); and 3 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/errata/RHSA-2026:90321">RHSA-2026:90321</a></td>
+<td>2026-10-26</td>
+<td>Critical</td>
+<td><code>devspaces/code-rhel9</code> (container image); <code>devspaces/code-sshd-rhel9</code> (container image); <code>devspaces/configbump-rhel9</code> (container image); and 13 more</td>
+<td><span class="nw">CVE-2026-109618</span>, <span class="nw">CVE-2026-109619</span></td>
+</tr>
+</tbody>
+</table></div>
+<!-- rhsa:end -->
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../openssl/index.html">&larr; OpenSSL</a><a rel="next" href="detect/index.html">PHP2Shell detection rules &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#php2shell-mitigation">PHP2Shell Mitigation</a></li><li class="l3"><a href="#php2shell-quick-start">PHP2Shell quick start</a></li><li class="l3"><a href="#php2shell-commands">PHP2Shell commands</a></li><li class="l3"><a href="#php2shell-environment-check">PHP2Shell environment check</a></li><li class="l3"><a href="#php2shell-patch-detection">PHP2Shell patch detection</a></li><li class="l3"><a href="#php2shell-hunting-for-exploitation">PHP2Shell hunting for exploitation</a></li><li class="l3"><a href="#watching-live">Watching live</a></li><li class="l3"><a href="#php2shell-configuration">PHP2Shell configuration</a></li><li class="l3"><a href="#php2shell-on-cpanel-easyapache-4">PHP2Shell on cPanel (EasyApache 4)</a></li><li class="l3"><a href="#edge-guards-and-detection-content">Edge guards and detection content</a></li><li class="l3"><a href="#how-exploitable-is-it-and-since-when">How exploitable is it, and since when</a></li><li class="l3"><a href="#php-protective-measures-and-what-they-cost">PHP protective measures and what they cost</a></li><li class="l3"><a href="#before-you-run-it">Before you run it</a></li><li class="l3"><a href="#why-cleanup-leaves-the-apparmor-profile-loaded">Why cleanup leaves the AppArmor profile loaded</a></li><li class="l3"><a href="#php--v-and-backported-fixes">php -v and backported fixes</a></li><li class="l2"><a href="#php-session-audit-cve-2026-115560">PHP Session Audit (CVE-2026-115560)</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
+<section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
+<div class="wrap">
+<article class="card has-partner">
+<h2 class="eco-title" id="ecosystem-title">The PrivacySafe Ecosystem</h2>
+<a class="partner-mark" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+<img src="../assets/img/ivy-logo-horizontal-white.svg" alt="Shop at Ivy Cyber" width="328" height="73" loading="lazy" decoding="async"/>
+</a>
+<p><strong>Ivy Cyber</strong> offers PrivacySafe products and services in the USA and has partnerships with 3NSoft in Canada and Kuip Limited in the European Union. Enterprise services and consulting are available at <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">ivycyber.com</a>
+</p><p><strong>PrivacySafe Foundation</strong> is a 501(c)(3) nonprofit public charity that supports the development of the PrivacySafe applications, along with the components they rely upon: 3NWeb protocols, filesystem, documentation, and reference implementations.</p>
+<div class="pullout">
+<a class="foundation-mark" href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank"><img src="../assets/img/logo-foundation.svg" alt="PrivacySafe Foundation" width="218" height="47" loading="lazy" decoding="async"/></a>
+<p class="pullout-text">Donations to <a href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank">PrivacySafe Foundation</a> support education, research, documentation, and public code. Purchases from <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber</a> support PrivacySafe products, services, hosting, and technical support. <strong class="pullout-lead">Together, we're building a better web.</strong></p>
+</div>
+<div class="split-actions">
+<a class="btn primary" href="https://www.zeffy.com/en-US/ticketing/cybersecurity-education-and-tech" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-heart" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="currentColor" d="M12 20.6 10.6 19.3C5.7 14.9 2.5 12 2.5 8.4 2.5 5.5 4.8 3.2 7.7 3.2c1.6 0 3.2.8 4.3 2.05C13.1 4 14.7 3.2 16.3 3.2c2.9 0 5.2 2.3 5.2 5.2 0 3.6-3.2 6.5-8.1 10.9L12 20.6Z"/> </svg>
+Donate to PrivacySafe Foundation
+</a>
+<a class="btn ghost" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+Buy PrivacySafe products &amp; services
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost" href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-code" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.6 4.8l-3.2 14.4"/> </svg>
+Browse our Source Code
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+</article>
+</div>
+</section>
+<footer>
+<div class="wrap">
+<div class="footer-community">
+<section aria-labelledby="footer-about-title" class="footer-panel footer-about">
+<h2 class="sr-only" id="footer-about-title">About PrivacySafe</h2>
+<img alt="PrivacySafe" class="footer-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+<p>PrivacySafe creates a secure sandbox environment for your organization which you can tie to your domain, your authentication methods, and your access controls.</p>
+<h3>Follow Us</h3>
+<div aria-label="PrivacySafe social links" class="social-links">
+<a aria-label="PrivacySafe on Mastodon" class="social-link" href="https://privacysafe.social/@privacysafe" rel="me noopener noreferrer" target="_blank" title="Mastodon">
+<svg class="ico ico-mastodon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg>
+</a><a aria-label="PrivacySafe on Bluesky" class="social-link" href="https://bsky.app/profile/privacysafe.social" rel="me noopener noreferrer" target="_blank" title="Bluesky">
+<svg class="ico ico-bluesky" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026"/></svg>
+</a><a aria-label="PrivacySafe on Twitter X" class="social-link" href="https://x.com/GetPrivacySafe" rel="nofollow noopener noreferrer" target="_blank" title="Twitter X">
+<svg class="ico ico-x-twitter" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+</a><a aria-label="PrivacySafe on LinkedIn" class="social-link" href="https://www.linkedin.com/company/privacysafe-app" rel="noopener noreferrer" target="_blank" title="LinkedIn">
+<svg class="ico ico-linkedin" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.200 3.600a1.700 1.700 0 1 0 0 3.400 1.700 1.700 0 0 0 0-3.400zM5.600 10.400v7.800h3.200v-7.800H5.600zm4.800 0v7.800h3.200v-4c0-1.100.4-1.700 1.300-1.700s1.300.6 1.300 1.700v4h3.200v-4.400c0-2.300-1.100-3.600-3.200-3.600-1.200 0-2.200.5-2.700 1.300v-1.100h-3.100z"/></svg>
+</a><a aria-label="PrivacySafe on YouTube" class="social-link" href="https://www.youtube.com/@privacysafe" rel="noopener noreferrer" target="_blank" title="YouTube">
+<svg class="ico ico-youtube" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+</a><a aria-label="PrivacySafe on Instagram" class="social-link" href="https://www.instagram.com/getprivacysafe/" rel="noopener noreferrer" target="_blank" title="Instagram">
+<svg class="ico ico-instagram" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>
+</a>
+<!--<a aria-label="Signal @ivycyber.01" class="social-link" href="https://signal.me/#eu/nmRqQrmMcXaq6cyfP8ckVaf-LniNZwhc5VatIEgC3y39lIYFNBBFF5NvpFurg6UA" rel="noopener noreferrer" target="_blank" title="Signal">
+<span aria-hidden="true" class="ico ico-signal"></span>
+</a>-->
+<!--<a aria-label="Ivy Cyber on Facebook" class="social-link" href="https://www.facebook.com/ivycyber" rel="noopener noreferrer" target="_blank" title="Facebook">
+<span aria-hidden="true" class="ico ico-facebook"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on TikTok" class="social-link" href="https://www.tiktok.com/@bitsontape" rel="noopener noreferrer" target="_blank" title="TikTok">
+<span aria-hidden="true" class="ico ico-tiktok"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Telegram" class="social-link" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank" title="Telegram">
+<span aria-hidden="true" class="ico ico-telegram"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Substack" class="social-link" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank" title="Substack">
+<span aria-hidden="true" class="ico ico-substack"></span>
+</a>--></div>
+</section>
+<section aria-labelledby="newsletter-title" class="footer-panel newsletter-panel">
+<div class="card-footnote">
+<a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank"><img class="newsletter-avatar" src="../assets/img/bitsontape-avatar.png" alt="Bits On Tape logo: two reels of open-reel tape arranged as a heart" width="200" height="200" loading="lazy" decoding="async"/></a>
+<h2 id="newsletter-title">Subscribe to Our Newsletter</h2>
+<p><a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">Bits On Tape</a> is our newsletter: a replay of science and technology stories by cyber experts, covering cybersecurity, privacy, free software, AI, and digital culture. Get the latest updates on our PrivacySafe ecosystem as we continue building and launching.</p>
+<div class="card-footnote-actions">
+<a class="btn primary small" href="https://psafe.ly/WaaEkp" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-envelope" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+Subscribe free
+</a>
+<a class="btn ghost small" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">
+Read past issues
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost small" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-telegram" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M21.6 3.2 18.4 20c-.24 1.18-.88 1.47-1.79.91l-4.88-3.6-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.97 9.05-8.18c.39-.35-.09-.55-.61-.2L6.01 13.74 1.2 12.24c-1.05-.33-1.07-1.05.22-1.55L20.2 3.45c.87-.32 1.63.2 1.4-.25Z"></path></svg>
+Join Telegram group
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+<p class="newsletter-note">We hate spam as much as you do and comply with CAN-SPAM regulation.</p>
+</div>
+</section>
+</div>
+<div class="footer-inner">
+<nav aria-label="Footer links" class="footer-links">
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+<a href="https://ivycyber.com/security-policy/" rel="nofollow noopener noreferrer" target="_blank">Security &amp; Bug Bounty</a>
+<a href="https://ivycyber.com/privacy-policy/" rel="nofollow noopener noreferrer" target="_blank">Privacy Policy</a>
+<a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
+<a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
+</nav>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+</div>
+</div>
+</footer>
+<script src="../assets/site.js" defer></script></body>
+</html>
