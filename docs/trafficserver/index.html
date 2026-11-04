@@ -73,6 +73,7 @@
 <li><a href="../vsftpd/index.html">vsftpd</a></li>
 </ul></details>
 <details class="grp"><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../apt/index.html">APT</a></li>
 <li><a href="../brotli/index.html">Brotli</a></li>
 <li><a href="../curl/index.html">curl</a></li>
 <li><a href="../pki/index.html">eMudhra CA compromise</a></li>
@@ -245,7 +246,7 @@ ATS_CONFIG_DIR=/opt/ts/etc/trafficserver ./trafficserver-check.sh check
 <li>There is no hunt. No indicators of exploitation have been published.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. In each running container, a read-only probe captures the output of <code>traffic_server -V</code> and the configuration files. Every line that does not load <code>magick.so</code> or <code>tsmemcache.so</code> is blanked inside the container, so remap tokens and other credentials never leave it and line numbers stay exact. The script then runs once per container in isolation. A path shown as <code>.../docker_NAME/...</code> is inside the container NAME.</li>
 </ul>
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/trafficserver/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../tomcat/index.html">&larr; Apache Tomcat</a><a rel="next" href="../basercms/index.html">baserCMS &rarr;</a></nav></article></main>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/trafficserver/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../tomcat/index.html">&larr; Apache Tomcat</a><a rel="next" href="../apt/index.html">APT &rarr;</a></nav></article></main>
 <aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#apache-traffic-server-check">Apache Traffic Server check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">

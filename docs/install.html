@@ -73,6 +73,7 @@
 <li><a href="vsftpd/index.html">vsftpd</a></li>
 </ul></details>
 <details class="grp"><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="apt/index.html">APT</a></li>
 <li><a href="brotli/index.html">Brotli</a></li>
 <li><a href="curl/index.html">curl</a></li>
 <li><a href="pki/index.html">eMudhra CA compromise</a></li>
@@ -122,7 +123,7 @@
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a> / <span>Install and update</span></nav>
 <article class="doc"><h1>Install and update</h1><h2 id="install-from-a-package"><svg class="ico ico-inbox-in" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.6 2.6h2.8v5.9h2.7L12 13 7.9 8.5h2.7V2.6zM2.6 13.2h5.2l1.1 2.2c.2.4.6.6 1 .6h4.2c.4 0 .8-.2 1-.6l1.1-2.2h5.2v6.3a2 2 0 0 1-2 2H4.6a2 2 0 0 1-2-2v-6.3z"/></svg> Install from a package</h2>
-<p>Each release ships three files, all named <code>psf-security-patches</code> and versioned by release date, <code>YY.MM.DD-X.Y.Z</code> (for example <code>26.11.02-1.0.0</code>). Download them from the releases page on <a href="https://codeberg.org/PrivacySafe/security-patches/releases">Codeberg</a> or <a href="https://github.com/PrivacySafe/security-patches/releases">GitHub</a>.</p>
+<p>Each release ships three files, all named <code>psf-security-patches</code> and versioned by release date, <code>YY.MM.DD-X.Y.Z</code> (for example <code>26.11.04-1.0.0</code>). Download them from the releases page on <a href="https://codeberg.org/PrivacySafe/security-patches/releases">Codeberg</a> or <a href="https://github.com/PrivacySafe/security-patches/releases">GitHub</a>.</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
 <tr>
@@ -132,23 +133,23 @@
 </thead>
 <tbody>
 <tr>
-<td><code>psf-security-patches_26.11.02-1.0.0_all.deb</code></td>
+<td><code>psf-security-patches_26.11.04-1.0.0_all.deb</code></td>
 <td>Debian, Ubuntu, Trisquel and derivatives</td>
 </tr>
 <tr>
-<td><code>psf-security-patches-26.11.02-1.0.0.noarch.rpm</code></td>
+<td><code>psf-security-patches-26.11.04-1.0.0.noarch.rpm</code></td>
 <td>RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives</td>
 </tr>
 <tr>
-<td><code>psf-security-patches-26.11.02-1.0.0.tar.gz</code></td>
+<td><code>psf-security-patches-26.11.04-1.0.0.tar.gz</code></td>
 <td>Any GNU/Linux: the source tree, plus the scripts to rebuild the packages</td>
 </tr>
 </tbody>
 </table></div>
 <p>Check the files against the release's <code>SHA256SUMS-&lt;version&gt;.txt</code> before installing, then:</p>
-<pre tabindex="0"><code class="language-bash">sha256sum -c SHA256SUMS-26.11.02-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.02-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.02-1.0.0.noarch.rpm    # RPM family
+<pre tabindex="0"><code class="language-bash">sha256sum -c SHA256SUMS-26.11.04-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.04-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.04-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/php/php2shell-mitigate.sh check             # read only
 </code></pre>
 <p>Each file also has a detached GPG signature, <code>FILE.asc</code>. Import the release key from the release page and confirm its fingerprint reads <code>4BAD A1D9 A399 352C D651 B1D7 4D36 5028 B8E5 6739</code> before you trust a signature.</p>
