@@ -49,7 +49,7 @@ set -uo pipefail
 
 SCRIPT_NAME="btcpayserver-nov2026-check.sh"
 SCRIPT_VERSION="1.2.0"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 NEWEST="2.4.7"                      # newest release at the time of writing
 WARNED_AT="2026-11-01T22:25:00Z"    # the project's warning to operators
 LOG_TAIL="${LOG_TAIL:-200000}"

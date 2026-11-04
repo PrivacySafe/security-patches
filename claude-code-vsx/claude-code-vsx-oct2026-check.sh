@@ -153,7 +153,7 @@ set -euo pipefail
 
 SCRIPT_NAME="claude-code-vsx-oct2026-check.sh"
 SCRIPT_VERSION="1.3.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 REF="https://cursor.com/blog/claude-code-extension-security-notice"
 FIXED_VER="2.1.314"

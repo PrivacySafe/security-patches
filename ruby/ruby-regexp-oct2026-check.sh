@@ -78,7 +78,7 @@ DISCOURSE_ROOT="${DISCOURSE_ROOT:-/var/discourse}"
 DISCOURSE_APP="${DISCOURSE_APP:-/var/www/discourse}"
 SCRIPT_NAME="ruby-regexp-oct2026-check.sh"
 SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 RUBY_ADVISORY="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/"
 

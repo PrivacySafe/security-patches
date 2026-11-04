@@ -64,6 +64,8 @@
 #   SCAN_DEPTH=12                     how deep to search
 #   BACKUP_ROOT=/var/backups/ghostaction-oct2026
 #   HUNT_LOGS="/srv/app/log/*.log"    extra log globs for hunt
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck can't follow
@@ -80,7 +82,7 @@ GA_NET='my-github\.com|my-gitlab\.com|193\.32\.204\.199'
 PRUNE=(node_modules .git .cache .venv venv site-packages .mypy_cache dist build .next)
 SCRIPT_NAME="ghostaction-oct2026-check.sh"
 SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 REF="https://opensourcemalware.com/blog/ghostaction-attack-escalates"
 
@@ -302,6 +304,33 @@ case "$CMD" in
     *) die "Unknown command: $CMD (check|hunt|quarantine|version)" ;;
 esac
 }
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "quarantine" "$@"
+
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5

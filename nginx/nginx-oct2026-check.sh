@@ -25,7 +25,13 @@
 # reports the nginx and njs versions on the host (and in containers), and audits the
 # running configuration (nginx -T) for the directive combination each flaw
 # needs, with F5's workaround for the ones you are exposed to; it
-# changes nothing. The fix is to upgrade to 1.30.6 / 1.31.7 (or your distro's
+# changes nothing. CVE-2026-42533, a critical script engine overflow fixed on 15 July in
+# 1.30.4 / 1.31.3, is not audited by name: this tool's version bar is newer, so an nginx that
+# passes "check" has that fix. A downstream distribution reported on 4 November that the Red
+# Hat family backport of that fix makes nginx answer a share of requests with HTTP 500 when a
+# set or rewrite uses a variable from a map marked volatile; "check" prints an information
+# line (no exit code change) when the running configuration has such a map on a Red Hat
+# family host. The fix is to upgrade to 1.30.6 / 1.31.7 (or your distro's
 # backport) and reload. "mitigate" is the only command that edits nginx.conf, and only
 # for the three simple workarounds you choose, with a copy of every file and an
 # automatic undo if nginx rejects the result; the others need an administrator.
@@ -84,6 +90,8 @@
 #                                     main configuration file, and the files to edit
 #   NGINX_T=1                         1 = run "nginx -T" for the config audit
 #                                     (0 to skip it)
+#   OS_RELEASE=/etc/os-release        names the distribution; check prints a note about a reported
+#                                     regression only on a Red Hat family host (see below)
 #   HUNT_SINCE="2026-10-01"           how far back hunt reads the journal
 #   HUNT_LOGS="/var/log/nginx/*.log"  extra log globs for hunt
 #      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
@@ -108,7 +116,7 @@ HUNT_SINCE="${HUNT_SINCE:-2026-10-01}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 SCRIPT_NAME="nginx-oct2026-check.sh"
 SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/nginx}"
 ADVISORY="https://nginx.org/en/security_advisories.html"
@@ -296,6 +304,17 @@ container_nginx() {   # "runtime|ref|version"
 }
 
 # ---------- check ------------------------------------------------------------
+# volatile_note CONFIG: information only. A downstream distribution reported on 4 November 2026 that the Red Hat
+# family backport of the CVE-2026-42533 fix answers some requests with HTTP 500 (alert "no buffer space in script copy")
+# when a set or rewrite uses a variable from a map marked volatile whose value contains other variables. Printed
+# only when the running configuration has a volatile map and this is a Red Hat family host. It changes no verdict.
+volatile_note() {
+    local osr="${OS_RELEASE:-/etc/os-release}"
+    grep -qE '^[[:space:]]*volatile[[:space:]]*;' "$1" || return 0
+    grep -qiE '^(ID|ID_LIKE)="?([a-z0-9._-]+ )*(rhel|fedora|centos|rocky|almalinux|ol|amzn)( |"|$)' "$osr" 2>/dev/null || return 0
+    inf "a map is marked volatile on a Red Hat family host: builds that carry the CVE-2026-42533 fix are reported to answer some requests with HTTP 500 ('no buffer space in script copy') when a set or rewrite uses such a variable and its value contains other variables. Keep the fix, and look for that alert in the nginx error log (see the README)"
+}
+
 cmd_check() {
     local rc=0 exposed=0 unknownz=0 b v st how any=0 primary=""
     step "nginx on the host"
@@ -336,6 +355,7 @@ cmd_check() {
             [[ "$pst" == 0 ]] && vfixed=1
             inf "auditing the running config of ${primary} (nginx ${v:-?}$([[ $vfixed -eq 1 ]] && echo ', patched'))"
             if audit_config "$v" "$vfixed" "$cfg"; then :; else exposed=1; fi
+            volatile_note "$cfg"
             inf "these matches cover the whole config; confirm the directives share a server/location before acting"
         else
             caution "could not run 'nginx -T' (needs root and a valid config); skipping the config audit"

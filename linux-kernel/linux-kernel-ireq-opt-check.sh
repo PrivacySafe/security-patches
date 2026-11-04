@@ -116,7 +116,7 @@ set -uo pipefail
 
 SCRIPT_NAME="linux-kernel-ireq-opt-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/linux-kernel-ireq-opt}"
 CVE="CVE-2026-98432"

@@ -116,7 +116,7 @@ set -euo pipefail
 # installs, so any pasted output or file says which version produced it.
 SCRIPT_NAME="php2shell-mitigate.sh"
 SCRIPT_VERSION="5.2.6"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.

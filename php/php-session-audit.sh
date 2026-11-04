@@ -43,7 +43,7 @@
 set -euo pipefail
 
 SCRIPT_VERSION="1.0.2"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 case "${1:-}" in
   -V|--version|version) echo "php-session-audit.sh ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;;
   -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$0"; exit 0 ;;

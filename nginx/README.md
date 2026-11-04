@@ -64,6 +64,16 @@ sudo ./nginx-oct2026-check.sh rollback
 
 nginx fixes land on the two current branches only: 1.30.6 (stable) and 1.31.7 (mainline). The script judges a version accordingly. A 1.30.x build is fixed at 1.30.6, a 1.31.x build at 1.31.7, and anything 1.32.0 or newer is fixed. An older branch (1.28 and earlier) upgrades to 1.30.6 or 1.31.7. For an nginx installed from a Debian or Ubuntu package, the package build and changelog are checked first (`FIXED_BUILDS` plus the changelog naming one of the CVEs), because a distribution can backport the fix while keeping the upstream version number. `njs` is judged against 1.0.2.
 
+### nginx and CVE-2026-42533 (July)
+
+A separate, critical flaw was fixed three months before this release. CVE-2026-42533 is a heap buffer overflow in nginx's script engine, the code that builds strings from variables for `set`, `rewrite`, `proxy_pass` and similar directives (CVSS 4.0 score 9.2). It is reached when a `map` does regular expression matching and a string expression uses captures that the map changed, or when a non-cacheable variable changes between the length pass and the copy pass of a script. Open source nginx 0.9.6 through 1.30.3 and 1.31.2 are affected, and 1.30.4 (stable) and 1.31.3 (mainline), released on 15 July 2026, fix it. A public proof of concept was reported on 27 July.
+
+This tool does not audit for it by name. Its version bar, 1.30.6 and 1.31.7, is newer than that fix, so an nginx that passes `check` has it, and a distribution package is judged by its changelog for the October flaws. If you can only apply the July fix, 1.30.4 or 1.31.3, or your distribution's backport, closes that flaw and not the five of October.
+
+**A reported regression in the Red Hat family backport.** On 4 November a downstream distribution reported that the backport of the CVE-2026-42533 fix in Red Hat family packages makes nginx answer a small share of requests with HTTP 500 and log `[alert] ... no buffer space in script copy`. It happens on configurations where a `set` or `rewrite` uses a variable from a `map` marked `volatile` whose value itself contains variables. The report traces it to nested script evaluation overwriting a global buffer end that the backport uses to avoid changing nginx's ABI, and describes the upstream fix as keeping that end per script engine, so only the Red Hat family backport is described as affected. It was reported to Red Hat as RHEL-300689, and Red Hat's packages did not have a fix when it was written. We have not reproduced it.
+
+What to do: keep the CVE-2026-42533 fix, because the flaw is critical and reachable without a login. If you see that alert, look for a `volatile` map used in a `set` or `rewrite`. The report notes that a map without `volatile` is computed once and does not nest, which changes how often the value is recomputed, so check that before you rely on it. `check` prints an information line, and changes no verdict or exit code, when the running configuration has a `volatile` map on a Red Hat family host.
+
 ### nginx configuration audit
 
 The valuable part. Each of the five flaws needs a particular directive combination, so the script runs `nginx -T` and reports, per flaw, whether your configuration reaches it:
@@ -103,6 +113,7 @@ Verified on nginx 1.24 serving TLS: the audit reported CVE-2026-97629 and CVE-20
 
 ## Before you run it
 
+- Updating for the July flaw, CVE-2026-42533, is covered by this tool's version bar. A Red Hat family build with that fix has a reported regression for configurations that use a `volatile` map (see the section above); keep the fix.
 - The fix. Upgrade to 1.30.6 or 1.31.7 (or your distribution's backport) and reload. Upgrade njs to 1.0.2. The config audit tells you which workarounds apply in the meantime.
 - A vulnerable version is not always reachable. Each flaw needs its directive, which is why the config audit matters. A build with none of the five directives configured is not a path, though upgrading is still the right move.
 - `check` reads the configuration with `nginx -T`, which is nginx's own configuration test. If the configuration does not pass that test, nginx writes the error to its own error log, exactly as it does when you run the command yourself.
@@ -118,7 +129,17 @@ Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-03) 
 
 | Advisory | Released | Severity | Package and stream | CVEs on this page |
 |---|---|---|---|---|
+| [RHSA-2026:46012](https://access.redhat.com/errata/RHSA-2026:46012) | 2026-07-26 | Important | `nginx-1.30.4-2.hum1` (Hummingbird) | CVE-2026-42533 |
+| [RHSA-2026:66542](https://access.redhat.com/errata/RHSA-2026:66542) | 2026-09-11 | Important | `nginx-1.20.1-28.el9_8.6` (RHEL 9.8) | CVE-2026-42533 |
+| [RHSA-2026:67283](https://access.redhat.com/errata/RHSA-2026:67283) | 2026-09-14 | Moderate | `nginx-1.26.3-9.module+el9.8.0+24845+a897661e.4` (RHEL 9.8) | CVE-2026-42533 |
+| [RHSA-2026:67308](https://access.redhat.com/errata/RHSA-2026:67308) | 2026-09-14 | Moderate | `nginx-1.24.0-7.module+el9.8.0+24846+e7eec568.5` (RHEL 9.8) | CVE-2026-42533 |
+| [RHSA-2026:67314](https://access.redhat.com/errata/RHSA-2026:67314) | 2026-09-14 | Important | `nginx-1.26.3-6.el10_2.7` (RHEL 10.2) | CVE-2026-42533 |
+| [RHSA-2026:67315](https://access.redhat.com/errata/RHSA-2026:67315) | 2026-09-14 | Moderate | `nginx-1.24.0-3.module+el8.10.0+24848+0300f002.5` (RHEL 8.10) | CVE-2026-42533 |
+| [RHSA-2026:79357](https://access.redhat.com/errata/RHSA-2026:79357) | 2026-10-08 | Important | `costmanagement/costmanagement-ui-rhel10` (container image) | CVE-2026-42533 |
 | [RHSA-2026:83427](https://access.redhat.com/errata/RHSA-2026:83427) | 2026-10-15 | Important | `nginx-1.30.6-1.hum1` (Hummingbird) | CVE-2026-15176, CVE-2026-95101, CVE-2026-97205, CVE-2026-97629 |
+| [RHSA-2026:93467](https://access.redhat.com/errata/RHSA-2026:93467) | 2026-11-02 | Important | `nginx-1.20.1-22.el9_6.7` (RHEL 9.6) | CVE-2026-42533 |
+| [RHSA-2026:93468](https://access.redhat.com/errata/RHSA-2026:93468) | 2026-11-02 | Important | `nginx-1.20.1-16.el9_4.7` (RHEL 9.4) | CVE-2026-42533 |
+| [RHSA-2026:93472](https://access.redhat.com/errata/RHSA-2026:93472) | 2026-11-02 | Important | `nginx-1.20.1-14.el9_2.7` (RHEL 9.2) | CVE-2026-42533 |
 
 <!-- rhsa:end -->
 

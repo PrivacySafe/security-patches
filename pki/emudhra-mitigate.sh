@@ -119,7 +119,7 @@ ATTIME=1790000000
 SELF="$0"
 SCRIPT_NAME="emudhra-mitigate.sh"
 SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 
 # Every certificate in the trust path, keyed by SHA-256 of its
 # SubjectPublicKeyInfo. Matching on the key catches every certificate for it:

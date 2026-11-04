@@ -47,7 +47,7 @@ set -uo pipefail
 
 SCRIPT_NAME="magento-check.sh"
 SCRIPT_VERSION="3.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----

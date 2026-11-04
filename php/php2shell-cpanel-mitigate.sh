@@ -84,7 +84,7 @@ set -euo pipefail
 
 SCRIPT_NAME="php2shell-cpanel-mitigate.sh"
 SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 
 EA_ROOT="${EA_ROOT:-/opt/cpanel}"
 HOME_ROOT="${HOME_ROOT:-/home}"

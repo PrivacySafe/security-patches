@@ -61,7 +61,7 @@ ROOTS="${ROOTS:-/home /root /srv /var/www /opt /usr/local}"
 MAX_DEPTH="${MAX_DEPTH:-9}"
 SCRIPT_NAME="openapi-codegen-check.sh"
 SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'

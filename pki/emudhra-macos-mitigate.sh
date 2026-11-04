@@ -73,7 +73,7 @@ set -uo pipefail
 
 SCRIPT_NAME="emudhra-macos-mitigate.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-02"
+SCRIPT_DATE="2026-11-03"
 SELF="$0"
 
 PLATFORM="${PLATFORM:-$(uname -s 2>/dev/null || echo unknown)}"
