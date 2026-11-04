@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en" data-root="../">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
+<title>eMudhra: intermediate CA compromise | PrivacySafe Security Patches</title><meta name="description" content="System CA store on Debian/Ubuntu/Trisquel and derivatives">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<body class="docs">
+<a class="skip-link" href="#top">Skip to main content</a>
+<header class="topbar">
+<div aria-label="Site navigation" class="wrap nav">
+<a aria-label="PrivacySafe home" class="brand header-brand" href="https://privacysafe.app/">
+<img alt="PrivacySafe" class="brand-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+</a>
+<nav aria-label="Primary" class="navlinks">
+<a href="https://privacysafe.app/#download">Download</a>
+<a href="https://privacysafe.app/#apps">Apps</a>
+<a href="https://privacysafe.app/#identity">Identity</a>
+<a href="https://privacysafe.app/#trust">Trust</a>
+<a href="https://privacysafe.app/docs/" rel="noopener noreferrer" target="_blank">Docs</a>
+<a href="https://privacysafe.social" rel="noopener noreferrer" target="_blank">Social</a>
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+</nav>
+<div class="nav-actions">
+<a class="btn soft" href="https://privacysafe.app/#apps">Learn More</a>
+<a class="btn primary" href="https://privacysafe.app/#download">Get PrivacySafe</a>
+<a aria-label="Download" class="btn hamb" href="https://privacysafe.app/#download">
+<svg class="ico ico-download" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.900 2.800h2.200v9.100l3.300-3.300 1.600 1.600L12 16.100 6 10.200l1.600-1.600 3.300 3.300V2.800zM4 18.400h16v2.200H4v-2.200z"/></svg>
+</a>
+</div>
+</div>
+</header>
+<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul><li><a href="../index.html">Home</a></li><li><a href="../tools.html" aria-current="page">Tools</a></li><li><a href="../cves.html">CVEs</a></li><li><a href="../how-it-works.html">How it works</a></li><li><a href="../install.html">Install</a></li><li><a href="../man/index.html">Manual pages</a></li><li><a href="https://privacysafe.app/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online <svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg></a></li></ul></div></nav>
+<div class="doc-page"><div class="wrap doc-layout"><nav class="docs-side" aria-label="Security Patches"><div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div><details class="side-box" open><summary>Menu</summary><ul class="start">
+<li><a href="../index.html">Home</a></li>
+<li><a href="../how-it-works.html">How the tools work</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../install.html">Install and update</a></li>
+<li><a href="../tools.html">All tools</a></li>
+<li><a href="../cves.html">Find a CVE</a></li>
+<li><a href="../man/index.html">Manual pages</a></li>
+<li><a href="../changelog.html">Changelog</a></li>
+<li><a href="../security.html">Security policy</a></li>
+<li><a href="../about.html">About and support</a></li>
+</ul>
+<details class="grp" open><summary>Newest: 22 October to 2 November 2026</summary><ul>
+<li><a href="../linux-kernel/index.html">3 Oct: Linux kernel</a></li>
+<li><a href="index.html" aria-current="page">2 Oct: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../vsftpd/index.html">30 Oct: vsftpd</a></li>
+<li><a href="../claude-code-vsx/index.html">29 Oct: Claude Code extension backdoor</a></li>
+<li><a href="../brotli/index.html">25 Oct: Brotli</a></li>
+<li><a href="../grav/index.html">24 Oct: Grav</a></li>
+<li><a href="../php/detect/index.html">24 Oct: PHP2Shell detection rules</a></li>
+<li><a href="../basercms/index.html">23 Oct: baserCMS</a></li>
+<li><a href="../openapi/index.html">23 Oct: openapi-typescript-codegen</a></li>
+<li><a href="../ruby/index.html">23 Oct: Ruby and GitLab regexp</a></li>
+<li><a href="../django/index.html">22 Oct: Django REST framework</a></li>
+<li><a href="../expat/index.html">22 Oct: libexpat</a></li>
+<li><a href="../haproxy/index.html">22 Oct: HAProxy</a></li>
+<li><a href="../rsyslog/index.html">22 Oct: rsyslog</a></li>
+<li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
+</ul></details>
+<details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../pulsar/index.html">Apache Pulsar</a></li>
+<li><a href="../tomcat/index.html">Apache Tomcat</a></li>
+<li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
+<li><a href="../bind/index.html">BIND 9</a></li>
+<li><a href="../couchdb/index.html">CouchDB</a></li>
+<li><a href="../haproxy/index.html">HAProxy</a></li>
+<li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../nginx/index.html">nginx</a></li>
+<li><a href="../nginx-ui/index.html">nginx-ui</a></li>
+<li><a href="../rsyslog/index.html">rsyslog</a></li>
+<li><a href="../vsftpd/index.html">vsftpd</a></li>
+</ul></details>
+<details class="grp" open><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../brotli/index.html">Brotli</a></li>
+<li><a href="../curl/index.html">curl</a></li>
+<li><a href="index.html" aria-current="page">eMudhra CA compromise</a></li>
+<li><a href="../expat/index.html">libexpat</a></li>
+<li><a href="../heif/index.html">libheif</a></li>
+<li><a href="../linux-kernel/index.html">Linux kernel</a></li>
+<li><a href="../node/index.html">Node.js</a></li>
+<li><a href="../openssl/index.html">OpenSSL</a></li>
+<li><a href="../php/index.html">PHP2Shell</a></li>
+<li><a href="../php/detect/index.html">PHP2Shell detection rules</a></li>
+<li><a href="../php/edge/index.html">PHP2Shell edge guards</a></li>
+<li><a href="../pillow/index.html">Pillow</a></li>
+<li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
+</ul></details>
+<details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../basercms/index.html">baserCMS</a></li>
+<li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
+<li><a href="../craft/index.html">Craft CMS</a></li>
+<li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../grav/index.html">Grav</a></li>
+<li><a href="../joomla/index.html">Joomla</a></li>
+<li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
+<li><a href="../nextcloud/index.html">Nextcloud Collabora</a></li>
+<li><a href="../plex/index.html">Plex Media Server</a></li>
+<li><a href="../roundcube/index.html">Roundcube</a></li>
+<li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
+<li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
+<li><a href="../zammad/index.html">Zammad</a></li>
+</ul></details>
+<details class="grp"><summary>Developer platforms, tools and supply chain</summary><ul>
+<li><a href="../claude-code-vsx/index.html">Claude Code extension backdoor</a></li>
+<li><a href="../django/index.html">Django REST framework</a></li>
+<li><a href="../ghostaction/index.html">GhostAction</a></li>
+<li><a href="../gitea/index.html">Gitea</a></li>
+<li><a href="../gitlab/index.html">GitLab</a></li>
+<li><a href="../jenkins/index.html">Jenkins plugins</a></li>
+<li><a href="../jupyter/index.html">Jupyter and nbconvert</a></li>
+<li><a href="../laravel/index.html">Laravel TokenGuard</a></li>
+<li><a href="../litellm/index.html">LiteLLM</a></li>
+<li><a href="../nextjs/index.html">Next.js Server Actions</a></li>
+<li><a href="../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../sagemaker/index.html">SageMaker SDK</a></li>
+<li><a href="../sentry/index.html">Sentry for Next.js</a></li>
+<li><a href="../storybook/index.html">Storybook</a></li>
+</ul></details>
+</details></nav>
+<main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>eMudhra CA compromise</span></nav>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>eMudhra: intermediate CA compromise</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff"><strong>eMudhra CA Compromise:</strong> System CA store on Debian/Ubuntu/Trisquel and derivatives</div><div class="aff"><strong>eMudhra CA Compromise on macOS:</strong> macOS system CA bundle <code>/etc/ssl/cert.pem</code> and Homebrew <code>ca-certificates</code></div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-111943</span></span></dd><dt>Scripts</dt><dd><div class="scr"><code>emudhra-macos-mitigate.sh</code> (<a href="../man/psf-emudhra-macos-mitigate.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/pki/emudhra-macos-mitigate.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>apply</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/pki/emudhra-macos-mitigate.sh check</code></pre></div><div class="scr"><code>emudhra-mitigate.sh</code> (<a href="../man/psf-emudhra-mitigate.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/pki/emudhra-mitigate.sh">source</a>)<br>reads only: <code>check</code>, <code>status</code>, <code>version</code>; can change the system: <code>apply</code>, <code>restore</code>, <code>cleanup</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/pki/emudhra-mitigate.sh check</code></pre><p class="warn"><strong>Type the command every time.</strong> Run with no command, this script does <code>apply</code>, which changes the system.</p></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><h2 id="emudhra-intermediate-ca-compromise-mitigation">eMudhra Intermediate CA Compromise Mitigation</h2>
+<p>On 20 October 2026 it was <a href="https://emudhra.we-have-a-problem.com/">disclosed</a> that the private keys of eight eMudhra intermediate CAs can be recovered from their certificates. Anyone holding one can impersonate any website. Browsers already block them through OneCRL, CRLite and CRLSets, but your server's system CA store doesn't. Everything that reads it keeps trusting the compromised intermediates until <code>ca-certificates</code> is updated: OpenSSL, GnuTLS, curl, wget, apt, git, Python, PHP, Go, Ruby, and Java through ca-certificates-java.</p>
+<p>The intermediates reach the store through two roots: emSign ECC Root CA - G3, which cross-signs emSign Root TLS CA - G3, and Sectigo's AAA Certificate Services, which cross-signs all eight. This script:</p>
+<ol>
+<li>Distrusts those roots in the system store , using <code>!</code> lines in <code>/etc/ca-certificates.conf</code>, and rebuilds it. It finds affected certificates by public key, not file name, so it also catches copies someone added by hand to <code>/usr/local/share/ca-certificates</code> or <code>/etc/ssl/certs</code>. It moves those out of the store into the backup directory.</li>
+<li>Proves the store rejects all of them. The script embeds the 16 published intermediate certificates and checks each against its published SHA-256 before using it. After every change it tests all 16 against the bundle file, the hash directory, and OpenSSL's built-in default paths. It also checks the bundle holds none of the affected certificates, because Go and GnuTLS will treat a lone intermediate in the store as a trust anchor.</li>
+</ol>
+<p>The script is designed so it can't break your CA store or leave you exposed by mistake. It checks that the rebuilt bundle lost only affected certificates and still has hash links, and rolls back if not. If <code>TEST_HOSTS</code> is set, it checks those hosts before and after so you see any collateral breakage immediately. <code>cleanup</code> never removes the distrust unless the store still rejects every compromised intermediate without it, and re-applies it if not.</p>
+<h3 id="emudhra-quick-start">eMudhra quick start</h3>
+<ol>
+<li>
+<p>Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.</p>
+<pre tabindex="0"><code class="language-bash"># BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO &quot;$BASE/pki/emudhra-mitigate.sh&quot;
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Read it before running it. Always.</p>
+<pre tabindex="0"><code class="language-bash">less emudhra-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Make it executable.</p>
+<pre tabindex="0"><code class="language-bash">chmod +x emudhra-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Check the environment. This changes nothing and needs no root.</p>
+<pre tabindex="0"><code class="language-bash">./emudhra-mitigate.sh check
+</code></pre>
+</li>
+<li>
+<p>Apply. Set <code>TEST_HOSTS</code> to hosts your server actually talks to, so the script flags any that stop verifying after the change.</p>
+<pre tabindex="0"><code class="language-bash">sudo TEST_HOSTS=&quot;api.example.com:443 mirror.example.org&quot; ./emudhra-mitigate.sh
+</code></pre>
+</li>
+</ol>
+<p>To confirm GitHub and Codeberg serve the same script, compare checksums:</p>
+<pre tabindex="0"><code class="language-bash">sha256sum emudhra-mitigate.sh
+curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/pki/emudhra-mitigate.sh | sha256sum
+</code></pre>
+<p>Set <code>TEST_HOSTS</code> to the hosts your server actually talks to: APIs, package mirrors, webhooks. A host that verifies before the change and fails after it most likely chains to one of the two distrusted roots.</p>
+<h3 id="emudhra-commands">eMudhra commands</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code></td>
+<td>Environment report only. Changes nothing and doesn't need root. Exits <code>0</code> if clear, <code>1</code> on a hard blocker, <code>2</code> if <code>--ignore-env</code> would be needed</td>
+</tr>
+<tr>
+<td><code>apply</code> (default)</td>
+<td>Distrusts the affected certificates, rebuilds the store, cleans the Java keystore, then verifies</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>What this script changed, all store tests, Java keystore state, and processes that still need a restart. Exits <code>1</code> if the store trusts a compromised intermediate</td>
+</tr>
+<tr>
+<td><code>restore</code></td>
+<td>Undoes everything this script distrusted. This re-exposes you if <code>ca-certificates</code> isn't patched</td>
+</tr>
+<tr>
+<td><code>cleanup</code></td>
+<td>Once <code>ca-certificates</code> is patched, removes this script's distrust, but only if the store still rejects every compromised intermediate. Otherwise it puts the distrust back. <code>--force</code> skips the patch check, never the store test</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version. Every command prints it on its first line too</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="emudhra-environment-check">eMudhra environment check</h3>
+<p>Before changing anything, the script checks your server in this order and prints what it found:</p>
+<ol>
+<li>Operating system. The same set as PHP2Shell: Debian, Ubuntu, Trisquel, the derivatives the check knows by name, and anything whose <code>ID_LIKE</code> names Debian or Ubuntu. It works out the base release so it can compare against the right fixed <code>ca-certificates</code> build. Other systems are refused with a pointer to their workaround on the disclosure page.</li>
+<li>System CA store. The <code>ca-certificates</code> version and its patch status (see <a href="#emudhra-patch-detection">Patch detection</a>). It lists every affected certificate it finds, whether shipped, already distrusted, or added by hand, and tests the current bundle.</li>
+<li>Other CA stores. This run doesn't fix these, so they're reported with the command that does:
+<ul>
+<li>Java. The system keystore follows the store. Other JDKs carry their own <code>cacerts</code>.</li>
+<li>Bundled CA files such as Python certifi, vendored pip and Homebrew, found under <code>SCAN_PATHS</code>. Debian's patched certifi reads the system store and is recognized as such.</li>
+<li>Node.js. It ships its own roots unless started with <code>--use-openssl-ca</code>.</li>
+<li>NSS builtin roots , unless <code>libnssckbi</code> is p11-kit.</li>
+<li>Overrides. <code>SSL_CERT_FILE</code> or <code>SSL_CERT_DIR</code> set in <code>/etc/environment</code> or <code>/etc/profile.d</code>.</li>
+<li>Separate environments. Containers, snaps and Flatpaks.</li>
+</ul>
+</li>
+<li>System. Root, OpenSSL, the self-check of the embedded certificates, the init system (for restart hints), and required tools.</li>
+</ol>
+<p><strong>Hard blockers</strong> always stop the run: a distribution that isn't Debian-based, <code>ca-certificates</code> or <code>update-ca-certificates</code> missing, no <code>openssl</code>, a failed self-check, missing tools, or not running as root for <code>apply</code>, <code>restore</code> or <code>cleanup</code>.</p>
+<p><strong>Soft blockers</strong> stop the run until you've looked at them, and <code>--ignore-env</code> lets you proceed. They cover a process that would keep trusting the compromised intermediates even after a clean run:</p>
+<ul>
+<li>a running Node.js process using its bundled roots;</li>
+<li>a running Java process on a JDK whose own <code>cacerts</code> still holds affected certificates;</li>
+<li>a system-wide <code>SSL_CERT_FILE</code> or <code>SSL_CERT_DIR</code> that points at an exposed store.</li>
+</ul>
+<h3 id="emudhra-patch-detection">eMudhra patch detection</h3>
+<p>For <code>ca-certificates</code>, three checks run in order, and any one is enough:</p>
+<ol>
+<li>
+<p>Fixed build for your release. These are the builds from the disclosure page:</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Release</th>
+<th>Fixed build</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Debian 12</td>
+<td><code>20250419~deb12u2</code></td>
+</tr>
+<tr>
+<td>Debian 13</td>
+<td><code>20250419+deb13u1</code></td>
+</tr>
+<tr>
+<td>Debian testing/unstable</td>
+<td><code>20260816+nmu1</code></td>
+</tr>
+<tr>
+<td>Ubuntu 22.04, 24.04, 26.04, 26.10</td>
+<td><code>20260816ubuntu0.XX.YY.1</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>It only compares against the build for your own release, because Debian 12 and 13 share the upstream version <code>20250419</code>.</p>
+</li>
+<li>
+<p><code>FIXED_BUILDS</code>. Builds you add, such as an Ubuntu ESM or Debian LTS update. A build only counts for the same upstream version.</p>
+</li>
+<li>
+<p>Changelog. The package changelog names Launchpad bug 2171507 or Debian bug 1151413, both from the disclosure page. The changelog only counts if its newest entry is the installed version. (<span class="nw">CVE-2026-111943</span> is deliberately <em>not</em> used here: that CVE is the Go standard library's own <code>crypto/x509</code> denylist, fixed in Go 1.26.10 / 1.27.3, so a <code>ca-certificates</code> changelog won't cite it. See the Go note below.)</p>
+</li>
+</ol>
+<p>The result is <em>patched</em>, <em>not patched</em>, or <em>unknown</em>. The store tests decide what actually happens: <code>cleanup</code> checks the patch status first, but it removes the distrust only if the store still rejects every intermediate without it.</p>
+<p>A fixed store isn't enough on its own, because a long-running process keeps the trust it loaded at start. <code>status</code> and <code>apply</code> list processes started before the current store that loaded a TLS library or a JVM, or are Node.js, and tell you what to restart. One-shot tools like curl, apt and git need nothing.</p>
+<h3 id="emudhra-configuration">eMudhra configuration</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TEST_HOSTS</code></td>
+<td><em>(empty)</em></td>
+<td><code>host[:port]</code> list to TLS-test before and after <code>apply</code>, to catch collateral breakage</td>
+</tr>
+<tr>
+<td><code>FIXED_BUILDS</code></td>
+<td><em>(empty)</em></td>
+<td>Extra fixed <code>ca-certificates</code> builds, space-separated full versions</td>
+</tr>
+<tr>
+<td><code>SCAN_PATHS</code></td>
+<td><code>/opt /srv /usr/local /usr/lib /usr/share /home /root /var/www</code></td>
+<td>Where to look for bundled CA files. Empty disables the scan</td>
+</tr>
+<tr>
+<td><code>SCAN_DEPTH</code></td>
+<td><code>9</code></td>
+<td>How deep that scan goes</td>
+</tr>
+<tr>
+<td><code>JAVA_STOREPASS</code></td>
+<td><code>changeit</code></td>
+<td>Password for the Java keystores</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="before-you-run-it">Before you run it</h2>
+<ul>
+<li>This is not a patch. Upgrade <code>ca-certificates</code> when your distribution ships the fix, then run <code>cleanup</code>.</li>
+<li>It distrusts two whole roots, not just the eight intermediates. The system store can only drop roots, so every site whose chain ends at emSign ECC Root CA - G3 or AAA Certificate Services fails verification until you run <code>cleanup</code> or <code>restore</code>. Set <code>TEST_HOSTS</code> and check <code>status</code> after applying. If the store already rejects every compromised intermediate, for example because a patched package cut the path, <code>apply</code> leaves those two roots trusted.</li>
+<li>Your browsers are already protected. Firefox, Chrome, Edge and Safari block these intermediates themselves. This script is for everything else on your servers.</li>
+<li>Other CA stores are reported, not changed. Python certifi, Node.js, other JDKs and NSS builtins need their own updates. The report prints the command for each. Programs that compile their roots in, such as Rust's webpki-roots and Electron apps, can't be detected and need updating. One common case is <a href="https://github.com/astral-sh/uv">uv</a>, the Python package manager: Plone's 6.2.2.1 release notes tell uv users to upgrade to 0.13.4 for this incident. If you can't upgrade a Node.js or Electron app right away, the <a href="https://github.com/IAmJSD/kill-emudhra"><code>kill-emudhra</code></a> package distrusts the eight intermediates from inside the process, by their public-key hash. That protects the process until you reach a fixed Node.js (22.23.4, 24.22.1 or 26.12.1) or Electron (44.9.1, 43.8.1 or 42.11.16).</li>
+<li>Go binaries need their own fix. A Go program built with CGO reads the system store this script fixes, but a pure-Go build carries Go's own certificate verifier, which got a built-in denylist for these intermediates in Go 1.26.10 and 1.27.3 (<a href="https://pkg.go.dev/vuln/GO-2026-6809"><span class="nw">CVE-2026-111943</span></a>). Rebuild such binaries with a fixed toolchain. This script's check reminds you if a <code>go</code> toolchain is present but can't tell which existing binaries are affected.</li>
+<li>Containers get their own fix. Each image carries its own <code>ca-certificates</code>. Rebuild images on patched bases. Running this inside a container fixes that container only.</li>
+<li>The distrust survives package upgrades and <code>dpkg-reconfigure ca-certificates</code>. Both keep <code>!</code> lines in <code>/etc/ca-certificates.conf</code>. Check with <code>status</code> after any upgrade anyway.</li>
+<li>Debian, Ubuntu, Trisquel and their derivatives only. Fedora/RHEL, openSUSE, Arch, Alpine, NixOS and FreeBSD need a different approach. macOS has its own script, <a href="#emudhra-on-macos">below</a>. See the <a href="https://emudhra.we-have-a-problem.com/#linux">disclosure page</a>.</li>
+<li>Backups of everything the script touches go to <code>/var/backups/emudhra-mitigation/&lt;timestamp&gt;-&lt;pid&gt;/</code>, so two runs in the same second never share a directory. A certificate file the script moves out of <code>/usr/local/share/ca-certificates</code> or <code>/etc/ssl/certs</code> is kept under a numbered name (<code>01-root.crt</code>, <code>02-root.crt</code>), so two different files with the same name from different directories cannot overwrite each other, and <code>restore</code> puts each one back where it came from. The record of what it changed is <code>/var/lib/emudhra-mitigation/state</code>.</li>
+</ul>
+
+<h2 id="emudhra-on-macos">eMudhra on macOS</h2>
+<p><strong>Script:</strong> <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/pki/emudhra-macos-mitigate.sh"><code>pki/emudhra-macos-mitigate.sh</code></a></p>
+<p>macOS blocks the compromised eMudhra intermediates in apps that use Apple's own networking and security frameworks, such as the browsers. The command line tools that ship with macOS and with the Xcode Command Line Tools, <code>curl</code>, <code>git</code>, <code>python3</code>, <code>ruby</code>, <code>perl</code> and <code>openssl</code>, are different: they verify certificates against <code>/etc/ssl/cert.pem</code> without checking revocation, and that file still contains the roots the intermediates chain to. Apple's <a href="https://support.apple.com/en-us/149555">support page</a> says it will update the file in a future release, and that a macOS update can replace a file you edited. Hosted macOS CI runners are affected the same way, and so is anything on them that uses Homebrew's <code>curl</code> or <code>git</code>, because their images disable Homebrew updates and so keep the old <code>ca-certificates</code>.</p>
+<p>This script does what Apple's support page and the <a href="https://emudhra.we-have-a-problem.com/#macos-curl">disclosure page</a> describe, with a backup, a check and a way back. It cuts the root out of the bundle with the same <code>awk</code> command and writes the file with the same <code>install -m 0644 -o root -g wheel</code> command as Apple's steps:</p>
+<ol>
+<li><code>check</code> reports whether emSign ECC Root CA - G3 and AAA Certificate Services are still in the system bundle and in Homebrew's, the Homebrew <code>ca-certificates</code> version against the first fixed one, and whether the built-in <code>pip</code> uses the system file. <code>--online</code> also connects to the disclosure site's test hosts.</li>
+<li><code>apply</code> backs up the bundle, removes emSign ECC Root CA - G3 from it, and proves the root is gone. <code>--include-aaa</code> also removes AAA Certificate Services. Like Apple's steps it keeps a copy next to the file as <code>cert.pem.orig</code>, and when a macOS update has replaced the file it refreshes that copy instead of keeping the stale one.</li>
+<li><code>rollback</code> puts the original bundle back.</li>
+</ol>
+<h3 id="macos-quick-start">macOS quick start</h3>
+<ol>
+<li>
+<p>Download it. The repository is mirrored on GitHub and Codeberg; pick a base URL.</p>
+<pre tabindex="0"><code class="language-bash"># BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO &quot;$BASE/pki/emudhra-macos-mitigate.sh&quot;
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-macos-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>Read it before running it, then make it executable.</p>
+<pre tabindex="0"><code class="language-bash">less emudhra-macos-mitigate.sh
+chmod +x emudhra-macos-mitigate.sh
+</code></pre>
+</li>
+<li>
+<p>See whether you are exposed. This changes nothing and needs no root. Add <code>--online</code> to test against the live hosts.</p>
+<pre tabindex="0"><code class="language-bash">./emudhra-macos-mitigate.sh check
+./emudhra-macos-mitigate.sh check --online
+</code></pre>
+</li>
+<li>
+<p>See the change, then make it. Run it from an admin account with <code>sudo</code>.</p>
+<pre tabindex="0"><code class="language-bash">sudo ./emudhra-macos-mitigate.sh apply --dry-run
+sudo ./emudhra-macos-mitigate.sh apply
+</code></pre>
+</li>
+<li>
+<p>Update Homebrew as your own user, not with <code>sudo</code>. The script never runs <code>brew</code>.</p>
+<pre tabindex="0"><code class="language-bash">brew update &amp;&amp; brew upgrade ca-certificates
+</code></pre>
+</li>
+</ol>
+<h3 id="macos-commands">macOS commands</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check [--online] [--cert-file FILE]</code> (default)</td>
+<td>Read-only. Exits <code>0</code> when neither root is in the bundle, <code>1</code> when emSign ECC Root CA - G3 is present, an old Homebrew <code>ca-certificates</code> is installed or a test host accepted the connection, <code>2</code> when only AAA Certificate Services remains or the bundle could not be read in full</td>
+</tr>
+<tr>
+<td><code>apply [--include-aaa] [--pip] [--dry-run] [--cert-file FILE]</code></td>
+<td><strong>Changes the host (root).</strong> Backs up the bundle to <code>/var/lib/psf-security-patches/emudhra-macos/</code>, removes the root, and checks the result. If the check fails it puts the original back. <code>--pip</code> points the built-in <code>pip</code> at the system file</td>
+</tr>
+<tr>
+<td><code>rollback [--dry-run] [--force]</code></td>
+<td>Puts the original bundle back and removes the <code>pip</code> line. This re-exposes you. It refuses when the bundle has changed since <code>apply</code>, for example after a macOS update, unless you pass <code>--force</code></td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version. Every command prints it on its first line too</td>
+</tr>
+</tbody>
+</table></div>
+<p>Commands that change the host need root. Run them with <code>sudo</code> from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:</p>
+<pre tabindex="0"><code class="language-bash">sudo ./emudhra-macos-mitigate.sh apply --dry-run
+sudo ./emudhra-macos-mitigate.sh apply
+sudo ./emudhra-macos-mitigate.sh rollback
+</code></pre>
+<h3 id="macos-on-hosted-runners">macOS on hosted runners</h3>
+<p>A hosted macOS runner has passwordless <code>sudo</code>, so a workflow step can apply the change before anything else makes a TLS connection. Pin the script by its SHA-256, taken from the release you reviewed, so a changed copy is refused. The download itself goes over the system's own trust, which is the thing being fixed, and the hash is what protects it.</p>
+<pre tabindex="0"><code class="language-yaml">- name: Distrust the compromised eMudhra root
+  run: |
+    curl -fsSLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/pki/emudhra-macos-mitigate.sh
+    echo &quot;${{ vars.EMUDHRA_MACOS_SHA256 }}  emudhra-macos-mitigate.sh&quot; | shasum -a 256 -c -
+    chmod +x emudhra-macos-mitigate.sh
+    sudo ./emudhra-macos-mitigate.sh apply
+    ./emudhra-macos-mitigate.sh check --online
+    brew update &amp;&amp; brew upgrade ca-certificates
+</code></pre>
+<h3 id="macos-configuration">macOS configuration</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CERT_FILE</code></td>
+<td><code>/etc/ssl/cert.pem</code></td>
+<td>The bundle to check and change</td>
+</tr>
+<tr>
+<td><code>STATE_DIR</code></td>
+<td><code>/var/lib/psf-security-patches/emudhra-macos</code></td>
+<td>Backups and the record that <code>rollback</code> reads</td>
+</tr>
+<tr>
+<td><code>BREW_PREFIX</code></td>
+<td><em>(detected)</em></td>
+<td>Where Homebrew is installed: <code>/opt/homebrew</code>, <code>/usr/local</code> or Linuxbrew</td>
+</tr>
+<tr>
+<td><code>CURL_BIN</code></td>
+<td><em>(system curl)</em></td>
+<td>The <code>curl</code> that <code>--online</code> uses, besides <code>/usr/bin/curl</code> and Homebrew's</td>
+</tr>
+<tr>
+<td><code>LIVE_HOSTS</code></td>
+<td><em>(the four hosts on the disclosure page)</em></td>
+<td>Replaces the hosts <code>--online</code> connects to</td>
+</tr>
+<tr>
+<td><code>PSF_NO_ROOT_NOTE</code></td>
+<td><em>(unset)</em></td>
+<td><code>1</code> hides the note that a change was started from the root account</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="macos-before-you-run-it">macOS before you run it</h3>
+<ul>
+<li>This is not a patch. Apple will ship its own fix. When it does, <code>check</code> tells you, and <code>rollback</code> is safe to run only if you want your old file back.</li>
+<li>It removes a whole root, not just the intermediates. emSign ECC Root CA - G3 covers the direct chains. The six Sectigo cross-signed intermediates chain to AAA Certificate Services instead, and removing that root can break unaffected sites that chain to it, so it is off unless you pass <code>--include-aaa</code>. <code>check</code> exits <code>2</code> while only that root remains, so the decision stays visible.</li>
+<li>It cuts a block only when the block's certificate has the published SHA-256 fingerprint of the root (<code>86A1ECBA...BE6B</code> for emSign ECC Root CA - G3, <code>D7A7A0FB...9EF4</code> for AAA Certificate Services), the certificate count drops by exactly the number removed, and OpenSSL can still read every remaining certificate. Otherwise it changes nothing and points you to the manual steps. A header line is any <code>===</code> or <code>###</code> line that ends with the root's name, so a different order of the subject fields still matches.</li>
+<li>It will not tell you a bundle is clean if it cannot read it. OpenSSL reads nothing at all from a bundle that has one damaged certificate, which would make both roots look absent, so <code>check</code> exits <code>2</code> and says how many certificates it could read, and <code>apply</code> refuses.</li>
+<li>A macOS update may replace <code>/etc/ssl/cert.pem</code> and bring the root back. Apple says so, and reports of macOS 27.2 say it did. Run <code>check</code> after each update and <code>apply</code> again. <code>rollback</code> after that skips the records the update made stale instead of putting an out-of-date bundle back. If macOS refuses the write, the original is untouched.</li>
+<li>The browsers and Apple's own frameworks are already protected and are not changed. Homebrew has its own bundle, which <code>check</code> reports but <code>apply</code> does not change: on a Mac Homebrew builds it from the certificates your Keychain trusts plus Mozilla's list, so versions before 2026-09-25_1 still include both roots, and from that release on its post-install step leaves them out by public key. Update it with <code>brew upgrade ca-certificates</code> as your own user. Other bundled copies of the roots, such as Python <code>certifi</code>, Node.js, Go and Java, need their own updates; see the <a href="https://emudhra.we-have-a-problem.com/#developers">disclosure page</a>.</li>
+<li><code>--pip</code> appends one line to the system Python's <code>sitecustomize.py</code>, as the disclosure page describes. <code>rollback</code> removes exactly that line, and the file too if the script created it.</li>
+</ul>
+<!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->
+<h2 id="red-hat-advisories">Red Hat advisories</h2>
+<p>Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-03) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on <a href="https://access.redhat.com/security/security-updates/#/cve">Red Hat's CVE database</a>.</p>
+<p>This is the Go standard library flaw named above, so the advisories are for Go programs, not for the certificate store.</p>
+<ul>
+<li><a href="https://access.redhat.com/security/cve/CVE-2026-111943"><span class="nw">CVE-2026-111943</span></a>: 163 advisories, 2026-10-20 to 2026-11-03; 159 important, 4 critical; by stream, RHEL 8 21, RHEL 9 42, RHEL 10 21, Hummingbird 50, RHEL 8 (el8ost) 1, RHEL 8 (el8sat) 1, RHEL 9 (el9ost) 2, RHEL 9 (el9sat) 3, container image 22; most often <code>rhc</code> (10), <code>grafana-pcp</code> (9), <code>grafana</code> (9), <code>golang</code> (7). All of them: <a href="https://access.redhat.com/security/cve/CVE-2026-111943">Red Hat's CVE page</a>.</li>
+</ul>
+<!-- rhsa:end -->
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/pki/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../drupal/index.html">&larr; Drupal</a><a rel="next" href="../ghostaction/index.html">GhostAction &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#emudhra-intermediate-ca-compromise-mitigation">eMudhra Intermediate CA Compromise Mitigation</a></li><li class="l3"><a href="#emudhra-quick-start">eMudhra quick start</a></li><li class="l3"><a href="#emudhra-commands">eMudhra commands</a></li><li class="l3"><a href="#emudhra-environment-check">eMudhra environment check</a></li><li class="l3"><a href="#emudhra-patch-detection">eMudhra patch detection</a></li><li class="l3"><a href="#emudhra-configuration">eMudhra configuration</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#emudhra-on-macos">eMudhra on macOS</a></li><li class="l3"><a href="#macos-quick-start">macOS quick start</a></li><li class="l3"><a href="#macos-commands">macOS commands</a></li><li class="l3"><a href="#macos-on-hosted-runners">macOS on hosted runners</a></li><li class="l3"><a href="#macos-configuration">macOS configuration</a></li><li class="l3"><a href="#macos-before-you-run-it">macOS before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
+<section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
+<div class="wrap">
+<article class="card has-partner">
+<h2 class="eco-title" id="ecosystem-title">The PrivacySafe Ecosystem</h2>
+<a class="partner-mark" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+<img src="../assets/img/ivy-logo-horizontal-white.svg" alt="Shop at Ivy Cyber" width="328" height="73" loading="lazy" decoding="async"/>
+</a>
+<p><strong>Ivy Cyber</strong> offers PrivacySafe products and services in the USA and has partnerships with 3NSoft in Canada and Kuip Limited in the European Union. Enterprise services and consulting are available at <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">ivycyber.com</a>
+</p><p><strong>PrivacySafe Foundation</strong> is a 501(c)(3) nonprofit public charity that supports the development of the PrivacySafe applications, along with the components they rely upon: 3NWeb protocols, filesystem, documentation, and reference implementations.</p>
+<div class="pullout">
+<a class="foundation-mark" href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank"><img src="../assets/img/logo-foundation.svg" alt="PrivacySafe Foundation" width="218" height="47" loading="lazy" decoding="async"/></a>
+<p class="pullout-text">Donations to <a href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank">PrivacySafe Foundation</a> support education, research, documentation, and public code. Purchases from <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber</a> support PrivacySafe products, services, hosting, and technical support. <strong class="pullout-lead">Together, we're building a better web.</strong></p>
+</div>
+<div class="split-actions">
+<a class="btn primary" href="https://www.zeffy.com/en-US/ticketing/cybersecurity-education-and-tech" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-heart" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="currentColor" d="M12 20.6 10.6 19.3C5.7 14.9 2.5 12 2.5 8.4 2.5 5.5 4.8 3.2 7.7 3.2c1.6 0 3.2.8 4.3 2.05C13.1 4 14.7 3.2 16.3 3.2c2.9 0 5.2 2.3 5.2 5.2 0 3.6-3.2 6.5-8.1 10.9L12 20.6Z"/> </svg>
+Donate to PrivacySafe Foundation
+</a>
+<a class="btn ghost" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+Buy PrivacySafe products &amp; services
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost" href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-code" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.6 4.8l-3.2 14.4"/> </svg>
+Browse our Source Code
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+</article>
+</div>
+</section>
+<footer>
+<div class="wrap">
+<div class="footer-community">
+<section aria-labelledby="footer-about-title" class="footer-panel footer-about">
+<h2 class="sr-only" id="footer-about-title">About PrivacySafe</h2>
+<img alt="PrivacySafe" class="footer-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+<p>PrivacySafe creates a secure sandbox environment for your organization which you can tie to your domain, your authentication methods, and your access controls.</p>
+<h3>Follow Us</h3>
+<div aria-label="PrivacySafe social links" class="social-links">
+<a aria-label="PrivacySafe on Mastodon" class="social-link" href="https://privacysafe.social/@privacysafe" rel="me noopener noreferrer" target="_blank" title="Mastodon">
+<svg class="ico ico-mastodon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg>
+</a><a aria-label="PrivacySafe on Bluesky" class="social-link" href="https://bsky.app/profile/privacysafe.social" rel="me noopener noreferrer" target="_blank" title="Bluesky">
+<svg class="ico ico-bluesky" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026"/></svg>
+</a><a aria-label="PrivacySafe on Twitter X" class="social-link" href="https://x.com/GetPrivacySafe" rel="nofollow noopener noreferrer" target="_blank" title="Twitter X">
+<svg class="ico ico-x-twitter" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+</a><a aria-label="PrivacySafe on LinkedIn" class="social-link" href="https://www.linkedin.com/company/privacysafe-app" rel="noopener noreferrer" target="_blank" title="LinkedIn">
+<svg class="ico ico-linkedin" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.200 3.600a1.700 1.700 0 1 0 0 3.400 1.700 1.700 0 0 0 0-3.400zM5.600 10.400v7.800h3.200v-7.800H5.600zm4.800 0v7.800h3.200v-4c0-1.100.4-1.700 1.300-1.700s1.300.6 1.300 1.700v4h3.200v-4.400c0-2.300-1.100-3.600-3.200-3.600-1.200 0-2.200.5-2.700 1.300v-1.100h-3.100z"/></svg>
+</a><a aria-label="PrivacySafe on YouTube" class="social-link" href="https://www.youtube.com/@privacysafe" rel="noopener noreferrer" target="_blank" title="YouTube">
+<svg class="ico ico-youtube" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+</a><a aria-label="PrivacySafe on Instagram" class="social-link" href="https://www.instagram.com/getprivacysafe/" rel="noopener noreferrer" target="_blank" title="Instagram">
+<svg class="ico ico-instagram" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>
+</a>
+<!--<a aria-label="Signal @ivycyber.01" class="social-link" href="https://signal.me/#eu/nmRqQrmMcXaq6cyfP8ckVaf-LniNZwhc5VatIEgC3y39lIYFNBBFF5NvpFurg6UA" rel="noopener noreferrer" target="_blank" title="Signal">
+<span aria-hidden="true" class="ico ico-signal"></span>
+</a>-->
+<!--<a aria-label="Ivy Cyber on Facebook" class="social-link" href="https://www.facebook.com/ivycyber" rel="noopener noreferrer" target="_blank" title="Facebook">
+<span aria-hidden="true" class="ico ico-facebook"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on TikTok" class="social-link" href="https://www.tiktok.com/@bitsontape" rel="noopener noreferrer" target="_blank" title="TikTok">
+<span aria-hidden="true" class="ico ico-tiktok"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Telegram" class="social-link" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank" title="Telegram">
+<span aria-hidden="true" class="ico ico-telegram"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Substack" class="social-link" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank" title="Substack">
+<span aria-hidden="true" class="ico ico-substack"></span>
+</a>--></div>
+</section>
+<section aria-labelledby="newsletter-title" class="footer-panel newsletter-panel">
+<div class="card-footnote">
+<a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank"><img class="newsletter-avatar" src="../assets/img/bitsontape-avatar.png" alt="Bits On Tape logo: two reels of open-reel tape arranged as a heart" width="200" height="200" loading="lazy" decoding="async"/></a>
+<h2 id="newsletter-title">Subscribe to Our Newsletter</h2>
+<p><a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">Bits On Tape</a> is our newsletter: a replay of science and technology stories by cyber experts, covering cybersecurity, privacy, free software, AI, and digital culture. Get the latest updates on our PrivacySafe ecosystem as we continue building and launching.</p>
+<div class="card-footnote-actions">
+<a class="btn primary small" href="https://psafe.ly/WaaEkp" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-envelope" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+Subscribe free
+</a>
+<a class="btn ghost small" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">
+Read past issues
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost small" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-telegram" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M21.6 3.2 18.4 20c-.24 1.18-.88 1.47-1.79.91l-4.88-3.6-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.97 9.05-8.18c.39-.35-.09-.55-.61-.2L6.01 13.74 1.2 12.24c-1.05-.33-1.07-1.05.22-1.55L20.2 3.45c.87-.32 1.63.2 1.4-.25Z"></path></svg>
+Join Telegram group
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+<p class="newsletter-note">We hate spam as much as you do and comply with CAN-SPAM regulation.</p>
+</div>
+</section>
+</div>
+<div class="footer-inner">
+<nav aria-label="Footer links" class="footer-links">
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+<a href="https://ivycyber.com/security-policy/" rel="nofollow noopener noreferrer" target="_blank">Security &amp; Bug Bounty</a>
+<a href="https://ivycyber.com/privacy-policy/" rel="nofollow noopener noreferrer" target="_blank">Privacy Policy</a>
+<a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
+<a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
+</nav>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+</div>
+</div>
+</footer>
+<script src="../assets/site.js" defer></script></body>
+</html>

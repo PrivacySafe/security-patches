@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en" data-root="../">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
+<title>vsftpd: CVE-2026-119568 FTPS data channel hijack | PrivacySafe Security Patches</title><meta name="description" content="vsftpd 3.0.5 and older with FTPS enabled on a standalone listener, GNU/Linux">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<body class="docs">
+<a class="skip-link" href="#top">Skip to main content</a>
+<header class="topbar">
+<div aria-label="Site navigation" class="wrap nav">
+<a aria-label="PrivacySafe home" class="brand header-brand" href="https://privacysafe.app/">
+<img alt="PrivacySafe" class="brand-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+</a>
+<nav aria-label="Primary" class="navlinks">
+<a href="https://privacysafe.app/#download">Download</a>
+<a href="https://privacysafe.app/#apps">Apps</a>
+<a href="https://privacysafe.app/#identity">Identity</a>
+<a href="https://privacysafe.app/#trust">Trust</a>
+<a href="https://privacysafe.app/docs/" rel="noopener noreferrer" target="_blank">Docs</a>
+<a href="https://privacysafe.social" rel="noopener noreferrer" target="_blank">Social</a>
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+</nav>
+<div class="nav-actions">
+<a class="btn soft" href="https://privacysafe.app/#apps">Learn More</a>
+<a class="btn primary" href="https://privacysafe.app/#download">Get PrivacySafe</a>
+<a aria-label="Download" class="btn hamb" href="https://privacysafe.app/#download">
+<svg class="ico ico-download" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.900 2.800h2.200v9.100l3.300-3.300 1.600 1.600L12 16.100 6 10.200l1.600-1.600 3.300 3.300V2.800zM4 18.400h16v2.200H4v-2.200z"/></svg>
+</a>
+</div>
+</div>
+</header>
+<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul><li><a href="../index.html">Home</a></li><li><a href="../tools.html" aria-current="page">Tools</a></li><li><a href="../cves.html">CVEs</a></li><li><a href="../how-it-works.html">How it works</a></li><li><a href="../install.html">Install</a></li><li><a href="../man/index.html">Manual pages</a></li><li><a href="https://privacysafe.app/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online <svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg></a></li></ul></div></nav>
+<div class="doc-page"><div class="wrap doc-layout"><nav class="docs-side" aria-label="Security Patches"><div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div><details class="side-box" open><summary>Menu</summary><ul class="start">
+<li><a href="../index.html">Home</a></li>
+<li><a href="../how-it-works.html">How the tools work</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../install.html">Install and update</a></li>
+<li><a href="../tools.html">All tools</a></li>
+<li><a href="../cves.html">Find a CVE</a></li>
+<li><a href="../man/index.html">Manual pages</a></li>
+<li><a href="../changelog.html">Changelog</a></li>
+<li><a href="../security.html">Security policy</a></li>
+<li><a href="../about.html">About and support</a></li>
+</ul>
+<details class="grp" open><summary>Newest: 22 October to 2 November 2026</summary><ul>
+<li><a href="../linux-kernel/index.html">3 Oct: Linux kernel</a></li>
+<li><a href="../pki/index.html">2 Oct: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="index.html" aria-current="page">30 Oct: vsftpd</a></li>
+<li><a href="../claude-code-vsx/index.html">29 Oct: Claude Code extension backdoor</a></li>
+<li><a href="../brotli/index.html">25 Oct: Brotli</a></li>
+<li><a href="../grav/index.html">24 Oct: Grav</a></li>
+<li><a href="../php/detect/index.html">24 Oct: PHP2Shell detection rules</a></li>
+<li><a href="../basercms/index.html">23 Oct: baserCMS</a></li>
+<li><a href="../openapi/index.html">23 Oct: openapi-typescript-codegen</a></li>
+<li><a href="../ruby/index.html">23 Oct: Ruby and GitLab regexp</a></li>
+<li><a href="../django/index.html">22 Oct: Django REST framework</a></li>
+<li><a href="../expat/index.html">22 Oct: libexpat</a></li>
+<li><a href="../haproxy/index.html">22 Oct: HAProxy</a></li>
+<li><a href="../rsyslog/index.html">22 Oct: rsyslog</a></li>
+<li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
+</ul></details>
+<details class="grp" open><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../pulsar/index.html">Apache Pulsar</a></li>
+<li><a href="../tomcat/index.html">Apache Tomcat</a></li>
+<li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
+<li><a href="../bind/index.html">BIND 9</a></li>
+<li><a href="../couchdb/index.html">CouchDB</a></li>
+<li><a href="../haproxy/index.html">HAProxy</a></li>
+<li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../nginx/index.html">nginx</a></li>
+<li><a href="../nginx-ui/index.html">nginx-ui</a></li>
+<li><a href="../rsyslog/index.html">rsyslog</a></li>
+<li><a href="index.html" aria-current="page">vsftpd</a></li>
+</ul></details>
+<details class="grp"><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../brotli/index.html">Brotli</a></li>
+<li><a href="../curl/index.html">curl</a></li>
+<li><a href="../pki/index.html">eMudhra CA compromise</a></li>
+<li><a href="../expat/index.html">libexpat</a></li>
+<li><a href="../heif/index.html">libheif</a></li>
+<li><a href="../linux-kernel/index.html">Linux kernel</a></li>
+<li><a href="../node/index.html">Node.js</a></li>
+<li><a href="../openssl/index.html">OpenSSL</a></li>
+<li><a href="../php/index.html">PHP2Shell</a></li>
+<li><a href="../php/detect/index.html">PHP2Shell detection rules</a></li>
+<li><a href="../php/edge/index.html">PHP2Shell edge guards</a></li>
+<li><a href="../pillow/index.html">Pillow</a></li>
+<li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
+</ul></details>
+<details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../basercms/index.html">baserCMS</a></li>
+<li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
+<li><a href="../craft/index.html">Craft CMS</a></li>
+<li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../grav/index.html">Grav</a></li>
+<li><a href="../joomla/index.html">Joomla</a></li>
+<li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
+<li><a href="../nextcloud/index.html">Nextcloud Collabora</a></li>
+<li><a href="../plex/index.html">Plex Media Server</a></li>
+<li><a href="../roundcube/index.html">Roundcube</a></li>
+<li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
+<li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
+<li><a href="../zammad/index.html">Zammad</a></li>
+</ul></details>
+<details class="grp"><summary>Developer platforms, tools and supply chain</summary><ul>
+<li><a href="../claude-code-vsx/index.html">Claude Code extension backdoor</a></li>
+<li><a href="../django/index.html">Django REST framework</a></li>
+<li><a href="../ghostaction/index.html">GhostAction</a></li>
+<li><a href="../gitea/index.html">Gitea</a></li>
+<li><a href="../gitlab/index.html">GitLab</a></li>
+<li><a href="../jenkins/index.html">Jenkins plugins</a></li>
+<li><a href="../jupyter/index.html">Jupyter and nbconvert</a></li>
+<li><a href="../laravel/index.html">Laravel TokenGuard</a></li>
+<li><a href="../litellm/index.html">LiteLLM</a></li>
+<li><a href="../nextjs/index.html">Next.js Server Actions</a></li>
+<li><a href="../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../sagemaker/index.html">SageMaker SDK</a></li>
+<li><a href="../sentry/index.html">Sentry for Next.js</a></li>
+<li><a href="../storybook/index.html">Storybook</a></li>
+</ul></details>
+</details></nav>
+<main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>vsftpd</span></nav>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#servers-proxies-and-network-services">Servers, proxies and network services</a></p><h1>vsftpd: <span class="nw">CVE-2026-119568</span> FTPS data channel hijack</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">vsftpd 3.0.5 and older with FTPS enabled on a standalone listener, GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2025-14242</span>, <span class="nw">CVE-2026-119568</span></span></dd><dt>Script</dt><dd><div class="scr"><code>vsftpd-ftps-ticket-check.sh</code> (<a href="../man/psf-vsftpd-ftps-ticket-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/vsftpd/vsftpd-ftps-ticket-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>harden</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/vsftpd/vsftpd-ftps-ticket-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside>
+<h2 id="vsftpd-ftps-data-channel-hijack">vsftpd FTPS data channel hijack</h2>
+<p>vsftpd 3.0.5 and older, built with SSL and running FTPS, has a flaw in how it ties a data connection to its user (<span class="nw">CVE-2026-119568</span>). It accepts any resumed TLS session ticket as proof that the data connection belongs to the logged-in user, without checking that the ticket came from that user's control connection. Anyone who shares the victim's IP address can use that to take over a transfer: they receive the victim's download, or the server takes the victim's upload from them.</p>
+<p>This tool tells you whether your vsftpd is exposed, protects it until upstream publishes a fixed release, and can apply optional baseline hardening. A second CVE, <span class="nw">CVE-2025-14242</span>, is a denial of service in Red Hat family packages and is covered further down.</p>
+<div class="table-wrap" tabindex="0"><table>
+
+<tbody>
+<tr>
+<td>CVE</td>
+<td><span class="nw">CVE-2026-119568</span> (published 30 October 2026)</td>
+</tr>
+<tr>
+<td>Affected</td>
+<td>vsftpd through 3.0.5</td>
+</tr>
+<tr>
+<td>Severity</td>
+<td>9.1 Critical in the VulnCheck advisory (CVSS v4, attack complexity high). The researcher scored 7.4 High (CVSS v3.1)</td>
+</tr>
+<tr>
+<td>Remedy</td>
+<td>Run <code>mitigate</code> now and install the upstream release that fixes it when it is published (<a href="https://security.appspot.com/vsftpd.html">vendor page</a>)</td>
+</tr>
+<tr>
+<td>Impact</td>
+<td>The content of one transfer can be read, or supplied, by someone who is not the user. Not a login bypass and not code execution</td>
+</tr>
+<tr>
+<td>Research</td>
+<td><a href="https://abraxaslabs.tech/research/vsftpd-ssl-data-any-ticket">Abraxas Labs write-up</a> with a loopback lab and proof of concept; <a href="https://www.vulncheck.com/advisories/vsftpd-through-3.0.5-require-ssl-reuse-bypass-via-ftps-data-channel-hijacking">VulnCheck advisory</a></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="what-exposes-you">What exposes you</h2>
+<p>All of these have to be true (the researcher's conditions):</p>
+<ol>
+<li>The binary was built with SSL support. The stock tarball has it off. Most distribution packages turn it on. The script reads this from whether the binary links OpenSSL.</li>
+<li><code>ssl_enable=YES</code> in the configuration (the default is <code>NO</code>).</li>
+<li>A standalone listener: <code>listen=YES</code> or <code>listen_ipv6=YES</code>. Debian's default configuration sets <code>listen_ipv6=YES</code>, which counts.</li>
+<li><code>require_ssl_reuse=YES</code>, which is the default. Setting it to <code>NO</code> removes the ticket requirement entirely, so the data connection is no longer tied to the control connection at all. The script reports that as exposed too (our reading, not the advisory's).</li>
+<li>The attacker shares the victim's source IP address. Passive connections must come from the control connection's address unless <code>pasv_promiscuous=YES</code>, so this means a shared NAT address, a shared proxy or the same host.</li>
+</ol>
+<h2 id="quick-start">Quick start</h2>
+<ol>
+<li>
+<p>Download the script. The repository is mirrored on GitHub and Codeberg; pick a base URL.</p>
+<pre tabindex="0"><code class="language-bash"># BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO &quot;$BASE/vsftpd/vsftpd-ftps-ticket-check.sh&quot;
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/vsftpd/vsftpd-ftps-ticket-check.sh
+</code></pre>
+</li>
+<li>
+<p>Read it before running it, then make it executable.</p>
+<pre tabindex="0"><code class="language-bash">less vsftpd-ftps-ticket-check.sh
+chmod +x vsftpd-ftps-ticket-check.sh
+</code></pre>
+</li>
+<li>
+<p>Check this host. The script finds vsftpd on <code>PATH</code>, in the usual locations and from running processes, and reads each configuration file it finds. To check a specific binary or configuration, pass the binary and set <code>VSFTPD_CONF</code>.</p>
+<pre tabindex="0"><code class="language-bash">./vsftpd-ftps-ticket-check.sh check
+./vsftpd-ftps-ticket-check.sh check /opt/vsftpd/sbin/vsftpd
+VSFTPD_CONF=/etc/vsftpd/ftps.conf ./vsftpd-ftps-ticket-check.sh check
+</code></pre>
+</li>
+</ol>
+<p><code>check</code> is read-only and sends no network traffic. Only <code>mitigate</code> and <code>rollback</code> change anything, and neither restarts vsftpd unless you add <code>--restart</code>.</p>
+<p>Exit codes of <code>check</code>: <strong>0</strong> nothing exposed, <strong>1</strong> an exposed vsftpd, or one that cannot be judged (a version or configuration that cannot be read is treated as exposed, so that you review it), <strong>2</strong> bad usage.</p>
+<p>What it reports for each binary:</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Finding</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Version above 3.0.5</td>
+<td>Outside the published range. Confirm against the vendor page</td>
+</tr>
+<tr>
+<td>Package changelog mentions <span class="nw">CVE-2026-119568</span></td>
+<td>Possibly backported by the distribution</td>
+</tr>
+<tr>
+<td>Binary does not link OpenSSL</td>
+<td>Not exposed: FTPS is not available</td>
+</tr>
+<tr>
+<td><code>ssl_enable</code> is not YES</td>
+<td>Not exposed</td>
+</tr>
+<tr>
+<td>Neither <code>listen</code> nor <code>listen_ipv6</code> is YES</td>
+<td>Not exposed on the researcher's reading (no shared ticket keys between connections)</td>
+</tr>
+<tr>
+<td><code>require_cert=YES</code></td>
+<td>Mitigated by configuration (researcher's reading; needs a certificate on every client)</td>
+</tr>
+<tr>
+<td>Everything else, on 3.0.5 or older</td>
+<td><strong>Exposed</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Several configuration files (for example <code>/etc/vsftpd/*.conf</code>, or the file named on a running process's command line) are each judged separately.</p>
+<h2 id="cve-2025-14242-authenticated-denial-of-service-red-hat-family-packages"><span class="nw">CVE-2025-14242</span>: authenticated denial of service (Red Hat family packages)</h2>
+<p>The check also reports a second vsftpd flaw that has nothing to do with FTPS.</p>
+<div class="table-wrap" tabindex="0"><table>
+
+<tbody>
+<tr>
+<td>CVE</td>
+<td><span class="nw">CVE-2025-14242</span> (published 14 January 2026 by Red Hat)</td>
+</tr>
+<tr>
+<td>Weakness</td>
+<td>CWE-190, integer overflow in the parsing of <code>ls</code> parameters, reached through a crafted <code>STAT</code> command</td>
+</tr>
+<tr>
+<td>Severity</td>
+<td>6.5 Medium (CVSS v3.1: network, low complexity, low privileges, availability high). CISA's SSVC entry: exploitation none, automatable no. Not known to be exploited</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td><strong>A valid login.</strong> An anonymous-only server needs the attacker to be able to log in anonymously</td>
+</tr>
+<tr>
+<td>Affected</td>
+<td>Red Hat's own vsftpd packages (RHEL 8, 9 and 10 and their update-service streams). Fixed in RHSA-2026:0605, 0606 and 0608 and later errata, for example 3.0.3-36.el8_10.3 (RHEL 8), 3.0.5-6.el9_7.2 (RHEL 9) and 3.0.5-10.el10_1.1 (RHEL 10)</td>
+</tr>
+<tr>
+<td>Open question</td>
+<td>A comment on <a href="https://bugzilla.redhat.com/show_bug.cgi?id=2419826">Red Hat's bug</a> asks whether the flaw comes from a patch only Red Hat carries (support for square brackets in <code>ls</code>). That is not confirmed, so <strong>this tool does not claim that upstream 3.0.5 or Debian and Ubuntu builds are affected or safe</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>What the check does: for each vsftpd it finds, it asks the package manager. A package whose changelog names <span class="nw">CVE-2025-14242</span> is reported fixed. A Red Hat family package (Red Hat, AlmaLinux, Rocky, CentOS, Oracle) whose changelog does not name it is reported as affected. RHEL 7 builds are not listed by Red Hat and are noted, not reported. Anything else (Debian, Ubuntu, a source build) is not reported, with the open question above. It decides by the package, not by the version number, because Red Hat backports under old version numbers.</p>
+<p>What to do: install your distribution's vsftpd update. Until then, <code>mitigate --allow</code> limits who can reach the port and removing accounts that do not need FTP limits who can log in. <code>harden --limits</code> caps sessions per address, which is a generic suggestion from a third-party summary and not Red Hat's advice. It does not remove the bug.</p>
+<h2 id="optional-hardening-harden">Optional hardening: <code>harden</code></h2>
+<p><code>harden</code> is separate from both CVEs: it applies baseline hardening, and only the measures you choose, because each can change how clients connect. It needs root, copies every file first, restarts nothing unless you add <code>--restart</code>, and <code>rollback</code> undoes it together with <code>mitigate</code>. Each directive is written only if the installed vsftpd build knows it, because an unknown directive stops vsftpd from starting (the Ubuntu 3.0.5 build, for example, does not recognize <code>ssl_tlsv1_1</code> or <code>ssl_tlsv1_2</code>). A numeric limit that is already set and at least as strict is never loosened.</p>
+<pre tabindex="0"><code class="language-bash">sudo ./vsftpd-ftps-ticket-check.sh harden --baseline --dry-run
+sudo ./vsftpd-ftps-ticket-check.sh harden --baseline --restart
+sudo ./vsftpd-ftps-ticket-check.sh harden --force-tls --no-anon --pasv-range 40000-40100
+sudo ./vsftpd-ftps-ticket-check.sh rollback
+</code></pre>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it sets</th>
+<th>What it can break</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--baseline</code></td>
+<td><code>--logging</code>, <code>--limits</code> and <code>--tls</code> together</td>
+<td>See each</td>
+</tr>
+<tr>
+<td><code>--logging</code></td>
+<td><code>xferlog_enable=YES</code></td>
+<td>Nothing; the log grows</td>
+</tr>
+<tr>
+<td><code>--limits</code></td>
+<td>Standalone listeners: <code>max_clients=50</code>, <code>max_per_ip=5</code>. Everywhere: <code>idle_session_timeout=300</code>, <code>data_connection_timeout=120</code></td>
+<td><code>max_per_ip</code> locks out many users behind one NAT address. Slow transfers can hit the timeouts. <code>max_clients</code> and <code>max_per_ip</code> are ignored when vsftpd runs once per connection, and are left alone</td>
+</tr>
+<tr>
+<td><code>--tls</code></td>
+<td>Where <code>ssl_enable=YES</code>: <code>ssl_ciphers=HIGH</code>, SSLv2, SSLv3, TLSv1 and TLSv1.1 off, TLSv1.2 on (each only if the build knows it)</td>
+<td>Very old FTPS clients</td>
+</tr>
+<tr>
+<td><code>--force-tls</code></td>
+<td>Where <code>ssl_enable=YES</code>: <code>force_local_logins_ssl</code> and <code>force_local_data_ssl</code> (vsftpd's default is already YES for both, so this makes it explicit), and where <code>allow_anon_ssl=YES</code> also <code>force_anon_logins_ssl</code> and <code>force_anon_data_ssl</code></td>
+<td>Every client must speak FTPS</td>
+</tr>
+<tr>
+<td><code>--no-anon</code></td>
+<td><code>anonymous_enable=NO</code> (vsftpd's default is YES)</td>
+<td>Anonymous FTP stops</td>
+</tr>
+<tr>
+<td><code>--chroot</code></td>
+<td>Where <code>local_enable=YES</code>: <code>chroot_local_user=YES</code></td>
+<td>vsftpd refuses a login when the user's home directory is writable. The tool does not set <code>allow_writeable_chroot</code>, which weakens the jail</td>
+</tr>
+<tr>
+<td><code>--pasv-range A-B</code></td>
+<td><code>pasv_min_port</code> and <code>pasv_max_port</code></td>
+<td>Your firewall and NAT must allow the range or passive transfers hang. <code>mitigate --allow</code> opens it for the listed addresses</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>harden</code> does not switch FTPS on, because that needs a certificate of your choosing: set <code>ssl_enable=YES</code> and the certificate paths first, then use <code>--tls</code> and <code>--force-tls</code>. For the firewall item in the usual hardening guides, use <code>mitigate --allow</code>. Updates are what <code>check</code> is for.</p>
+<p>Verified on vsftpd 3.0.5 (Ubuntu build) with a local user and FTPS clients. After <code>harden --baseline --force-tls --no-anon</code> and a restart, plain FTP was refused for anonymous and local users, FTPS for the local user still worked, and TLS 1.2 was accepted. <code>ssl_tlsv1_1</code> and <code>ssl_tlsv1_2</code> were skipped because the build does not know them, and <code>rollback</code> restored the file exactly. With anonymous TLS allowed, <code>--force-tls</code> refused plain anonymous FTP and left anonymous FTPS working. With <code>--chroot</code>, a local user with a writable home could not log in. TLS 1.0 was already refused on that host, so the protocol settings made no visible difference there.</p>
+<h2 id="mitigating-it">Mitigating it</h2>
+<p><code>mitigate</code> applies the protective measures for you. It needs root, copies every file it edits first, restarts nothing unless you add <code>--restart</code> (vsftpd reads its configuration at start, and a restart ends transfers in progress), and <code>rollback</code> undoes it. Use <code>--dry-run</code> first.</p>
+<pre tabindex="0"><code class="language-bash">sudo ./vsftpd-ftps-ticket-check.sh mitigate --dry-run
+sudo ./vsftpd-ftps-ticket-check.sh mitigate                       # safe step only
+sudo ./vsftpd-ftps-ticket-check.sh mitigate --require-cert        # if your clients present certificates
+sudo ./vsftpd-ftps-ticket-check.sh mitigate --allow 203.0.113.0/24,198.51.100.7
+sudo ./vsftpd-ftps-ticket-check.sh rollback
+</code></pre>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it does</th>
+<th>Cost and trust</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(none)</td>
+<td>Sets <code>pasv_promiscuous=NO</code> in each FTPS configuration that has it on. That setting lets passive data connections come from any address, which removes the same-IP precondition of the attack</td>
+<td>Safe unless you rely on FXP (server to server) transfers. A clear tightening, not a complete fix</td>
+</tr>
+<tr>
+<td><code>--require-cert</code></td>
+<td>Also sets <code>require_cert=YES</code> and <code>ssl_request_cert=YES</code>: every client must present a certificate and the data connection is matched against it</td>
+<td>It <strong>refuses clients that have no certificate</strong>, which is most FTPS clients, so use it where every client presents one</td>
+</tr>
+<tr>
+<td><code>--allow LIST</code></td>
+<td>nftables (or iptables): only the listed addresses or CIDRs, plus loopback, may reach the control port (<code>listen_port</code>, default 21) and the passive range if <code>pasv_min_port</code> and <code>pasv_max_port</code> are set. IPv6 is dropped entirely unless you list an IPv6 source</td>
+<td>Does not survive a reboot. Cannot stop an attacker who shares an allowed address, which is the attack's precondition. Useful against everyone else</td>
+</tr>
+<tr>
+<td><code>--restart</code></td>
+<td>Restarts vsftpd through systemd afterwards</td>
+<td>Ends transfers in progress</td>
+</tr>
+</tbody>
+</table></div>
+<p>The ports to protect are read from each FTPS-enabled configuration (<code>ssl_enable=YES</code>). With none, only port 21 is protected, and the script says so. Verified with vsftpd 3.0.5 and a client in a separate network namespace: with <code>--allow 192.0.2.0/24</code> the client's connection to the control port timed out while loopback still worked. With the client's own network in the list it connected. <code>rollback</code> removed the rules. The nftables rule and the iptables fallback behaved the same.</p>
+<p>Not automated: running vsftpd per connection from xinetd or a systemd socket (the researcher's other suggestion) replaces how the service is started, so it stays your decision. Moving transfers to SFTP is a migration, not a setting. <code>require_ssl_reuse=YES</code> shows that some ticket the server can decrypt was presented. It does not tie the data connection to the same session.</p>
+<p>State (backups of the first original of each file, and a manifest) is kept in <code>STATE_DIR</code>, default <code>/var/lib/psf-security-patches/vsftpd</code>. Running <code>mitigate</code> twice keeps the first original, so <code>rollback</code> always restores the real original.</p>
+<h2 id="sources">Sources</h2>
+<ul>
+<li><a href="https://hackviser.com/tactics/hardening/vsftpd">Hackviser: vsftpd hardening guide</a>: the source of the baseline items (FTPS, anonymous login, ciphers, chroot, logging, connection limits, passive range, firewall, updates)</li>
+<li><a href="https://cyrisk.com/security/mitigation-instructions-for-vsftpd/">CyRisk: mitigation instructions for vsftpd</a>: generic advice written for vsftpd 2.0.6. Nothing version-specific was taken from it</li>
+<li><a href="https://www.rapid7.com/db/">Rapid7 vulnerability database: <span class="nw">CVE-2026-119568</span></a> and <a href="https://www.cve.org/CVERecord?id=CVE-2026-119568">the CVE record</a>: CVSS v4 9.1 and v3.1 7.4. Not in the CISA KEV catalog on 30 October 2026</li>
+<li><a href="https://access.redhat.com/security/cve/CVE-2025-14242">Red Hat: <span class="nw">CVE-2025-14242</span></a> and <a href="https://bugzilla.redhat.com/show_bug.cgi?id=2419826">bug 2419826</a>: affected packages, the fixed errata and the open question about the source of the flaw. A third-party summary page of the same CVE says it was generated with AI, so its details were checked against Red Hat's data before use</li>
+</ul>
+<h2 id="before-you-run-it">Before you run it</h2>
+<ul>
+<li>The fix. Install the upstream vsftpd release that fixes <span class="nw">CVE-2026-119568</span> when it is published (<a href="https://security.appspot.com/vsftpd.html">vendor page</a>). Until then, <code>mitigate</code> is a clear tightening, not a complete fix.</li>
+<li>The impact is one transfer. Someone who shares your source IP address can read or supply the content of a transfer. It is not a login bypass and not code execution.</li>
+<li><code>mitigate</code> and <code>harden</code> edit your vsftpd configuration. They copy every file first, restart nothing unless you add <code>--restart</code>, and <code>rollback</code> undoes both. Use <code>--dry-run</code> first.</li>
+<li><code>mitigate --require-cert</code> refuses clients that have no certificate, which is most FTPS clients.</li>
+<li><code>harden</code> is separate from both CVEs and applies only the measures you choose, because each can change how clients connect.</li>
+<li>Containers are not scanned. Run the script inside the container, or pass the binary and set <code>VSFTPD_CONF</code> to a copy of its configuration.</li>
+<li>The configuration parser follows vsftpd's rules (a later line wins, <code>#</code> starts a comment, no spaces around <code>=</code> are needed here) but does not follow <code>include</code>-style tricks from distribution wrappers.</li>
+<li>Whether a standalone vsftpd was started by a supervisor that ignores <code>listen</code> cannot be seen from the configuration. If neither <code>listen</code> nor <code>listen_ipv6</code> is set the script reports &quot;not exposed (per connection)&quot;. Set <code>listen=YES</code> in a copy of the file to see how it would be reported.</li>
+<li><code>harden</code> cannot start vsftpd to prove a configuration works: it relies on the build knowing each directive and on <code>--dry-run</code>. Try a login from each kind of client after a restart.</li>
+<li>Whether <span class="nw">CVE-2025-14242</span> affects builds that are not Red Hat family packages is unconfirmed (see above), so such builds are not reported.</li>
+<li>The affected range is the one published on 30 October 2026. The CVE text names <code>ssl_data_accept()</code> and the researcher's write-up names <code>ssl_accept()</code>. They describe the same missing check.</li>
+</ul>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/vsftpd/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../storybook/index.html">&larr; Storybook</a><a rel="next" href="../wordpress/index.html">WordPress core and plugins &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#vsftpd-ftps-data-channel-hijack">vsftpd FTPS data channel hijack</a></li><li class="l2"><a href="#what-exposes-you">What exposes you</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#cve-2025-14242-authenticated-denial-of-service-red-hat-family-packages">CVE-2025-14242: authenticated denial of service (Red Hat family packages)</a></li><li class="l2"><a href="#optional-hardening-harden">Optional hardening: harden</a></li><li class="l2"><a href="#mitigating-it">Mitigating it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
+<section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
+<div class="wrap">
+<article class="card has-partner">
+<h2 class="eco-title" id="ecosystem-title">The PrivacySafe Ecosystem</h2>
+<a class="partner-mark" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+<img src="../assets/img/ivy-logo-horizontal-white.svg" alt="Shop at Ivy Cyber" width="328" height="73" loading="lazy" decoding="async"/>
+</a>
+<p><strong>Ivy Cyber</strong> offers PrivacySafe products and services in the USA and has partnerships with 3NSoft in Canada and Kuip Limited in the European Union. Enterprise services and consulting are available at <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">ivycyber.com</a>
+</p><p><strong>PrivacySafe Foundation</strong> is a 501(c)(3) nonprofit public charity that supports the development of the PrivacySafe applications, along with the components they rely upon: 3NWeb protocols, filesystem, documentation, and reference implementations.</p>
+<div class="pullout">
+<a class="foundation-mark" href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank"><img src="../assets/img/logo-foundation.svg" alt="PrivacySafe Foundation" width="218" height="47" loading="lazy" decoding="async"/></a>
+<p class="pullout-text">Donations to <a href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank">PrivacySafe Foundation</a> support education, research, documentation, and public code. Purchases from <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber</a> support PrivacySafe products, services, hosting, and technical support. <strong class="pullout-lead">Together, we're building a better web.</strong></p>
+</div>
+<div class="split-actions">
+<a class="btn primary" href="https://www.zeffy.com/en-US/ticketing/cybersecurity-education-and-tech" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-heart" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="currentColor" d="M12 20.6 10.6 19.3C5.7 14.9 2.5 12 2.5 8.4 2.5 5.5 4.8 3.2 7.7 3.2c1.6 0 3.2.8 4.3 2.05C13.1 4 14.7 3.2 16.3 3.2c2.9 0 5.2 2.3 5.2 5.2 0 3.6-3.2 6.5-8.1 10.9L12 20.6Z"/> </svg>
+Donate to PrivacySafe Foundation
+</a>
+<a class="btn ghost" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+Buy PrivacySafe products &amp; services
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost" href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-code" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.6 4.8l-3.2 14.4"/> </svg>
+Browse our Source Code
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+</article>
+</div>
+</section>
+<footer>
+<div class="wrap">
+<div class="footer-community">
+<section aria-labelledby="footer-about-title" class="footer-panel footer-about">
+<h2 class="sr-only" id="footer-about-title">About PrivacySafe</h2>
+<img alt="PrivacySafe" class="footer-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+<p>PrivacySafe creates a secure sandbox environment for your organization which you can tie to your domain, your authentication methods, and your access controls.</p>
+<h3>Follow Us</h3>
+<div aria-label="PrivacySafe social links" class="social-links">
+<a aria-label="PrivacySafe on Mastodon" class="social-link" href="https://privacysafe.social/@privacysafe" rel="me noopener noreferrer" target="_blank" title="Mastodon">
+<svg class="ico ico-mastodon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg>
+</a><a aria-label="PrivacySafe on Bluesky" class="social-link" href="https://bsky.app/profile/privacysafe.social" rel="me noopener noreferrer" target="_blank" title="Bluesky">
+<svg class="ico ico-bluesky" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026"/></svg>
+</a><a aria-label="PrivacySafe on Twitter X" class="social-link" href="https://x.com/GetPrivacySafe" rel="nofollow noopener noreferrer" target="_blank" title="Twitter X">
+<svg class="ico ico-x-twitter" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+</a><a aria-label="PrivacySafe on LinkedIn" class="social-link" href="https://www.linkedin.com/company/privacysafe-app" rel="noopener noreferrer" target="_blank" title="LinkedIn">
+<svg class="ico ico-linkedin" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.200 3.600a1.700 1.700 0 1 0 0 3.400 1.700 1.700 0 0 0 0-3.400zM5.600 10.400v7.800h3.200v-7.800H5.600zm4.800 0v7.800h3.200v-4c0-1.100.4-1.700 1.300-1.700s1.300.6 1.300 1.700v4h3.200v-4.400c0-2.300-1.100-3.600-3.200-3.600-1.200 0-2.200.5-2.700 1.300v-1.100h-3.100z"/></svg>
+</a><a aria-label="PrivacySafe on YouTube" class="social-link" href="https://www.youtube.com/@privacysafe" rel="noopener noreferrer" target="_blank" title="YouTube">
+<svg class="ico ico-youtube" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+</a><a aria-label="PrivacySafe on Instagram" class="social-link" href="https://www.instagram.com/getprivacysafe/" rel="noopener noreferrer" target="_blank" title="Instagram">
+<svg class="ico ico-instagram" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>
+</a>
+<!--<a aria-label="Signal @ivycyber.01" class="social-link" href="https://signal.me/#eu/nmRqQrmMcXaq6cyfP8ckVaf-LniNZwhc5VatIEgC3y39lIYFNBBFF5NvpFurg6UA" rel="noopener noreferrer" target="_blank" title="Signal">
+<span aria-hidden="true" class="ico ico-signal"></span>
+</a>-->
+<!--<a aria-label="Ivy Cyber on Facebook" class="social-link" href="https://www.facebook.com/ivycyber" rel="noopener noreferrer" target="_blank" title="Facebook">
+<span aria-hidden="true" class="ico ico-facebook"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on TikTok" class="social-link" href="https://www.tiktok.com/@bitsontape" rel="noopener noreferrer" target="_blank" title="TikTok">
+<span aria-hidden="true" class="ico ico-tiktok"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Telegram" class="social-link" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank" title="Telegram">
+<span aria-hidden="true" class="ico ico-telegram"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Substack" class="social-link" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank" title="Substack">
+<span aria-hidden="true" class="ico ico-substack"></span>
+</a>--></div>
+</section>
+<section aria-labelledby="newsletter-title" class="footer-panel newsletter-panel">
+<div class="card-footnote">
+<a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank"><img class="newsletter-avatar" src="../assets/img/bitsontape-avatar.png" alt="Bits On Tape logo: two reels of open-reel tape arranged as a heart" width="200" height="200" loading="lazy" decoding="async"/></a>
+<h2 id="newsletter-title">Subscribe to Our Newsletter</h2>
+<p><a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">Bits On Tape</a> is our newsletter: a replay of science and technology stories by cyber experts, covering cybersecurity, privacy, free software, AI, and digital culture. Get the latest updates on our PrivacySafe ecosystem as we continue building and launching.</p>
+<div class="card-footnote-actions">
+<a class="btn primary small" href="https://psafe.ly/WaaEkp" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-envelope" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+Subscribe free
+</a>
+<a class="btn ghost small" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">
+Read past issues
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost small" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-telegram" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M21.6 3.2 18.4 20c-.24 1.18-.88 1.47-1.79.91l-4.88-3.6-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.97 9.05-8.18c.39-.35-.09-.55-.61-.2L6.01 13.74 1.2 12.24c-1.05-.33-1.07-1.05.22-1.55L20.2 3.45c.87-.32 1.63.2 1.4-.25Z"></path></svg>
+Join Telegram group
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+<p class="newsletter-note">We hate spam as much as you do and comply with CAN-SPAM regulation.</p>
+</div>
+</section>
+</div>
+<div class="footer-inner">
+<nav aria-label="Footer links" class="footer-links">
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+<a href="https://ivycyber.com/security-policy/" rel="nofollow noopener noreferrer" target="_blank">Security &amp; Bug Bounty</a>
+<a href="https://ivycyber.com/privacy-policy/" rel="nofollow noopener noreferrer" target="_blank">Privacy Policy</a>
+<a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
+<a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
+</nav>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+</div>
+</div>
+</footer>
+<script src="../assets/site.js" defer></script></body>
+</html>

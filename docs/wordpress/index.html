@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="en" data-root="../">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
+<title>WordPress: XSS2Shell core check and October 2026 plugin checks | PrivacySafe Security Patches</title><meta name="description" content="WordPress Core sites and their web server logs on GNU/Linux">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<body class="docs">
+<a class="skip-link" href="#top">Skip to main content</a>
+<header class="topbar">
+<div aria-label="Site navigation" class="wrap nav">
+<a aria-label="PrivacySafe home" class="brand header-brand" href="https://privacysafe.app/">
+<img alt="PrivacySafe" class="brand-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+</a>
+<nav aria-label="Primary" class="navlinks">
+<a href="https://privacysafe.app/#download">Download</a>
+<a href="https://privacysafe.app/#apps">Apps</a>
+<a href="https://privacysafe.app/#identity">Identity</a>
+<a href="https://privacysafe.app/#trust">Trust</a>
+<a href="https://privacysafe.app/docs/" rel="noopener noreferrer" target="_blank">Docs</a>
+<a href="https://privacysafe.social" rel="noopener noreferrer" target="_blank">Social</a>
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+</nav>
+<div class="nav-actions">
+<a class="btn soft" href="https://privacysafe.app/#apps">Learn More</a>
+<a class="btn primary" href="https://privacysafe.app/#download">Get PrivacySafe</a>
+<a aria-label="Download" class="btn hamb" href="https://privacysafe.app/#download">
+<svg class="ico ico-download" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.900 2.800h2.200v9.100l3.300-3.300 1.600 1.600L12 16.100 6 10.200l1.600-1.600 3.300 3.300V2.800zM4 18.400h16v2.200H4v-2.200z"/></svg>
+</a>
+</div>
+</div>
+</header>
+<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul><li><a href="../index.html">Home</a></li><li><a href="../tools.html" aria-current="page">Tools</a></li><li><a href="../cves.html">CVEs</a></li><li><a href="../how-it-works.html">How it works</a></li><li><a href="../install.html">Install</a></li><li><a href="../man/index.html">Manual pages</a></li><li><a href="https://privacysafe.app/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online <svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg></a></li></ul></div></nav>
+<div class="doc-page"><div class="wrap doc-layout"><nav class="docs-side" aria-label="Security Patches"><div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div><details class="side-box" open><summary>Menu</summary><ul class="start">
+<li><a href="../index.html">Home</a></li>
+<li><a href="../how-it-works.html">How the tools work</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../install.html">Install and update</a></li>
+<li><a href="../tools.html">All tools</a></li>
+<li><a href="../cves.html">Find a CVE</a></li>
+<li><a href="../man/index.html">Manual pages</a></li>
+<li><a href="../changelog.html">Changelog</a></li>
+<li><a href="../security.html">Security policy</a></li>
+<li><a href="../about.html">About and support</a></li>
+</ul>
+<details class="grp"><summary>Newest: 22 October to 2 November 2026</summary><ul>
+<li><a href="../linux-kernel/index.html">3 Oct: Linux kernel</a></li>
+<li><a href="../pki/index.html">2 Oct: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../vsftpd/index.html">30 Oct: vsftpd</a></li>
+<li><a href="../claude-code-vsx/index.html">29 Oct: Claude Code extension backdoor</a></li>
+<li><a href="../brotli/index.html">25 Oct: Brotli</a></li>
+<li><a href="../grav/index.html">24 Oct: Grav</a></li>
+<li><a href="../php/detect/index.html">24 Oct: PHP2Shell detection rules</a></li>
+<li><a href="../basercms/index.html">23 Oct: baserCMS</a></li>
+<li><a href="../openapi/index.html">23 Oct: openapi-typescript-codegen</a></li>
+<li><a href="../ruby/index.html">23 Oct: Ruby and GitLab regexp</a></li>
+<li><a href="../django/index.html">22 Oct: Django REST framework</a></li>
+<li><a href="../expat/index.html">22 Oct: libexpat</a></li>
+<li><a href="../haproxy/index.html">22 Oct: HAProxy</a></li>
+<li><a href="../rsyslog/index.html">22 Oct: rsyslog</a></li>
+<li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
+</ul></details>
+<details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../pulsar/index.html">Apache Pulsar</a></li>
+<li><a href="../tomcat/index.html">Apache Tomcat</a></li>
+<li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
+<li><a href="../bind/index.html">BIND 9</a></li>
+<li><a href="../couchdb/index.html">CouchDB</a></li>
+<li><a href="../haproxy/index.html">HAProxy</a></li>
+<li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../nginx/index.html">nginx</a></li>
+<li><a href="../nginx-ui/index.html">nginx-ui</a></li>
+<li><a href="../rsyslog/index.html">rsyslog</a></li>
+<li><a href="../vsftpd/index.html">vsftpd</a></li>
+</ul></details>
+<details class="grp"><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../brotli/index.html">Brotli</a></li>
+<li><a href="../curl/index.html">curl</a></li>
+<li><a href="../pki/index.html">eMudhra CA compromise</a></li>
+<li><a href="../expat/index.html">libexpat</a></li>
+<li><a href="../heif/index.html">libheif</a></li>
+<li><a href="../linux-kernel/index.html">Linux kernel</a></li>
+<li><a href="../node/index.html">Node.js</a></li>
+<li><a href="../openssl/index.html">OpenSSL</a></li>
+<li><a href="../php/index.html">PHP2Shell</a></li>
+<li><a href="../php/detect/index.html">PHP2Shell detection rules</a></li>
+<li><a href="../php/edge/index.html">PHP2Shell edge guards</a></li>
+<li><a href="../pillow/index.html">Pillow</a></li>
+<li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
+</ul></details>
+<details class="grp" open><summary>Content management and web applications</summary><ul>
+<li><a href="../basercms/index.html">baserCMS</a></li>
+<li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
+<li><a href="../craft/index.html">Craft CMS</a></li>
+<li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../grav/index.html">Grav</a></li>
+<li><a href="../joomla/index.html">Joomla</a></li>
+<li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
+<li><a href="../nextcloud/index.html">Nextcloud Collabora</a></li>
+<li><a href="../plex/index.html">Plex Media Server</a></li>
+<li><a href="../roundcube/index.html">Roundcube</a></li>
+<li><a href="index.html" aria-current="page">WordPress core and plugins</a></li>
+<li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
+<li><a href="../zammad/index.html">Zammad</a></li>
+</ul></details>
+<details class="grp"><summary>Developer platforms, tools and supply chain</summary><ul>
+<li><a href="../claude-code-vsx/index.html">Claude Code extension backdoor</a></li>
+<li><a href="../django/index.html">Django REST framework</a></li>
+<li><a href="../ghostaction/index.html">GhostAction</a></li>
+<li><a href="../gitea/index.html">Gitea</a></li>
+<li><a href="../gitlab/index.html">GitLab</a></li>
+<li><a href="../jenkins/index.html">Jenkins plugins</a></li>
+<li><a href="../jupyter/index.html">Jupyter and nbconvert</a></li>
+<li><a href="../laravel/index.html">Laravel TokenGuard</a></li>
+<li><a href="../litellm/index.html">LiteLLM</a></li>
+<li><a href="../nextjs/index.html">Next.js Server Actions</a></li>
+<li><a href="../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../sagemaker/index.html">SageMaker SDK</a></li>
+<li><a href="../sentry/index.html">Sentry for Next.js</a></li>
+<li><a href="../storybook/index.html">Storybook</a></li>
+</ul></details>
+</details></nav>
+<main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>WordPress core and plugins</span></nav>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>WordPress: XSS2Shell core check and October 2026 plugin checks</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff"><strong>WordPress XSS2Shell:</strong> WordPress Core sites and their web server logs on GNU/Linux</div><div class="aff"><strong>WordPress plugins October 2026:</strong> LiteSpeed Cache, Rank Math PRO, OttoKit, SureCart, LatePoint, Amelia, Profile Builder and Bricksforge (exploited upload to code execution) in WordPress installs on GNU/Linux</div><div class="aff"><strong>wp2shell, WordPress core RCE:</strong> WordPress core 6.8.0 to 6.8.5, 6.9.0 to 6.9.4 and 7.0.0 to 7.0.1: unauthenticated remote code execution, exploited in the wild</div></dd><dt>The fix</dt><dd>7.0.3 (same day as disclosure, 2026-08-07)</dd><dt>Severity</dt><dd>8.9 (CVSS 4.0, <code>CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:P/VC:N/VI:N/VA:N/SC:L/SI:N/SA:N</code>)</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-60137</span>, <span class="nw">CVE-2026-63030</span>, <span class="nw">CVE-2026-64638</span>, <span class="nw">CVE-2026-85097</span>, <span class="nw">CVE-2026-110372</span>, <span class="nw">CVE-2026-110653</span></span> <details class="more"><summary>and 5 more</summary><span class="nw">CVE-2026-111862</span>, <span class="nw">CVE-2026-112241</span>, <span class="nw">CVE-2026-112242</span>, <span class="nw">CVE-2026-112327</span>, <span class="nw">CVE-2026-113500</span></details></dd><dt>Scripts</dt><dd><div class="scr"><code>wordpress-plugins-oct2026-check.sh</code> (<a href="../man/psf-wordpress-plugins-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/wordpress/wordpress-plugins-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/wordpress/wordpress-plugins-oct2026-check.sh check</code></pre></div><div class="scr"><code>wordpress-wp2shell-check.sh</code> (<a href="../man/psf-wordpress-wp2shell-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/wordpress/wordpress-wp2shell-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/wordpress/wordpress-wp2shell-check.sh check</code></pre></div><div class="scr"><code>wordpress-xss2shell-check.sh</code> (<a href="../man/psf-wordpress-xss2shell-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/wordpress/wordpress-xss2shell-check.sh">source</a>)<br>reads only: <code>check</code>, <code>audit</code>, <code>hunt</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/wordpress/wordpress-xss2shell-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd><dt>Related</dt><dd><a href="../wordpress-pt/index.html">WordPress path traversal</a></dd></dl></aside>
+<h2 id="wordpress-xss2shell-check">WordPress XSS2Shell check</h2>
+<p>WordPress Core 4.7 through 7.0.2 reflects the submitted username in the <code>wp-login.php</code> error message through <code>sprintf()</code> without adequate sanitization. A whitespace parser-differential payload (<code>&lt; area</code>, with a space between <code>&lt;</code> and the tag name) survives PHP <code>strip_tags()</code> but is re-tokenized by WordPress's KSES sanitizer into a live DOM element. An attacker who can get a logged-in administrator to send that crafted login form runs attacker JavaScript in the WordPress origin, and can then chain the injected session privileges into full remote code execution through OAuth app-password abuse and plugin upload. No account is required for the XSS stage. Disclosure by PWN.AI on 2026-08-07. WordPress shipped the fix in 7.0.3 the same day.</p>
+<div class="table-wrap" tabindex="0"><table>
+
+<tbody>
+<tr>
+<td>CVE</td>
+<td><span class="nw">CVE-2026-64638</span> (CWE-79, reflected XSS)</td>
+</tr>
+<tr>
+<td>Severity</td>
+<td>8.9 (CVSS 4.0, <code>CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:P/VC:N/VI:N/VA:N/SC:L/SI:N/SA:N</code>)</td>
+</tr>
+<tr>
+<td>Affected</td>
+<td>WordPress Core 4.7 through 7.0.2</td>
+</tr>
+<tr>
+<td>Fixed</td>
+<td>7.0.3 (same day as disclosure, 2026-08-07)</td>
+</tr>
+<tr>
+<td>Attack vector</td>
+<td>Pre-authentication: a single crafted POST to <code>wp-login.php</code> delivers the XSS payload; the RCE stage requires a logged-in administrator to visit attacker-controlled content</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="quick-start">Quick start</h2>
+<ol>
+<li>
+<p>Download the script. The repository is mirrored on GitHub and Codeberg; pick a base URL.</p>
+<pre tabindex="0"><code class="language-bash"># BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO &quot;$BASE/wordpress/wordpress-xss2shell-check.sh&quot;
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/wordpress/wordpress-xss2shell-check.sh
+</code></pre>
+</li>
+<li>
+<p>Read it before running it, then make it executable.</p>
+<pre tabindex="0"><code class="language-bash">less wordpress-xss2shell-check.sh
+chmod +x wordpress-xss2shell-check.sh
+</code></pre>
+</li>
+<li>
+<p>Check a site. The probe is a non-destructive POST to <code>wp-login.php</code> that generates one failed-authentication entry.</p>
+<pre tabindex="0"><code class="language-bash">./wordpress-xss2shell-check.sh check https://your.site
+</code></pre>
+</li>
+<li>
+<p>Full defensive-posture audit.</p>
+<pre tabindex="0"><code class="language-bash">./wordpress-xss2shell-check.sh audit https://your.site
+</code></pre>
+</li>
+<li>
+<p>Look for signs of exploitation in web server logs and plugin directories.</p>
+<pre tabindex="0"><code class="language-bash">sudo WP_ROOTS=&quot;/var/www/html /srv/www&quot; ./wordpress-xss2shell-check.sh hunt
+</code></pre>
+</li>
+</ol>
+<h2 id="commands">Commands</h2>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check URL</code> (default)</td>
+<td>Detects the WordPress version from the homepage meta generator (and from <code>/wp-links-opml.php</code> as a fallback), then POSTs the parser-differential probe to <code>wp-login.php</code> and checks whether it is reflected unescaped into the response. One failed-authentication entry is written to the auth log; nothing else changes. Exits <code>0</code> if not vulnerable, <code>1</code> if vulnerable, <code>2</code> if the target was unreachable or not WordPress</td>
+</tr>
+<tr>
+<td><code>audit URL</code></td>
+<td>All of <code>check</code>, plus: sensitive file exposure (<code>wp-config</code> backups, <code>.git/config</code>, <code>debug.log</code>, <code>.env</code>, <code>xmlrpc.php</code>), security response headers (CSP, HSTS, <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>), and REST API user enumeration. Exits <code>0</code> if no critical findings, <code>1</code> if critical</td>
+</tr>
+<tr>
+<td><code>hunt [WEBROOT]</code></td>
+<td>Scans web server access logs for POST bursts to <code>wp-login.php</code>, requests to <code>authorize-application.php</code> (OAuth app-password abuse), plugin upload requests, and direct PHP calls in plugin directories returning 200; WordPress <code>debug.log</code> for suspicious patterns; and plugin directories for PHP files created after <code>HUNT_SINCE</code>. Root optional but improves coverage. Exits <code>0</code> if nothing found, <code>1</code> if findings</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version. Every command prints it on its first line too</td>
+</tr>
+</tbody>
+</table></div>
+<p>Environment: <code>WP_ROOTS</code> (space-separated directories to look for <code>wp-content/</code> under; default <code>/var/www /srv/www /srv/www/html /opt/wordpress</code>), <code>HUNT_SINCE</code> (how far back hunt looks; default <code>2026-08-07</code>, the disclosure date), <code>HUNT_LOGS</code> (extra log file globs), <code>CURL_OPTS</code> (extra curl options, e.g. <code>--insecure</code> for a self-signed certificate).</p>
+<h2 id="what-the-probe-checks-and-why-it-is-non-destructive">What the probe checks and why it is non-destructive</h2>
+<p>The probe posts <code>&lt; area id=ajaxurl href=/?rest_route=/&gt;</code> as the username to <code>wp-login.php</code>. On a vulnerable WordPress install, KSES re-tokenizes the whitespace-prefixed tag into a real <code>&lt;area id=&quot;ajaxurl&quot;&gt;</code> element in the error message. On a patched install the output is escaped or the tag is stripped. The checker looks for <code>id=&quot;ajaxurl&quot;</code> and <code>&lt;area</code> together with <code>Error:</code> (the login-failure marker, which also prevents false positives against non-WordPress pages). This is the same matcher the verified Nuclei template uses.</p>
+<p>Posting to <code>wp-login.php</code> with an incorrect password generates one failed-authentication record in the auth log and no other side effects: no account is created or modified, no data is written, and no session is opened.</p>
+<h2 id="what-hunt-looks-for">What <code>hunt</code> looks for</h2>
+<p>In web server access logs (Apache and nginx, from standard paths and from <code>HUNT_LOGS</code>):</p>
+<ul>
+<li>POST bursts to <code>wp-login.php</code>: the XSS stage sends a crafted login form. Legitimate traffic is usually much lower volume.</li>
+<li>Requests to <code>authorize-application.php</code>: this page handles OAuth application-password authorization and is not normally accessed directly. A request here after a burst of login POSTs is a strong indicator of stage 4 of the chain.</li>
+<li>Plugin upload requests (<code>update.php?action=upload-plugin</code>): the RCE stage uploads a plugin zip containing a webshell. Each upload that the admin did not make is worth investigating.</li>
+<li>Direct PHP access in plugin directories returning 200: a webshell dropped via plugin upload lives at <code>wp-content/plugins/&lt;slug&gt;/&lt;slug&gt;.php</code> and is web-accessible without activation. Successful GET requests to a path matching that pattern are a strong signal.</li>
+</ul>
+<p>In plugin directories under <code>WP_ROOTS</code> (with <code>WEBROOT</code> supplied as an argument or from the environment):</p>
+<ul>
+<li>PHP files created after <code>HUNT_SINCE</code>: any <code>*.php</code> file that appeared after the disclosure date is worth reviewing. The webshell dropped by the public PoC is not named uniquely, so a new PHP file in any plugin directory is a lead.</li>
+</ul>
+<p>In WordPress <code>debug.log</code> (under <code>WP_ROOTS</code>):</p>
+<ul>
+<li>Fatal errors, <code>call_user_func</code> warnings, and <code>system()</code> or <code>shell_exec()</code> calls that suggest code execution.</li>
+</ul>
+<p>A hit tells you exactly where to look. Confirm by reviewing the specific request IDs, the plugin directory contents, and your outbound traffic logs.</p>
+<h2 id="before-you-run-it">Before you run it</h2>
+<ul>
+<li><code>check</code> and <code>audit</code> make HTTP requests to the target. The probe causes one failed-authentication entry. The sensitive-file checks each make one GET request. <code>audit</code> fetches the homepage, the OPML endpoint, several sensitive paths, the homepage headers, and the REST API user list: nine or ten requests in total.</li>
+<li><code>hunt</code> is read-only. It reads log files and file system metadata; it does not modify anything.</li>
+<li>Version detection can miss. WordPress plugins and themes often hide the meta generator tag. A clean version result does not mean the site is patched. The XSS reflection probe covers this case independently.</li>
+<li>GNU/Linux only. The find <code>-printf</code> and date formats assume GNU tools.</li>
+<li>Root helps but is not required. Without root, hunt reads only the logs you own and may miss files in other users' directories.</li>
+<li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. A read-only probe inside each running docker and podman container copies only the <code>Plugin Name</code> and <code>Version</code> header lines of each covered plugin's main file, plus its modification time, and the script runs once per container in isolation against that copy. For Rank Math PRO 3.0.123 the arrival-time test uses the modification time alone, because a container's inode change time cannot be recovered. The output says so. <code>hunt</code> does not look inside containers. A path shown as <code>.../docker_NAME/PATH</code> is the PATH inside the container NAME.</li>
+</ul>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>PWN.AI disclosure: <a href="https://pwn.ai/blog/xss2shell">https://pwn.ai/blog/xss2shell</a></li>
+<li>NVD record: <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-64638">https://nvd.nist.gov/vuln/detail/<span class="nw">CVE-2026-64638</span></a></li>
+<li>THN coverage: <a href="https://thehackernews.com/2026/08/new-wordpress-pre-auth-xss-could-lead.html">https://thehackernews.com/2026/08/new-wordpress-pre-auth-xss-could-lead.html</a></li>
+<li>NHS cyber alert: <a href="https://digital.nhs.uk/cyber-alerts/2026/cc-4827">https://digital.nhs.uk/cyber-alerts/2026/cc-4827</a></li>
+<li>Nuclei template (upstream): projectdiscovery/nuclei-templates PR #16785</li>
+</ul>
+<p><a id="wordpress-plugins-october-2026-check"></a></p>
+<h2 id="wordpress-plugin-checks-october-2026">WordPress plugin checks, October 2026</h2>
+<p><strong>Script:</strong> <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/wordpress/wordpress-plugins-oct2026-check.sh"><code>wordpress/wordpress-plugins-oct2026-check.sh</code></a></p>
+<p>Eight plugin problems: seven vulnerabilities and one supply-chain compromise. The script reports all eight and hunts for signs of abuse.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th><span class="sr">Item</span></th>
+<th><span class="nw">CVE-2026-113500</span></th>
+<th><span class="nw">CVE-2026-111862</span></th>
+<th><span class="nw">CVE-2026-110372</span></th>
+<th><span class="nw">CVE-2026-112241</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plugin</td>
+<td>LiteSpeed Cache (millions of active installs)</td>
+<td>Rank Math SEO PRO, the paid add-on (the free Rank Math SEO plugin is not part of the incident)</td>
+<td>OttoKit, formerly SureTriggers (folder <code>suretriggers</code>)</td>
+<td>SureCart, the e-commerce plugin from the same vendor (folder <code>surecart</code>)</td>
+</tr>
+<tr>
+<td>What</td>
+<td>An HTML optimization routine is not limited to stylesheet content and can delete the markup that closes an attribute in the rendered page. With unescaped comment author output, an unauthenticated visitor whose comment is published can inject event-handler attributes that run JavaScript for any visitor, including a logged-in administrator</td>
+<td>Some copies of version 3.0.123 contained malware. Rank Math removed the files and shipped 3.0.124</td>
+<td>Incorrect privilege assignment (CWE-266) lets an unauthenticated visitor escalate privileges, in practice to administrator</td>
+<td>Authentication bypass by spoofing (CWE-290): an attacker can present identity markers the plugin trusts and be treated as another user, with no valid credentials</td>
+</tr>
+<tr>
+<td>Affected</td>
+<td>Below 7.9.2</td>
+<td>Copies of 3.0.123 downloaded or updated between 15 October 2026 20:02 UTC and 16 October 2026 07:12 UTC. The genuine 3.0.123 is dated 7 October, so the version number alone does not prove compromise</td>
+<td>1.1.40 and earlier</td>
+<td>4.9.5 and earlier</td>
+</tr>
+<tr>
+<td>Fixed</td>
+<td>7.9.2</td>
+<td>3.0.124 (the clean replacement). <strong>An update alone does not remove what the malware left behind</strong></td>
+<td>1.1.41. <strong>An update does not remove administrator accounts already created</strong></td>
+<td>4.9.6. <strong>An update does not undo account takeovers</strong></td>
+</tr>
+<tr>
+<td>Severity</td>
+<td>High 7.5</td>
+<td>9.8 Critical</td>
+<td>9.8 Critical</td>
+<td>9.8 Critical</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>The HTML optimization feature on, and comments from unauthenticated visitors being published</td>
+<td>The tainted copy to have been activated. Reports say it does nothing until then</td>
+<td>Nothing: the flaw is reachable without an account</td>
+<td>No credentials (a CVSS 9.8 score implies none are required)</td>
+</tr>
+<tr>
+<td>Exploitation</td>
+<td>None known to us</td>
+<td>The malware shipped through the vendor's own update channel</td>
+<td>A Nuclei template exists and is tagged as known-exploited by VulnCheck's list. Another tracker says no public proof of concept exists. Treat exploitation as plausible</td>
+<td>None known to us. Patchstack rates it high priority and expects mass exploitation</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two booking plugins and a registration plugin, covered by the same script:</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th><span class="sr">Item</span></th>
+<th><span class="nw">CVE-2026-110653</span></th>
+<th><span class="nw">CVE-2026-112327</span></th>
+<th><span class="nw">CVE-2026-112242</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plugin</td>
+<td>LatePoint, appointment booking (folder <code>latepoint</code>)</td>
+<td>Amelia, booking (folder <code>ameliabooking</code>)</td>
+<td>Profile Builder, registration forms and profiles (folder <code>profile-builder</code>; the paid add-on ships separately and is not checked)</td>
+</tr>
+<tr>
+<td>What</td>
+<td>The one-time-password check increments its attempts counter with a stale value and no conditional guard or row lock, so concurrent requests slip past the 10-attempt lockout and an unauthenticated visitor can brute-force the code and log in as a customer</td>
+<td>SQL injection</td>
+<td>Incorrect privilege assignment (CWE-266): a low-privilege account may gain a higher role</td>
+</tr>
+<tr>
+<td>Affected</td>
+<td>5.7.4 and earlier</td>
+<td>2.4.11 and earlier</td>
+<td>4.0.4 and earlier</td>
+</tr>
+<tr>
+<td>Fixed</td>
+<td>5.7.5. The advisory references the 5.7.5 code for the fixed helper; the advisory does not say &quot;fixed in&quot; in so many words</td>
+<td>2.4.12 or later (Patchstack's solution)</td>
+<td>4.0.5</td>
+</tr>
+<tr>
+<td>Severity</td>
+<td>9.1 Critical (CVSS 3.1)</td>
+<td>9.3 Critical</td>
+<td>8.8 High (CVSS 3.1)</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>Nothing: no account is required</td>
+<td>The advisory does not state a required role; a 9.3 score implies none</td>
+<td>A low-privilege account (privileges required: low), such as a registered user</td>
+</tr>
+<tr>
+<td>Exploitation</td>
+<td>None known to us</td>
+<td>None known to us</td>
+<td>None known to us</td>
+</tr>
+</tbody>
+</table></div>
+<p>One more plugin, exploited since 7 October 2026:</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th><span class="sr">Item</span></th>
+<th><span class="nw">CVE-2026-85097</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plugin</td>
+<td>Bricksforge, an add-on for the Bricks site builder (about 6,000 sites). It is found by the <code>Plugin Name</code> in its main file, whatever its folder is called</td>
+</tr>
+<tr>
+<td>What</td>
+<td>The plugin trusts file metadata that arrives with a form submission. An unauthenticated visitor gets a form nonce, uploads a file that passes the image type check but also holds PHP code, then submits the form naming a <code>.php</code> file, and the code runs. Attackers used the route <code>/wp-json/bricksforge/v1/form_submit</code> and filenames matching <code>login_admin_*.php</code>, sometimes placed straight in the uploads directories</td>
+</tr>
+<tr>
+<td>Affected</td>
+<td>3.1.8.9 and earlier. Sites with Pro Forms active are affected even when no form has an upload field</td>
+</tr>
+<tr>
+<td>Fixed</td>
+<td>3.1.8.10 for the 3.x line. The vendor changelog says 4.0.0 also has the fix; Patchstack names 4.0.1. The script treats 4.0.0 as unconfirmed and 4.0.1 or later as fixed</td>
+</tr>
+<tr>
+<td>Severity</td>
+<td>10.0 Critical (9.8 in one report)</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>Nothing: no account is required</td>
+</tr>
+<tr>
+<td>Exploitation</td>
+<td><strong>Yes.</strong> Patchstack saw the first attempts on 7 October 2026 at 21:47 UTC, before the advisory of 8 October, from 63 addresses within days</td>
+</tr>
+<tr>
+<td>If you cannot update</td>
+<td>Deactivate Pro Forms or the whole plugin (the mitigation reported by Patchstack). <strong>An update does not remove a file already uploaded</strong>: run <code>hunt</code> and treat a site that was reachable as possibly compromised</td>
+</tr>
+</tbody>
+</table></div>
+<p>Once activated, the Rank Math malware reportedly contacts a command server (<code>rank1cdn[.]com</code>) and plants hidden PHP backdoors that it rebuilds whenever a visitor loads a page. It creates administrator accounts, drops a fake WordPress core file and PHP code hidden inside <code>.cache</code> files, adds scheduled tasks, can add SSH keys, and reads every secret the web server can reach: WordPress passwords, the database login, API keys and payment gateway keys. Treat an activated tainted copy as a full compromise. The vendor notice is <a href="https://rankmath.com/kb/pro-3-0-123-security-incident/">rankmath.com/kb/pro-3-0-123-security-incident</a>.</p>
+<h3 id="quick-start-1">Quick start</h3>
+<ol>
+<li>
+<p>Download the script. The repository is mirrored on GitHub and Codeberg; pick a base URL.</p>
+<pre tabindex="0"><code class="language-bash"># BASE from GitHub:   https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main
+# BASE from Codeberg: https://codeberg.org/PrivacySafe/security-patches/raw/branch/main
+# curl -fLO &quot;$BASE/wordpress/wordpress-plugins-oct2026-check.sh&quot;
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/wordpress/wordpress-plugins-oct2026-check.sh
+</code></pre>
+</li>
+<li>
+<p>Read it before running it, then make it executable.</p>
+<pre tabindex="0"><code class="language-bash">less wordpress-plugins-oct2026-check.sh
+chmod +x wordpress-plugins-oct2026-check.sh
+</code></pre>
+</li>
+<li>
+<p>Check the versions, then hunt. Run the hunt as root so it can read crontabs and logs.</p>
+<pre tabindex="0"><code class="language-bash">./wordpress-plugins-oct2026-check.sh check
+sudo ./wordpress-plugins-oct2026-check.sh hunt
+</code></pre>
+</li>
+</ol>
+<h3 id="commands-1">Commands</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check [DIR ...]</code> (default)</td>
+<td>Finds WordPress installs (a <code>wp-content/plugins</code> directory under <code>/var/www /srv /home /opt /usr/share/wordpress</code>, or the directories you pass), reads the <code>Version:</code> header of LiteSpeed Cache, OttoKit, SureCart, LatePoint, Amelia, Profile Builder and Rank Math PRO (folders <code>seo-by-rank-math-pro</code> and <code>rank-math-pro</code>), and compares them. For Rank Math PRO 3.0.123 it compares the plugin file's modification and inode-change times with the incident window</td>
+</tr>
+<tr>
+<td><code>hunt [DIR ...]</code></td>
+<td>Looks for the published Rank Math indicators, for signs of OttoKit abuse and for Bricksforge upload attacks, in each install and on the server (below)</td>
+</tr>
+<tr>
+<td><code>mitigate (--plugin SLUG[,SLUG] | --all-affected) [--dry-run] [DIR ...]</code></td>
+<td>Deactivates a plugin that is below its fixed version, with WP-CLI, as the owner of the site and with <code>--skip-plugins --skip-themes</code> so the vulnerable code is not loaded to switch it off. You must choose the plugins, because deactivating turns their features off. Acts on OttoKit (<code>suretriggers</code>) below 1.1.41, SureCart below 4.9.6, LatePoint below 5.7.5, Amelia (<code>ameliabooking</code>) below 2.4.12, Profile Builder below 4.0.5 and Bricksforge below 3.1.8.10 (found by its Plugin Name, whatever the folder is called). Plugins at or above the fixed version, already inactive, or network-activated are left alone. LiteSpeed Cache (hold comments for moderation instead) and Rank Math PRO (follow the vendor notice) are never touched. Needs <code>wp</code> on <code>PATH</code>, or <code>WP_CLI=/path/to/wp</code></td>
+</tr>
+<tr>
+<td><code>rollback [--dry-run]</code></td>
+<td>Reactivates the plugins <code>mitigate</code> deactivated</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version</td>
+</tr>
+</tbody>
+</table></div>
+<p>With WP-CLI 2.12 on WordPress 6.4.3, the REST routes of the deactivated plugins went from 200 to 404 and <code>rollback</code> brought them back. Update the plugin to its fixed version, then reactivate it. An update does not remove accounts or files an attacker already created, so run <code>hunt</code>. As root, WP-CLI runs as the owner of <code>wp-config.php</code> and never as root, if <code>runuser</code> is not available the plugin is left active and the script says how to deactivate it by hand. <code>STATE_DIR</code> (default <code>/var/lib/psf-security-patches/wordpress-plugins</code>) holds the record <code>rollback</code> uses.</p>
+<p>Exit codes: <code>0</code> nothing affected or nothing found, <code>1</code> affected or to review (check) or an indicator found (hunt), <code>2</code> bad arguments.</p>
+<p>A pre-release of a fixed release (<code>7.9.2-rc1</code> against a fix in 7.9.2) counts as below it, as in semantic versioning, so it is never reported as the release.</p>
+<p><code>mitigate</code> and <code>rollback</code> change the plugins on the host. Run them with <code>sudo</code> from an admin account, or as the site's own user (set <code>WPM_ALLOW_NONROOT=1</code>), so the change is recorded against a person. The script stops and prints the exact command if you forget:</p>
+<pre tabindex="0"><code class="language-bash">sudo ./wordpress-plugins-oct2026-check.sh mitigate --all-affected --dry-run
+sudo ./wordpress-plugins-oct2026-check.sh mitigate --all-affected
+sudo ./wordpress-plugins-oct2026-check.sh rollback
+</code></pre>
+<h3 id="reading-the-rank-math-result">Reading the Rank Math result</h3>
+<ul>
+<li>3.0.123 whose files changed inside the window: likely the tainted package.</li>
+<li>3.0.123 that arrived before the window opened: not the tainted package.</li>
+<li>3.0.123 that arrived after the window: probably clean, because Rank Math pulled the bad files, but the script asks you to update and run the hunt. File times are circumstantial: a backup restore or <code>rsync</code> resets them. Also check the plugin update history, your backup log and the email Rank Math sent to affected accounts.</li>
+<li>3.0.124 or newer: clean replacement. If the site ever ran 3.0.123, run the hunt anyway.</li>
+</ul>
+<h3 id="reading-the-profile-builder-result">Reading the Profile Builder result</h3>
+<ul>
+<li>4.0.4 or earlier: affected. Update to 4.0.5. A registered user may be able to gain a higher role, so afterwards review administrator and editor accounts (the hunt lists administrators created since 1 October). If you cannot update today, deactivate the plugin and close public registration. Only the free <code>profile-builder</code> folder is checked. A folder named <code>profile-builder-pro</code> is a different product and is not matched.</li>
+</ul>
+<h3 id="reading-the-latepoint-and-amelia-results">Reading the LatePoint and Amelia results</h3>
+<ul>
+<li>LatePoint 5.7.4 or earlier: affected. Update to 5.7.5. An attacker who brute-forces the one-time code logs in as a customer, so afterwards review recent customer logins and bookings. The hunt counts web log requests that name LatePoint's OTP route (<code>auth__verify_otp</code>) by source address. Many from one address is a lead. POST bodies are not normally logged, so a POST-only attack may not show.</li>
+<li>Amelia 2.4.11 or earlier: affected. Update to 2.4.12. An SQL injection can expose the whole database, including user password hashes, so afterwards rotate administrator passwords and the keys and salts in <code>wp-config.php</code>, and run the hunt for new administrators.</li>
+<li>If you cannot update today, deactivate the plugin: an inactive plugin registers no routes (PrivacySafe recommendation).</li>
+</ul>
+<h3 id="reading-the-surecart-result">Reading the SureCart result</h3>
+<ul>
+<li>4.9.5 or earlier: affected. Update to 4.9.6, or deactivate the plugin if you cannot update today (an inactive plugin registers no routes; this is PrivacySafe's recommendation). After updating, reset administrator passwords and end all sessions by changing the <code>AUTH_KEY</code> and <code>SECURE_AUTH_KEY</code> salts in <code>wp-config.php</code>, because an authentication bypass leaves no account trace.</li>
+<li>4.9.6 or newer: fixed. If the site ran 4.9.5 or earlier in October, run the hunt. It lists new administrator accounts, but it cannot see a login as an existing user, so also review recent administrator activity.</li>
+<li>SureCart has had a run of authentication and account-takeover fixes this autumn, so keep it current rather than pinning a version.</li>
+</ul>
+<h3 id="reading-the-ottokit-result">Reading the OttoKit result</h3>
+<ul>
+<li>1.1.40 or earlier: affected. Update to 1.1.41, or deactivate the plugin if you cannot update today (an inactive plugin registers no routes; this is PrivacySafe's recommendation).</li>
+<li>1.1.41 or newer: fixed, but a site that ran an affected version in October may already have a rogue administrator. Run the hunt.</li>
+</ul>
+<h3 id="what-the-hunt-looks-for">What the hunt looks for</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Indicator</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Files, per install (Rank Math)</td>
+<td><code>wp-includes/class-wp-cache-util.php</code> (not a real WordPress file); <code>.cache</code> files that contain PHP; <code>.htaccess</code> rules that mention <code>.cache</code> together with PHP or a handler; the key <code>xmmqhn</code> or the name <code>rank1cdn</code> in PHP or <code>.cache</code> files; PHP in <code>wp-content/mu-plugins</code> and in <code>wp-content/uploads</code> (reported for review, not as proof)</td>
+</tr>
+<tr>
+<td>Database, per install (Rank Math)</td>
+<td><code>wp_options</code> rows named <code>_uf6qdn2hmm</code>, <code>t8krdk990phb</code> or <code>_np5pvf754c</code>; users whose login starts with <code>wpsupport_</code> or whose email ends in <code>@wp-mail.net</code></td>
+</tr>
+<tr>
+<td>Database, per install (OttoKit)</td>
+<td>Administrator accounts created since 1 October 2026 (change it with <code>HUNT_ADMIN_SINCE</code>). Reported for review: you know which administrators are yours</td>
+</tr>
+<tr>
+<td>Server (Rank Math)</td>
+<td>Crontab entries tagged <code>#ms6v46</code>; logs that mention <code>rank1cdn</code>; <code>authorized_keys</code> files changed since 15 October 2026 (reported for review)</td>
+</tr>
+<tr>
+<td>Files, per install (Bricksforge)</td>
+<td>Files named <code>login_admin_*.php</code> anywhere under <code>wp-content</code>; PHP, <code>.phtml</code> or <code>.phar</code> files in <code>wp-content/uploads</code> (the empty <code>index.php</code> stubs some plugins write are not counted). Both are strong leads: WordPress uploads should hold no PHP</td>
+</tr>
+<tr>
+<td>Server (Bricksforge)</td>
+<td>Requests to <code>/wp-json/bricksforge/v1/form_submit</code> (or its <code>rest_route</code> form) in the readable web logs, counted by source address. Real visitors use this route too, so it is reported for review, not as proof</td>
+</tr>
+<tr>
+<td>Server (LatePoint)</td>
+<td>Requests naming <code>auth__verify_otp</code> in the readable web logs, counted by source address. Reported for review, not as proof</td>
+</tr>
+<tr>
+<td>Server (OttoKit)</td>
+<td>Requests to OttoKit's REST routes (<code>sure-triggers</code>) in the readable web logs, counted by source address. OttoKit's own cloud service also calls these routes, so a count is not an alarm: unfamiliar addresses are the lead. Set <code>HUNT_WEB_LOGS</code> to add log paths</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Rank Math indicators come from public reports of the incident (Rank Math, Wordfence and Patchstack, as relayed by several write-ups). The named rows, domain, usernames, fake core file and cron tag are specific to that attack. A clean hunt does not prove a site is clean, and the published list may be incomplete. The administrator list is a generic check that also catches other privilege escalations.</p>
+<h3 id="how-the-database-check-works-and-why-it-avoids-wp-cli">How the database check works, and why it avoids wp-cli</h3>
+<p>The script reads <code>DB_HOST</code>, <code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code> and <code>$table_prefix</code> from <code>wp-config.php</code> with a text search, and runs three <code>SELECT</code> queries with the <code>mysql</code> client. The password goes through the <code>MYSQL_PWD</code> environment variable, not the command line. It deliberately does not use <code>wp-cli</code>: <code>wp-cli</code> loads the site's PHP, including <code>mu-plugins</code>, and a backdoor could run when it does. <code>localhost:/path/to.sock</code> and <code>host:port</code> forms of <code>DB_HOST</code> are understood. If there is no readable <code>wp-config.php</code>, no <code>mysql</code> client or the login fails, the script prints the three queries so you can run them yourself.</p>
+<h3 id="if-the-hunt-finds-something">If the hunt finds something</h3>
+<p>For the Rank Math malware:</p>
+<ol>
+<li>Delete the whole <code>rank-math-pro</code> plugin folder first. Deactivating it does not stop the malware, and it recreates deleted files whenever someone visits the site, so remove the folder and the database rows before the other files.</li>
+<li>Block outgoing traffic to <code>rank1cdn[.]com</code>.</li>
+<li>Restore files and database from a backup taken before 15 October 2026 20:02 UTC.</li>
+<li>Rotate WordPress user passwords, the database login, the keys and salts in <code>wp-config.php</code>, payment, SMTP and API keys, and hosting, FTP and SSH logins.</li>
+<li>Only then install Rank Math PRO 3.0.124, downloaded by typing the vendor's address yourself. Rank Math says it never sends download links by email.</li>
+</ol>
+<p>For OttoKit: update to 1.1.41, remove administrator accounts you did not create, reset the password of every administrator and rotate the keys and salts in <code>wp-config.php</code>, and review plugins and themes for files you did not add.</p>
+<h3 id="litespeed-cache-fixing-and-a-protective-measure">LiteSpeed Cache: fixing and a protective measure</h3>
+<p>Update LiteSpeed Cache to 7.9.2 or later. Until then, hold every comment for moderation (Settings, Discussion). That is our reading of the description, which needs a published comment from an unauthenticated visitor; this is PrivacySafe's recommendation.</p>
+<h3 id="sources-1">Sources</h3>
+<ul>
+<li><a href="https://rankmath.com/kb/pro-3-0-123-security-incident/">Rank Math: PRO 3.0.123 security incident</a></li>
+<li><a href="https://raw.githubusercontent.com/CVEProject/cvelistV5/main/cves/2026/113xxx/CVE-2026-113500.json">CVE record for <span class="nw">CVE-2026-113500</span> (WPScan)</a></li>
+<li><a href="https://patchstack.com/articles/critical-unauthenticated-arbitrary-file-upload-vulnerability-exploited-in-bricksforge-plugin/">Patchstack: Bricksforge arbitrary file upload exploited (<span class="nw">CVE-2026-85097</span>)</a></li>
+<li><a href="https://patchstack.com/database/wordpress/plugin/suretriggers/vulnerability/wordpress-ottokit-plugin-1-1-40-privilege-escalation-vulnerability">Patchstack entry for the OttoKit flaw</a></li>
+</ul>
+<p><a id="wp2shell-check"></a></p>
+<h2 id="wp2shell-wordpress-core-pre-authentication-rce-cve-2026-63030-and-cve-2026-60137">wp2shell: WordPress core pre-authentication RCE (<span class="nw">CVE-2026-63030</span> and <span class="nw">CVE-2026-60137</span>)</h2>
+<p><strong>Script:</strong> <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/wordpress/wordpress-wp2shell-check.sh"><code>wordpress/wordpress-wp2shell-check.sh</code></a></p>
+<p>wp2shell chains two flaws in WordPress core into remote code execution for an <strong>unauthenticated</strong> attacker on a default install, with no plugins and no login. It was disclosed and fixed on 17 July 2026, exploitation began on 20 July, and CISA added both CVEs to its Known Exploited Vulnerabilities catalog on 21 July. Observed attacks create rogue administrator accounts and install webshells. Discovered by Adam Kues of Searchlight Cyber.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th><span class="sr">Item</span></th>
+<th><span class="nw">CVE-2026-63030</span></th>
+<th><span class="nw">CVE-2026-60137</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What</td>
+<td>REST API batch endpoint route confusion (<code>/wp-json/batch/v1</code> or <code>/?rest_route=/batch/v1</code>): a malformed sub-request path desynchronizes the matched handlers from the requests, so later sub-requests run under the wrong permission check</td>
+<td>SQL injection in <code>WP_Query</code>: when <code>author__not_in</code> reaches the query as a string rather than an array, it skips integer sanitization and is interpolated into the SQL <code>WHERE</code> clause</td>
+</tr>
+<tr>
+<td>Affected</td>
+<td>6.9.0 through 6.9.4, 7.0.0 through 7.0.1, and 7.1 beta 1</td>
+<td>6.8.0 through 6.8.5, 6.9.0 through 6.9.4, 7.0.0 through 7.0.1, and 7.1 beta 1</td>
+</tr>
+<tr>
+<td>Fixed</td>
+<td>6.9.5, 7.0.2, 7.1 beta 2</td>
+<td>6.8.6, 6.9.5, 7.0.2, 7.1 beta 2</td>
+</tr>
+<tr>
+<td>Not affected</td>
+<td>Before 6.9.0 (the flaw is absent on 6.8.x)</td>
+<td>Before 6.8.0</td>
+</tr>
+<tr>
+<td>Chain</td>
+<td>Together on 6.9.x and 7.0.x: unauthenticated RCE. On <strong>6.8.x only the SQL injection exists</strong>, and the full chain does not apply</td>
+<td></td>
+</tr>
+<tr>
+<td>Object cache</td>
+<td>The SQL injection sink is <strong>not reached when a persistent object cache (Redis, Memcached) is active</strong>. A cached site may appear safe from this check but should still be updated, because disabling the cache later re-exposes it</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Update with <code>wp core update</code>, to 6.8.6, 6.9.5, 7.0.2 or newer on your branch.</p>
+<p><strong>Object cache caveat:</strong> when a persistent object cache (Redis, Memcached) is active, the SQL injection sink is not reached and the chain does not fire. The site still needs the update, if the cache is ever disabled or flushed the full chain becomes reachable again.</p>
+<h2 id="quick-start-2">Quick start</h2>
+<pre tabindex="0"><code class="language-bash">curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/wordpress/wordpress-wp2shell-check.sh
+less wordpress-wp2shell-check.sh
+chmod +x wordpress-wp2shell-check.sh
+./wordpress-wp2shell-check.sh check
+./wordpress-wp2shell-check.sh hunt
+</code></pre>
+<p>By default it searches <code>/var/www /srv /home /opt /usr/share/wordpress /usr/share/nginx /var/lib/wordpress</code>. Pass directories to narrow it. Everything it does is read-only.</p>
+<h2 id="commands-2">Commands</h2>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code> (default)</td>
+<td>Finds each WordPress install by <code>wp-includes/version.php</code>, reads the version, reads the two source files for the fixes, and looks for a web server rule that refuses the batch route. Exit <code>0</code> nothing exposed, <code>1</code> an install without the fixes or whose state is unclear</td>
+</tr>
+<tr>
+<td><code>hunt</code></td>
+<td>Looks for signs of exploitation: requests to the batch route and SQL injection strings in web server logs (plain and rotated <code>.gz</code>), PHP files inside <code>wp-content/uploads</code>, and changes to <code>wp-content/mu-plugins</code> since the disclosure. Exit <code>0</code> nothing found, <code>1</code> a strong lead. A clean hunt means none of the published indicators were found</td>
+</tr>
+<tr>
+<td><code>mitigate [--web auto|apache|nginx] [--dir DIR] [--server-name NAME] [--dry-run] [--reload] [--force]</code></td>
+<td><strong>Changes the host (root).</strong> Applies the web server block below for you, only when an exposed WordPress is found. nginx: an <code>include</code> as the first line of every PHP-serving server block, checked with <code>nginx -t</code>. Apache: a server-scope file (<code>psf-wp2shell-batch-block.conf</code>, with <code>LocationMatch</code> and <code>If</code>, so virtual hosts inherit it) checked with a configtest. If the web server rejects the result, everything is undone at once. Reloads nothing unless you add <code>--reload</code></td>
+</tr>
+<tr>
+<td><code>rollback [--dry-run] [--reload]</code></td>
+<td>Removes what <code>mitigate</code> added and restores the files it edited</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version</td>
+</tr>
+</tbody>
+</table></div>
+<p>Env: <code>STATE_DIR</code> (default <code>/var/lib/psf-security-patches/wp2shell</code>) holds the backups and manifest. <code>HUNT_SINCE</code> (<code>YYYY-MM-DD</code>, default <code>2026-07-17</code>) sets the date for file changes. <code>WP2S_LOGS</code> names web server logs (space separated paths or globs) when they are not in the usual places.</p>
+<p>Commands that change the host need root. Run them with <code>sudo</code> from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:</p>
+<pre tabindex="0"><code class="language-bash">sudo ./wordpress-wp2shell-check.sh mitigate --dry-run
+sudo ./wordpress-wp2shell-check.sh mitigate
+sudo ./wordpress-wp2shell-check.sh rollback
+</code></pre>
+<h2 id="how-the-check-decides">How the check decides</h2>
+<ul>
+<li>Version, per branch. 6.8.0 to 6.8.5 is reported as the SQL injection only. 6.9.0 to 6.9.4, 7.0.0 to 7.0.1 and 7.1 beta 1 are reported as the full chain. 6.8.6, 6.9.5, 7.0.2, 7.1 beta 2 and later are reported as fixed. Anything before 6.8.0 as not affected.</li>
+<li>The source, because a package can backport. A distribution can carry both fixes under an older version number. The SQL injection fix replaces the <code>is_array</code> test and <code>implode()</code> in <code>wp-includes/class-wp-query.php</code> with <code>wp_parse_id_list()</code>. The batch fix adds a guard against starting a new top-level REST cycle while one is already dispatching, in <code>wp-includes/rest-api/class-wp-rest-server.php</code>. The script judges <strong>each flaw from its own signature</strong>: both present is reported as a backport and not exposed. Only one present is reported as partially patched and exposed, naming the flaw that remains.</li>
+<li>A fixed version whose files still hold the vulnerable code is reported as a mismatch (a partial or failed update).</li>
+<li>The block on the batch route. If an install is exposed, the script looks in the usual nginx, Apache and <code>.htaccess</code> locations for a refusing rule for <strong>each of the two URL forms</strong> and says which it found. Both forms must be covered. The block closes the chain's entry point. It does not fix the SQL injection, so update anyway.</li>
+</ul>
+<p>Checked against the real source files of WordPress 6.8.5, 6.8.6, 6.9.4, 6.9.5, 7.0.1 and 7.0.2: the verdicts above came out as described. A tree with the 6.9.4 version file and the 6.9.5 source files was recognized as a backport and reported as not exposed, and the reverse (6.9.5 version file, 6.9.4 source) was reported as a partial or failed update.</p>
+<h2 id="if-you-cannot-update-at-once">If you cannot update at once</h2>
+<p><code>./wordpress-wp2shell-check.sh mitigate --dry-run</code>, then <code>mitigate --reload</code>, applies the web server block below. <code>rollback</code> removes it. Verified on nginx 1.24 in front of a PHP handler: the plain, subdirectory, query-string, URL-encoded and mixed-case forms of the route all got 403 after the change, other REST routes, <code>index.php</code> and static files were unaffected, and <code>rollback</code> restored the original behavior. The rule matches the route anywhere in the path, so a WordPress in a subdirectory is covered, and it applies to every PHP virtual host on the machine. On a live WordPress 6.9.4 (an affected release) on Apache 2.4.58 in the Debian layout, the check flagged the install as the full chain. The batch route answered anonymous POSTs (207 and 200) before the block and 403 after it, in the query-string, <code>index.php/</code> and URL-encoded forms. The login page and other REST routes kept working, the check then reported a refusing rule for both URL forms, and <code>rollback</code> restored the original behavior. On Apache 2.4.58 with WordPress 6.4.3, the batch route answered 403 in the plain, query-string, URL-encoded and <code>index.php/</code> forms on every virtual host, while other REST routes still answered. In the Debian layout, <code>a2enconf</code> and <code>configtest</code> accepted the rule and <code>rollback</code> removed it. The block editor uses the batch route for some saves. On a site that is edited, the plugin below leaves editors working and is the better choice.</p>
+<p>Refuse both URL forms of the batch route at the web server.</p>
+<p>nginx:</p>
+<pre tabindex="0"><code class="language-nginx">location ~* &quot;^/wp-json/batch&quot; { return 403; }
+if ($args ~* &quot;rest_route=(%2F|/)batch&quot;) { return 403; }
+</code></pre>
+<p>Apache:</p>
+<pre tabindex="0"><code class="language-apache">RewriteEngine On
+RewriteRule ^wp-json/batch - [F,L]
+RewriteCond %{QUERY_STRING} rest_route=(%2F|/)batch [NC]
+RewriteRule ^ - [F,L]
+</code></pre>
+<p>If you cannot install a web server rule, a WordPress plugin can block the route from within WordPress. Drop this file on the server at <code>wp-content/plugins/disable-batch-api-for-unauth.php</code> and activate it from the Plugins screen:</p>
+<pre tabindex="0"><code class="language-php">&lt;?php
+/**
+ * Plugin Name: Disable Unauthenticated REST Batch API
+ * Description: Requires an authenticated WordPress user for REST batch requests.
+ * Version: 1.0.0
+ * Requires at least: 5.6
+ * License: GPL-2.0-or-later
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+function wporg_require_authentication_for_rest_batch( $result, $server, $request ) {
+    if ( '/batch/v1' !== strtolower( untrailingslashit( $request-&gt;get_route() ) ) || is_user_logged_in() ) {
+        return $result;
+    }
+    return new WP_Error(
+        'rest_batch_authentication_required',
+        'Authentication is required to use the batch API.',
+        array( 'status' =&gt; 401 )
+    );
+}
+add_filter( 'rest_pre_dispatch', 'wporg_require_authentication_for_rest_batch', -1000, 3 );
+</code></pre>
+<p>This approach causes fewer compatibility issues than a network-level block, because authenticated editors keep full access to the batch endpoint. Source: Searchlight Cyber.</p>
+<p>The block editor uses the batch route for some saves, so a network-level block may affect editing until you update. These are protective measures. They do not fix the underlying flaws.</p>
+<h2 id="if-an-affected-site-was-reachable-after-17-july-2026">If an affected site was reachable after 17 July 2026</h2>
+<p>Run <code>hunt</code>. Then treat any strong lead as a possible compromise: update core. In the database look for administrator accounts you did not create (<code>wp user list --role=administrator</code>) and for unexpected <code>customize_changeset</code> posts; review <code>wp-content/plugins</code> and <code>mu-plugins</code>; and rotate the database password, the salts in <code>wp-config.php</code> and every administrator password. The hunt cannot see request bodies, which is where the exploit's payload travels, so a quiet log does not rule out an attack.</p>
+<h2 id="sources-2">Sources</h2>
+<ul>
+<li><a href="https://wordpress.org/news/2026/07/wordpress-7-0-2-release/">WordPress 7.0.2 release announcement</a></li>
+<li><a href="https://www.cve.org/CVERecord?id=CVE-2026-63030"><span class="nw">CVE-2026-63030</span> at CVE.org</a> and <a href="https://github.com/WordPress/wordpress-develop/security/advisories/GHSA-ff9f-jf42-662q">GHSA-ff9f-jf42-662q</a></li>
+<li><a href="https://www.cve.org/CVERecord?id=CVE-2026-60137"><span class="nw">CVE-2026-60137</span> at CVE.org</a> and <a href="https://github.com/WordPress/wordpress-develop/security/advisories/GHSA-fpp7-x2x2-2mjf">GHSA-fpp7-x2x2-2mjf</a></li>
+<li><a href="https://slcyber.io/research-center/wp2shell-pre-authentication-rce-in-wordpress-core">Searchlight Cyber: wp2shell pre-authentication RCE in WordPress core</a></li>
+<li><a href="https://www.rapid7.com/blog/post/etr-cve-2026-63030-wp2shell-a-critical-remote-code-execution-vulnerability-in-wordpress-core/">Rapid7 ETR: <span class="nw">CVE-2026-63030</span> wp2shell</a></li>
+</ul>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/wordpress/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../vsftpd/index.html">&larr; vsftpd</a><a rel="next" href="../wordpress-pt/index.html">WordPress path traversal &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#wordpress-xss2shell-check">WordPress XSS2Shell check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#what-the-probe-checks-and-why-it-is-non-destructive">What the probe checks and why it is non-destructive</a></li><li class="l2"><a href="#what-hunt-looks-for">What hunt looks for</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#wordpress-plugin-checks-october-2026">WordPress plugin checks, October 2026</a></li><li class="l3"><a href="#quick-start-1">Quick start</a></li><li class="l3"><a href="#commands-1">Commands</a></li><li class="l3"><a href="#reading-the-rank-math-result">Reading the Rank Math result</a></li><li class="l3"><a href="#reading-the-profile-builder-result">Reading the Profile Builder result</a></li><li class="l3"><a href="#reading-the-latepoint-and-amelia-results">Reading the LatePoint and Amelia results</a></li><li class="l3"><a href="#reading-the-surecart-result">Reading the SureCart result</a></li><li class="l3"><a href="#reading-the-ottokit-result">Reading the OttoKit result</a></li><li class="l3"><a href="#what-the-hunt-looks-for">What the hunt looks for</a></li><li class="l3"><a href="#how-the-database-check-works-and-why-it-avoids-wp-cli">How the database check works, and why it avoids wp-cli</a></li><li class="l3"><a href="#if-the-hunt-finds-something">If the hunt finds something</a></li><li class="l3"><a href="#litespeed-cache-fixing-and-a-protective-measure">LiteSpeed Cache: fixing and a protective measure</a></li><li class="l3"><a href="#sources-1">Sources</a></li><li class="l2"><a href="#wp2shell-wordpress-core-pre-authentication-rce-cve-2026-63030-and-cve-2026-60137">wp2shell: WordPress core pre-authentication RCE (CVE-2026-63030 and CVE-2026-60137)</a></li><li class="l2"><a href="#quick-start-2">Quick start</a></li><li class="l2"><a href="#commands-2">Commands</a></li><li class="l2"><a href="#how-the-check-decides">How the check decides</a></li><li class="l2"><a href="#if-you-cannot-update-at-once">If you cannot update at once</a></li><li class="l2"><a href="#if-an-affected-site-was-reachable-after-17-july-2026">If an affected site was reachable after 17 July 2026</a></li><li class="l2"><a href="#sources-2">Sources</a></li></ul></aside></div></div>
+<section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
+<div class="wrap">
+<article class="card has-partner">
+<h2 class="eco-title" id="ecosystem-title">The PrivacySafe Ecosystem</h2>
+<a class="partner-mark" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+<img src="../assets/img/ivy-logo-horizontal-white.svg" alt="Shop at Ivy Cyber" width="328" height="73" loading="lazy" decoding="async"/>
+</a>
+<p><strong>Ivy Cyber</strong> offers PrivacySafe products and services in the USA and has partnerships with 3NSoft in Canada and Kuip Limited in the European Union. Enterprise services and consulting are available at <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">ivycyber.com</a>
+</p><p><strong>PrivacySafe Foundation</strong> is a 501(c)(3) nonprofit public charity that supports the development of the PrivacySafe applications, along with the components they rely upon: 3NWeb protocols, filesystem, documentation, and reference implementations.</p>
+<div class="pullout">
+<a class="foundation-mark" href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank"><img src="../assets/img/logo-foundation.svg" alt="PrivacySafe Foundation" width="218" height="47" loading="lazy" decoding="async"/></a>
+<p class="pullout-text">Donations to <a href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank">PrivacySafe Foundation</a> support education, research, documentation, and public code. Purchases from <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber</a> support PrivacySafe products, services, hosting, and technical support. <strong class="pullout-lead">Together, we're building a better web.</strong></p>
+</div>
+<div class="split-actions">
+<a class="btn primary" href="https://www.zeffy.com/en-US/ticketing/cybersecurity-education-and-tech" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-heart" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="currentColor" d="M12 20.6 10.6 19.3C5.7 14.9 2.5 12 2.5 8.4 2.5 5.5 4.8 3.2 7.7 3.2c1.6 0 3.2.8 4.3 2.05C13.1 4 14.7 3.2 16.3 3.2c2.9 0 5.2 2.3 5.2 5.2 0 3.6-3.2 6.5-8.1 10.9L12 20.6Z"/> </svg>
+Donate to PrivacySafe Foundation
+</a>
+<a class="btn ghost" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+Buy PrivacySafe products &amp; services
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost" href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-code" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.6 4.8l-3.2 14.4"/> </svg>
+Browse our Source Code
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+</article>
+</div>
+</section>
+<footer>
+<div class="wrap">
+<div class="footer-community">
+<section aria-labelledby="footer-about-title" class="footer-panel footer-about">
+<h2 class="sr-only" id="footer-about-title">About PrivacySafe</h2>
+<img alt="PrivacySafe" class="footer-logo" height="192" src="../assets/img/privacysafe-logo.svg" width="1696"/>
+<p>PrivacySafe creates a secure sandbox environment for your organization which you can tie to your domain, your authentication methods, and your access controls.</p>
+<h3>Follow Us</h3>
+<div aria-label="PrivacySafe social links" class="social-links">
+<a aria-label="PrivacySafe on Mastodon" class="social-link" href="https://privacysafe.social/@privacysafe" rel="me noopener noreferrer" target="_blank" title="Mastodon">
+<svg class="ico ico-mastodon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg>
+</a><a aria-label="PrivacySafe on Bluesky" class="social-link" href="https://bsky.app/profile/privacysafe.social" rel="me noopener noreferrer" target="_blank" title="Bluesky">
+<svg class="ico ico-bluesky" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026"/></svg>
+</a><a aria-label="PrivacySafe on Twitter X" class="social-link" href="https://x.com/GetPrivacySafe" rel="nofollow noopener noreferrer" target="_blank" title="Twitter X">
+<svg class="ico ico-x-twitter" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+</a><a aria-label="PrivacySafe on LinkedIn" class="social-link" href="https://www.linkedin.com/company/privacysafe-app" rel="noopener noreferrer" target="_blank" title="LinkedIn">
+<svg class="ico ico-linkedin" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.200 3.600a1.700 1.700 0 1 0 0 3.400 1.700 1.700 0 0 0 0-3.400zM5.600 10.400v7.800h3.200v-7.800H5.600zm4.800 0v7.800h3.200v-4c0-1.100.4-1.700 1.300-1.700s1.300.6 1.300 1.700v4h3.200v-4.400c0-2.300-1.100-3.600-3.200-3.600-1.200 0-2.200.5-2.700 1.300v-1.100h-3.100z"/></svg>
+</a><a aria-label="PrivacySafe on YouTube" class="social-link" href="https://www.youtube.com/@privacysafe" rel="noopener noreferrer" target="_blank" title="YouTube">
+<svg class="ico ico-youtube" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+</a><a aria-label="PrivacySafe on Instagram" class="social-link" href="https://www.instagram.com/getprivacysafe/" rel="noopener noreferrer" target="_blank" title="Instagram">
+<svg class="ico ico-instagram" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>
+</a>
+<!--<a aria-label="Signal @ivycyber.01" class="social-link" href="https://signal.me/#eu/nmRqQrmMcXaq6cyfP8ckVaf-LniNZwhc5VatIEgC3y39lIYFNBBFF5NvpFurg6UA" rel="noopener noreferrer" target="_blank" title="Signal">
+<span aria-hidden="true" class="ico ico-signal"></span>
+</a>-->
+<!--<a aria-label="Ivy Cyber on Facebook" class="social-link" href="https://www.facebook.com/ivycyber" rel="noopener noreferrer" target="_blank" title="Facebook">
+<span aria-hidden="true" class="ico ico-facebook"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on TikTok" class="social-link" href="https://www.tiktok.com/@bitsontape" rel="noopener noreferrer" target="_blank" title="TikTok">
+<span aria-hidden="true" class="ico ico-tiktok"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Telegram" class="social-link" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank" title="Telegram">
+<span aria-hidden="true" class="ico ico-telegram"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Substack" class="social-link" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank" title="Substack">
+<span aria-hidden="true" class="ico ico-substack"></span>
+</a>--></div>
+</section>
+<section aria-labelledby="newsletter-title" class="footer-panel newsletter-panel">
+<div class="card-footnote">
+<a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank"><img class="newsletter-avatar" src="../assets/img/bitsontape-avatar.png" alt="Bits On Tape logo: two reels of open-reel tape arranged as a heart" width="200" height="200" loading="lazy" decoding="async"/></a>
+<h2 id="newsletter-title">Subscribe to Our Newsletter</h2>
+<p><a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">Bits On Tape</a> is our newsletter: a replay of science and technology stories by cyber experts, covering cybersecurity, privacy, free software, AI, and digital culture. Get the latest updates on our PrivacySafe ecosystem as we continue building and launching.</p>
+<div class="card-footnote-actions">
+<a class="btn primary small" href="https://psafe.ly/WaaEkp" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-envelope" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+Subscribe free
+</a>
+<a class="btn ghost small" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">
+Read past issues
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost small" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-telegram" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M21.6 3.2 18.4 20c-.24 1.18-.88 1.47-1.79.91l-4.88-3.6-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.97 9.05-8.18c.39-.35-.09-.55-.61-.2L6.01 13.74 1.2 12.24c-1.05-.33-1.07-1.05.22-1.55L20.2 3.45c.87-.32 1.63.2 1.4-.25Z"></path></svg>
+Join Telegram group
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+<p class="newsletter-note">We hate spam as much as you do and comply with CAN-SPAM regulation.</p>
+</div>
+</section>
+</div>
+<div class="footer-inner">
+<nav aria-label="Footer links" class="footer-links">
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+<a href="https://ivycyber.com/security-policy/" rel="nofollow noopener noreferrer" target="_blank">Security &amp; Bug Bounty</a>
+<a href="https://ivycyber.com/privacy-policy/" rel="nofollow noopener noreferrer" target="_blank">Privacy Policy</a>
+<a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
+<a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
+</nav>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+</div>
+</div>
+</footer>
+<script src="../assets/site.js" defer></script></body>
+</html>
