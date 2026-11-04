@@ -73,6 +73,7 @@
 <li><a href="../vsftpd/index.html">vsftpd</a></li>
 </ul></details>
 <details class="grp"><summary>Operating system, libraries and runtimes</summary><ul>
+<li><a href="../apt/index.html">APT</a></li>
 <li><a href="../brotli/index.html">Brotli</a></li>
 <li><a href="../curl/index.html">curl</a></li>
 <li><a href="../pki/index.html">eMudhra CA compromise</a></li>
@@ -221,7 +222,7 @@ chmod +x basercms-check.sh
 <li>There is no hunt. No indicators of exploitation have been published for these flaws.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as <code>.../docker_NAME_PATH</code> is the PATH inside the container NAME. It never runs anything in a container beyond <code>find</code> and a file copy, never copies <code>.env</code> or <code>wp-config.php</code>, never keeps a staged symlink, and is skipped when you name directories yourself.</li>
 </ul>
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/basercms/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../trafficserver/index.html">&larr; Apache Traffic Server</a><a rel="next" href="../bind/index.html">BIND 9 &rarr;</a></nav></article></main>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/basercms/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../apt/index.html">&larr; APT</a><a rel="next" href="../bind/index.html">BIND 9 &rarr;</a></nav></article></main>
 <aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#basercms-check">baserCMS check</a></li><li class="l2"><a href="#how-the-script-reads-a-site">How the script reads a site</a></li><li class="l2"><a href="#there-is-no-hunt">There is no hunt</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#if-a-site-was-exposed">If a site was exposed</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
