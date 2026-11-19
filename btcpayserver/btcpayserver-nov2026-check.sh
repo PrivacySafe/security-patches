@@ -48,8 +48,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="btcpayserver-nov2026-check.sh"
-SCRIPT_VERSION="1.2.0"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.3.0"
+SCRIPT_DATE="2026-11-19"
 NEWEST="2.4.7"                      # newest release at the time of writing
 WARNED_AT="2026-11-01T22:25:00Z"    # the project's warning to operators
 LOG_TAIL="${LOG_TAIL:-200000}"
@@ -765,6 +765,60 @@ harden_fragments() {
     [ "$flagged" -eq 0 ] && ok "None of the higher-exposure fragments is enabled."
 }
 
+harden_retired() {
+    step "Retired integrations (removed from the generator in 2.4.5)"
+    if [ ! -r "$PROFILE_FILE" ]; then
+        inf "Deployment profile $PROFILE_FILE is not readable here (not a Docker deployment, or run as root). Retired integrations were not reviewed."
+        return
+    fi
+    local flagged=0 f reason cryptos tok
+    # Each of these fragments was removed on its own PR, for its own named reason; the project's
+    # own write-up is why these are flagged as caution rather than treated as routine cleanup.
+    for f in opt-add-btctransmuter opt-add-configurator opt-add-joinmarket opt-add-electrum-ps \
+             opt-add-bwt opt-add-bluewallet-lndhub opt-add-ndlc opt-add-snapdrop \
+             opt-add-librepatron opt-add-fireflyiii opt-add-tallycoin-connect opt-add-chatwoot; do
+        if has_fragment "$f"; then
+            flagged=1
+            case "$f" in
+                opt-add-fireflyiii) reason="reuses a fixed application encryption key across every deployment that enables it" ;;
+                opt-add-tallycoin-connect) reason="exposes LND administrative credentials to Tallycoin, which shut down on 1 June 2024" ;;
+                opt-add-joinmarket) reason="ships a hardcoded RPC password shared by every deployment that enables it" ;;
+                opt-add-chatwoot) reason="pins Chatwoot v1.7.0 and Redis 5.0.2, both years out of date, and does not persist attachment storage" ;;
+                opt-add-bluewallet-lndhub) reason="BlueWallet sunset its hosted Lndhub service" ;;
+                opt-add-ndlc|opt-add-electrum-ps|opt-add-bwt) reason="its upstream project has had no maintenance commit since 2022 or earlier" ;;
+                opt-add-btctransmuter|opt-add-configurator|opt-add-librepatron) reason="no longer maintained by its project" ;;
+                opt-add-snapdrop) reason="acquired by LimeWire and no longer a peer-to-peer tool" ;;
+                *) reason="no longer maintained" ;;
+            esac
+            caution "${f} is enabled: the project removed this fragment from the generator in 2.4.5 because it ${reason}."
+            tip "btcpay-fragments remove ${f}   (confirm you have an alternative first; this stops the service)"
+        fi
+    done
+    local rp; rp=$(profile_value BTCPAYGEN_REVERSEPROXY)
+    if [ "$(printf '%s' "$rp" | tr '[:upper:]' '[:lower:]')" = "traefik" ]; then
+        flagged=1
+        caution "BTCPAYGEN_REVERSEPROXY=traefik: Traefik support was removed in 2.4.5; a current generator run will reject this setting."
+        tip "Switch BTCPAYGEN_REVERSEPROXY to nginx (the default) and re-run btcpay-setup.sh."
+    fi
+    cryptos=$(profile_value BTCPAYGEN_CRYPTOS)
+    if [ -n "$cryptos" ]; then
+        for tok in $(printf '%s' "$cryptos" | tr ',' '\n' | tr '[:upper:]' '[:lower:]' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g'); do
+            case "$tok" in
+                xbc) flagged=1; caution "BTCPAYGEN_CRYPTOS includes xbc (Bitcoin Plus): removed in 2.4.5, upstream untouched since 2021-08-02." ;;
+                tzc) flagged=1; caution "BTCPAYGEN_CRYPTOS includes tzc (Trezarcoin): removed in 2.4.5, upstream untouched since 2022-10-29." ;;
+                btx) flagged=1; caution "BTCPAYGEN_CRYPTOS includes btx (Bitcore): removed in 2.4.5, unclear release provenance." ;;
+                btg) flagged=1; caution "BTCPAYGEN_CRYPTOS includes btg (Bitcoin Gold): removed in 2.4.5; its LND integration used an unpinned 'latest' image from a stale fork." ;;
+                via) flagged=1; caution "BTCPAYGEN_CRYPTOS includes via (Viacoin): removed in 2.4.5, no current verified Docker build path." ;;
+                eth) flagged=1; inf "BTCPAYGEN_CRYPTOS includes eth: the old Ethereum fragment was removed in 2.4.5 (BTCPay Server does not natively support ETH/ERC-20; that needs a plugin)." ;;
+                ftc) inf "BTCPAYGEN_CRYPTOS includes ftc (Feathercoin): kept for now, several releases behind upstream. The project may remove it after 24 January 2027 without an active maintainer." ;;
+                grs) inf "BTCPAYGEN_CRYPTOS includes grs (Groestlcoin): kept for now, its Lightning integrations are substantially outdated. The project may remove it after 24 January 2027 without an active maintainer." ;;
+                mona) inf "BTCPAYGEN_CRYPTOS includes mona (Monacoin): kept for now, trails upstream. The project may remove it after 24 January 2027 without an active maintainer." ;;
+            esac
+        done
+    fi
+    [ "$flagged" -eq 0 ] && ok "No retired fragment, reverse proxy or removed altcoin is configured."
+}
+
 harden_routes() {
     step "LND API routes in the bundled web server"
     local base dir r found=0
@@ -870,6 +924,7 @@ cmd_harden() {
     [ "$EXPOSED_SEEN" -eq 1 ] && advice_short
     harden_ports
     harden_fragments
+    harden_retired
     harden_routes
     harden_filter
     step "Access to this host"

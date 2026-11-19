@@ -140,7 +140,7 @@ for name, pr in sorted(pages.items()):
     if "<aside class=\"glance\"" in pr.raw:
         for what, rx in (("a kicker line with the kind of software", r'<p class="kicker-line">'), ("the at-a-glance box", r'<aside class="glance" aria-label="At a glance">'),
                          ("a Covers line in the at-a-glance box", r"<dt>Covers</dt>"), ("a Script or Scripts line in the at-a-glance box", r"<dt>Scripts?</dt>" if tool not in NO_SCRIPT_OK else r"<dt>Covers</dt>"),
-                         ("the edit link", r'class="edit"'), ("previous and next links", r'aria-label="Previous and next tool"')):
+                         ("previous and next links", r'aria-label="Previous and next tool"')):
             if not re.search(rx, pr.raw): bad(name, f"tool page has no {what}")
         h = re.search(r'<(h[23]) id="before-you-run-it"', pr.raw)
         if h and h.group(1) != "h2" and tool not in NESTED_OK: bad(name, "Before you run it is a sub-heading here but a section on the other tool pages")
@@ -151,9 +151,51 @@ for name, pr in sorted(pages.items()):
     for what, rx in (("the documentation row", r'class="docs-subnav"'), ("the ecosystem card", r'id="ecosystem"'), ("the footer", r'class="footer-community"'),
                      ("the Get PrivacySafe button", r'href="/#download"' if WEBROOT else r'href="https://privacysafe\.app/#download"')):
         if not re.search(rx, pr.raw): bad(name, f"page has no {what}")
+    # GNU LibreJS: the page points at a web labels page, and an inline script carries its own license notice
+    if WEBROOT:
+        if not re.search(r'<link href="/weblabels\.html" rel="jslicense"/>', pr.raw): bad(name, "no link to /weblabels.html with rel=jslicense")
+    else:
+        _m = re.search(r'<link rel="jslicense" href="([^"]+)">', pr.raw)
+        if not _m or not os.path.exists(os.path.normpath(os.path.join(SITE, os.path.dirname(name), _m.group(1)))): bad(name, "no local link to weblabels.html with rel=jslicense")
+        for _t in re.findall(r'<(?:a|link)\b[^>]*\brel="[^"]*jslicense[^"]*"[^>]*>', pr.raw):
+            if re.search(r'href="(?:https?:)?//', _t): bad(name, "the offline page's rel=jslicense link points to an outside page")
+        for _blob in re.findall(r'<script>(.*?)</script>', pr.raw, re.S):
+            if not re.search(r'^// @license magnet:\S+ \S+$', _blob, re.M) or "// @license-end" not in _blob: bad(name, "an inline script has no license notice for GNU LibreJS")
     if not WEBROOT:
         for img in ("privacysafe-logo.svg", "ivy-logo-horizontal-white.svg", "logo-foundation.svg", "bitsontape-avatar.png"):
             if f"assets/img/{img}" not in pr.raw: bad(name, f"the offline page does not use its local copy of {img}")
+# ---- GNU LibreJS: every script file carries its license notice, and the offline web labels list exactly the scripts of this copy
+LIBREJS_OK = {"magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt": "CC0-1.0",
+              "magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt": "AGPL-3.0",
+              "magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&dn=expat.txt": "Expat"}
+def librejs_notice(rel):
+    txt = open(os.path.join(SITE, rel), encoding="utf-8").read()
+    m = re.search(r"^// @license (magnet:\S+) (\S+)\s*$", txt, re.M)
+    if not m: return "no '// @license magnet:... NAME' line"
+    if m.group(1) not in LIBREJS_OK: return f"the magnet link {m.group(1)} is not one of the approved licenses"
+    if txt[:m.start()].strip(): return "code or comments come before the license notice"
+    ends = [e for e in re.finditer(r"^// @license-end\s*$", txt, re.M) if e.start() > m.end()]
+    if len(ends) != 1: return f"{len(ends)} '// @license-end' lines after the notice (one is needed)"
+    if any(l.strip() and not l.strip().startswith("//") for l in txt[ends[0].end():].splitlines()): return "code comes after '// @license-end'"
+    return None
+JS_FILES = sorted(os.path.relpath(os.path.join(dp, f), SITE) for dp, _, fs in os.walk(SITE) for f in fs if f.endswith(".js"))
+for rel in JS_FILES:
+    err = librejs_notice(rel)
+    if err: bad(rel, f"GNU LibreJS: {err}")
+if not WEBROOT:
+    wl = os.path.join(SITE, "weblabels.html")
+    if not os.path.exists(wl): bad("weblabels.html", "the offline copy has no web labels page")
+    else:
+        raw = open(wl, encoding="utf-8").read()
+        t = re.search(r'<table id="jslicense-labels1">(.*?)</table>', raw, re.S)
+        rows = re.findall(r"<tr><td><a href=\"([^\"]+)\">[^<]*</a></td><td><a href=\"([^\"]+)\"[^>]*>[^<]*</a></td><td><a href=\"([^\"]+)\">[^<]*</a></td></tr>", t.group(1)) if t else []
+        if not t: bad("weblabels.html", "no table with id jslicense-labels1")
+        listed = sorted(r[0] for r in rows)
+        if listed != JS_FILES: bad("weblabels.html", f"the table lists {listed}, the site has the script files {JS_FILES}")
+        for r in rows:
+            if not os.path.exists(os.path.join(SITE, r[0])): bad("weblabels.html", f"{r[0]} does not exist")
+            if r[2] != r[0]: bad("weblabels.html", f"the source of {r[0]} should be the file itself, not {r[2]}")
+            if not r[1].startswith("https://creativecommons.org/publicdomain/zero/1.0/"): bad("weblabels.html", f"{r[0]}: the license link {r[1]} is not the CC0 text this copy's scripts carry")
 for f in (("css/docs.css", "js/docs.js") if WEBROOT else ("assets/ps-base.css", "assets/docs.css", "assets/site.js")):
     if os.path.exists(os.path.join(SITE, f)) and any(ch in open(os.path.join(SITE, f), encoding="utf-8").read() for ch in DASHES): bad(f, "contains a dash character")
 print(f"checked {len(pages)} pages in {SITE}")

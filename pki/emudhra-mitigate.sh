@@ -14,6 +14,21 @@
 # trusting them until ca-certificates is updated. This script distrusts the
 # roots that anchor them and then proves the store rejects all of them.
 #
+# Update, 11 Nov 2026: eMudhra's full incident report (7 Nov) revoked eight
+# more intermediates, this time RSA-4096 ones, with reason cessationOfOperation
+# rather than cACompromise: their private keys are not claimed to be
+# mathematically weak the way the first eight are, only that the same 2025
+# ceremony handled them in a Python process's volatile memory in a way eMudhra
+# "cannot positively demonstrate" met its own key-handling policy. This script
+# now also flags those eight by their own certificate fingerprint, taken
+# straight from eMudhra's report; being new and not yet independently
+# reproduced the way the first eight were, they are not part of the embedded
+# self-test or the leaked-key proof below, both of which are specific to the
+# first eight. Their issuing roots are not distrusted: emSign Root TLS CA - G1
+# keeps issuing real certificates for a university federation under an agreed
+# transition ending 16 November 2026, and root programs have left it trusted
+# "at this time". See the README for the full distinction.
+#
 # Usage:
 #   ./emudhra-mitigate.sh [command] [--force] [--ignore-env]
 #
@@ -118,8 +133,8 @@ OS_RELEASE="${OS_RELEASE:-/etc/os-release}"   # testing hook
 ATTIME=1790000000
 SELF="$0"
 SCRIPT_NAME="emudhra-mitigate.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-11-11"
 
 # Every certificate in the trust path, keyed by SHA-256 of its
 # SubjectPublicKeyInfo. Matching on the key catches every certificate for it:
@@ -162,6 +177,26 @@ declare -A AFFECTED_SHA256=(
     [D7A7A0FB5D7E2731D771E9484EBCDEF71D5F0C3E0A2948782BC83EE0EA699EF4]="AAA Certificate Services - root"
     [86A1ECBA089C4A8D3BBE2734C612BA341D813E043CF9E8A862CD5C57A36BBE6B]="emSign ECC Root CA - G3 - root"
     [3094025792039A68AF6E553686410BDAB7C0D4A36B9084CBA64202E35D6EBBDD]="emSign Root TLS CA - G3 - cross-signed by emSign ECC Root CA - G3"
+    # 07 Nov 2026: eight RSA-4096 intermediates revoked (reason: cessationOfOperation, not
+    # cACompromise). Their private keys are not claimed to be mathematically weak the way the
+    # 16 above are: eMudhra's incident report says the keys were handled in the volatile memory
+    # of a Python process during the same 2025 ceremony and it "cannot positively demonstrate"
+    # CPS compliance for them, not that they were recovered. They are matched here by their own
+    # certificate fingerprint only, straight from eMudhra's report; unlike the ECDSA set above,
+    # they are not independently cross-verified by a root program, embedded for a self-test, or
+    # part of the leaked-key proof, because no third party has reproduced a weak key for them and
+    # the known defect (RSA keys, not P-384 scalars) would not fit that proof anyway. Their issuing
+    # roots, emSign Root TLS CA - G1 and emSign Root CS CA - G2, are not distrusted here: G1 keeps
+    # issuing real certificates for a university federation under an agreed transition and root
+    # programs have left it trusted "at this time" (see the README for the 16 November deadline).
+    [829EC444B8BE3DFD2D030A0D9E7A1D0DD2A3C2C325D39589C27AC9A065BAE793]="EM DV TLS CA - G2B - issued by emSign Root TLS CA - G1"
+    [0427EA3CB4A7B4CB205E77A7B166D332BEDB8E8EF469BC5E883169C8D0AC876D]="EM DV TLS CA - G2C - issued by emSign Root TLS CA - G1"
+    [6A7A93861982B664001710A0EFD04C8A72F6A23E252B280911797E0BF1BD9012]="EM OV TLS CA - G2B - issued by emSign Root TLS CA - G1"
+    [DE767792E870BD32F331029FC89DC24C53F9DF970DC70F1EA30CF29DB3F94BA9]="EM OV TLS CA - G2C - issued by emSign Root TLS CA - G1"
+    [E072B30D7F5B8BCF0080E51D6CC7765767072DB2319E9BB1CD3D02A086898750]="EM EV TLS CA - G2B - issued by emSign Root TLS CA - G1"
+    [C3BC2B480FB1A1AB4D0BA1ED6C7B53E096447045733620991A32D6798D77AA20]="EM EV TLS CA - G2C - issued by emSign Root TLS CA - G1"
+    [913F1A04B02814B604AC5275ACB201B1C802B2C0F1B4986FB1A1EB595958E072]="EM OV CS CA - G2B - issued by emSign Root CS CA - G2"
+    [EBAC91B8EC9853323779EDB393C595FADB29DD4DDB20C47E336F2A021684F27B]="EM OV CS CA - G2C - issued by emSign Root CS CA - G2"
 )
 
 # The leaked private keys, keyed by SPKI-SHA256: each intermediate's private

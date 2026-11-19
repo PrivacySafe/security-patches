@@ -2,7 +2,9 @@
 <html lang="en" data-root="../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>psf-linux-kernel-ireq-opt-check(8) | PrivacySafe Security Patches</title><meta name="description" content="Linux kernel IPv4 TCP use-after-free, remote code execution with MPTCP">
-<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
 <body class="docs">
 <a class="skip-link" href="#top">Skip to main content</a>
 <header class="topbar">
@@ -81,6 +83,7 @@
 <li><a href="../heif/index.html">libheif</a></li>
 <li><a href="../linux-kernel/index.html">Linux kernel</a></li>
 <li><a href="../node/index.html">Node.js</a></li>
+<li><a href="../openssh-musl/index.html">OpenSSH musl password bypass</a></li>
 <li><a href="../openssl/index.html">OpenSSL</a></li>
 <li><a href="../php/index.html">PHP2Shell</a></li>
 <li><a href="../php/detect/index.html">PHP2Shell detection rules</a></li>
@@ -101,6 +104,7 @@
 <li><a href="../roundcube/index.html">Roundcube</a></li>
 <li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
 <li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../wordpress-upgrade/index.html">WordPress upgrade window</a></li>
 <li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
 <li><a href="../zammad/index.html">Zammad</a></li>
 </ul></details>
@@ -116,6 +120,7 @@
 <li><a href="../litellm/index.html">LiteLLM</a></li>
 <li><a href="../nextjs/index.html">Next.js Server Actions</a></li>
 <li><a href="../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
 <li><a href="../sagemaker/index.html">SageMaker SDK</a></li>
 <li><a href="../sentry/index.html">Sentry for Next.js</a></li>
 <li><a href="../storybook/index.html">Storybook</a></li>
@@ -141,6 +146,22 @@ Hat scores it lower (5.9, Moderate, draft). AWS reports that researchers have de
 unauthenticated remote code execution against a host with a Multipath TCP (MPTCP) listener, and
 that a crash, a leak of kernel memory or memory corruption are the other outcomes. At the time of
 AWS&#x27;s bulletin of 2 November there was no evidence of exploitation in the wild.
+
+Two things independent, public testing has since added, neither of them from a primary source
+(CVE record, vendor advisory or the upstream patch) and neither changing whether a kernel below
+its fixed release is affected:
+  - The duplicate SYN and the ACK that races it share one 4-tuple, so normal flow affinity
+    (RSS, RPS, sk_incoming_cpu) puts both on the same CPU, where softirqs run one at a time: no
+    second CPU is left to be the reader while the first one frees the options. One report
+    reproduced a read of the freed memory locally on 6.12.112 (the release just before 6.12.113)
+    only after steering the duplicate SYN to a different CPU by hand; it also found every cloud
+    and ISP edge it tried (not an exhaustive list, and not this script&#x27;s own test) silently
+    dropped packets that carried IP options, so the SYN this flaw needs never arrived. Neither
+    observation is a fix, and both can differ on another network path or a differently tuned host
+    (oversubscribed virtualisation, irqbalance, custom RPS, request-socket migration all change
+    which CPU handles which packet).
+  - The same report could not get remote code execution outside of an MPTCP listener either, in
+    line with AWS&#x27;s bulletin above.
 
   Affected: every kernel from 4.4 (commit 079096f103fa) up to the fixed releases below, on
             IPv4. IPv6 is not affected by this flaw. Kernels before 4.4 are not affected.
@@ -180,6 +201,18 @@ Usage:
   ./linux-kernel-ireq-opt-check.sh [check]
   check (default)  Exit 0 = the running kernel has the fix (or a vendor backport), 1 =
                    affected, or a vendor backport could not be confirmed. Read-only.
+  verify [--vmlinux PATH]   Static ground truth, not a guess: disassembles the running kernel&#x27;s
+                   own two destructors (inet_sock_destruct, tcp_v4_reqsk_destructor) from its
+                   debug image and reports which one calls plain kfree() (the pre-fix shape) and
+                   which calls kvfree_call_rcu() (the fix). Needs a debug image that matches the
+                   running kernel&#x27;s build-id: Debian/Ubuntu linux-image-RELEASE-dbgsym (Ubuntu&#x27;s
+                   come from ddebs.ubuntu.com, not the main archive), RHEL/Alma/Rocky/Fedora
+                   debuginfo-install kernel, SUSE kernel-debuginfo. Without --vmlinux it looks in
+                   the usual places for the running release. check runs this automatically when
+                   such an image is found, and its verdict overrides a version/changelog guess
+                   in either direction: it is the strongest evidence this script can offer. Exit
+                   0 = patched, 1 = vulnerable, 2 = no usable image, or the two functions
+                   disagree (not a verdict either way). Read-only.
   hunt             Read the kernel log for the crash side of the flaw: a call trace through
                    ip_options_build, ip_build_and_send_pkt, tcp_v4_send_synack,
                    tcp_v4_reqsk_destructor or inet_sock_destruct, or a skb_under_panic.
@@ -222,6 +255,8 @@ Env: KERNEL_CHANGELOG   a vendor changelog file to read, plain or .gz
      STATE_DIR (default /var/lib/psf-security-patches/linux-kernel-ireq-opt), SYSCTL_D and
      MODPROBE_D (default /etc/sysctl.d and /etc/modprobe.d) for mitigate and rollback
      KERNEL_RELEASE, KERNEL_VERSION_STRING   override uname -r and uname -v
+     KERNEL_VMLINUX_FILE   a debug image to use for verify, instead of looking in the usual places
+     KERNEL_NOTES_FILE   instead of /sys/kernel/notes, for the running kernel&#x27;s build-id
      KERNEL_MODULES_FILE, KERNEL_PROC_SYS    override /proc/modules and /proc/sys
      KERNEL_PROTOCOLS_FILE   override /proc/net/protocols (the MPTCP socket count)
      KERNEL_BUILTIN_FILE   override /lib/modules/&lt;release&gt;/modules.builtin
@@ -333,7 +368,7 @@ Join Telegram group
 <a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
 <a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
 </nav>
-<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="../weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
 </div>
 </div>
 </footer>

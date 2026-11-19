@@ -90,6 +90,8 @@ A race in the Linux kernel's IPv4 TCP handshake, published as CVE-2026-98432 on 
 
 The attacker is an unauthenticated peer who sends a SYN that carries IPv4 options, such as Record Route or Timestamp, to any listening TCP port. No account and no user interaction are needed, and a firewall that allows the port does not help. The CVE record scores it 9.8 (Critical). Red Hat first scored it 5.9 (Moderate) and now rates it Critical. AWS's bulletin 2026-160-AWS says researchers have demonstrated unauthenticated remote code execution against a host with a Multipath TCP (MPTCP) listener, that a kernel crash or a disclosure of kernel memory are the other outcomes, and that it had no evidence of exploitation when it last updated the bulletin on 2 November. IPv6 is not affected by this flaw, and kernels before 4.4 are not affected.
 
+Independent, public testing since that bulletin has narrowed the practical picture a little, without changing which kernels are affected. The duplicate SYN and the ACK that races it share one 4-tuple, so a host's normal flow affinity (RSS, RPS, `sk_incoming_cpu`) puts both on the same CPU, where softirqs run one at a time: there is no second CPU left to read the options while the first one frees them, unless something (an oversubscribed or virtualised host, a custom RPS setup, request-socket migration) spreads the two packets across CPUs anyway. One report says it could only reproduce a read of the already-freed memory, on kernel 6.12.112 (the release immediately before the fix, 6.12.113), after steering the two packets to different CPUs by hand; it also found that every cloud and ISP network edge it tried, though not an exhaustive survey and not something this script tests, silently dropped packets that carry IP options, which would stop the triggering SYN from arriving at all. Neither point is a fix or something to rely on, and both can differ on another path or a differently tuned host; the same report also could not get code execution outside an MPTCP listener, matching AWS's bulletin.
+
 | | |
 |---|---|
 | Affected | Every kernel from 4.4 (commit `079096f103fa`) up to the fixed releases below, on IPv4 |
@@ -129,6 +131,28 @@ Canonical's position is that security updates are the only appropriate mitigatio
 
 It reads the kernel's origin first, exactly as the other kernel checks above do. A kernel that follows the stable series (vanilla, Arch, Alpine, most custom builds) is judged on the upstream version in `uname -r`. Debian's upstream version is read from `uname -v`. A stable release candidate such as `6.12.113-rc1` is judged as the release before it. Ubuntu, RHEL and its derivatives, SUSE and Amazon Linux backport fixes under release strings that do not say which fixes they carry, so for them the vendor changelog is the evidence: the script looks in it for `CVE-2026-98432`, and when it is absent it says so and points you to your vendor's tracker instead of guessing.
 
+### Three kinds of evidence, strongest first
+
+The script never pretends a remote probe or a crash-free host proves a kernel is patched; a race this narrow can stay quiet for a long time on a vulnerable kernel. Instead it ranks the *local* evidence it can gather, strongest to weakest, and the strongest available kind wins:
+
+1. **Static disassembly of the running kernel's own code** (`verify`, and folded automatically into `check` when a debug image is present). `inet_sock_destruct()` and `tcp_v4_reqsk_destructor()` are the two functions the fix changed, and the fix is a one-line change in each: `kfree()` becomes `kvfree_call_rcu()`. Reading which shape a destructor actually has, from a debug image whose build-id matches the running kernel, is not a guess about what the kernel probably does; it is what the kernel's own code does. It is also the only leg that can catch a backport that claims the CVE in its changelog but missed (or mis-happened to include only one of the two changed lines of) the actual fix, or a custom-built kernel with no changelog at all.
+2. **The vendor changelog naming the CVE** (`check`, when the running kernel is a vendor build such as Ubuntu or RHEL). A real signal, but it is the *maintainer's own record* of what they backported, not a reading of the code; a changelog entry can be wrong, miscopied between branches, or reused for a kernel that packaged only part of a fix.
+3. **The upstream version number** (`check`, on a kernel that follows the stable series). The weakest leg: correct when the kernel truly follows the stable series, meaningless on a vendor kernel whose release string does not say which fixes it carries.
+
+A static verdict overrides a weaker one in either direction: it can tell you a kernel that *looks* patched by its version string still has the pre-fix code, or that one that *looks* affected has already been quietly fixed. `check` reports both legs and says so explicitly when they disagree; it never discards the disagreement silently.
+
+### Getting the kernel's debug image, for `verify`
+
+`verify` needs a debug build of the exact kernel that is running, matched by build-id, so it has something to disassemble:
+
+| Distribution | Command |
+|---|---|
+| Debian, Ubuntu | `apt install linux-image-$(uname -r)-dbgsym`. Ubuntu's debug packages live in the separate [ddebs.ubuntu.com](http://ddebs.ubuntu.com) archive, not the main one; see the Ubuntu wiki's "DebugSymbolPackages" page to enable it first |
+| RHEL, AlmaLinux, Rocky Linux, Fedora | `dnf debuginfo-install kernel` (or `kernel-core`) |
+| openSUSE, SUSE | `zypper install kernel-debuginfo` |
+
+`verify` looks in `/usr/lib/debug/boot/vmlinux-$(uname -r)`, `/boot/vmlinux-$(uname -r)` and `/usr/lib/debug/lib/modules/$(uname -r)/vmlinux`; pass `--vmlinux PATH` for anything else. Its build-id is compared against `/sys/kernel/notes`, the running kernel's own: a mismatch means the image is not what is actually running, and the script says so rather than reporting a verdict that would not apply.
+
 ### Quick start
 
 ```bash
@@ -141,12 +165,13 @@ chmod +x linux-kernel-ireq-opt-check.sh
 | Command | What it does |
 |---|---|
 | `check` (default) | Judges the running kernel. Exit `0` the kernel has the fix (or a vendor backport), `1` it is affected or a vendor backport could not be confirmed. Read-only |
+| `verify [--vmlinux PATH]` | Static ground truth: disassembles the two destructors the fix changed from the kernel's own debug image and reports which free call each one has. `check` runs this by itself when it finds a matching image; run it on its own for the install-the-debug-package pointer, or to check an image that is not the running kernel's. Exit `0` patched, `1` vulnerable, `2` no usable image, or the two functions disagree. Read-only |
 | `hunt` | Reads the kernel log (`dmesg`, the journal's kernel messages, and the rotated `kern.log`, `syslog` and `messages` files under `/var/log`) for the crash side of the flaw: a call trace through `ip_options_build`, `ip_build_and_send_pkt`, `tcp_v4_send_synack`, `tcp_v4_reqsk_destructor` or `inet_sock_destruct`, or a `skb_under_panic`. Exit `0` nothing in the logs that were read, `1` hits, `2` no log could be read or one could not. Read-only |
 | `mitigate [--mptcp] [--ip-options] [--modules LIST] [--force] [--dry-run]` | **Changes the host (root).** Reductions, not a fix; see below |
 | `rollback [--dry-run]` | Restores the saved sysctl values and removes the files and the packet filter `mitigate` wrote |
 | `version` | Prints the script version |
 
-Env: `KERNEL_CHANGELOG` (a vendor changelog file to read, plain or `.gz`), `KERNEL_RELEASE` and `KERNEL_VERSION_STRING` (override `uname -r` and `uname -v`), `KERNEL_MODULES_FILE`, `KERNEL_PROC_SYS` and `KERNEL_BUILTIN_FILE` (override `/proc/modules`, `/proc/sys` and the module list of the release), `KERNEL_LOG_FILES` (the log files `hunt` reads, instead of the defaults), `KERNEL_INSTALLED_RELEASES` (the installed kernel releases, instead of `/lib/modules`), `OS_RELEASE_FILE`, and `STATE_DIR`, `SYSCTL_D` and `MODPROBE_D` for `mitigate` and `rollback`.
+Env: `KERNEL_CHANGELOG` (a vendor changelog file to read, plain or `.gz`), `KERNEL_RELEASE` and `KERNEL_VERSION_STRING` (override `uname -r` and `uname -v`), `KERNEL_VMLINUX_FILE` (a debug image for `verify`, instead of looking in the usual places), `KERNEL_NOTES_FILE` (instead of `/sys/kernel/notes`, for the running kernel's build-id), `KERNEL_MODULES_FILE`, `KERNEL_PROC_SYS` and `KERNEL_BUILTIN_FILE` (override `/proc/modules`, `/proc/sys` and the module list of the release), `KERNEL_LOG_FILES` (the log files `hunt` reads, instead of the defaults), `KERNEL_INSTALLED_RELEASES` (the installed kernel releases, instead of `/lib/modules`), `OS_RELEASE_FILE`, and `STATE_DIR`, `SYSCTL_D` and `MODPROBE_D` for `mitigate` and `rollback`.
 
 A container shows the host's kernel, so run the script on the host.
 

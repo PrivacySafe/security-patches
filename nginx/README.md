@@ -1,6 +1,89 @@
-# nginx: October 2026 security release
+# nginx security releases
 
 Part of the [PrivacySafe Security Patches](../README.md) collection.
+
+<a name="nginx2root"></a>
+
+## nginx2root: HTTP/2, HTTP/3, resolver and mail-proxy flaws
+
+**Script:** [`nginx/nginx2root-check.sh`](nginx2root-check.sh)
+
+nginx 1.30.7 (stable) and 1.31.9 (mainline), released 18 November 2026, [fix five flaws](https://nginx.org/en/security_advisories.html) F5 and nginx both rate 9.2 (CVSS 4.0) critical. Two were independently found by five separate teams: Wiz Research, [Xint](https://nginx2root.com/), Metnir, Rapid7 and Ikotas Labs, who also call it NGINX2Shell (the same two bugs, not a sixth): CVE-2026-123007, an HTTP/2 flow-control integer underflow exploitable even on a plain static-file server with no backend, and CVE-2026-123633, a use-after-free reachable when HTTP/2 is proxied to an upstream and the worker is short of connection slots. Xint found three more on its own as part of research it names nginx2root: CVE-2026-123634 (a resolver use-after-free, reachable through `mirror` plus a request-derived `proxy_pass` target), CVE-2026-121810 (the same shape of bug over HTTP/3 instead of HTTP/2), and CVE-2026-113425 (a use-after-free in the mail proxy's `auth_http` path). Xint also chained CVE-2026-123007 with an undisclosed, unpatched, not-yet-numbered Linux kernel SCTP use-after-free to get root on the host, including out of a Docker container; that kernel bug is a different, newer issue from three already-fixed 2026 SCTP flaws in the kernel's own advisory history, one of them nicknamed "SCTPhantom", and this script cannot check for it, only help block the module that carries it.
+
+CVE-2026-123007 affects nginx 1.9.5 through 1.31.8 and needs nothing but HTTP/2 turned on; it was present in every official release for more than a decade. The other four each need a more specific setup:
+
+| CVE | Needs, besides an unpatched version | First affected | `http2`/`http3 off` helps? |
+|---|---|---|---|
+| CVE-2026-123007 | HTTP/2 on, nothing else | 1.9.5 | yes |
+| CVE-2026-123633 | HTTP/2 on, proxied to an upstream | 1.19.7 | yes |
+| CVE-2026-123634 | `resolver`, a request-derived `proxy_pass`, and `mirror` | 0.6.18 | no |
+| CVE-2026-121810 | HTTP/3 (`quic`) on, proxied to an upstream | 1.25.0 | no (`http3 off` helps) |
+| CVE-2026-113425 | a `mail` block with `proxy on` and `auth_http` | 0.5.33 | no |
+
+Rapid7 published a working proof of concept; it needs about 128 GB of HTTP/2 traffic over one connection and a glibc `memcpy` implementation chosen at runtime on CPUs with AVX-512. Xint's own write-up and demo instead walk through a build that resolves to the AVX2 `memcpy` path. Both are real, CPU-dependent variants of the same bug, not a disagreement between them: glibc picks one of several vectorized `memcpy` implementations at runtime based on the CPU's feature flags, and the backward-copy quirk both researchers describe exists in more than one of them.
+
+`check` and `hunt` change nothing. `check` reports the nginx version on the host and in containers, and audits the running configuration (`nginx -T`) for each flaw's trigger directives, the same approach as [our October tool below](#nginx-october-2026-check): a match shows the ingredients are present, not a guarantee, and matches are not confirmed to share a server or location block. `hunt` looks for signs in the logs that match what Xint's own write-up says an attack leaves: sustained one-way traffic, requests that stay small while received bytes climb, and abnormal worker exits. None of it can see the `WINDOW_UPDATE` and `RST_STREAM` control frames the attack itself sends: those are not logged requests, and TLS hides them from a packet capture at the host. `mitigate` edits `nginx.conf` for three of the five flaws (`--http2-off` also covers the one chained with the kernel bug), backs up every file it touches, and rolls back automatically if nginx rejects the result. The fourth, the resolver and mirror flaw, needs a fixed upstream address only you know, so `rules` explains it instead of editing anything. The kernel flaw has its own `mitigate --block-sctp` option, since it is not an `nginx.conf` change.
+
+### nginx2root quick start
+
+1. Download the script.
+
+   ```bash
+   curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/nginx/nginx2root-check.sh
+   ```
+
+2. Read it before running it, then make it executable.
+
+   ```bash
+   less nginx2root-check.sh
+   chmod +x nginx2root-check.sh
+   ```
+
+3. See what's exposed. Run as root so `nginx -T` can read the full config and the package checks work.
+
+   ```bash
+   sudo ./nginx2root-check.sh check
+   ```
+
+4. The single broadest fix, if you can't upgrade yet:
+
+   ```bash
+   sudo ./nginx2root-check.sh mitigate --http2-off
+   ```
+
+### nginx2root commands
+
+| Command | What it does |
+|---|---|
+| `check` (default) | nginx version on the host and in containers, and a configuration audit for the five flaws' trigger directives. Root optional, but `nginx -T` usually needs root to read the full config. Exits `0` if nothing is exposed, `1` if a vulnerable nginx is present, `2` if something couldn't be read |
+| `hunt` | Read-only: connection and log signals from Section 3.2 of Xint's write-up (long-lived connections with far more received than sent, HTTP/2 requests whose logged length stays small while bytes climb, and abnormal nginx worker exits). None of this proves an attack on its own. Exits `0` if nothing found, `1` if it found a lead |
+| `mitigate --http2-off \| --http3-off \| --mail-loopback \| --block-sctp [--force] [--dry-run] [--reload]` | **Changes the host (root).** With no option, applies `--http2-off`. Every `nginx.conf` file is copied first and checked with `nginx -t` before and after; if nginx rejects the result the originals are put back at once. `--block-sctp` is a `/etc/modprobe.d/` drop-in, not an `nginx.conf` change, and applies regardless of what `nginx -T` reports |
+| `rollback [--dry-run] [--reload]` | Puts back everything `mitigate` changed, `nginx.conf` and the `modprobe.d` drop-in alike |
+| `rules` | Prints the manual fix for CVE-2026-123634 and the exact `modprobe.d` line `--block-sctp` writes, for anyone who would rather add either by hand |
+| `version` | Prints the script version |
+
+### nginx2root workarounds: `mitigate`
+
+| Option | Flaw(s) | What it does | What it changes |
+|---|---|---|---|
+| `--http2-off` | CVE-2026-123007, CVE-2026-123633 | Sets `http2 off;` (nginx >= 1.25.1) or drops the `http2` listen parameter (older), per F5's own workaround | Breaks anything that specifically needs HTTP/2, such as native gRPC |
+| `--http3-off` | CVE-2026-121810 | Removes `quic` listen parameters, sets `http3 off;`, and replaces (or adds) an `Alt-Svc` header advertising HTTP/3 with `Alt-Svc 'clear'` | Breaks QUIC/HTTP/3 access; HTTP/1.1 and HTTP/2 keep working |
+| `--mail-loopback` | CVE-2026-113425 | Binds every mail proxy `listen` directive on a standard mail port to `127.0.0.1` | Only this host can reach the mail proxy; remote mail clients lose access. Use a firewall instead, and skip this, if the proxy needs outside access |
+| `--block-sctp` | the undisclosed kernel flaw | Adds `install sctp /bin/false` under `/etc/modprobe.d/` | `modprobe` refuses to load the `sctp` module from then on. Does not unload a copy already loaded (`lsmod \| grep sctp`), and does nothing on a kernel with SCTP compiled in rather than as a module. Skip this on a host that uses SCTP |
+
+CVE-2026-123634 is **not** automated, because the fix needs your own backend address; see `rules`. After a change, `mitigate` re-runs the audit and says what is still exposed. `STATE_DIR` (default `/var/lib/psf-security-patches/nginx2root`) holds the backups and manifest.
+
+Verified on nginx 1.24 (Ubuntu): the audit reported all of CVE-2026-123007, CVE-2026-123633, CVE-2026-123634 and CVE-2026-113425 against test configurations matching each flaw's trigger directives, and correctly reported CVE-2026-121810 as not configured when no HTTP/3 directive was present. After `mitigate --http2-off`, `nginx -t` accepted the result and the re-audit no longer reported either HTTP/2 flaw; `rollback` restored the file exactly. The same cycle was confirmed for `--mail-loopback`, including that a mail proxy already bound to loopback alone is correctly reported as not exposed, and a second, public-bound listener added alongside it is correctly caught. `--block-sctp` was confirmed idempotent (a second run reports the block is already in place) and its rollback removes the file. `--http3-off` could not be run through a live `nginx -t`, because this build's nginx has no `http_v3_module`; its text transformation was instead verified directly, including that it replaces an existing `Alt-Svc` header's value in place rather than deleting it, and that re-running it a second time (recomputing the same way `mitigate` does) makes no further change either way.
+
+## Before you run it (nginx2root)
+
+- The fix is to upgrade to 1.30.7 (stable) or 1.31.9 (mainline), or your distribution's backport, then reload. As of 18 November 2026, Debian's and Ubuntu's own security trackers both still marked every supported release vulnerable; no distro had shipped a backport yet.
+- CVE-2026-123007 needs nothing but HTTP/2 turned on, so treat an unpatched version as exposed to it even if you skip or can't run the configuration audit. The other four each need their own directive combination; see the table above.
+- The config audit matches directives across the whole `nginx -T` output and cannot prove they share one server or location block, so treat an "exposed" line as "review this," not a verdict.
+- `mitigate --http2-off` and `--http3-off` break anything that specifically depends on that protocol (native gRPC needs HTTP/2; QUIC-only clients need HTTP/3). `--mail-loopback` cuts off remote mail clients; use it only if the proxy doesn't need outside access, and prefer a firewall rule otherwise.
+- `--block-sctp` does nothing for a kernel that already has the module loaded, or one with SCTP compiled in rather than built as a loadable module; check `lsmod | grep sctp` first, and skip this option entirely on a host that uses SCTP.
+- The kernel flaw itself has no CVE, no patch, and no way for this script to detect it; `--block-sctp` only reduces exposure to the one chain Xint demonstrated, and does nothing about any other local-privilege-escalation path.
+- GNU/Linux only.
 
 <a name="nginx-october-2026-check"></a>
 

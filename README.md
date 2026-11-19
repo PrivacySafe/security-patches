@@ -15,7 +15,7 @@ Security mitigations and auditing tools shared for the public good.
 
 This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. We publish these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
-**64 scripts addressing 140 CVEs across 70 software projects and 10 programming languages, plus 6 other global security incidents.**
+**68 scripts addressing 146 CVEs across 72 software projects and 10 programming languages, plus 8 other global security incidents.**
 
 **Documentation:** open [`docs/index.html`](docs/index.html) in a browser for the offline site (every tool, a CVE index, a glossary and the manual pages in HTML), or read it online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/). The packages also install a manual page for every tool (`man psf-<tool>`) and an info manual.
 
@@ -42,11 +42,13 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [curl HTTP/2 upload](curl/README.md#curl-http2-upload-use-after-free-check) | curl and libcurl on GNU/Linux | CVE-2026-92392 | Read-only check and audit |
 | [openapi-typescript-codegen](openapi/README.md#openapi-typescript-codegen-code-injection-check) | Projects, CI jobs and generated TypeScript clients on GNU/Linux | CVE-2026-108551 | Read-only check and generated-code scan |
 | [Nextcloud Collabora Built-in CODE](nextcloud/README.md#nextcloud-collabora-built-in-code-command-injection) | Nextcloud with the richdocumentscode app on GNU/Linux | CVE-2026-110447 | Mitigation, check and hunt |
+| [nginx2root](nginx/README.md#nginx2root) | nginx on GNU/Linux (HTTP/2, HTTP/3, resolver, mail proxy) | CVE-2026-123007, CVE-2026-123633, CVE-2026-123634, CVE-2026-121810, CVE-2026-113425 | Check, config audit, hunt, four workarounds (`mitigate`) and rollback |
 | [nginx October 2026](nginx/README.md#nginx-october-2026-check) | nginx and njs on GNU/Linux | CVE-2026-15176, CVE-2026-93479, CVE-2026-97205, CVE-2026-95101, CVE-2026-97629; njs: CVE-2026-101019, CVE-2026-101025 | Check, config audit, hunt, three workarounds (`mitigate`) and rollback |
 | [LiteLLM supply-chain compromise](litellm/README.md#litellm-11070-supply-chain-compromise) | litellm in Python environments and containers on GNU/Linux | [incident](https://github.com/BerriAI/litellm/issues/47826) (litellm 1.107.0, no CVE) | Detect, hunt and contain |
 | [Plex Media Server Plex2Shell](plex/README.md#plex-media-server-plex2shell-rce-chain) | Plex Media Server on GNU/Linux | CVE-2026-96651, CVE-2026-96652, CVE-2026-96654, CVE-2026-96655, CVE-2026-96656 | Read-only check and hunt |
 | [GhostAction developer-machine stealer](ghostaction/README.md#ghostaction-developer-machine-stealer) | Git repositories and developer machines on GNU/Linux | [incident](https://opensourcemalware.com/blog/ghostaction-attack-escalates) (campaign, no CVE) | Scan, hunt and contain |
 | [Claude Code extension SSH backdoor](claude-code-vsx/README.md#claude-code-extension-ssh-backdoor) | Claude Code extension 2.1.312 and 2.1.313 served by the Cursor marketplace (29 October 2026); developer machines on GNU/Linux, macOS and Windows (Cursor's notice publishes scripts for macOS and Windows only; the Windows script here is a read-only check) | [incident](https://cursor.com/blog/claude-code-extension-security-notice) (no CVE) | Check, hunt, clean and block (Windows: check) |
+| [Optimizely OPTIMJACK supply-chain compromise](optimizely/README.md#optimizely-optimjack) | Optimizely Web Experimentation snippets (16 November 2026), on any site; sites that already use Optimizely, checked from GNU/Linux | [incident](https://blog.report-uri.com/) (no CVE) | Read-only check, hunt and CSP evaluation |
 | [vsftpd FTPS data channel hijack](vsftpd/README.md#vsftpd-ftps-data-channel-hijack) | vsftpd 3.0.5 and older with FTPS enabled on a standalone listener, GNU/Linux | CVE-2026-119568, CVE-2025-14242 (Red Hat family packages) | Check, mitigation, optional hardening and rollback |
 | [WordPress XSS2Shell](wordpress/README.md#wordpress-xss2shell-check) | WordPress Core sites and their web server logs on GNU/Linux | CVE-2026-64638 | Read-only check, audit and hunt |
 | [BTCPay Server hot wallet thefts](btcpayserver/README.md#btcpay-server-check) | BTCPay Server 2.4.1 and earlier, on a Docker host or any server you can reach by address; GNU/Linux | No CVE (1 November 2026) | Check, recovery plan, evidence archive, hunt, hardening review and a Tor option; `--strict` and `--json` |
@@ -78,6 +80,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [Incus](incus/README.md#incus-check) | Incus 6.0 before 6.0.7, 7.0 before 7.0.2 and 7.1 to 7.4: a confined client can write to the host as root | CVE-2026-115375, CVE-2026-115377, CVE-2026-115372 | Read-only check |
 | [LiteLLM proxy admin escalation](litellm/README.md#litellm-proxy-admin-escalation) | LiteLLM proxy 1.87.0 up to the fixed release on each line | CVE-2026-114612 | Read-only check |
 | [WordPress page-template path traversal](wordpress-pt/README.md#wordpress-pt-check) | WordPress core 4.7.0 to 7.1.1: unauthenticated path traversal, local PHP file inclusion, exploited in the wild | CVE-2026-87902 | Read-only check and hunt |
+| [WordPress upgrade-window RCE](wordpress-upgrade/README.md#wordpress-upgrade-check) | WordPress core 4.7.0 to 7.1.3: unauthenticated code execution while a core update runs, exploited in the wild | CVE-2026-119977 | Read-only check, hunt and the web server rule to add before updating |
 | [Magento, Adobe Commerce and Mage-OS BlockStrap](magento/README.md#magento-check) | Magento and Adobe Commerce 2.4.4 to 2.4.9, and Mage-OS below 3.6.0: a CVSS 10.0 unauthenticated email-template engine flaw | CVE-2026-103849 | Read-only check |
 | [Zammad session hijack and privilege escalation](zammad/README.md#zammad-check) | Zammad 6.3.0 to 6.5.4: session hijack to code execution as the zammad user, chained to root, exploited in the wild | CVE-2026-102489, CVE-2026-102490 | Read-only check and hunt |
 | [Linux kernel ebtables SNAT](linux-kernel/README.md#linux-kernel-check) | The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild | CVE-2026-53266 | Read-only check |
@@ -85,6 +88,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [Linux kernel IPv4 TCP use-after-free](linux-kernel/README.md#linux-kernel-ireq-opt-check) | The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener | CVE-2026-98432 | Check, hunt and reversible reductions |
 | [Linux kernel module blocker](linux-kernel/README.md#linux-kernel-module-block) | The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback | CVE-2026-80844, CVE-2026-81000, CVE-2026-68121, CVE-2026-74469, CVE-2026-53266, CVE-2026-98432 | List, check and reversible blocks |
 | [APT package downloads](apt/README.md#apt-nov2026-check) | Debian, Ubuntu and their derivatives: APT before the fixed release of its line (3.0.4, 2.6.2, 2.8.4 and others), when it follows redirects and retries downloads | CVE-2026-109518 | Check, hunt, stopgap (`mitigate`) and rollback |
+| [OpenSSH musl password bypass](openssh-musl/README.md#openssh-musl-password-bypass) | sshd linked against musl (Alpine, OpenWrt, buildroot, Yocto) without PAM in effect: a password over 256 bytes matches any account with no password set | No CVE at time of writing | Check, hunt, stopgap (`mitigate`) and rollback |
 | [nginx-ui restricted-directive bypass](nginx-ui/README.md#nginx-ui-check) | nginx-ui below 2.4.1: a logged-in user can bypass the restricted-directive check, which leads to code execution where nginx loads njs, Perl or Lua | CVE-2026-84316, CVE-2026-84317, CVE-2026-84318, CVE-2026-84319 | Read-only check and hunt |
 | [Joomla core, September 2026 release](joomla/README.md#joomla-check) | Joomla 4.0.0 to 5.4.8 and 6.0.0 to 6.1.3: 16 core fixes, two rated High (directory deletion, SSRF) | CVE-2026-90915, CVE-2026-92222, CVE-2026-92227 and others | Check, administrator path restriction (`mitigate --allow`) and rollback |
 | [OpenSSL DTLS heap disclosure](openssl/README.md#openssl-check) | OpenSSL 4.0, 3.6, 3.5, 3.4, 3.0, 1.1.1 and 1.0.2 before their fixed releases: a High flaw reachable through DTLS | CVE-2026-84782 | Read-only check |
@@ -100,20 +104,20 @@ Where Red Hat has published an advisory for a CVE a tool covers, the tool's READ
 
 ## 📥 Install from a package
 
-Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.04-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
+Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.19-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
 
 | File | For |
 |---|---|
-| `psf-security-patches_26.11.04-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
-| `psf-security-patches-26.11.04-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
-| `psf-security-patches-26.11.04-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
+| `psf-security-patches_26.11.19-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
+| `psf-security-patches-26.11.19-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
+| `psf-security-patches-26.11.19-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
 
 Check the files against the release's `SHA256SUMS-<version>.txt` before installing, then:
 
 ```bash
-sha256sum -c SHA256SUMS-26.11.04-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.04-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.04-1.0.0.noarch.rpm    # RPM family
+sha256sum -c SHA256SUMS-26.11.19-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.19-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.19-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/php/php2shell-mitigate.sh check             # read only
 ```
 

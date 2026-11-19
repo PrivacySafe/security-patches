@@ -21,6 +21,22 @@
 # that a crash, a leak of kernel memory or memory corruption are the other outcomes. At the time of
 # AWS's bulletin of 2 November there was no evidence of exploitation in the wild.
 #
+# Two things independent, public testing has since added, neither of them from a primary source
+# (CVE record, vendor advisory or the upstream patch) and neither changing whether a kernel below
+# its fixed release is affected:
+#   - The duplicate SYN and the ACK that races it share one 4-tuple, so normal flow affinity
+#     (RSS, RPS, sk_incoming_cpu) puts both on the same CPU, where softirqs run one at a time: no
+#     second CPU is left to be the reader while the first one frees the options. One report
+#     reproduced a read of the freed memory locally on 6.12.112 (the release just before 6.12.113)
+#     only after steering the duplicate SYN to a different CPU by hand; it also found every cloud
+#     and ISP edge it tried (not an exhaustive list, and not this script's own test) silently
+#     dropped packets that carried IP options, so the SYN this flaw needs never arrived. Neither
+#     observation is a fix, and both can differ on another network path or a differently tuned host
+#     (oversubscribed virtualisation, irqbalance, custom RPS, request-socket migration all change
+#     which CPU handles which packet).
+#   - The same report could not get remote code execution outside of an MPTCP listener either, in
+#     line with AWS's bulletin above.
+#
 #   Affected: every kernel from 4.4 (commit 079096f103fa) up to the fixed releases below, on
 #             IPv4. IPv6 is not affected by this flaw. Kernels before 4.4 are not affected.
 #   First fixed stable release of each branch (the mainline fix is in 7.3):
@@ -59,6 +75,18 @@
 #   ./linux-kernel-ireq-opt-check.sh [check]
 #   check (default)  Exit 0 = the running kernel has the fix (or a vendor backport), 1 =
 #                    affected, or a vendor backport could not be confirmed. Read-only.
+#   verify [--vmlinux PATH]   Static ground truth, not a guess: disassembles the running kernel's
+#                    own two destructors (inet_sock_destruct, tcp_v4_reqsk_destructor) from its
+#                    debug image and reports which one calls plain kfree() (the pre-fix shape) and
+#                    which calls kvfree_call_rcu() (the fix). Needs a debug image that matches the
+#                    running kernel's build-id: Debian/Ubuntu linux-image-RELEASE-dbgsym (Ubuntu's
+#                    come from ddebs.ubuntu.com, not the main archive), RHEL/Alma/Rocky/Fedora
+#                    debuginfo-install kernel, SUSE kernel-debuginfo. Without --vmlinux it looks in
+#                    the usual places for the running release. check runs this automatically when
+#                    such an image is found, and its verdict overrides a version/changelog guess
+#                    in either direction: it is the strongest evidence this script can offer. Exit
+#                    0 = patched, 1 = vulnerable, 2 = no usable image, or the two functions
+#                    disagree (not a verdict either way). Read-only.
 #   hunt             Read the kernel log for the crash side of the flaw: a call trace through
 #                    ip_options_build, ip_build_and_send_pkt, tcp_v4_send_synack,
 #                    tcp_v4_reqsk_destructor or inet_sock_destruct, or a skb_under_panic.
@@ -101,6 +129,8 @@
 #      STATE_DIR (default /var/lib/psf-security-patches/linux-kernel-ireq-opt), SYSCTL_D and
 #      MODPROBE_D (default /etc/sysctl.d and /etc/modprobe.d) for mitigate and rollback
 #      KERNEL_RELEASE, KERNEL_VERSION_STRING   override uname -r and uname -v
+#      KERNEL_VMLINUX_FILE   a debug image to use for verify, instead of looking in the usual places
+#      KERNEL_NOTES_FILE   instead of /sys/kernel/notes, for the running kernel's build-id
 #      KERNEL_MODULES_FILE, KERNEL_PROC_SYS    override /proc/modules and /proc/sys
 #      KERNEL_PROTOCOLS_FILE   override /proc/net/protocols (the MPTCP socket count)
 #      KERNEL_BUILTIN_FILE   override /lib/modules/<release>/modules.builtin
@@ -116,7 +146,7 @@ set -uo pipefail
 
 SCRIPT_NAME="linux-kernel-ireq-opt-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_DATE="2026-11-05"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/linux-kernel-ireq-opt}"
 CVE="CVE-2026-98432"
@@ -405,6 +435,100 @@ pending_reboot() {
     return 1
 }
 
+# ---------- static verification (disassembly of the running kernel's own debug image) --------
+# This is ground truth, not a guess: it reads the two functions the fix changed and reports which
+# shape of the free call each one has. KERNEL_VMLINUX_FILE and KERNEL_NOTES_FILE (default
+# /sys/kernel/notes) let the test suite and an operator with an unusual layout point this at a
+# file directly.
+STATIC_FUNCS="inet_sock_destruct tcp_v4_reqsk_destructor"
+locate_vmlinux() {
+    local rel="${KERNEL_RELEASE:-$(uname -r 2>/dev/null)}" cand
+    if [[ -n "${KERNEL_VMLINUX_FILE:-}" ]]; then echo "$KERNEL_VMLINUX_FILE"; return 0; fi
+    for cand in "/usr/lib/debug/boot/vmlinux-${rel}" "/boot/vmlinux-${rel}" "/usr/lib/debug/lib/modules/${rel}/vmlinux"; do
+        [[ -r "$cand" ]] && { echo "$cand"; return 0; }
+    done
+    return 1
+}
+no_debug_image_help() {
+    local rel="${KERNEL_RELEASE:-$(uname -r 2>/dev/null)}"
+    inf "no kernel debug image was found for ${rel}. This needs one that matches it: Debian/Ubuntu"
+    inf "  apt install linux-image-${rel}-dbgsym (Ubuntu's come from ddebs.ubuntu.com, not the main"
+    inf "  archive: see the Ubuntu wiki page \"DebugSymbolPackages\" to enable it); RHEL, Alma, Rocky,"
+    inf "  Fedora: dnf debuginfo-install kernel (or kernel-core); SUSE: zypper install kernel-debuginfo."
+    inf "  Or pass --vmlinux PATH if you already have a matching image somewhere else."
+}
+# disassemble_calls FUNC VMLINUX: the call targets found in FUNC's disassembly, one per line, or
+# nothing (and a non-zero return) if the symbol was not found in this image.
+disassemble_calls() {
+    local fn="$1" vmlinux="$2" out
+    out="$(objdump -d --no-show-raw-insn --disassemble="$fn" "$vmlinux" 2>/dev/null)"
+    grep -qE "^[0-9a-f]+ <${fn}>:" <<<"$out" || return 1
+    grep -oE 'call[[:space:]]+[0-9a-f]+ <[A-Za-z0-9_.@]+>' <<<"$out" | sed -E 's/.*<([A-Za-z0-9_.@]+)>.*/\1/; s/@.*$//'
+}
+# cmd_verify: read-only. Exit 0 = both destructors still call kfree (vulnerable), 1 = both call
+# kvfree_call_rcu (patched), 2 = no usable image, the two functions disagree, or one is unreadable.
+cmd_verify() {
+    local vmlinux=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --vmlinux) vmlinux="${2:?--vmlinux needs a path}"; shift 2 ;;
+            --vmlinux=*) vmlinux="${1#--vmlinux=}"; shift ;;
+            *) die "verify: unknown argument: $1 (usage: verify [--vmlinux PATH])" ;;
+        esac
+    done
+    step "Static verification (disassembly of the running kernel's own debug image)"
+    if ! have objdump || ! have readelf; then
+        caution "objdump and readelf are both needed for this and were not found: install binutils"
+        return 2
+    fi
+    [[ -n "$vmlinux" ]] || vmlinux="$(locate_vmlinux || true)"
+    if [[ -z "$vmlinux" || ! -r "$vmlinux" ]]; then no_debug_image_help; return 2; fi
+    inf "image: ${vmlinux}"
+    local notes="${KERNEL_NOTES_FILE:-/sys/kernel/notes}" running_bid image_bid match=""
+    running_bid="$(readelf -n "$notes" 2>/dev/null | awk '/Build ID/{print $NF; exit}')"
+    image_bid="$(readelf -n "$vmlinux" 2>/dev/null | awk '/Build ID/{print $NF; exit}')"
+    if [[ -z "$image_bid" ]]; then caution "could not read a build-id from ${vmlinux}: this may not be a kernel debug image"
+    elif [[ -z "$running_bid" ]]; then caution "the running kernel's build-id could not be read from ${notes}: the match with ${vmlinux} could not be confirmed"
+    elif [[ "$running_bid" == "$image_bid" ]]; then ok "this image's build-id matches the running kernel (${image_bid}): the verdict below is for what is actually running"; match=1
+    else bad "this image's build-id (${image_bid}) does not match the running kernel's (${running_bid}): ${vmlinux} is not what is running, and the verdict below does not apply to it"; match=0
+    fi
+    local fn calls has_kfree has_kvfree n_vuln=0 n_patched=0 n_unknown=0 n_mixed=0
+    for fn in $STATIC_FUNCS; do
+        if ! calls="$(disassemble_calls "$fn" "$vmlinux")"; then
+            inf "  ${fn}: symbol not found in this image (stripped, renamed, or inlined differently)"; n_unknown=$((n_unknown+1)); continue
+        fi
+        has_kfree=0; has_kvfree=0
+        grep -qx 'kfree' <<<"$calls" && has_kfree=1
+        grep -qx 'kvfree_call_rcu' <<<"$calls" && has_kvfree=1
+        if [[ $has_kfree -eq 1 && $has_kvfree -eq 0 ]]; then bad "  ${fn}: calls kfree (the shape before the fix)"; n_vuln=$((n_vuln+1))
+        elif [[ $has_kvfree -eq 1 && $has_kfree -eq 0 ]]; then ok "  ${fn}: calls kvfree_call_rcu (the fixed shape)"; n_patched=$((n_patched+1))
+        elif [[ $has_kfree -eq 1 && $has_kvfree -eq 1 ]]; then caution "  ${fn}: calls both kfree and kvfree_call_rcu: cannot tell which one frees the option pointer"; n_mixed=$((n_mixed+1))
+        else inf "  ${fn}: neither kfree nor kvfree_call_rcu appears in its disassembly: inconclusive"; n_unknown=$((n_unknown+1))
+        fi
+    done
+    step "Static verdict"
+    local label rc
+    if [[ $n_mixed -gt 0 || ( $n_vuln -gt 0 && $n_patched -gt 0 ) ]]; then
+        caution "the two functions do not agree: this is not a clean verdict. Treat it as inconclusive and rely on check's version and changelog evidence instead."
+        label=UNKNOWN; rc=2
+    elif [[ $n_vuln -gt 0 ]]; then
+        bad "both destructors have the pre-fix shape: VULNERABLE, by direct inspection of the running kernel's own code"
+        label=VULNERABLE; rc=1
+    elif [[ $n_patched -gt 0 ]]; then
+        ok "both destructors have the fixed shape: PATCHED, by direct inspection of the running kernel's own code"
+        label=PATCHED; rc=0
+    else
+        inf "neither destructor could be classified in this image"
+        label=UNKNOWN; rc=2
+    fi
+    if [[ "$match" == 0 ]]; then
+        caution "that verdict is for ${vmlinux}, which is not the running kernel's own image, so it is reported as inconclusive here"
+        label=UNKNOWN; rc=2
+    fi
+    echo "STATIC_VERDICT=${label}"
+    return "$rc"
+}
+
 cmd_check() {
     local rc=0 rel ver origin kind up st v ms n p mpv
     rel="${KERNEL_RELEASE:-$(uname -r 2>/dev/null)}"; ver="${KERNEL_VERSION_STRING:-$(uname -v 2>/dev/null)}"
@@ -440,6 +564,20 @@ cmd_check() {
                 rc=1
             fi ;;
     esac
+    # If this host's own debug image is present, static disassembly is ground truth and can
+    # override the version/changelog guess above in either direction. Silent when no image is
+    # there (the common case): run `verify` on its own for the installation pointer.
+    local vmlinux_auto static_rc=9
+    if have objdump && have readelf && vmlinux_auto="$(locate_vmlinux 2>/dev/null)"; then
+        cmd_verify --vmlinux "$vmlinux_auto"; static_rc=$?
+        case "$static_rc" in
+            0) if [[ $rc -eq 1 ]]; then ok "static verification overrides the guess above: this exact kernel's code already has the fix (both destructors call kvfree_call_rcu), whatever its version string or changelog say"; rc=0
+               else ok "static verification agrees: this kernel has the fix" ; fi ;;
+            1) if [[ $rc -eq 0 ]]; then bad "static verification overrides the guess above: this exact kernel's code is still vulnerable (both destructors call plain kfree), despite the version/changelog evidence saying it is fixed. Trust the code"; rc=1
+               else bad "static verification agrees: this kernel is vulnerable" ; fi ;;
+            *) : ;;
+        esac
+    fi
     if [[ $rc -eq 1 ]]; then
         step "Exposure (information; a kernel below its fixed release is affected whatever this shows)"
         v="$(sysval net/mptcp/enabled)"; ms="$(mod_state mptcp "$rel")"
@@ -462,7 +600,7 @@ cmd_check() {
         v="$(sysval net/ipv4/tcp_migrate_req)"
         case "$v" in 1) inf "net.ipv4.tcp_migrate_req=1: the request socket migration path is open too" ;; 0) inf "net.ipv4.tcp_migrate_req=0 (the default): the migration path is closed unless a BPF program does it" ;; *) inf "net.ipv4.tcp_migrate_req could not be read" ;; esac
         if ipopt_filter_present; then inf "a filter that drops TCP packets with IP options is in place"
-        else inf "no filter that drops TCP packets with IP options was found"; fi
+        else inf "no filter that drops TCP packets with IP options was found. Some network edges drop such packets before they reach any host behind them; that is not something this script, or you, can see from here, and it is not something to rely on: the SYN only needs to reach this host once"; fi
     fi
     local fam fid fvid fixedk=""
     read -r fam fid fvid <<<"$(os_info)"
@@ -690,10 +828,11 @@ main() {
     echo "${CVE}: Linux kernel IPv4 TCP use-after-free, remote code execution with an MPTCP listener"
     case "$CMD" in
         check) cmd_check "$@" ;;
+        verify) cmd_verify "$@" ;;
         hunt) cmd_hunt "$@" ;;
         mitigate) cmd_mitigate "$@" ;;
         rollback) cmd_rollback "$@" ;;
-        *) die "Unknown command: ${CMD} (check|hunt|mitigate|rollback|version)" ;;
+        *) die "Unknown command: ${CMD} (check|verify|hunt|mitigate|rollback|version)" ;;
     esac
 }
 main "$@"; exit

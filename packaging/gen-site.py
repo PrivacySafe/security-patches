@@ -18,7 +18,7 @@
 # folder it names. packaging/build-release.sh stops when docs/ is out of date and installs
 # the same pages with the packages, and the privacysafe.app docs are built from the same READMEs.
 #
-#   python3 packaging/gen-site.py --out DIR [--release 26.11.04-1.0.0] [--date 2026-11-04] [--base-path /docs/]
+#   python3 packaging/gen-site.py --out DIR [--release 26.11.05-1.0.0] [--date 2026-11-05] [--base-path /docs/]
 #
 # Without --release and --date it uses the newest dated heading of CHANGELOG.md.
 #
@@ -75,11 +75,11 @@ CATEGORIES = [
     ("Servers, proxies and network services", "Web servers, proxies, name servers, FTP, logging, databases and container hosts.",
      ["nginx", "nginx-ui", "haproxy", "tomcat", "trafficserver", "bind", "vsftpd", "rsyslog", "couchdb", "pulsar", "incus"]),
     ("Operating system, libraries and runtimes", "The kernel, system libraries, language runtimes and the certificate store.",
-     ["linux-kernel", "apt", "openssl", "curl", "expat", "brotli", "heif", "pillow", "node", "php", "php/detect", "php/edge", "ruby", "pki"]),
+     ["linux-kernel", "apt", "openssh-musl", "openssl", "curl", "expat", "brotli", "heif", "pillow", "node", "php", "php/detect", "php/edge", "ruby", "pki"]),
     ("Content management and web applications", "WordPress, Joomla, Drupal and the other sites and services you host.",
-     ["wordpress", "wordpress-pt", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex", "btcpayserver"]),
+     ["wordpress", "wordpress-pt", "wordpress-upgrade", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex", "btcpayserver"]),
     ("Developer platforms, tools and supply chain", "Developer machines, build and CI systems, frameworks and packages.",
-     ["claude-code-vsx", "ghostaction", "litellm", "openapi", "storybook", "jupyter", "sentry", "nextjs", "laravel", "django", "sagemaker", "gitea", "gitlab", "jenkins"]),
+     ["claude-code-vsx", "ghostaction", "litellm", "openapi", "storybook", "jupyter", "sentry", "nextjs", "laravel", "django", "sagemaker", "gitea", "gitlab", "jenkins", "optimizely"]),
 ]
 NAMES = {  # short names for the menu and the cards
     "wordpress": "WordPress core and plugins", "linux-kernel": "Linux kernel", "drupal": "Drupal", "grav": "Grav",
@@ -89,25 +89,32 @@ NAMES = {  # short names for the menu and the cards
     "pulsar": "Apache Pulsar", "sentry": "Sentry for Next.js", "magento": "Magento and Adobe Commerce",
     "plex": "Plex Media Server", "pki": "eMudhra CA compromise", "haproxy": "HAProxy", "node": "Node.js", "nginx": "nginx",
     "curl": "curl", "apt": "APT", "openssl": "OpenSSL", "roundcube": "Roundcube", "trafficserver": "Apache Traffic Server",
-    "wordpress-pt": "WordPress path traversal", "bind": "BIND 9", "couchdb": "CouchDB", "craft": "Craft CMS",
+    "wordpress-pt": "WordPress path traversal", "wordpress-upgrade": "WordPress upgrade window", "bind": "BIND 9", "couchdb": "CouchDB", "craft": "Craft CMS",
     "basercms": "baserCMS", "claude-code-vsx": "Claude Code extension backdoor", "sagemaker": "SageMaker SDK",
     "nextjs": "Next.js Server Actions", "jupyter": "Jupyter and nbconvert", "yootheme": "YOOtheme Pro",
     "incus": "Incus", "storybook": "Storybook", "zammad": "Zammad", "rsyslog": "rsyslog", "vsftpd": "vsftpd",
     "tomcat": "Apache Tomcat", "gitea": "Gitea", "ghostaction": "GhostAction", "litellm": "LiteLLM", "pillow": "Pillow",
     "openapi": "openapi-typescript-codegen", "laravel": "Laravel TokenGuard", "nginx-ui": "nginx-ui", "btcpayserver": "BTCPay Server",
+    "openssh-musl": "OpenSSH musl password bypass",
+    "optimizely": "Optimizely OPTIMJACK supply-chain compromise",
 }
-RELATED = [["php", "php/detect", "php/edge"], ["wordpress", "wordpress-pt"], ["node", "brotli"], ["ruby", "gitlab"], ["nextjs", "sentry"], ["grav", "craft"]]
+RELATED = [["php", "php/detect", "php/edge"], ["wordpress", "wordpress-pt", "wordpress-upgrade"], ["node", "brotli"], ["ruby", "gitlab"], ["nextjs", "sentry"], ["grav", "craft"]]
 FACT_KEYS = [("Fixed", "The fix"), ("Move to", "The fix"), ("Remedy", "The fix"), ("Severity", "Severity"), ("Exploited", "Exploited")]
 PROTECT_WORDS = re.compile(r"mitigat|workaround|protect|rollback|guard|block|rule|hardening|deactivat|clean", re.I)
 SYNONYMS = {  # words people type that the page itself does not use; added to the search index only
+    "weblabels.html": "librejs javascript license licence web labels weblabels free software script",
     "install.html": "checksum checksums sha256 verify download apt dnf deb rpm package uninstall remove removal upgrade",
     "how-it-works.html": "docker podman containers exit code exit codes dry run dry-run rollback mitigate hunt check settings environment variable state backups root",
     "cves.html": "cve number identifier vulnerability",
+    "wordpress-upgrade/index.html": "wordpress core update upgrade staging wp-config race condition rce wp-content upgrade",
     "apt/index.html": "debian ubuntu package manager apt-get dpkg updates mirror proxy retries",
+    "openssh-musl/index.html": "ssh sshd musl crypt star asterisk password alpine openwrt buildroot yocto locked account no password login bypass usepam pam match block",
     "glossary.html": "meaning means definition what is explained terms abbreviation acronym kev cwe rce xss ssrf dos lpe eol",
+    "optimizely/index.html": "optimjack magecart javascript injection project javascript snippet cdn supply chain crypto clipper card skimmer coruna darksword ios exploit csp content security policy",
+    "nginx/index.html": "nginx2root nginx2shell http2 http3 quic flow control window update rst stream sctp kernel root escalation docker container escape xint wiz rapid7 ikotas metnir mail proxy auth_http resolver mirror njs session tickets aio ssi",
 }
 HUBS = {"index.html", "tools.html", "cves.html", "man/index.html", "changelog.html", "about.html"}   # long lists that mention everything
-READONLY = {"check", "hunt", "scan", "audit", "version", "keys", "verify", "status", "list", "report"}
+READONLY = {"check", "hunt", "scan", "audit", "version", "keys", "verify", "status", "list", "report", "csp", "rules"}
 CHANGERS = {"mitigate", "rollback", "apply", "guard", "unguard", "harden", "clean", "update", "block", "unblock", "quarantine", "restore", "enforce", "complain", "cleanup", "remove"}
 NOT_COMMANDS = {"sudo", "tail", "nohup", "env", "bash", "curl", "wget", "systemctl", "cat", "echo", "grep", "tar", "the", "see", "run"}
 
@@ -367,7 +374,8 @@ def nav_html(cur_out):
     o.append("</details></nav>")
     return "\n".join(o)
 
-JS_FLAG = 'document.documentElement.className+=" js"'
+LIC_CC0 = "magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0"   # GNU LibreJS: the license notice of a CC0 file
+JS_FLAG = '// @license ' + LIC_CC0 + '\ndocument.documentElement.className+=" js"\n// @license-end'
 CSP = ("default-src 'none'; img-src 'self' data:; style-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; "
        "script-src 'self' 'sha256-" + base64.b64encode(hashlib.sha256(JS_FLAG.encode()).digest()).decode() + "'")
 
@@ -417,6 +425,8 @@ def offline_chrome(h, root):
     img = root + "assets/img/"
     for f in ("privacysafe-logo.svg", "ivy-logo-horizontal-white.svg", "logo-foundation.svg", "bitsontape-avatar.png"):
         h = h.replace(f'src="/img/{f}"', f'src="{img}{f}"')
+    # the license page of this copy lists this copy's scripts, so the link to it stays local
+    h = h.replace('<a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">', f'<a href="{root}weblabels.html" rel="jslicense">')
     h = h.replace('href="/"', f'href="{SITE_URL}/"')
     for a in ("download", "apps", "identity", "trust"): h = h.replace(f'href="/#{a}"', f'href="{SITE_URL}/#{a}"')
     h = h.replace('<a href="/docs/" aria-current="true">Docs</a>', f'<a href="{SITE_URL}/docs/" rel="noopener noreferrer" target="_blank">Docs</a>')
@@ -450,7 +460,7 @@ def page_html_offline(out, title, body, toc, desc, crumbs, footer_nav, wide, cru
     head = (f'<!doctype html>\n<html lang="en" data-root="{root}">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
             f'<meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">\n'
             f'<title>{esc(head_title)}</title><meta name="description" content="{esc(desc or SITE)}">\n'
-            f'<link rel="icon" href="{root}assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="{root}assets/ps-base.css"><link rel="stylesheet" href="{root}assets/docs.css"><script>{JS_FLAG}</script></head>\n')
+            f'<link rel="jslicense" href="{root}weblabels.html"><link rel="icon" href="{root}assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="{root}assets/ps-base.css"><link rel="stylesheet" href="{root}assets/docs.css"><script>{JS_FLAG}</script></head>\n')
     top = L.topbar("Security Patches")
     top = re.sub(r'<nav aria-label="Documentation sections" class="docs-subnav">.*?</nav>\n?', lambda m: offline_subnav(out, root), top, flags=re.S)
     page = (f'<div class="doc-page"><div class="wrap doc-layout{"" if toc_html else " no-toc"}">{nav_html(out)}\n'
@@ -644,6 +654,20 @@ GLOSSARY = [
  ("Server-side request forgery (SSRF)", "Tricking a server into making requests for the attacker, often to addresses that are only reachable from inside."),
 ]
 gl = "".join(f'<dt id="{ghslug(t)}">{esc(t)}</dt><dd>{cell_html(d)}</dd>' for t, d in GLOSSARY)
+# GNU LibreJS: the offline copy lists its own scripts. The online copy is listed on privacysafe.app/weblabels.html (see packaging/site/ and
+# privacysafe-app-docs/weblabels-docs-rows.html). Each script file also carries its own license notice, which is what LibreJS reads first.
+if not APP:
+    _cc0 = "https://creativecommons.org/publicdomain/zero/1.0/legalcode"
+    _wl = "".join(f'<tr><td><a href="assets/{f}">{f}</a></td><td><a href="{_cc0}" rel="noopener noreferrer" target="_blank">CC0-1.0</a></td><td><a href="assets/{f}">{f}</a></td></tr>' for f in ("search-index.js", "site.js"))
+    add("weblabels.html", "JavaScript web labels",
+        '<h1>JavaScript web labels</h1><p>This documentation reads fine without JavaScript. Two scripts add conveniences: <code>assets/site.js</code> (the menu and the copy buttons) '
+        'and <code>assets/search-index.js</code> (the data the search reads). Both are CC0 1.0 files, and each carries its own license notice for GNU LibreJS. '
+        'One line of script on every page adds a class so the styles know scripts are available; its notice is inside the page. Nothing is loaded from another site.</p>'
+        '<table id="jslicense-labels1"><thead><tr><th>Script</th><th>License</th><th>Source</th></tr></thead><tbody>' + _wl + '</tbody></table>'
+        '<p>The online copy, at <a href="' + SITE_URL + '/docs/security-patches/" rel="noopener noreferrer" target="_blank">privacysafe.app</a>, also loads the documentation script '
+        '(AGPL-3.0-or-later) and the privacysafe.click metrics script, which are listed on <a href="' + SITE_URL + '/weblabels.html" rel="noopener noreferrer" target="_blank">its web labels page</a>.</p>',
+        desc="The JavaScript on this documentation site and its licenses, for GNU LibreJS.")
+
 add("glossary.html", "Glossary", f'<h1>Glossary</h1><p>Plain meanings for the terms used on this site.</p><dl class="gloss">{gl}</dl>',
     [(2, t, ghslug(t)) for t, _ in GLOSSARY], desc="Plain meanings for CVE, CVSS, backport, indicator, mitigation and the other terms used on this site.")
 
@@ -755,7 +779,7 @@ for i, d in enumerate(order_tools):
     text = clean_tool_md(tool_text[d]); h, toc = render_md(text)
     out = tool_out(d); h = rewriter(d + "/README.md", out)(h)
     prv = order_tools[i - 1] if i else None; nxt = order_tools[i + 1] if i + 1 < len(order_tools) else None
-    nav = f'<p class="edit"><a href="{SRC}{d}/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool">'
+    nav = '<nav class="pn" aria-label="Previous and next tool">'
     nav += f'<a rel="prev" href="{posixpath.relpath(tool_out(prv), d)}">&larr; {esc(labels[prv])}</a>' if prv else "<span></span>"
     nav += f'<a rel="next" href="{posixpath.relpath(tool_out(nxt), d)}">{esc(labels[nxt])} &rarr;</a>' if nxt else "<span></span>"
     nav += "</nav>"
@@ -798,7 +822,7 @@ _404 = None if APP else page_html("404.html", "Page not found", '<h1>Page not fo
 if BASE_PATH and _404: _404 = _404.replace("<head>", f'<head><base href="{esc(BASE_PATH)}">', 1)
 if _404: write("404.html", _404)
 
-open(os.path.join(OUT, "assets", "search-index.js"), "w", encoding="utf-8").write("window.PSF_INDEX=" + json.dumps(pages, ensure_ascii=False, separators=(",", ":")) + ";\n")
+open(os.path.join(OUT, "assets", "search-index.js"), "w", encoding="utf-8").write("// @license " + LIC_CC0 + "\nwindow.PSF_INDEX=" + json.dumps(pages, ensure_ascii=False, separators=(",", ":")) + ";\n// @license-end\n")
 if APP:
     feed_url = BASE_URL + "feed.xml"
     ents = ""

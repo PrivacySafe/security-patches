@@ -2,7 +2,9 @@
 <html lang="en" data-root="">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>Install and update | PrivacySafe Security Patches</title><meta name="description" content="Install the packages, check the checksums, update and remove.">
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/ps-base.css"><link rel="stylesheet" href="assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<link rel="jslicense" href="weblabels.html"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/ps-base.css"><link rel="stylesheet" href="assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
 <body class="docs">
 <a class="skip-link" href="#top">Skip to main content</a>
 <header class="topbar">
@@ -81,6 +83,7 @@
 <li><a href="heif/index.html">libheif</a></li>
 <li><a href="linux-kernel/index.html">Linux kernel</a></li>
 <li><a href="node/index.html">Node.js</a></li>
+<li><a href="openssh-musl/index.html">OpenSSH musl password bypass</a></li>
 <li><a href="openssl/index.html">OpenSSL</a></li>
 <li><a href="php/index.html">PHP2Shell</a></li>
 <li><a href="php/detect/index.html">PHP2Shell detection rules</a></li>
@@ -101,6 +104,7 @@
 <li><a href="roundcube/index.html">Roundcube</a></li>
 <li><a href="wordpress/index.html">WordPress core and plugins</a></li>
 <li><a href="wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="wordpress-upgrade/index.html">WordPress upgrade window</a></li>
 <li><a href="yootheme/index.html">YOOtheme Pro</a></li>
 <li><a href="zammad/index.html">Zammad</a></li>
 </ul></details>
@@ -116,6 +120,7 @@
 <li><a href="litellm/index.html">LiteLLM</a></li>
 <li><a href="nextjs/index.html">Next.js Server Actions</a></li>
 <li><a href="openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
 <li><a href="sagemaker/index.html">SageMaker SDK</a></li>
 <li><a href="sentry/index.html">Sentry for Next.js</a></li>
 <li><a href="storybook/index.html">Storybook</a></li>
@@ -123,7 +128,7 @@
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a> / <span>Install and update</span></nav>
 <article class="doc"><h1>Install and update</h1><h2 id="install-from-a-package"><svg class="ico ico-inbox-in" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.6 2.6h2.8v5.9h2.7L12 13 7.9 8.5h2.7V2.6zM2.6 13.2h5.2l1.1 2.2c.2.4.6.6 1 .6h4.2c.4 0 .8-.2 1-.6l1.1-2.2h5.2v6.3a2 2 0 0 1-2 2H4.6a2 2 0 0 1-2-2v-6.3z"/></svg> Install from a package</h2>
-<p>Each release ships three files, all named <code>psf-security-patches</code> and versioned by release date, <code>YY.MM.DD-X.Y.Z</code> (for example <code>26.11.04-1.0.0</code>). Download them from the releases page on <a href="https://codeberg.org/PrivacySafe/security-patches/releases">Codeberg</a> or <a href="https://github.com/PrivacySafe/security-patches/releases">GitHub</a>.</p>
+<p>Each release ships three files, all named <code>psf-security-patches</code> and versioned by release date, <code>YY.MM.DD-X.Y.Z</code> (for example <code>26.11.19-1.0.0</code>). Download them from the releases page on <a href="https://codeberg.org/PrivacySafe/security-patches/releases">Codeberg</a> or <a href="https://github.com/PrivacySafe/security-patches/releases">GitHub</a>.</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
 <tr>
@@ -133,23 +138,23 @@
 </thead>
 <tbody>
 <tr>
-<td><code>psf-security-patches_26.11.04-1.0.0_all.deb</code></td>
+<td><code>psf-security-patches_26.11.19-1.0.0_all.deb</code></td>
 <td>Debian, Ubuntu, Trisquel and derivatives</td>
 </tr>
 <tr>
-<td><code>psf-security-patches-26.11.04-1.0.0.noarch.rpm</code></td>
+<td><code>psf-security-patches-26.11.19-1.0.0.noarch.rpm</code></td>
 <td>RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives</td>
 </tr>
 <tr>
-<td><code>psf-security-patches-26.11.04-1.0.0.tar.gz</code></td>
+<td><code>psf-security-patches-26.11.19-1.0.0.tar.gz</code></td>
 <td>Any GNU/Linux: the source tree, plus the scripts to rebuild the packages</td>
 </tr>
 </tbody>
 </table></div>
 <p>Check the files against the release's <code>SHA256SUMS-&lt;version&gt;.txt</code> before installing, then:</p>
-<pre tabindex="0"><code class="language-bash">sha256sum -c SHA256SUMS-26.11.04-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.04-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.04-1.0.0.noarch.rpm    # RPM family
+<pre tabindex="0"><code class="language-bash">sha256sum -c SHA256SUMS-26.11.19-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.19-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.19-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/php/php2shell-mitigate.sh check             # read only
 </code></pre>
 <p>Each file also has a detached GPG signature, <code>FILE.asc</code>. Import the release key from the release page and confirm its fingerprint reads <code>4BAD A1D9 A399 352C D651 B1D7 4D36 5028 B8E5 6739</code> before you trust a signature.</p>
@@ -278,7 +283,7 @@ Join Telegram group
 <a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
 <a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
 </nav>
-<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
 </div>
 </div>
 </footer>

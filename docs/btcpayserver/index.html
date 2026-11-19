@@ -2,7 +2,9 @@
 <html lang="en" data-root="../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>BTCPay Server: hot wallet thefts on 2.4.1 and earlier (no CVE) | PrivacySafe Security Patches</title><meta name="description" content="BTCPay Server 2.4.1 and earlier, on a Docker host or any server you can reach by address; GNU/Linux">
-<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
 <body class="docs">
 <a class="skip-link" href="#top">Skip to main content</a>
 <header class="topbar">
@@ -81,6 +83,7 @@
 <li><a href="../heif/index.html">libheif</a></li>
 <li><a href="../linux-kernel/index.html">Linux kernel</a></li>
 <li><a href="../node/index.html">Node.js</a></li>
+<li><a href="../openssh-musl/index.html">OpenSSH musl password bypass</a></li>
 <li><a href="../openssl/index.html">OpenSSL</a></li>
 <li><a href="../php/index.html">PHP2Shell</a></li>
 <li><a href="../php/detect/index.html">PHP2Shell detection rules</a></li>
@@ -101,6 +104,7 @@
 <li><a href="../roundcube/index.html">Roundcube</a></li>
 <li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
 <li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../wordpress-upgrade/index.html">WordPress upgrade window</a></li>
 <li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
 <li><a href="../zammad/index.html">Zammad</a></li>
 </ul></details>
@@ -116,6 +120,7 @@
 <li><a href="../litellm/index.html">LiteLLM</a></li>
 <li><a href="../nextjs/index.html">Next.js Server Actions</a></li>
 <li><a href="../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
 <li><a href="../sagemaker/index.html">SageMaker SDK</a></li>
 <li><a href="../sentry/index.html">Sentry for Next.js</a></li>
 <li><a href="../storybook/index.html">Storybook</a></li>
@@ -217,7 +222,7 @@ sudo ./btcpayserver-nov2026-check.sh preserve --out /root
 </tr>
 <tr>
 <td><code>harden [--url URL] [DIR ...]</code></td>
-<td>Runs <code>check</code>, then reviews network-reachable ports, higher-exposure fragments, enabled LND routes, the IPv4 options filter, SSH settings, the keys in root's <code>authorized_keys</code>, custom fragments, the <code>btcpayserver-docker</code> checkout, the server administrators and Tor, and lists the steps that cannot be checked from here.</td>
+<td>Runs <code>check</code>, then reviews network-reachable ports, higher-exposure fragments, retired integrations, enabled LND routes, the IPv4 options filter, SSH settings, the keys in root's <code>authorized_keys</code>, custom fragments, the <code>btcpayserver-docker</code> checkout, the server administrators and Tor, and lists the steps that cannot be checked from here.</td>
 </tr>
 <tr>
 <td><code>tor [status|enable|disable]</code></td>
@@ -273,6 +278,7 @@ sudo ./btcpayserver-nov2026-check.sh preserve --out /root
 <ul>
 <li><strong>Ports.</strong> The default Docker stack publishes only 80, 443 and the Lightning peer port. A published Bitcoin P2P port (<code>opt-expose-unsafe</code>), Bitcoin RPC, NBXplorer, PostgreSQL, Tor SOCKS or control, or DNS port is flagged, and so are LND 8080 and 10009.</li>
 <li><strong>Fragments.</strong> <code>opt-expose-unsafe</code> and <code>opt-add-pihole</code> are warnings. Watchtower, Tor relay, public ElectrumX and Cloudflare Tunnel are noted.</li>
+<li><strong>Retired integrations.</strong> 2.4.5 removed twelve optional fragments from the generator, each for its own stated reason: a fixed encryption key shared by every Firefly III deployment, a hardcoded JoinMarket RPC password, LND credentials exposed to Tallycoin after it shut down, BlueWallet's own Lndhub sunset, or simply no maintenance commit since 2021 or 2022 (BTCTransmuter, Configurator, EPS, BWT, NDLC, Snapdrop, LibrePatron, Chatwoot). It also rejects <code>BTCPAYGEN_REVERSEPROXY=traefik</code>, and dropped six altcoin integrations whose upstream or fragment images had gone stale (Bitcoin Plus, Trezarcoin, Bitcore, Bitcoin Gold, Viacoin, and the non-functional old Ethereum fragment). Any of these still named in your deployment profile is flagged, with the reason the project gave for removing it. Feathercoin, Groestlcoin and Monacoin are kept for now but may be removed after 24 January 2027 without an active maintainer; the tool notes these without warning, since they are not yet retired.</li>
 <li><strong>LND routes.</strong> The project turned off external LND API access by default after the August incident, and its reverse proxy blocks LND's unauthenticated wallet setup and unlock routes. If <code>lnd-rest</code> or <code>lnd-grpc</code> is enabled you are told how to remove it with <code>btcpay-routes</code>.</li>
 <li><strong>Host.</strong> The IPv4 options filter, explicit SSH password or root logins, and a pending reboot.</li>
 <li><strong>Manual steps.</strong> Hot wallet balance (keep only what daily operations need; the project's advice is to hold the rest in a wallet whose keys are off the server), two-factor sign-in, registration policy, API keys, LND password and macaroon rotation, backups, updates, firewall and monitoring.</li>
@@ -292,7 +298,7 @@ sudo ./btcpayserver-nov2026-check.sh tor disable
 <li><a href="https://blog.btcpayserver.org/">Security Incident Affecting BTCPay Server 2.4.1 and Earlier, 2 November 2026</a>: the affected versions, the recovery steps, the timeline and the destination addresses. Look for the post under that title.</li>
 <li><a href="https://blog.btcpayserver.org/security-advisory-btcpay-server-2-4-2/">Security Advisory: Update BTCPay Server to 2.4.2 Immediately, 7 August 2026</a>: the flaw 2.4.2 fixed, and the LND credential risk.</li>
 <li><a href="https://blog.btcpayserver.org/btcpay-server-2-4-4/">BTCPay Server 2.4.4, 8 September 2026</a>: LND wallet passwords, the blocked unauthenticated routes, restricted host management.</li>
-<li><a href="https://blog.btcpayserver.org/btcpay-server-2-4-5/">BTCPay Server 2.4.5, 5 October 2026</a>: Tor becomes opt-in, <code>btcpay-routes</code>, the locked LND wallets.</li>
+<li><a href="https://blog.btcpayserver.org/btcpay-server-2-4-5/">BTCPay Server 2.4.5, 5 October 2026</a>: Tor becomes opt-in, <code>btcpay-routes</code>, the locked LND wallets, and the retired integrations, each named in its own <code>btcpayserver-docker</code> pull request (#1099, #1100, #1102, #1106, #1107, #1117, #1128, #1142, #1143, #1144).</li>
 <li><a href="https://github.com/btcpayserver/btcpayserver-docker/tree/master/docs">btcpayserver-docker documentation</a></li>
 <li>To report a security issue to the project: security@btcpayserver.org</li>
 </ul>
@@ -306,7 +312,7 @@ sudo ./btcpayserver-nov2026-check.sh tor disable
 <li><code>ss</code> or <code>netstat</code>, and root, are needed for the full port review and for container logs.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>.</li>
 </ul>
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/btcpayserver/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../brotli/index.html">&larr; Brotli</a><a rel="next" href="../claude-code-vsx/index.html">Claude Code extension backdoor &rarr;</a></nav></article></main>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../brotli/index.html">&larr; Brotli</a><a rel="next" href="../claude-code-vsx/index.html">Claude Code extension backdoor &rarr;</a></nav></article></main>
 <aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#btcpay-server-check">BTCPay Server check</a></li><li class="l2"><a href="#what-to-do">What to do</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#signs-on-the-host">Signs on the host</a></li><li class="l2"><a href="#preserve-the-evidence">Preserve the evidence</a></li><li class="l2"><a href="#for-scheduled-jobs-and-monitoring">For scheduled jobs and monitoring</a></li><li class="l2"><a href="#harden-the-new-server">Harden the new server</a></li><li class="l2"><a href="#tor-enable-or-disable">Tor: enable or disable</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
@@ -409,7 +415,7 @@ Join Telegram group
 <a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
 <a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
 </nav>
-<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="../weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
 </div>
 </div>
 </footer>

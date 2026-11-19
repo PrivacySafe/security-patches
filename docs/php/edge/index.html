@@ -2,7 +2,9 @@
 <html lang="en" data-root="../../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>PHP2Shell edge guards | PrivacySafe Security Patches</title><meta name="description" content="Apache httpd (server configuration or .htaccess) and nginx in front of PHP, with request body and header limits, and a curl tester">
-<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<link rel="jslicense" href="../../weblabels.html"><link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
 <body class="docs">
 <a class="skip-link" href="#top">Skip to main content</a>
 <header class="topbar">
@@ -81,6 +83,7 @@
 <li><a href="../../heif/index.html">libheif</a></li>
 <li><a href="../../linux-kernel/index.html">Linux kernel</a></li>
 <li><a href="../../node/index.html">Node.js</a></li>
+<li><a href="../../openssh-musl/index.html">OpenSSH musl password bypass</a></li>
 <li><a href="../../openssl/index.html">OpenSSL</a></li>
 <li><a href="../index.html">PHP2Shell</a></li>
 <li><a href="../detect/index.html">PHP2Shell detection rules</a></li>
@@ -101,6 +104,7 @@
 <li><a href="../../roundcube/index.html">Roundcube</a></li>
 <li><a href="../../wordpress/index.html">WordPress core and plugins</a></li>
 <li><a href="../../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../../wordpress-upgrade/index.html">WordPress upgrade window</a></li>
 <li><a href="../../yootheme/index.html">YOOtheme Pro</a></li>
 <li><a href="../../zammad/index.html">Zammad</a></li>
 </ul></details>
@@ -116,6 +120,7 @@
 <li><a href="../../litellm/index.html">LiteLLM</a></li>
 <li><a href="../../nextjs/index.html">Next.js Server Actions</a></li>
 <li><a href="../../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../../optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
 <li><a href="../../sagemaker/index.html">SageMaker SDK</a></li>
 <li><a href="../../sentry/index.html">Sentry for Next.js</a></li>
 <li><a href="../../storybook/index.html">Storybook</a></li>
@@ -448,7 +453,7 @@ tail -3 /var/log/nginx/php2shell-guard.log
 <p><a href="https://access.redhat.com/security/cve/CVE-2026-109618"><span class="nw">CVE-2026-109618</span></a>: 19 advisories, listed in the <a href="../index.html#red-hat-advisories">Red Hat advisories section of the PHP README</a>.</p>
 <p><a href="https://access.redhat.com/security/cve/CVE-2026-109619"><span class="nw">CVE-2026-109619</span></a>: 20 advisories, listed in the <a href="../index.html#red-hat-advisories">Red Hat advisories section of the PHP README</a>.</p>
 <!-- rhsa:end -->
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/php/edge/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../detect/index.html">&larr; PHP2Shell detection rules</a><a rel="next" href="../../pillow/index.html">Pillow &rarr;</a></nav></article></main>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../detect/index.html">&larr; PHP2Shell detection rules</a><a rel="next" href="../../pillow/index.html">Pillow &rarr;</a></nav></article></main>
 <aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#what-is-here">What is here</a></li><li class="l2"><a href="#install-and-remove">Install and remove</a></li><li class="l2"><a href="#the-multipart-guard">The multipart guard</a></li><li class="l2"><a href="#the-cookie-guard-apache-only">The cookie guard (Apache only)</a></li><li class="l2"><a href="#nginx-and-oversized-response-headers">nginx and oversized response headers</a></li><li class="l2"><a href="#request-body-size-limit">Request body size limit</a></li><li class="l2"><a href="#apache-without-server-access-the-htaccess-file">Apache without server access: the .htaccess file</a></li><li class="l2"><a href="#testing-a-guard-php2shell-edge-testsh">Testing a guard: php2shell-edge-test.sh</a></li><li class="l2"><a href="#which-content-type-values-matter">Which Content-Type values matter</a></li><li class="l2"><a href="#verify-on-every-virtual-host">Verify on every virtual host</a></li><li class="l2"><a href="#limits">Limits</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
@@ -551,7 +556,7 @@ Join Telegram group
 <a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
 <a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
 </nav>
-<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="../../weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
 </div>
 </div>
 </footer>

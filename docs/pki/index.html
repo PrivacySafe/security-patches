@@ -2,7 +2,9 @@
 <html lang="en" data-root="../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>eMudhra: intermediate CA compromise | PrivacySafe Security Patches</title><meta name="description" content="System CA store on Debian/Ubuntu/Trisquel and derivatives">
-<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>document.documentElement.className+=" js"</script></head>
+<link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
 <body class="docs">
 <a class="skip-link" href="#top">Skip to main content</a>
 <header class="topbar">
@@ -81,6 +83,7 @@
 <li><a href="../heif/index.html">libheif</a></li>
 <li><a href="../linux-kernel/index.html">Linux kernel</a></li>
 <li><a href="../node/index.html">Node.js</a></li>
+<li><a href="../openssh-musl/index.html">OpenSSH musl password bypass</a></li>
 <li><a href="../openssl/index.html">OpenSSL</a></li>
 <li><a href="../php/index.html">PHP2Shell</a></li>
 <li><a href="../php/detect/index.html">PHP2Shell detection rules</a></li>
@@ -101,6 +104,7 @@
 <li><a href="../roundcube/index.html">Roundcube</a></li>
 <li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
 <li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../wordpress-upgrade/index.html">WordPress upgrade window</a></li>
 <li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
 <li><a href="../zammad/index.html">Zammad</a></li>
 </ul></details>
@@ -116,6 +120,7 @@
 <li><a href="../litellm/index.html">LiteLLM</a></li>
 <li><a href="../nextjs/index.html">Next.js Server Actions</a></li>
 <li><a href="../openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
 <li><a href="../sagemaker/index.html">SageMaker SDK</a></li>
 <li><a href="../sentry/index.html">Sentry for Next.js</a></li>
 <li><a href="../storybook/index.html">Storybook</a></li>
@@ -130,6 +135,14 @@
 <li>Proves the store rejects all of them. The script embeds the 16 published intermediate certificates and checks each against its published SHA-256 before using it. After every change it tests all 16 against the bundle file, the hash directory, and OpenSSL's built-in default paths. It also checks the bundle holds none of the affected certificates, because Go and GnuTLS will treat a lone intermediate in the store as a trust anchor.</li>
 </ol>
 <p>The script is designed so it can't break your CA store or leave you exposed by mistake. It checks that the rebuilt bundle lost only affected certificates and still has hash links, and rolls back if not. If <code>TEST_HOSTS</code> is set, it checks those hosts before and after so you see any collateral breakage immediately. <code>cleanup</code> never removes the distrust unless the store still rejects every compromised intermediate without it, and re-applies it if not.</p>
+<h3 id="emudhra-eight-more-intermediates-revoked-7-november">eMudhra: eight more intermediates revoked, 7 November</h3>
+<p>eMudhra's <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2083449#c82">full incident report</a>, posted 10 November, revoked eight further intermediates on 7 November: EM DV/OV/EV TLS CA - G2B and G2C, and EM OV CS CA - G2B and G2C. These are a different, lesser kind of finding from the original eight, and the script treats them differently:</p>
+<ul>
+<li><strong>Not a proven weak key.</strong> The original eight are ECDSA P-384 keys with a private scalar under 256, reproducible by anyone from the public certificate; eMudhra revoked them as <code>cACompromise</code>. These eight are RSA-4096, and eMudhra's report states their signatures still verify correctly against the certified modulus. The concern is that the same 2025 ceremony handled the private key material in the volatile memory of a Python process during a wrap/unwrap step, so eMudhra &quot;cannot positively demonstrate&quot; this met its own CPS §6.2.6 key-handling rule, not that the keys are mathematically weak or have been recovered by anyone. They were revoked as <code>cessationOfOperation</code>, not <code>cACompromise</code>.</li>
+<li><strong>Detected, but not self-tested.</strong> The script now flags all eight by their own certificate SHA-256 fingerprint, taken directly from eMudhra's report (<code>check</code> and <code>status</code> report them the same way as the original eight). They are not part of the embedded self-test, the per-host <code>TEST_HOSTS</code> verification, or the leaked-key proof: those are specific to the original eight's embedded certificates and their recovered scalars, which don't exist for this set. A root program has not yet independently reproduced or corroborated these eight fingerprints the way Mozilla and others did for the first eight; they come from eMudhra's own report alone.</li>
+<li><strong>Their roots stay trusted.</strong> The original eight chain to emSign ECC Root CA - G3 and Sectigo's AAA Certificate Services, both of which this script distrusts outright. These eight chain to emSign Root TLS CA - G1 (the six TLS ones) and emSign Root CS CA - G2 (the two code-signing ones). Neither root is distrusted: G1 is still issuing real certificates for a university federation (InCommon) under an agreed transition, due to stop by <strong>16 November 2026</strong>, and root programs have explicitly left it trusted &quot;at this time&quot;. Distrusting G1 now would break those subscribers' valid certificates along with the compromised ones. <code>apply</code> removes only the eight specific certificates it finds in your store, the same way it already does for copies of the original eight under <code>/usr/local/share/ca-certificates</code> or <code>/etc/ssl/certs</code>.</li>
+</ul>
+<p>If <code>check</code> or <code>status</code> reports one of these eight as trusted, treat it the same as the original eight: it shouldn't be in your store, and <code>apply</code> will remove it. If you're specifically relying on G1-issued certificates (for example, from InCommon) past 16 November, watch for their migration to a replacement CA; this script does nothing to that root itself.</p>
 <h3 id="emudhra-quick-start">eMudhra quick start</h3>
 <ol>
 <li>
@@ -463,8 +476,8 @@ sudo ./emudhra-macos-mitigate.sh rollback
 <li><a href="https://access.redhat.com/security/cve/CVE-2026-111943"><span class="nw">CVE-2026-111943</span></a>: 163 advisories, 2026-10-20 to 2026-11-03; 159 important, 4 critical; by stream, RHEL 8 21, RHEL 9 42, RHEL 10 21, Hummingbird 50, RHEL 8 (el8ost) 1, RHEL 8 (el8sat) 1, RHEL 9 (el9ost) 2, RHEL 9 (el9sat) 3, container image 22; most often <code>rhc</code> (10), <code>grafana-pcp</code> (9), <code>grafana</code> (9), <code>golang</code> (7). All of them: <a href="https://access.redhat.com/security/cve/CVE-2026-111943">Red Hat's CVE page</a>.</li>
 </ul>
 <!-- rhsa:end -->
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><p class="edit"><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/pki/README.md">Edit this page on Codeberg</a></p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../drupal/index.html">&larr; Drupal</a><a rel="next" href="../ghostaction/index.html">GhostAction &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#emudhra-intermediate-ca-compromise-mitigation">eMudhra Intermediate CA Compromise Mitigation</a></li><li class="l3"><a href="#emudhra-quick-start">eMudhra quick start</a></li><li class="l3"><a href="#emudhra-commands">eMudhra commands</a></li><li class="l3"><a href="#emudhra-environment-check">eMudhra environment check</a></li><li class="l3"><a href="#emudhra-patch-detection">eMudhra patch detection</a></li><li class="l3"><a href="#emudhra-configuration">eMudhra configuration</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#emudhra-on-macos">eMudhra on macOS</a></li><li class="l3"><a href="#macos-quick-start">macOS quick start</a></li><li class="l3"><a href="#macos-commands">macOS commands</a></li><li class="l3"><a href="#macos-on-hosted-runners">macOS on hosted runners</a></li><li class="l3"><a href="#macos-configuration">macOS configuration</a></li><li class="l3"><a href="#macos-before-you-run-it">macOS before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../drupal/index.html">&larr; Drupal</a><a rel="next" href="../ghostaction/index.html">GhostAction &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#emudhra-intermediate-ca-compromise-mitigation">eMudhra Intermediate CA Compromise Mitigation</a></li><li class="l3"><a href="#emudhra-eight-more-intermediates-revoked-7-november">eMudhra: eight more intermediates revoked, 7 November</a></li><li class="l3"><a href="#emudhra-quick-start">eMudhra quick start</a></li><li class="l3"><a href="#emudhra-commands">eMudhra commands</a></li><li class="l3"><a href="#emudhra-environment-check">eMudhra environment check</a></li><li class="l3"><a href="#emudhra-patch-detection">eMudhra patch detection</a></li><li class="l3"><a href="#emudhra-configuration">eMudhra configuration</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#emudhra-on-macos">eMudhra on macOS</a></li><li class="l3"><a href="#macos-quick-start">macOS quick start</a></li><li class="l3"><a href="#macos-commands">macOS commands</a></li><li class="l3"><a href="#macos-on-hosted-runners">macOS on hosted runners</a></li><li class="l3"><a href="#macos-configuration">macOS configuration</a></li><li class="l3"><a href="#macos-before-you-run-it">macOS before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">
@@ -566,7 +579,7 @@ Join Telegram group
 <a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
 <a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
 </nav>
-<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="https://privacysafe.app/weblabels.html" rel="jslicense nofollow noopener noreferrer" target="_blank">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="../weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
 </div>
 </div>
 </footer>

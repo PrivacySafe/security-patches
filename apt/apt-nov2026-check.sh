@@ -54,12 +54,15 @@
 #                    caches that have more than one hard link (a healthy cache has
 #                    none). A clean hunt is not clearance. Exit 0 = nothing found, 1 =
 #                    a lead, 2 = it could not read what it needs.
-#   mitigate [--dry-run]   (root) changes the host. Writes the file
+#   mitigate [--dry-run] [--force]   (root) changes the host. Writes the file
 #                    /etc/apt/apt.conf.d/99psf-cve-2026-109518-retries with
 #                    Acquire::Retries "0", then asks apt-config for the effective value.
 #                    If another file or setting overrides it, the new file is removed
-#                    again and the command says which one. Nothing else is touched. This
-#                    is a stopgap, not the fix: update APT, then run rollback.
+#                    again and the command says which one. If something else already
+#                    exists at that exact path (not written by this script), mitigate
+#                    stops and asks you to look at it; --force replaces it anyway.
+#                    Nothing else is touched. This is a stopgap, not the fix: update
+#                    APT, then run rollback.
 #   rollback [--dry-run]   (root) removes the file that mitigate wrote (and only that
 #                    file; --force removes it even if someone edited it).
 #   version          print the script version.
@@ -83,7 +86,7 @@ set -uo pipefail
 
 SCRIPT_NAME="apt-nov2026-check.sh"
 SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-04"
+SCRIPT_DATE="2026-11-05"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/apt}"
 APT_CONF_DIR="${APT_CONF_DIR:-/etc/apt/apt.conf.d}"
@@ -268,6 +271,9 @@ cmd_check() {
     fi
     local px
     px="$(apt-config dump 2>/dev/null | grep -iE '^Acquire::https?::Proxy ' | grep -v '""' || true)"
+    # a proxy URL can carry a username and password (http://user:pass@host:port/); redact them so
+    # this script's own output is never the thing that leaks a credential
+    px="$(sed -E 's#(://)[^/@[:space:]"]+@#\1[redacted]@#g' <<<"$px")"
     [[ -z "$px" ]] || inf "A proxy is configured: $(tr '\n' ' ' <<<"$px")"
 
     step "Verdict"
@@ -294,7 +300,7 @@ cmd_check() {
 # ---------- hunt ----------------------------------------------------------------------------
 cmd_hunt() {
     read_apt || { step "APT"; inf "APT is not installed here, so there is nothing to look at."; return 0; }
-    local arch lists nlead=0 ndeb=0 hl idx key sha want f tmp
+    local arch lists nlead=0 ndeb=0 nincomplete=0 hl idx key sha want f tmp
     arch="${ARCHIVES_DIR:-$(apt-config shell A Dir::Cache::archives/d 2>/dev/null | sed -n "s/^A='\(.*\)'$/\1/p")}"
     lists="${LISTS_DIR:-$(apt-config shell L Dir::State::lists/d 2>/dev/null | sed -n "s/^L='\(.*\)'$/\1/p")}"
     [[ -n "$arch" ]] || arch=/var/cache/apt/archives/
@@ -310,9 +316,9 @@ cmd_hunt() {
     local debs
     debs="$(find "$arch" -maxdepth 1 -type f -name '*.deb' 2>/dev/null | sort || true)"
     if [[ -z "$debs" ]]; then inf "There are no cached packages to compare (APT removes them after an install on many systems)."
-    elif ! have dpkg-deb || ! have sha256sum; then inf "dpkg-deb or sha256sum is missing, so the packages cannot be compared."
+    elif ! have dpkg-deb || ! have sha256sum; then inf "dpkg-deb or sha256sum is missing, so the packages cannot be compared."; nincomplete=$((nincomplete + 1))
     else
-        tmp="$(mktemp "${TMPDIR:-/tmp}/apt-psf.XXXXXX")" || { inf "No temporary file; skipped."; tmp=""; }
+        tmp="$(mktemp "${TMPDIR:-/tmp}/apt-psf.XXXXXX")" || { inf "No temporary file; skipped."; tmp=""; nincomplete=$((nincomplete + 1)); }
         if [[ -n "$tmp" ]]; then
             PSF_TMP+=("$tmp")
             local files nread=0
@@ -327,14 +333,14 @@ cmd_hunt() {
                 /^Package: /{p=$2} /^Version: /{v=$2} /^Architecture: /{a=$2} /^SHA256: /{s=$2}
                 /^$/ { if (p != "" && s != "") print p "|" v "|" a "\t" s; p=v=a=s="" }
                 END  { if (p != "" && s != "") print p "|" v "|" a "\t" s }' > "$tmp"
-            if [[ ! -s "$tmp" ]]; then inf "No package index could be read, so the cached packages cannot be compared."
+            if [[ ! -s "$tmp" ]]; then inf "No package index could be read, so the cached packages cannot be compared."; nincomplete=$((nincomplete + 1))
             else
                 while IFS= read -r f; do
                     ndeb=$((ndeb + 1))
                     key="$(dpkg-deb -f "$f" Package Version Architecture 2>/dev/null | awk -F': ' '{print $2}' | paste -sd'|' || true)"
                     sha="$(sha256sum "$f" | cut -d' ' -f1)"
                     want="$(awk -F'\t' -v k="$key" '$1 == k {print $2; exit}' "$tmp")"
-                    if [[ -z "$want" ]]; then inf "$(basename "$f"): the index no longer lists this version, so it cannot be compared."
+                    if [[ -z "$want" ]]; then inf "$(basename "$f"): the index no longer lists this version, so it cannot be compared."; nincomplete=$((nincomplete + 1))
                     elif [[ "$want" == "$sha" ]]; then ok "$(basename "$f") matches the SHA-256 in the index."
                     else bad "$(basename "$f") has SHA-256 ${sha}, but the index lists ${want} for the same package, version and architecture"; nlead=$((nlead + 1)); fi
                 done <<<"$debs"
@@ -347,6 +353,10 @@ cmd_hunt() {
         bad "${nlead} lead(s). Treat the host as possibly altered if the package was installed over http: reinstall it from a trusted source and check what it put on disk."
         return 1
     fi
+    if [[ $nincomplete -gt 0 ]]; then
+        caution "${nincomplete} check(s) above could not be completed. That is not the same as a clean result: it means hunt could not look, not that it looked and found nothing. Install dpkg-deb and sha256sum if either is missing, make sure APT's package index is readable, and run hunt again."
+        return 2
+    fi
     ok "Nothing found. APT's advisories name no indicator, so this is not clearance: it only means the two things this hunt can see are in order."
     return 0
 }
@@ -355,8 +365,8 @@ cmd_hunt() {
 manifest_add() { mkdir -p "$STATE_DIR" && printf '%s\t%s\t%s\n' "$(date -u +%FT%TZ)" "$1" "$2" >> "$STATE_DIR/manifest"; }
 
 cmd_mitigate() {
-    local dry=0 a path content tmp eff
-    for a in "$@"; do case "$a" in --dry-run) dry=1 ;; *) die "Unknown option: $a (mitigate [--dry-run])" ;; esac; done
+    local dry=0 force=0 a path content tmp eff
+    for a in "$@"; do case "$a" in --dry-run) dry=1 ;; --force) force=1 ;; *) die "Unknown option: $a (mitigate [--dry-run] [--force])" ;; esac; done
     read_apt || die "APT is not installed here (apt-config and dpkg-query are needed)."
     path="${APT_CONF_DIR}/${DROPIN}"
     step "Stopgap: Acquire::Retries \"0\""
@@ -377,6 +387,8 @@ Acquire::Retries \"0\";
     [[ -d "$APT_CONF_DIR" ]] || die "${APT_CONF_DIR} does not exist."
     if [[ -f "$path" ]] && grep -qF "$DROPIN_MARK" "$path" && [[ "$(cat "$path")" == "${content%$'\n'}" ]]; then
         ok "${path} is already in place."
+    elif [[ -f "$path" ]] && ! grep -qF "$DROPIN_MARK" "$path" && [[ $force -eq 0 ]]; then
+        die "${path} already exists and was not written by this script: look at it, or add --force to replace it."
     else
         tmp="$(mktemp "${APT_CONF_DIR}/.psf-apt.XXXXXX")" || die "cannot create a file in ${APT_CONF_DIR}"
         PSF_TMP+=("$tmp")

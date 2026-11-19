@@ -89,7 +89,7 @@ Ubuntu rates it high priority. A distribution built on Debian or Ubuntu has APT 
 |---|---|
 | `check` (default) | Read-only. Reads the installed APT version and judges it against the fixed releases, reads the effective `Acquire::Retries` and redirect settings through `apt-config`, and lists the repositories this host downloads from, with how many are plain http. Exit `0` when APT is fixed, when it is not fixed but one of the two conditions is off (a warning says so), or when APT is not installed; `1` when it is vulnerable and both conditions are on; `2` when it cannot be judged |
 | `hunt` | Read-only. Looks for what the flaw would leave behind, because the advisories name no indicator: a cached package whose SHA-256 differs from the index's for the same name, version and architecture, and any file in the package and list caches with more than one hard link (a healthy cache has none). Exit `0` nothing found, `1` a lead, `2` it could not read what it needs |
-| `mitigate [--dry-run]` | **Changes the host (root).** Writes `/etc/apt/apt.conf.d/99psf-cve-2026-109518-retries` with `Acquire::Retries "0";`, then asks `apt-config` for the effective value. If another file or setting overrides it, the new file is removed again and the command says so. Nothing else is touched, and nothing is restarted |
+| `mitigate [--dry-run] [--force]` | **Changes the host (root).** Writes `/etc/apt/apt.conf.d/99psf-cve-2026-109518-retries` with `Acquire::Retries "0";`, then asks `apt-config` for the effective value. If another file or setting overrides it, the new file is removed again and the command says so. If something else already exists at that exact path and was not written by this script, `mitigate` stops and asks you to look at it; `--force` replaces it anyway. Nothing else is touched, and nothing is restarted |
 | `rollback [--dry-run] [--force]` | Removes the file `mitigate` wrote, and only that file. `--force` removes it even if someone edited it |
 | `version` | Prints the script version |
 
@@ -103,6 +103,7 @@ Commands that change the host need root. Run them with `sudo` from an admin acco
 - **Retries** are the explicit `Acquire::Retries` that `apt-config` reports, which merges `/etc/apt/apt.conf.d` and `/etc/apt/apt.conf`. When none is set, the default of the installed APT applies: 3 from APT 2.4 on, 0 before. A `-o Acquire::Retries=...` on a command line, and a script that sets it, are not visible to the check.
 - **Redirects** are on unless `Acquire::http::AllowRedirect` and `Acquire::https::AllowRedirect` are both turned off. Turning redirects off also removes a condition, but it breaks mirrors that answer with a redirect, so `mitigate` does not do it.
 - **Sources** are read from `apt-get indextargets`. A source over http can be altered by anyone on the network path. An https source is out of reach of an ordinary on-path attacker, but a malicious mirror, or a proxy that inspects TLS, is in scope in the advisories.
+- **A configured proxy** is reported if one is set (`Acquire::http::Proxy` or `Acquire::https::Proxy`), because a proxy is explicitly in scope for this flaw. A username and password embedded in the proxy URL are redacted before they are printed, so this script's own output is never the thing that discloses a credential.
 
 ## How to read the result
 
