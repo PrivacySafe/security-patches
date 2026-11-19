@@ -1,16 +1,20 @@
-# Ruby and GitLab: Regexp CVEs
+# Ruby and GitLab: Regexp and String case conversion CVEs
 
 Part of the [PrivacySafe Security Patches](../README.md) collection.
 
-## Ruby and GitLab Regexp Check
+## Ruby and GitLab Regexp and case conversion check
 
 **Script:** [`ruby/ruby-regexp-oct2026-check.sh`](ruby-regexp-oct2026-check.sh)
 
 On 23 October 2026 Ruby released [4.0.9, 3.4.12 and 3.3.13](https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/), which fix memory corruption bugs in Onigmo, the engine behind Ruby's regular expressions. GitLab showed that a crafted pattern can turn them into remote code execution on a GitLab server, and published four CVEs: **CVE-2026-89078**, **CVE-2026-93577**, **CVE-2026-97229** and **CVE-2026-110264**. Two of them, CVE-2026-97229 and CVE-2026-110264, need no login, and CVE-2026-110264 affects every GitLab version from 7.0.
 
-A Ruby application is exposed if it compiles a pattern an attacker controls, through `Regexp.new`, `Regexp.compile`, `Regexp.union` or a literal such as `/#{input}/`. Patterns your own developers wrote are not affected. Ruby requested no CVEs of its own, so a scanner that follows Ruby CVEs shows nothing: follow the GitLab CVEs instead.
+On 18 November 2026 Ruby released [4.0.10, 3.4.13 and 3.3.14](https://www.ruby-lang.org/en/news/2026/11/18/multiple-vulnerabilities-in-regexp-and-string/) for seven more flaws in the same two areas, reported directly to Ruby rather than through GitLab, so none has a CVE yet: Ruby's advisory tracks them by GHSA ID until one is assigned to each. Five are in the regex engine (a double free compiling a character class intersection, two heap buffer overflows, an integer overflow and two out-of-bounds reads); two are in string case conversion (`String#upcase`/`downcase`/`capitalize`/`swapcase` and their bang forms), a one-byte overflow and an integer overflow when the converted result exceeds 4 GiB. Three are rated critical, three high, one moderate, and Ruby says it has seen working proof-of-concept code reaching remote code execution for six of the seven.
 
-`Regexp.timeout` and length limits do not protect against these bugs, so the fix is to upgrade Ruby and GitLab. `check` finds what needs upgrading, `scan` finds applications that compile patterns from strings, and `hunt` looks for crashes that look like exploitation.
+A Ruby application is exposed to the regex half if it compiles a pattern an attacker controls, through `Regexp.new`, `Regexp.compile`, `Regexp.union` or a literal such as `/#{input}/`; patterns your own developers wrote are not affected. The case-conversion half has no such narrowing: calling `.upcase`, `.downcase`, `.capitalize` or `.swapcase` on an attacker-influenced string is reached by code far more ordinary than pattern compilation, so an unfixed Ruby should be treated as exposed to it by default. Neither Ruby's October fixes nor its November fixes got a CVE of their own: the October ones are tracked by GitLab's four CVEs, the November ones by their GHSA IDs, so a scanner that follows Ruby CVEs shows nothing for either batch.
+
+`Regexp.timeout` and length limits do not protect against any of these bugs, so the fix is to upgrade Ruby (and, for the October batch's GitLab CVEs, GitLab too). `check` finds what needs upgrading and reports whether it's fixed for October, November, both or neither; `scan` finds applications that compile patterns from strings, which narrows down the regex half only; and `hunt` looks for crashes that look like exploitation.
+
+Self-hosted software that bundles its own Ruby needs that product's own update on its own schedule. As of 19 November 2026, public tracking (https://verialabs.com/ruby2shell/) showed the current release of GitLab, GitHub Enterprise Server, Mastodon, OpenProject, Discourse and Chatwoot all still running an unfixed Ruby. This script checks GitLab's and Discourse's bundled Ruby directly against the November thresholds; it has no install detection for GitHub Enterprise Server, Mastodon, OpenProject or Chatwoot, so check those directly against their own vendor's advisory. A few trackers have started calling the November batch "Ruby2Shell"; that name is not Ruby's own and this script does not rely on it.
 
 ### Ruby quick start
 
@@ -60,7 +64,7 @@ sha256sum ruby-regexp-oct2026-check.sh
 curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/ruby/ruby-regexp-oct2026-check.sh | sha256sum
 ```
 
-**If you run GitLab, upgrade it first.** The fixed releases are 18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1. GitLab patched the Ruby it ships, so upgrading the system `ruby` package does nothing for a GitLab install, and upgrading GitLab is the whole fix for it.
+**If you run GitLab, upgrade it first.** For GitLab's own CVE-2026-110264, the fixed releases are 18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1. GitLab patched the Ruby it ships for that one, so upgrading the system `ruby` package does nothing for a GitLab install, and upgrading GitLab is the whole fix for it. That list says nothing about the November batch: as of 19 November 2026 no GitLab release bundles Ruby 4.0.10, 3.4.13 or 3.3.14, so this script checks GitLab's embedded Ruby binary directly to say whether that half is fixed, rather than relying on a GitLab version number that doesn't yet exist.
 
 ### Ruby commands
 
@@ -76,7 +80,7 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/rub
 1. GitLab. Omnibus installs under `/opt/gitlab`, source installs under `/home/git/gitlab`, and `gitlab/gitlab-ce` and `gitlab/gitlab-ee` images in Docker or Podman. The version comes from GitLab's own `VERSION` file or version manifest, or from the image tag. An image tagged `latest` can't be judged and is reported as unknown.
 2. Discourse. The Docker launcher under `/var/discourse`, a bare-metal checkout under `/var/www/discourse` (or a user home, or `/srv/discourse`), and `discourse/discourse` and `discourse/base` images. Discourse has published no Discourse-version fix for these CVEs, so each install is judged by the Ruby it runs: a bare-metal checkout by its `.ruby-version`, the Docker launcher by the running web process, since that Ruby lives inside the container. Discourse compiles patterns from admin and user input (watched words, search, theme and automation settings), so an unfixed Ruby is reachable. This is the Ruby Regexp issue, separate from the Discourse `libheif` image-upload RCE, which is fixed by rebuilding the container, not by upgrading Ruby.
 3. Ruby runtimes on disk. Everything on `PATH`, `/usr/bin/ruby*`, `/usr/local/bin/ruby`, chruby's `/opt/rubies`, and every user's rbenv, rvm, asdf, mise and chruby installs.
-4. Vendor-bundled Rubies. Rubies that ship inside another product, under `/opt/*/embedded` (Chef, Fluentd, Vagrant and others) or `/opt/puppetlabs`, are listed but not judged by version: their fix comes from that vendor's update. GitLab's embedded Ruby is judged by the GitLab version, since GitLab patched it.
+4. Vendor-bundled Rubies. Rubies that ship inside another product, under `/opt/*/embedded` (Chef, Fluentd, Vagrant and others) or `/opt/puppetlabs`, are listed but not judged by version: their fix comes from that vendor's update. GitLab's embedded Ruby is the one exception: it's judged both ways. GitLab's own product version is checked against GitLab's fixed releases for its own CVE-2026-110264 (above), and the embedded Ruby binary is also checked directly against the November thresholds, since no GitLab release bundles the November fix yet and GitLab's fixed-release list only ever tracked the October CVEs.
 5. Running processes. Every process whose binary is a Ruby or that has `libruby` loaded, which catches Puma, Sidekiq and Unicorn under their own names, with its user and systemd unit. A process whose Ruby binary or `libruby` was replaced on disk since it started still runs the old code until you restart it.
 
 The script reads each Ruby version from the description string compiled into the binary or into the `libruby` it links. It never executes a Ruby binary, so root never runs one planted in a user's version manager.
@@ -86,10 +90,10 @@ The script reads each Ruby version from the description string compiled into the
 For each runtime, three checks run in order, and the first that applies decides:
 
 1. `FIXED_BUILDS`. Distro builds you list as fixed, for a backport the script doesn't know about. A build only counts for the same upstream version.
-2. Changelog. For a Ruby installed from a Debian or Ubuntu package, the changelog of the interpreter package or of its `libruby` package names one of the four GitLab CVEs. The changelog only counts if its newest entry is the installed version. Because Ruby requested no CVEs, a distro may describe the fix without naming them, if you know your build is fixed, add it to `FIXED_BUILDS`.
-3. Upstream version. The runtime is at or above the fixed release for its line: 3.3.13, 3.4.12 or 4.0.9. Older lines read as not fixed: move to a fixed line. A line newer than 4.0 reads as unknown: check that the build includes ruby/ruby#13332, #19020 and #16801.
+2. Changelog. For a Ruby installed from a Debian or Ubuntu package, the changelog of the interpreter package or of its `libruby` package names one of the seven November GHSA IDs (which counts as fixed for October too, since upstream's November release is built on top of October's fix) or, failing that, one of the four October GitLab CVEs (which counts as fixed for October only, not November). The changelog only counts if its newest entry is the installed version. Because neither batch has a CVE of its own, a distro may describe either fix without naming an identifier the script recognizes; if you know your build is fixed, add it to `FIXED_BUILDS`.
+3. Upstream version. The runtime is at or above 3.3.14, 3.4.13 or 4.0.10 for its line: fixed for both batches. At or above 3.3.13, 3.4.12 or 4.0.9 but below that: fixed for October, still exposed to November. Below both: exposed to both. A line newer than 4.0 reads as unknown: check that the build includes both the October and November fixes.
 
-GitLab is judged the same way against its fixed release for each minor line. A minor line older than 18.11 moves to a fixed line. A line newer than 19.5 shipped after the fixes and reads as fixed.
+GitLab's own product version is judged the same way against its fixed release for each minor line, for its own CVE-2026-110264: a minor line older than 18.11 moves to a fixed line, and a line newer than 19.5 shipped after the October fix and reads as fixed for it. That check says nothing about the November batch; GitLab's embedded Ruby binary is checked separately and directly against the November thresholds, since GitLab has not (as of this writing) shipped a release that bundles Ruby 4.0.10, 3.4.13 or 3.3.14.
 
 ### Ruby scan grades
 
@@ -121,7 +125,8 @@ A match tells you exactly where to look. Native gems crash Ruby too, and `Regexp
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `RUBY_FIXED_33`, `RUBY_FIXED_34`, `RUBY_FIXED_40` | `3.3.13`, `3.4.12`, `4.0.9` | First fixed release for each line |
+| `RUBY_FIXED_33`, `RUBY_FIXED_34`, `RUBY_FIXED_40` | `3.3.14`, `3.4.13`, `4.0.10` | First release fixed for both the October and November batches, for each line |
+| `RUBY_OCT_FIXED_33`, `RUBY_OCT_FIXED_34`, `RUBY_OCT_FIXED_40` | `3.3.13`, `3.4.12`, `4.0.9` | First release fixed for October only, for each line |
 | `FIXED_BUILDS` | *(empty)* | Extra fixed distro builds, space-separated full versions |
 | `GITLAB_FIXED` | `18.11.13 19.0.10 19.1.9 19.2.9 19.3.6 19.4.3 19.5.1` | First fixed GitLab release for each minor line |
 | `GITLAB_ROOT` | `/opt/gitlab` | Where Omnibus GitLab is installed |
@@ -136,12 +141,12 @@ A match tells you exactly where to look. Native gems crash Ruby too, and `Regexp
 
 ## Before you run it
 
-- This is a check, not a mitigation. Upgrade GitLab, upgrade Ruby to 4.0.9, 3.4.12 or 3.3.13, and restart what runs on it. Ruby 3.3 normally gets only security fixes. Ruby says it included these as an exception.
-- No setting protects you. `Regexp.timeout` and length limits don't. Until you can upgrade, the protective fix is in the application: don't compile patterns from untrusted input.
-- GitLab is fixed by upgrading GitLab , not by upgrading the system Ruby.
-- Vendor-bundled Rubies need the vendor's update. The script lists them so you know they exist.
-- Containers get their own fix. Each image carries its own Ruby. Rebuild on `ruby:3.3.13`, `3.4.12`, `4.0.9` or later. The script checks GitLab images by tag but can't see Rubies inside other images.
-- `scan` is a grep. It misses patterns built across several lines or in another file, and it can flag interpolated strings that aren't regexps. Use it to find where to look, not as a verdict.
+- This is a check, not a mitigation. Upgrade GitLab, upgrade Ruby to 3.3.14, 3.4.13 or 4.0.10 (the release that fixes both batches), and restart what runs on it. Ruby 3.3 normally gets only security fixes; Ruby included both batches as an exception.
+- No setting protects you. `Regexp.timeout` and length limits don't help the regex bugs, and there is no setting at all for the case-conversion bugs, since they trigger on ordinary string methods. Until you can upgrade, the only protective fix available for the regex half is in the application: don't compile patterns from untrusted input. The case-conversion half has no equivalent application-level mitigation; upgrading Ruby is the only fix.
+- GitLab is fixed for its own CVE-2026-110264 by upgrading GitLab, not by upgrading the system Ruby. GitLab has not yet shipped a release bundling the November Ruby fix at all, so no GitLab upgrade currently closes that half; track GitLab's own advisories.
+- Vendor-bundled Rubies need the vendor's update. The script lists most of them so you know they exist, and checks GitLab's and Discourse's bundled Ruby directly. It has no install detection for GitHub Enterprise Server, Mastodon, OpenProject or Chatwoot, all of which bundle Ruby the same way; as of 19 November 2026 all were still confirmed running an unfixed Ruby.
+- Containers get their own fix. Each image carries its own Ruby. Rebuild on `ruby:3.3.14`, `3.4.13`, `4.0.10` or later. The script checks GitLab images by tag but can't see Rubies inside other images.
+- `scan` is a grep, and only narrows down the regex-compilation half. It misses patterns built across several lines or in another file, and it can flag interpolated strings that aren't regexps. Use it to find where to look, not as a verdict. It has no equivalent for the case-conversion half, since case folding is too ordinary an operation to usefully triage by call site.
 - GNU/Linux only. Process inspection reads `/proc`.
 
 <!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-root="../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
-<title>psf-ruby-regexp-oct2026-check(8) | PrivacySafe Security Patches</title><meta name="description" content="Ruby Regexp compilation fixes, October 2026: read-only checker">
+<title>psf-ruby-regexp-oct2026-check(8) | PrivacySafe Security Patches</title><meta name="description" content="Ruby Regexp and String case conversion fixes, October+November 2026:">
 <link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
 document.documentElement.className+=" js"
 // @license-end</script></head>
@@ -127,10 +127,50 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Manual pages</a> / <span>psf-ruby-regexp-oct2026-check(8)</span></nav>
-<article class="doc"><h1>psf-ruby-regexp-oct2026-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/ruby/ruby-regexp-oct2026-check.sh</code>. Tool page: <a href="../ruby/index.html">Ruby and GitLab regexp</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/ruby/ruby-regexp-oct2026-check.sh">Source</a>. With the package installed: <code>man psf-ruby-regexp-oct2026-check</code>.</p><pre class="manual">Ruby Regexp compilation fixes, October 2026: read-only checker  (v1)
-GitLab CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264
-Fixed in Ruby 4.0.9, 3.4.12 and 3.3.13 (23 Oct 2026) and in GitLab
-18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1
+<article class="doc"><h1>psf-ruby-regexp-oct2026-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/ruby/ruby-regexp-oct2026-check.sh</code>. Tool page: <a href="../ruby/index.html">Ruby and GitLab regexp</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/ruby/ruby-regexp-oct2026-check.sh">Source</a>. With the package installed: <code>man psf-ruby-regexp-oct2026-check</code>.</p><pre class="manual">Ruby Regexp and String case conversion fixes, October+November 2026:
+read-only checker  (v2)
+
+October 2026: GitLab CVE-2026-89078, CVE-2026-93577, CVE-2026-97229,
+CVE-2026-110264. Fixed in Ruby 4.0.9, 3.4.12 and 3.3.13 (23 Oct 2026) and in
+GitLab 18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1.
+
+November 2026: seven more flaws in the same two areas, reported to Ruby
+directly rather than through GitLab, so none has a CVE yet (one has been
+requested for each; Ruby&#x27;s advisory says to track them by GHSA ID until
+then): GHSA-34m4-m9fh-gqp5 and GHSA-87fm-7w84-j2px (case conversion, one a
+one-byte overflow, the other an integer overflow when the converted string
+exceeds 4 GiB); GHSA-7x2q-68qv-6p8x (double free compiling a character
+class intersection), GHSA-3p8q-wmhx-vm2w (compiled-program size overflow),
+GHSA-7whj-cfh7-xgm4 (Regexp#to_s), GHSA-wpqw-5qxg-m68r and
+GHSA-pvgc-g7gj-pv6h (case-insensitive matching and backreferences, both
+out-of-bounds reads). Three are rated critical, three high, one moderate;
+Ruby says it has seen working proof-of-concept code reaching remote code
+execution for six of the seven (every one except the backreference read,
+which only discloses memory or crashes the process). Fixed in Ruby 4.0.10,
+3.4.13 and 3.3.14 (18 Nov 2026). A few trackers have started calling this
+batch &quot;Ruby2Shell&quot;; that name is not Ruby&#x27;s own and this script does not
+rely on it.
+
+This batch is broader than October&#x27;s: the case-conversion half is reached
+by String#upcase/downcase/capitalize/swapcase (and their bang forms) on an
+attacker-influenced string, something far more common in ordinary code
+than compiling a user-supplied pattern, and the GHSA-34m4 overflow is
+listed as reachable over the network with no authentication. Treat an
+unfixed Ruby as exposed by default; the regex-compilation half is still the
+one this script&#x27;s &#x27;scan&#x27; command can usefully narrow down.
+
+Self-hosted software that bundles its own Ruby needs that product&#x27;s own
+update, on its own schedule, not just a system Ruby upgrade. As of 19 Nov
+2026, public tracking (https://verialabs.com/ruby2shell/) showed the
+current release of each of these still running an unfixed Ruby: GitLab
+(19.6.0, Ruby 3.3.13), GitHub Enterprise Server (3.22.5, Ruby 4.0.9),
+Mastodon (4.7.5, Ruby 4.0.9), OpenProject (17.9.7, Ruby 4.0.9), Discourse
+(2026.10.1, Ruby 3.4.7) and Chatwoot (4.20.0, Ruby 3.4.4). This script
+checks GitLab&#x27;s and Discourse&#x27;s bundled Ruby directly against the new
+thresholds, since neither&#x27;s own version number says anything about the
+November fix yet; it has no install detection for GitHub Enterprise
+Server, Mastodon, OpenProject or Chatwoot, so check those directly against
+their own vendor&#x27;s advisory.
 
 If this software is helpful, consider a donation to our 501c3 nonprofit:
 https://privacysafe.foundation
@@ -143,10 +183,11 @@ Usage:
                    every running Ruby process (Puma, Sidekiq, Unicorn...),
                    GitLab (Omnibus, source and container installs) and
                    Discourse (Docker launcher and bare-metal installs),
-                   with whether each is fixed. Root optional (root sees
-                   every process). Exit 0 = nothing exposed, 1 = something
-                   unfixed is running or a bundled app is unfixed, 2 =
-                   something couldn&#x27;t be read.
+                   with whether each is fixed for the October batch, the
+                   November batch, both, or neither. Root optional (root
+                   sees every process). Exit 0 = nothing exposed, 1 =
+                   something unfixed is running or a bundled app is
+                   unfixed, 2 = something couldn&#x27;t be read.
   scan             application code that compiles regexps from strings:
                    Regexp.new / Regexp.compile / Regexp.union and
                    interpolated regexp literals, graded by whether the
@@ -169,7 +210,8 @@ This script never executes a Ruby binary. Versions are read from the
 binary&#x27;s contents or from the libruby it links.
 
 Env overrides:
-  RUBY_FIXED_33=3.3.13 RUBY_FIXED_34=3.4.12 RUBY_FIXED_40=4.0.9
+  RUBY_FIXED_33=3.3.14 RUBY_FIXED_34=3.4.13 RUBY_FIXED_40=4.0.10   (fixes both batches)
+  RUBY_OCT_FIXED_33=3.3.13 RUBY_OCT_FIXED_34=3.4.12 RUBY_OCT_FIXED_40=4.0.9   (October only)
   FIXED_BUILDS=&quot;3.3.8-2ubuntu1.2&quot;    distro builds known to carry the fixes
   GITLAB_FIXED=&quot;18.11.13 19.0.10 19.1.9 19.2.9 19.3.6 19.4.3 19.5.1&quot;
   DISCOURSE_ROOT=&quot;/var/discourse&quot;   where the Docker launcher lives

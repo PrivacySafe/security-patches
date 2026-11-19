@@ -1,10 +1,50 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# Ruby Regexp compilation fixes, October 2026: read-only checker  (v1)
-# GitLab CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264
-# Fixed in Ruby 4.0.9, 3.4.12 and 3.3.13 (23 Oct 2026) and in GitLab
-# 18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1
+# Ruby Regexp and String case conversion fixes, October+November 2026:
+# read-only checker  (v2)
+#
+# October 2026: GitLab CVE-2026-89078, CVE-2026-93577, CVE-2026-97229,
+# CVE-2026-110264. Fixed in Ruby 4.0.9, 3.4.12 and 3.3.13 (23 Oct 2026) and in
+# GitLab 18.11.13, 19.0.10, 19.1.9, 19.2.9, 19.3.6, 19.4.3 and 19.5.1.
+#
+# November 2026: seven more flaws in the same two areas, reported to Ruby
+# directly rather than through GitLab, so none has a CVE yet (one has been
+# requested for each; Ruby's advisory says to track them by GHSA ID until
+# then): GHSA-34m4-m9fh-gqp5 and GHSA-87fm-7w84-j2px (case conversion, one a
+# one-byte overflow, the other an integer overflow when the converted string
+# exceeds 4 GiB); GHSA-7x2q-68qv-6p8x (double free compiling a character
+# class intersection), GHSA-3p8q-wmhx-vm2w (compiled-program size overflow),
+# GHSA-7whj-cfh7-xgm4 (Regexp#to_s), GHSA-wpqw-5qxg-m68r and
+# GHSA-pvgc-g7gj-pv6h (case-insensitive matching and backreferences, both
+# out-of-bounds reads). Three are rated critical, three high, one moderate;
+# Ruby says it has seen working proof-of-concept code reaching remote code
+# execution for six of the seven (every one except the backreference read,
+# which only discloses memory or crashes the process). Fixed in Ruby 4.0.10,
+# 3.4.13 and 3.3.14 (18 Nov 2026). A few trackers have started calling this
+# batch "Ruby2Shell"; that name is not Ruby's own and this script does not
+# rely on it.
+#
+# This batch is broader than October's: the case-conversion half is reached
+# by String#upcase/downcase/capitalize/swapcase (and their bang forms) on an
+# attacker-influenced string, something far more common in ordinary code
+# than compiling a user-supplied pattern, and the GHSA-34m4 overflow is
+# listed as reachable over the network with no authentication. Treat an
+# unfixed Ruby as exposed by default; the regex-compilation half is still the
+# one this script's 'scan' command can usefully narrow down.
+#
+# Self-hosted software that bundles its own Ruby needs that product's own
+# update, on its own schedule, not just a system Ruby upgrade. As of 19 Nov
+# 2026, public tracking (https://verialabs.com/ruby2shell/) showed the
+# current release of each of these still running an unfixed Ruby: GitLab
+# (19.6.0, Ruby 3.3.13), GitHub Enterprise Server (3.22.5, Ruby 4.0.9),
+# Mastodon (4.7.5, Ruby 4.0.9), OpenProject (17.9.7, Ruby 4.0.9), Discourse
+# (2026.10.1, Ruby 3.4.7) and Chatwoot (4.20.0, Ruby 3.4.4). This script
+# checks GitLab's and Discourse's bundled Ruby directly against the new
+# thresholds, since neither's own version number says anything about the
+# November fix yet; it has no install detection for GitHub Enterprise
+# Server, Mastodon, OpenProject or Chatwoot, so check those directly against
+# their own vendor's advisory.
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
@@ -17,10 +57,11 @@
 #                    every running Ruby process (Puma, Sidekiq, Unicorn...),
 #                    GitLab (Omnibus, source and container installs) and
 #                    Discourse (Docker launcher and bare-metal installs),
-#                    with whether each is fixed. Root optional (root sees
-#                    every process). Exit 0 = nothing exposed, 1 = something
-#                    unfixed is running or a bundled app is unfixed, 2 =
-#                    something couldn't be read.
+#                    with whether each is fixed for the October batch, the
+#                    November batch, both, or neither. Root optional (root
+#                    sees every process). Exit 0 = nothing exposed, 1 =
+#                    something unfixed is running or a bundled app is
+#                    unfixed, 2 = something couldn't be read.
 #   scan             application code that compiles regexps from strings:
 #                    Regexp.new / Regexp.compile / Regexp.union and
 #                    interpolated regexp literals, graded by whether the
@@ -43,7 +84,8 @@
 # binary's contents or from the libruby it links.
 #
 # Env overrides:
-#   RUBY_FIXED_33=3.3.13 RUBY_FIXED_34=3.4.12 RUBY_FIXED_40=4.0.9
+#   RUBY_FIXED_33=3.3.14 RUBY_FIXED_34=3.4.13 RUBY_FIXED_40=4.0.10   (fixes both batches)
+#   RUBY_OCT_FIXED_33=3.3.13 RUBY_OCT_FIXED_34=3.4.12 RUBY_OCT_FIXED_40=4.0.9   (October only)
 #   FIXED_BUILDS="3.3.8-2ubuntu1.2"    distro builds known to carry the fixes
 #   GITLAB_FIXED="18.11.13 19.0.10 19.1.9 19.2.9 19.3.6 19.4.3 19.5.1"
 #   DISCOURSE_ROOT="/var/discourse"   where the Docker launcher lives
@@ -62,9 +104,13 @@
 set -euo pipefail
 
 # ---------- config -----------------------------------------------------------
-CVES=(CVE-2026-89078 CVE-2026-93577 CVE-2026-97229 CVE-2026-110264)
-declare -A RUBY_FIXED_DEFAULT=([3.3]=3.3.13 [3.4]=3.4.12 [4.0]=4.0.9)
+OCT_CVES=(CVE-2026-89078 CVE-2026-93577 CVE-2026-97229 CVE-2026-110264)
+NOV_GHSAS=(GHSA-34m4-m9fh-gqp5 GHSA-7x2q-68qv-6p8x GHSA-87fm-7w84-j2px GHSA-wpqw-5qxg-m68r GHSA-3p8q-wmhx-vm2w GHSA-7whj-cfh7-xgm4 GHSA-pvgc-g7gj-pv6h)
+CVES=("${OCT_CVES[@]}" "${NOV_GHSAS[@]}")   # kept for scripts/output that expect one combined list
+declare -A RUBY_FIXED_DEFAULT=([3.3]=3.3.14 [3.4]=3.4.13 [4.0]=4.0.10)       # fixes October AND November
+declare -A RUBY_OCT_FIXED_DEFAULT=([3.3]=3.3.13 [3.4]=3.4.12 [4.0]=4.0.9)   # October only
 ruby_fixed_for() { local n="RUBY_FIXED_${1//./}"; echo "${!n:-${RUBY_FIXED_DEFAULT[$1]:-}}"; }
+ruby_oct_fixed_for() { local n="RUBY_OCT_FIXED_${1//./}"; echo "${!n:-${RUBY_OCT_FIXED_DEFAULT[$1]:-}}"; }
 FIXED_BUILDS="${FIXED_BUILDS:-}"
 GITLAB_FIXED="${GITLAB_FIXED:-18.11.13 19.0.10 19.1.9 19.2.9 19.3.6 19.4.3 19.5.1}"
 SCAN_PATHS="${SCAN_PATHS:-/srv /opt /var/www /home /usr/local/lib}"
@@ -77,10 +123,11 @@ GITLAB_ROOT="${GITLAB_ROOT:-/opt/gitlab}"
 DISCOURSE_ROOT="${DISCOURSE_ROOT:-/var/discourse}"
 DISCOURSE_APP="${DISCOURSE_APP:-/var/www/discourse}"
 SCRIPT_NAME="ruby-regexp-oct2026-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="2.0.0"
+SCRIPT_DATE="2026-11-19"
 SELF="$0"
 RUBY_ADVISORY="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/"
+RUBY_ADVISORY_NOV="https://www.ruby-lang.org/en/news/2026/11/18/multiple-vulnerabilities-in-regexp-and-string/"
 
 # ---------- output -----------------------------------------------------------
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -148,13 +195,16 @@ owner_pkg() { have dpkg-query || return 0; dpkg -S "$(readlink -f "$1")" 2>/dev/
 
 # "<rc>|<explanation>": rc 0 = fixed, 1 = not fixed, 2 = unknown
 ruby_state() {   # <X.Y.Z> [binary] [libruby]
-    local v="$1" bin="${2:-}" lib="${3:-}" mm fixed pkg full f cl p
+    local v="$1" bin="${2:-}" lib="${3:-}" mm fixed oct_fixed pkg full f cl p
     [[ -n "$v" ]] || { echo "2|version unreadable"; return; }
-    mm="${v%.*}"; fixed="$(ruby_fixed_for "$mm")"
+    mm="${v%.*}"; fixed="$(ruby_fixed_for "$mm")"; oct_fixed="$(ruby_oct_fixed_for "$mm")"
 
     # A distro package can carry the fixes under the old upstream version, so
     # a dpkg-owned Ruby is judged on its package first. Debian ships the
     # interpreter as rubyX.Y and the engine (Onigmo included) in librubyX.Y.
+    # A changelog naming a November GHSA implies October's fix too, since
+    # upstream's November release is built on top of October's. One naming
+    # only an October CVE is fixed for October but not November.
     for p in "$bin" "$lib"; do
         [[ -n "$p" ]] || continue
         pkg="$(owner_pkg "$p")"; [[ -n "$pkg" ]] || continue
@@ -171,8 +221,11 @@ ruby_state() {   # <X.Y.Z> [binary] [libruby]
             # Only trust a changelog whose newest entry is the installed build
             [[ "$(zcat "$cl" 2>/dev/null | head -1)" == *"(${full})"* ]] || continue
             local c
-            for c in "${CVES[@]}"; do
+            for c in "${NOV_GHSAS[@]}"; do
                 if zgrep -q "$c" "$cl"; then shopt -u nullglob; echo "0|${pkg} ${full}: changelog lists ${c}"; return; fi
+            done
+            for c in "${OCT_CVES[@]}"; do
+                if zgrep -q "$c" "$cl"; then shopt -u nullglob; echo "1|${pkg} ${full}: changelog lists ${c} (October) but names no November GHSA, so it is not fixed for the November batch"; return; fi
             done
         done
         shopt -u nullglob
@@ -180,15 +233,17 @@ ruby_state() {   # <X.Y.Z> [binary] [libruby]
     done
 
     if [[ -n "$fixed" ]]; then
-        if ver_ge "$v" "$fixed"; then echo "0|${v} >= ${fixed}"; else echo "1|${v} < ${fixed}${pkg:+ (${pkg} ${full}, changelog does not name the GitLab CVEs)}"; fi
+        if ver_ge "$v" "$fixed"; then echo "0|${v} >= ${fixed}"
+        elif [[ -n "$oct_fixed" ]] && ver_ge "$v" "$oct_fixed"; then echo "1|${v}: fixed for October (>= ${oct_fixed}) but < ${fixed}, so still exposed to the November Regexp and case-conversion batch${pkg:+ (${pkg} ${full}, changelog does not name a November GHSA)}"
+        else echo "1|${v} < ${fixed}: exposed to both batches${pkg:+ (${pkg} ${full}, changelog does not name the GitLab CVEs or a November GHSA)}"; fi
         return
     fi
     if ver_ge "$v" "4.1.0"; then
-        echo "2|${v} is newer than the 23 Oct releases: check the build includes ruby/ruby#13332, #19020 and #16801"
+        echo "2|${v} is newer than the 18 Nov releases: check the build includes both the October and November fixes"
     elif [[ -n "${pkg:-}" ]]; then
-        echo "1|${v} (${pkg} ${full}): Ruby ${mm} is an older line and the changelog doesn't name the GitLab CVEs"
+        echo "1|${v} (${pkg} ${full}): Ruby ${mm} is an older line and the changelog doesn't name the GitLab CVEs or a November GHSA"
     else
-        echo "1|${v}: Ruby ${mm} is an older line. Move to 3.3.13, 3.4.12 or 4.0.9"
+        echo "1|${v}: Ruby ${mm} is an older line, before either fix. Move to 3.3.14, 3.4.13 or 4.0.10"
     fi
 }
 
@@ -321,7 +376,7 @@ discourse_installs() {
 
 # ---------- check ------------------------------------------------------------
 cmd_check() {
-    local rc=0 bin v lib ps how vendor gl_bad=0 exposed=0
+    local rc=0 bin v lib ps how vendor gl_bad=0 gl_ruby_bad=0 exposed=0
 
     step "GitLab"
     local kind where gv any=0
@@ -355,7 +410,7 @@ cmd_check() {
         else
             case "$dkind" in
                 docker)   caution "${dkind} ${dwhere}${dv:+  ${dv}}: app Ruby runs inside the web container. Judged by the running process below, or run this script inside it: ${DISCOURSE_ROOT}/launcher enter app" ;;
-                *" image") caution "${dkind} ${dwhere}: rebuild on a base image whose Ruby is 3.3.13, 3.4.12, 4.0.9 or later" ;;
+                *" image") caution "${dkind} ${dwhere}: rebuild on a base image whose Ruby is 3.3.14, 3.4.13, 4.0.10 or later" ;;
                 *)        caution "${dkind} ${dwhere}${dv:+  Discourse ${dv}}: no pinned Ruby found; judged by the system Ruby above and the running process below" ;;
             esac
         fi
@@ -375,11 +430,23 @@ cmd_check() {
         found=1
         v="$(ruby_version "$bin")"; lib="$(libruby_for "$bin")"; vendor="$(vendor_of "$bin")"
         if [[ -z "$v" ]]; then caution "${bin}: version unreadable"; [[ $rc -eq 0 ]] && rc=2; continue; fi
-        case "$vendor" in
-            gitlab) inf "${bin}  ${v}  GitLab's own Ruby, patched by GitLab: judged by the GitLab version above"; continue ;;
-            vendor) caution "${bin}  ${v}  bundled by a vendor: its fix comes from that vendor's update, not from Ruby's version number"; continue ;;
-        esac
+        if [[ "$vendor" == vendor ]]; then
+            caution "${bin}  ${v}  bundled by a vendor: its fix comes from that vendor's update, not from Ruby's version number"; continue
+        fi
         IFS='|' read -r ps how <<<"$(ruby_state "$v" "$bin" "$lib")"
+        if [[ "$vendor" == gitlab ]]; then
+            # GitLab's own CVE-2026-110264 state is judged above by GitLab's product
+            # version (GitLab's own fix for that one). This directly checks the Ruby
+            # binary GitLab bundles against the November thresholds too, since no
+            # GitLab release has bundled that fix yet as of this script's writing,
+            # and GITLAB_FIXED only ever tracked the October CVEs.
+            case $ps in
+                0) ok "${bin}  ${v}  GitLab's own Ruby  $(state_word 0)  (${how})" ;;
+                1) bad "${bin}  ${v}  GitLab's own Ruby  $(state_word 1)  (${how}). GitLab's own CVE-2026-110264 fix (above) is separate from this; GitLab has not yet shipped a release bundling the November Ruby fix"; gl_ruby_bad=1 ;;
+                *) caution "${bin}  ${v}  GitLab's own Ruby  $(state_word 2)  (${how})"; [[ $rc -eq 0 ]] && rc=2 ;;
+            esac
+            continue
+        fi
         case $ps in
             0) ok "${bin}  ${v}  $(state_word 0)  (${how})" ;;
             1) bad "${bin}  ${v}  $(state_word 1)  (${how})"; disk_bad=$((disk_bad + 1)) ;;
@@ -397,13 +464,19 @@ cmd_check() {
         vendor="$(vendor_of "${exe% (deleted)}")"
         v="$(desc_version "/proc/${pid}/exe")"
         [[ -z "$v" && -n "$lib" && -r "$lib" ]] && v="$(desc_version "$lib")"
-        if [[ "$vendor" == gitlab ]]; then
-            if [[ $stale -eq 1 ]]; then caution "${where}  GitLab, running code replaced on disk since start: gitlab-ctl restart"
-            else inf "${where}  GitLab: judged by the GitLab version above"; fi
-            continue
+        if [[ "$vendor" == gitlab && $stale -eq 1 ]]; then
+            caution "${where}  GitLab, running code replaced on disk since start: gitlab-ctl restart"; continue
         fi
         if [[ "$vendor" == vendor ]]; then caution "${where}  ${v:-?}  vendor-bundled Ruby: check that vendor's update"; continue; fi
         IFS='|' read -r ps how <<<"$(ruby_state "$v" "${exe% (deleted)}" "$lib")"
+        if [[ "$vendor" == gitlab ]]; then
+            case $ps in
+                0) ok "${where}  ${v}  GitLab's own Ruby  $(state_word 0)" ;;
+                1) bad "${where}  ${v}  GitLab's own Ruby  $(state_word 1)  (${how}). GitLab's own CVE-2026-110264 fix (above) is separate; GitLab has not yet shipped a release bundling the November Ruby fix"; gl_ruby_bad=1 ;;
+                *) caution "${where}  ${v:-?}  GitLab's own Ruby  $(state_word 2)  (${how})"; [[ $rc -eq 0 ]] && rc=2 ;;
+            esac
+            continue
+        fi
         if [[ $stale -eq 1 ]]; then
             caution "${where}  Ruby replaced on disk since start: restart it to run the new code${unit:+ (systemctl restart ${unit})}"
             exposed=1
@@ -418,17 +491,19 @@ cmd_check() {
     [[ $running -eq 1 ]] || inf "no running Ruby processes"
 
     step "What this check can't see"
-    inf "Rubies inside containers: each image carries its own. Rebuild on ruby:3.3.13, 3.4.12, 4.0.9 or later"
-    inf "Whether an app compiles attacker-controlled patterns at all: run '${SELF} scan'"
-    inf "Ruby requested no CVEs for these fixes, so scanners keyed on Ruby CVEs show nothing. Track the GitLab CVEs"
+    inf "Rubies inside containers: each image carries its own. Rebuild on ruby:3.3.14, 3.4.13, 4.0.10 or later"
+    inf "Whether an app compiles attacker-controlled patterns at all: run '${SELF} scan'. This narrows down the regex-compilation half only; the case-conversion half (String#upcase/downcase/capitalize/swapcase) is reached by code far more ordinary than pattern compilation, and this script treats any unfixed Ruby as exposed to it by default"
+    inf "GitHub Enterprise Server, Mastodon, OpenProject and Chatwoot: each bundles its own Ruby the same way GitLab and Discourse do, but this script has no install detection for them. Check that product's own advisory, and as of 19 Nov 2026, public tracking (https://verialabs.com/ruby2shell/) showed the current release of each still running an unfixed Ruby"
+    inf "The October fixes had no Ruby CVE of their own, tracked instead by GitLab's four CVEs; the November fixes have none yet either, tracked by their GHSA IDs until Ruby requests CVEs for them. A scanner keyed only on CVE numbers will show nothing for either batch"
 
     step "Verdict"
-    [[ $exposed -eq 1 || $gl_bad -eq 1 ]] && rc=1
+    [[ $exposed -eq 1 || $gl_bad -eq 1 || $gl_ruby_bad -eq 1 ]] && rc=1
     case $rc in
-        0) info "Nothing running is exposed to ${CVES[*]}"
-           [[ $disk_bad -eq 0 ]] || warn "...but ${disk_bad} installed Ruby runtime(s) are unfixed. Upgrade them before something starts them" ;;
-        1) [[ $gl_bad -eq 1 ]] && warn "GitLab is unfixed: upgrade it first, it is reachable without a login"
-           [[ $exposed -eq 1 ]] && warn "Unfixed Ruby is running. It matters if the app compiles patterns from user input: see '${SELF} scan'" ;;
+        0) info "Nothing running is exposed to the October or November Ruby Regexp/case-conversion fixes (${CVES[*]})"
+           [[ $disk_bad -eq 0 ]] || warn "...but ${disk_bad} installed Ruby runtime(s) are unfixed for one or both batches. Upgrade them before something starts them" ;;
+        1) [[ $gl_bad -eq 1 ]] && warn "GitLab is unfixed for its own CVE-2026-110264: upgrade it first, it is reachable without a login"
+           [[ $gl_ruby_bad -eq 1 ]] && warn "GitLab's own bundled Ruby is unfixed for the November batch. GitLab has not yet shipped a release with the fix; track GitLab's advisories"
+           [[ $exposed -eq 1 ]] && warn "Unfixed Ruby is running. The case-conversion half is exposed by default; the regex-compilation half matters if the app compiles patterns from user input: see '${SELF} scan'" ;;
         *) warn "Some versions couldn't be read; rerun as root" ;;
     esac
     return "$rc"
@@ -588,7 +663,7 @@ case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${S
 case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$SELF"; exit 0 ;; esac
 [[ $# -eq 0 ]] || die "Unknown option: $1"
 echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
-echo "advisory: ${RUBY_ADVISORY}"
+echo "advisories: ${RUBY_ADVISORY} ; ${RUBY_ADVISORY_NOV}"
 case "$CMD" in
     check|scan|hunt) "cmd_${CMD}" ;;
     *) die "Unknown command: $CMD (check|scan|hunt|version)" ;;

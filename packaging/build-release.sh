@@ -7,7 +7,7 @@
 # https://privacysafe.foundation
 #
 # Builds a release tarball, a .deb and an .rpm, all named psf-security-patches
-# and versioned by release date: YY.MM.DD-X.Y.Z, for example 26.11.19-1.0.0.
+# and versioned by release date: YY.MM.DD-X.Y.Z, for example 26.11.20-1.0.0.
 # In the deb the date is the upstream version and X.Y.Z the revision; in the
 # rpm the date is Version and X.Y.Z is Release. The packages install the whole
 # tree to /opt/psf-security-patches and the php2shell-watch systemd unit to
@@ -168,7 +168,11 @@ if command -v dpkg-deb >/dev/null 2>&1; then
   subst "$ROOT/packaging/deb/control.in" > "$D/DEBIAN/control"
   (cd "$D" && find . -type f -not -path './DEBIAN/*' -printf '%P\n' | LC_ALL=C sort | xargs -d '\n' md5sum) > "$D/DEBIAN/md5sums"
   chmod 0644 "$D/DEBIAN/control" "$D/DEBIAN/md5sums"; chmod 0755 "$D/DEBIAN"
-  dpkg-deb --root-owner-group -Zxz -b "$D" "$OUT/${PKG}_${FULL}_all.deb" >/dev/null
+  # control and md5sums are written after normalize, so they still carry the real build-time
+  # mtime; dpkg-deb bakes that into control.tar.xz's member timestamps even though the file
+  # content is identical build to build, making the .deb non-reproducible. Clamp them too.
+  touch -h -d "@$SDE" "$D/DEBIAN/control" "$D/DEBIAN/md5sums" "$D/DEBIAN"
+  dpkg-deb --root-owner-group --threads-max=1 -Zxz -b "$D" "$OUT/${PKG}_${FULL}_all.deb" >/dev/null
   echo "built $OUT/${PKG}_${FULL}_all.deb"
 else
   echo "skipped .deb: dpkg-deb not found" >&2

@@ -91,8 +91,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="linux-kernel-module-block.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-11-20"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/linux-kernel-module-block}"
 MODPROBE_D="${MODPROBE_D:-/etc/modprobe.d}"
@@ -154,6 +154,7 @@ ROWS=(
 "sctp_diag|exploited|CVE-2026-74469|SCTP socket diagnostics (DiagSpill)|ss and other tools that query SCTP sockets|"
 "ebt_snat|exploited|CVE-2026-53266|ebtables SNAT target, exploited in the wild|bridge firewalls that use the ebtables snat target|"
 "mptcp|exploited|CVE-2026-98432|Multipath TCP; a reduction, not a fix|software that uses MPTCP|sysctl net.mptcp.enabled=0 (linux-kernel-ireq-opt-check.sh mitigate --mptcp)"
+"kvm_amd|exploited|CVE-2026-99312|AMD nested virtualization, guest-to-host escape|any AMD KVM virtualization at all, nested or not, since this module runs it all; blocking it fully is far more than this flaw needs|options kvm_amd nested=0 (linux-kernel-kvm-escape-check.sh mitigate)"
 "mptcp_diag|hardening||MPTCP socket diagnostics, the module ss -M reads; not the flawed code|ss -M, the only way to list MPTCP listeners, and this collection's own checks||keep"
 "dccp|historic|CVE-2017-6074 CVE-2020-16119|DCCP, local root double free and use after free|DCCP users, practically none|"
 "rds|historic|CVE-2010-3904|Reliable Datagram Sockets, local root through the RDS page copy|Oracle RAC and other RDS clusters|"

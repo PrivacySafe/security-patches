@@ -81,11 +81,29 @@ for f in man/man8/*.8; do gzip -9n < "$f" > %{buildroot}%{_mandir}/man8/$(basena
 gzip -9n < man/man7/psf-security-patches.7 > %{buildroot}%{_mandir}/man7/psf-security-patches.7.gz
 gzip -9n < man/psf-security-patches.info > %{buildroot}%{_infodir}/psf-security-patches.info.gz
 find %{buildroot}%{_mandir} %{buildroot}%{_infodir} -type f -exec chmod 0644 {} +
+# %license and %doc, used below, each make rpm create their directory and copy these files
+# into it itself, as a packaging step that runs after %install and is not covered by
+# clamp_mtime_to_source_date_epoch for the directory entry, leaving its mtime as the real
+# build time and making the package non-reproducible even though every file's content is
+# identical build to build. Create and populate these directories ourselves instead, so they
+# are covered by the same clamp below as everything else, and list them as plain paths in
+# %files rather than with %license/%doc.
+install -d %{buildroot}%{_licensedir}/%{name}-%{version} %{buildroot}%{_docdir}/%{name}-%{version}
+install -m 0644 LICENSE NOTICE %{buildroot}%{_licensedir}/%{name}-%{version}/
+install -m 0644 README.md CHANGELOG.md %{buildroot}%{_docdir}/%{name}-%{version}/
+# clamp_mtime_to_source_date_epoch only lowers an mtime that is later than SOURCE_DATE_EPOCH on
+# files rpm itself copies into the payload; directories created directly by install -d above
+# keep the real build-time mtime, which makes the package non-reproducible even though every
+# file's content is identical build to build. Clamp everything under the buildroot explicitly,
+# now that %install is otherwise finished; build-release.sh exports SOURCE_DATE_EPOCH.
+find %{buildroot} -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
 
 %files
 %defattr(-,root,root,-)
-%license LICENSE NOTICE
-%doc README.md CHANGELOG.md
+%license %{_licensedir}/%{name}-%{version}/LICENSE
+%license %{_licensedir}/%{name}-%{version}/NOTICE
+%doc %{_docdir}/%{name}-%{version}/README.md
+%doc %{_docdir}/%{name}-%{version}/CHANGELOG.md
 /opt/psf-security-patches
 /usr/lib/systemd/system/php2shell-watch.service
 %{_mandir}/man7/psf-security-patches.7*

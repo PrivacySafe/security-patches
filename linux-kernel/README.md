@@ -301,7 +301,57 @@ The rebuild command by system: `update-initramfs -u -k all` on Debian, Ubuntu, T
 ### Why a block helps
 
 `check` shows how a module loads. Network protocol modules have `net-pf-` aliases: any process, with no privileges, loads one by opening a socket of that family. That is why a block removes a real path for an attacker. Filesystem modules load when something mounts that type, USB modules when a matching device is plugged in.
+
 ---
+
+<a name="linux-kernel-kvm-escape-check"></a>
+
+## KVM guest-to-host escape on AMD nested virtualization (CVE-2026-99312)
+
+**Script:** [`linux-kernel/linux-kernel-kvm-escape-check.sh`](linux-kernel-kvm-escape-check.sh)
+
+Terra Security (Oren Yomtov) disclosed CVE-2026-99312 on 18 November 2026: a guest VM on an AMD KVM host with nested virtualization on can read and write the host's physical memory, which on a shared host means every other tenant's memory too. Terra demonstrated the read on an ordinary DigitalOcean droplet (the host's own kernel version banner came back first, then about 127 GB of host RAM) and the write on their own server, so as not to disrupt other customers.
+
+The official record (the kernel's own CNA entry, mirrored by NVD and Red Hat) describes the underlying bug as an unconditional MMU-context reset missing when KVM emulates an INIT while a nested guest's paging is off, and scores it as a local denial-of-service: the CVSS vector ends `C:N/I:N/A:H`, no confidentiality or integrity impact, only availability. Terra's own research, independently corroborated, found the same bug chains with a use-after-free in KVM's nested SVM handling (a stale `nCR3` pointer left referencing a recycled page-table page) and an Accessed-bit timing oracle, into the full guest-to-host read and write demonstrated above. Treat the official score as a description of the kernel's own accounting of the bug class, not of what was actually shown against it.
+
+This is a fix landing on top of an older one. In 2022, a different, already-fixed KVM reset flaw was fixed by switching a reset back to the control block of the VM that runs the nested one before anything is freed. CVE-2026-99312 is a flaw that fix itself opened. It is unrelated to three other 2026 KVM guest-to-host escapes found by a different researcher under the names ITScape (arm64), Januscape and Zapscape (x86, both reaching Intel and AMD); this script covers only CVE-2026-99312, and its one AMD-only mitigation should not be confused with those.
+
+**Affected:** nested virtualization on AMD (`kvm_amd`), on any kernel from 6.1 up to, but not including, the fixed releases below. INIT is an unconditional intercept on Intel VMX, so Intel nested virtualization (`kvm_intel`) cannot reach this specific bug. First fixed stable release of each currently maintained branch: `6.12.118`, `6.18.64`, `7.3.5`; first mainline release with the fix: `7.4-rc2` (9 November 2026). The precondition for this flaw came from a November 2022 commit that was itself widely backported at the time, confirmed at least as far back as the (now unsupported) stable branches 5.15.81 and 6.0.11. Nothing confirms that *other* branches below 6.1 that were also receiving backports in November 2022 (5.10 and 5.4, for instance) escaped it; `check` reports those as unknown rather than clear, and says to check that branch's own changelog, rather than assume its age puts it out of scope.
+
+### Quick start
+
+```bash
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/linux-kernel/linux-kernel-kvm-escape-check.sh
+less linux-kernel-kvm-escape-check.sh
+chmod +x linux-kernel-kvm-escape-check.sh
+./linux-kernel-kvm-escape-check.sh check
+```
+
+If you can't upgrade the kernel yet:
+
+```bash
+sudo ./linux-kernel-kvm-escape-check.sh mitigate --dry-run
+```
+
+### Commands
+
+| Command | What it does |
+|---|---|
+| `check` (default) | Read-only. Kernel version against the fixed releases; whether this is an AMD host; `kvm_amd`'s load state and current `nested` parameter. Exit `0` not exposed (patched, not AMD, module absent, or `nested` already off), `1` exposed, `2` something couldn't be read |
+| `mitigate [--unload] [--force] [--dry-run]` | **Changes the host (root).** Writes `/etc/modprobe.d/psf-kvm-amd-nested-off.conf` (`options kvm_amd nested=0`). Refuses if `kvm_amd` is currently loaded, unless `--unload` (which itself refuses if any VM is running on it, since `modprobe -r` fails while anything uses the module) or `--force` (writes the file anyway, for the next load) |
+| `rollback [--dry-run]` | Removes the modprobe.d file. Does not turn `nested` back on for an already-loaded `kvm_amd`; that needs the same drain this script will not do for you |
+| `rules` | Prints the file `mitigate` writes and the manual unload/reload commands |
+| `version` | Prints the script version |
+
+The `nested` module parameter is read only when `kvm_amd` loads, so there is no way to flip it on a host where the module is already loaded without unloading it (every VM must already be stopped; `modprobe -r` refuses otherwise) or rebooting. `mitigate --force` writes the file and tells you it only takes effect on the next load, which on most hosts means the next reboot or maintenance window.
+
+`linux-kernel-module-block.sh` also lists `kvm_amd` (`check kvm_amd`, `list --group exploited`), but **blocking it entirely is the wrong tool here**: it would stop all AMD virtualization, nested or not, which is far more than this flaw needs. That tool's own `check` output says so; use `mitigate` above for the targeted fix.
+
+### Sources
+
+- [Terra Security, "CVE-2026-99312: KVM Guest-to-Host Escape", 18 November 2026](https://www.terra.security/blog/kvm-guest-to-host-escape): the disclosure, the DigitalOcean demonstration, the fixed releases and the `kvm_amd nested=0` mitigation.
+- The kernel's own CNA record for CVE-2026-99312 (mirrored by NVD and Red Hat): the official description and CVSS vector.
+- ITScape, Januscape and Zapscape are separate KVM guest-to-host escapes found by a different researcher; their own write-ups and this script's header note how they differ from CVE-2026-99312.
 
 ## Before you run it
 

@@ -2,6 +2,12 @@
 
 Part of the [PrivacySafe Security Patches](../README.md) collection.
 
+## WordPress 7.1.5 (19 November 2026)
+
+WordPress 7.1.5 fixes 20 security issues, none of which overlap the three core bug classes the scripts below cover (the August XSS2Shell reflected-XSS chain, the July wp2shell REST/SQL-injection chain, or the 28 October upgrade-folder race in [`wordpress-upgrade/`](../wordpress-upgrade/README.md#wordpress-upgrade-window-check)). The most serious is a pre-authentication privilege escalation in Template Part block attributes that WordPress says can lead to remote code execution, reported by Logan Homolka. A separate flaw lets an authenticated site Administrator take over a network Super Admin account on Multisite through Customizer menu previews (reported by Yuval Miller); two SQL injection fixes cover `WP_Meta_Query` nested relations and the Customizer's front-page changeset preview; and an unauthenticated stored XSS through comment shortcode attributes (reported by Rafie Muhammad) needs no login to persist. The rest are lower-severity information-disclosure and hardening fixes (REST API comment and taxonomy exposure, XML-RPC pingback denial of service, Imgur embed removal, and others); WordPress's own release notes at [wordpress.org/news](https://wordpress.org/news/) list all 20.
+
+This collection has no dedicated check for this release: none of the existing scripts' detection logic applies to these bugs, and WordPress has not published public proof-of-concept detail the way it did for the upgrade-window race. The fix is the update: WordPress 7.1.5, or the matching backport for your branch (7.0.9, 6.9.12, down to 4.7.40 for the 11 that apply there). `wp core update` or your host's normal update path is sufficient; none of this release's fixes involve the `wp-content/upgrade/` staging folder that [`wordpress-upgrade-check.sh`](../wordpress-upgrade/wordpress-upgrade-check.sh) guards, so that script's advice to block the folder before updating still applies if you haven't already.
+
 <a name="wordpress-xss2shell-check"></a>
 
 ## WordPress XSS2Shell check

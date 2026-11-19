@@ -136,7 +136,7 @@ git pull
 ./launcher rebuild app
 </code></pre>
 <p>Fixed-version information varies across upstream releases and distribution packages. The upstream heap-write class was fixed across 1.21.0, 1.22.0 and 1.22.1, with security releases continuing into the 1.23.x line. Debian fixed a batch in <a href="https://lists.debian.org/debian-security-announce/2026/msg00328.html">DSA-6417-1</a> (<code>libheif 1.19.8-1+deb13u1</code>, trixie, 8 August 2026), and other distributions backport under their own version strings, so a package can carry the fixes under an older-looking upstream number. This script accounts for that: a distribution build is judged by <code>FIXED_BUILDS</code> and its package changelog first, and only falls back to the upstream version floor when it is not a distribution package.</p>
-<p>This is a separate issue from the Ruby Regexp CVEs. For Ruby and GitLab, use <a href="../ruby/index.html#ruby-and-gitlab-regexp-check"><code>ruby/ruby-regexp-oct2026-check.sh</code></a> instead.</p>
+<p>This is a separate issue from the Ruby Regexp and case-conversion CVEs. For Ruby and GitLab, use <a href="../ruby/index.html#ruby-and-gitlab-regexp-and-case-conversion-check"><code>ruby/ruby-regexp-oct2026-check.sh</code></a> instead.</p>
 <h3 id="libheif-quick-start">libheif quick start</h3>
 <ol>
 <li>

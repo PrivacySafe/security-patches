@@ -2,6 +2,32 @@
 
 Notable changes to PrivacySafe Security Patches, newest first.
 
+## 2026-11-22
+
+### Changed
+
+- [PHP2Shell](php/README.md#php2shell-mitigation): `php2shell-mitigate.sh` and `php-session-audit.sh` now know the real fixed releases for CVE-2026-115560 (8.2.36, 8.3.37, 8.4.28, 8.5.13), shipped 19 November 2026 as part of a broader 18-CVE PHP release; the `PATCHED_115560_X_Y` table was empty before this since no fix existed yet. `php2shell-mitigate.sh cleanup` now correctly detects a fully patched host and drops the `session.upload_progress` restriction on its own; `php-session-audit.sh` gained a version-check step so it reports whether each installed PHP is already fixed before auditing the three CVE-2026-115560 preconditions. Both READMEs now also name CVE-2026-129289, a critical (CVSS 9.2) PHP-FPM request-smuggling RCE in the same release that neither script audits for, since it needs no session preconditions and the only fix is upgrading PHP or disabling backend connection reuse on the front end. Versions 5.3.0 and 1.1.0.
+- [WordPress](wordpress/README.md#wordpress-715-19-november-2026): added a note on WordPress 7.1.5 (20 fixes, including a pre-auth privilege escalation that can lead to RCE in Template Part block attributes, and a Multisite Super Admin takeover through Customizer previews). None of the three existing WordPress scripts' detection logic applies to these bugs, and WordPress published no exploitation proof-of-concept the way it did for the October upgrade-window race, so there is no dedicated check for this release: the fix is updating to 7.1.5 or the matching branch backport.
+- Release 26.11.22-1.0.0 replaces 26.11.21-1.0.0. `php2shell-mitigate.sh` and `php-session-audit.sh` carry 2026-11-19; every other script is unchanged from 26.11.21-1.0.0.
+
+## 2026-11-21
+
+### Changed
+
+- [Ruby and GitLab Regexp/case conversion](ruby/README.md#ruby-and-gitlab-regexp-and-case-conversion-check): `ruby-regexp-oct2026-check.sh` now also covers seven flaws Ruby fixed on 18 November 2026 in 4.0.10, 3.4.13 and 3.3.14, reported directly to Ruby rather than through GitLab, so none has a CVE yet (tracked by GHSA ID: GHSA-34m4-m9fh-gqp5, GHSA-7x2q-68qv-6p8x, GHSA-87fm-7w84-j2px, GHSA-wpqw-5qxg-m68r, GHSA-3p8q-wmhx-vm2w, GHSA-7whj-cfh7-xgm4, GHSA-pvgc-g7gj-pv6h). Five are further Onigmo regex-engine memory bugs; two are in `String#upcase`/`downcase`/`capitalize`/`swapcase` case conversion, a surface the October fixes didn't touch and one reached by code far more ordinary than compiling a user-supplied pattern. Three are critical, three high, one moderate, with working proof-of-concept RCE for six of the seven. `check` now reports, for every Ruby it finds, whether it's fixed for October only, for both, or for neither, since a build at exactly the October threshold (4.0.9, 3.4.12, 3.3.13) is still exposed to November. GitLab's embedded Ruby binary is now checked directly against the November thresholds rather than only through GitLab's own product-version table, since that table only ever tracked GitLab's own CVE-2026-110264 fix and no GitLab release bundles the November fix yet; the same direct check runs whether the embedded Ruby was found on disk or in a running process. `scan` is unchanged and still narrows down the regex-compilation half only; the case-conversion half has no comparable per-call-site signal, so `check` treats any Ruby below the new thresholds as exposed to it by default. Public tracking (https://verialabs.com/ruby2shell/) showed GitHub Enterprise Server, Mastodon, OpenProject and Chatwoot, which bundle Ruby the same way GitLab and Discourse do, also still unpatched as of 19 November; the script has no install detection for those four, and the README and script header now say so explicitly. Version 2.0.0.
+- Release 26.11.21-1.0.0 replaces 26.11.20-1.0.0. `ruby-regexp-oct2026-check.sh` carries 2026-11-19; every other script is unchanged from 26.11.20-1.0.0.
+
+## 2026-11-20
+
+### New
+
+- [Linux kernel](linux-kernel/README.md#kvm-guest-to-host-escape-on-amd-nested-virtualization-cve-2026-99312): `linux-kernel-kvm-escape-check.sh` for CVE-2026-99312, a KVM guest-to-host escape on AMD nested virtualization disclosed by Terra Security (Oren Yomtov) on 18 November 2026, demonstrated reading about 127 GB of host memory from a DigitalOcean droplet and writing to host kernel memory on a separate server the researchers controlled. `check` reports the kernel version against the fixed releases (6.12.118, 6.18.64, 7.3.5, mainline 7.4-rc2), whether the host is AMD, and `kvm_amd`'s `nested` parameter; `mitigate` writes `options kvm_amd nested=0` to modprobe.d and, with `--unload`, applies it now (every VM on the host must already be stopped). Kernel branches below 6.1 outside the two confirmed-affected ranges are reported unknown rather than clear, since the 2022 commit this flaw's precondition came from was widely backported at the time and other long-term branches are not ruled out. Version 1.0.0, 2026-11-20.
+
+### Changed
+
+- [Linux kernel](linux-kernel/README.md#linux-kernel-module-blocker): `linux-kernel-module-block.sh` gained a `kvm_amd` row in its curated list (group `exploited`, CVE-2026-99312), pointing to the new `linux-kernel-kvm-escape-check.sh mitigate` rather than a full block, since blocking `kvm_amd` entirely stops all AMD virtualization, nested or not. Version 1.1.0.
+- `packaging/build-release.sh` and `packaging/rpm/psf-security-patches.spec.in`: fixed two reproducibility gaps found while verifying this release's own build. The `.deb`'s `DEBIAN/control` and `DEBIAN/md5sums` are written after the mtime-normalization pass, so they carried the real build-time mtime into `control.tar.xz`'s member timestamps, producing different compressed bytes on every build despite identical file content; they are now clamped to `SOURCE_DATE_EPOCH` explicitly before `dpkg-deb` runs. The `.rpm`'s `%license` and `%doc` macros make rpm itself create their target directory and copy the named files into it as a packaging step that runs after `%install`, bypassing `clamp_mtime_to_source_date_epoch` for that directory entry; the files are now installed explicitly in `%install` (still tagged `%license`/`%doc` at their final path, so `rpm -q --licensefiles`/`--docfiles` are unaffected) and the whole buildroot is clamped explicitly once `%install` finishes. All three packages (`.tar.gz`, `.deb`, `.rpm`) were confirmed byte-identical across independent builds before this release shipped.
+
 ## 2026-11-19
 
 ### Changed
@@ -240,7 +266,7 @@ Notable changes to PrivacySafe Security Patches, newest first.
 
 - [Brotli checker](brotli/README.md#brotli-checker-quick-start): CVE-2026-111497 is not only a Node.js bug. The checker covers `libbrotli` on the host, the runtimes that bundle it, and containers.
 - [libheif checker](heif/README.md#libheif-heifavif-decoder-check): the HEIF/AVIF decoder heap overflow used to breach a Discourse forum. Read-only check plus ImageMagick and MediaWiki hardening.
-- [Ruby and GitLab checker](ruby/README.md#ruby-and-gitlab-regexp-check): the Regexp fixes in Ruby 4.0.9 / 3.4.12 / 3.3.13 and the four GitLab CVEs. If you run GitLab, upgrade it first.
+- [Ruby and GitLab checker](ruby/README.md#ruby-and-gitlab-regexp-and-case-conversion-check): the Regexp fixes in Ruby 4.0.9 / 3.4.12 / 3.3.13 and the four GitLab CVEs. If you run GitLab, upgrade it first.
 
 ### Changed
 

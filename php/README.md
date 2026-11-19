@@ -160,7 +160,7 @@ Two of those alerts, the per-client burst and the same-worker chain, need the er
 | `PATCHED_X_Y` (for example `PATCHED_8_4`) | `8.2.35`, `8.3.36`, `8.4.27`, `8.5.12`; empty for 7.0-8.1 | First fixed upstream release for each branch |
 | `PHP_VER` | *(empty)* | The same as `--php X.Y`. An exported `PHP_VER` in your environment therefore limits the run to that version |
 | `GUARD_HINT` | `1` | Set to `0` to stop the environment check pointing to the third-party extension for PHP this script can't cover |
-| `PATCHED_115560_X_Y` | *(empty)* | First release fixing CVE-2026-115560 for branch X.Y. Until set, only a changelog naming the CVE counts |
+| `PATCHED_115560_X_Y` | `8.2.36` `8.3.37` `8.4.28` `8.5.13` | First release fixing CVE-2026-115560 for branch X.Y (shipped 19 Nov 2026). A changelog naming the CVE also counts |
 | `SUPPORTED_VERS` | `7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5` | Versions the script will touch |
 | `FIXED_BUILDS` | *(empty)* | Extra fixed distro builds, space-separated full versions, for example a Debian LTS 7.4 update |
 | `HUNT_IPS` | `15.204.59.70 162.35.99.94` | Source addresses reported in confirmed exploitation. An aging indicator: a hit means the address touched you, not what it did. Empty turns it off |
@@ -225,7 +225,7 @@ What the drop-in sets:
 
 | Setting | When | Why |
 |---|---|---|
-| `session.upload_progress.enabled = 0` | Every version, patched or not | CVE-2026-115560 is not fixed by the 21 October releases |
+| `session.upload_progress.enabled = 0` | Every version not yet upgraded to the 19 November fix (8.2.36 / 8.3.37 / 8.4.28 / 8.5.13) | CVE-2026-115560 was not fixed by the 21 October releases; it is fixed now, but only once you've actually upgraded |
 | `fatal_error_backtraces = 0` | PHP 8.5, unpatched builds only | Removes the fatal-error-backtrace variant |
 | `memory_limit = -1` | Only with `--memory-unlimited`, unpatched builds only | PHP's own protective measure; it trades the remote code execution for denial of service, so pair it with a request body cap (see [`php/edge/`](edge/README.md)) |
 | `post_max_size`, `upload_max_filesize` | Only with `--post-max` (and `--upload-max`) | Capped to the smaller of the current value and your ceiling; never raised. A chunked request can pass `post_max_size`, so this narrows the exposure and does not close it |
@@ -308,9 +308,9 @@ That's deliberate. The patch fixes these bugs. The profile confines PHP-FPM agai
 
 CVE-2026-115560 needs three things at once: `session.serialize_handler` set to `php_binary` or `php_serialize` in config, application code switching it to `php` at runtime before `session_start()`, and session upload progress left on. Turning upload progress off closes it, and `php2shell-mitigate.sh` does that.
 
-Status as of PHP's 23 October advisory, as reported by [Cybernews](https://cybernews.com/security/php2shell-attacks-php-new-vulnerabilities-found/): the PHP Foundation considers the setup unlikely in practice, so it is handling this CVE in the regular release cycle and will publish a full advisory with the next release. It has not yet named the affected versions or given a severity score, and it has reported no exploitation of this CVE. Its advice is to keep `session.upload_progress.enabled = 0` until that release, and an application that already has it off needs nothing more for this issue. This is why `PATCHED_115560_X_Y` has no default: set it yourself once PHP names the fixed release for your branch. Check [php.net](https://www.php.net/) for the current position.
+PHP published an informational advisory for this CVE on 23 October 2026 and shipped the actual fix on 19 November, in **8.2.36, 8.3.37, 8.4.28 and 8.5.13**, as part of a broader release fixing 18 CVEs in total (see the table near the top of this file and PHP's own [8.5.13 changelog](https://www.php.net/ChangeLog-8.php#8.5.13)). The most severe of the other 17 is **CVE-2026-129289**, a critical (CVSS 9.2) PHP-FPM request-smuggling flaw: with a persistent connection between the web server and PHP-FPM (`fastcgi_keep_conn` on nginx, `enablereuse=on` for Apache's `mod_proxy_fcgi`, or an equivalent HAProxy or LSAPI setup) and an application path that opens `php://input` without reading it to the end, an unauthenticated request can run PHP code as the FPM worker. Standard nginx and Apache configurations that close the FastCGI connection after each request are not exposed to the demonstrated attack. Neither `php2shell-mitigate.sh` nor this script audits for CVE-2026-129289; upgrading PHP, or turning off backend connection reuse on the front end, is the fix for it.
 
-This read-only script tells you whether the other two conditions exist, so you know whether you were exposed:
+This read-only script now checks each installed PHP's package version against the fixed releases above (`PATCHED_115560_X_Y` overrides a branch's fixed version if you need to), then tells you whether the other two CVE-2026-115560 conditions exist, so you know whether you were exposed even on a host you haven't upgraded yet:
 
 - the configured handler and upload-progress setting for every PHP-FPM version and pool, and for mod_php;
 - per-directory overrides in Apache config, `.htaccess` and `.user.ini`;
@@ -321,7 +321,7 @@ This read-only script tells you whether the other two conditions exist, so you k
 WEB_ROOTS="/var/www /srv" ./php-session-audit.sh
 ```
 
-Exits `0` if nothing matched, `1` if all three conditions are present, `2` for a partial match worth reviewing. The code scan is a grep: it finds literal switches, and flags non-literal ones for you to check.
+Exits `0` if nothing matched, `1` if all three conditions are present, `2` for a partial match worth reviewing. The code scan is a grep: it finds literal switches, and flags non-literal ones for you to check. The version check reads the installed dpkg package, the same way `php2shell-mitigate.sh` does, so it needs Debian or Ubuntu packaging to report a version; other distributions get a caution to check by hand.
 
 <!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->
 ## Red Hat advisories

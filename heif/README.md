@@ -20,7 +20,7 @@ git pull
 
 Fixed-version information varies across upstream releases and distribution packages. The upstream heap-write class was fixed across 1.21.0, 1.22.0 and 1.22.1, with security releases continuing into the 1.23.x line. Debian fixed a batch in [DSA-6417-1](https://lists.debian.org/debian-security-announce/2026/msg00328.html) (`libheif 1.19.8-1+deb13u1`, trixie, 8 August 2026), and other distributions backport under their own version strings, so a package can carry the fixes under an older-looking upstream number. This script accounts for that: a distribution build is judged by `FIXED_BUILDS` and its package changelog first, and only falls back to the upstream version floor when it is not a distribution package.
 
-This is a separate issue from the Ruby Regexp CVEs. For Ruby and GitLab, use [`ruby/ruby-regexp-oct2026-check.sh`](../ruby/README.md#ruby-and-gitlab-regexp-check) instead.
+This is a separate issue from the Ruby Regexp and case-conversion CVEs. For Ruby and GitLab, use [`ruby/ruby-regexp-oct2026-check.sh`](../ruby/README.md#ruby-and-gitlab-regexp-and-case-conversion-check) instead.
 
 ### libheif quick start
 

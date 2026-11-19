@@ -141,10 +141,15 @@ session upload progress when three things line up:
   2. application code switches it to &quot;php&quot; at runtime before session_start(),
   3. session.upload_progress.enabled is still on.
 
-The fix ships in the next regular PHP release. Until then turning upload
-progress off (php2shell-mitigate.sh does) closes it. This script tells you
-whether the other two conditions exist on this server, so you know whether
-you were exposed and whether anything else depends on the switch:
+PHP shipped the fix on 19 November 2026, in 8.2.36, 8.3.37, 8.4.28 and
+8.5.13 (part of a broader 18-CVE release; see php/README.md and
+php2shell-mitigate.sh for the rest, including CVE-2026-129289, a critical
+PHP-FPM request-smuggling RCE this script does not cover). Until every
+php-fpm and mod_php on the host is on a fixed build, turning upload
+progress off (php2shell-mitigate.sh does) still closes this one. This
+script checks each installed PHP against the fixed releases, then tells
+you whether the other two conditions exist on this server, so you know
+whether you were exposed and whether anything else depends on the switch:
 
   * the configured handler and upload-progress setting for every PHP-FPM
     version and pool, and for Apache mod_php, from the files PHP reads

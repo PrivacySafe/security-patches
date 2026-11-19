@@ -15,7 +15,7 @@ Security mitigations and auditing tools shared for the public good.
 
 This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. We publish these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
-**68 scripts addressing 146 CVEs across 72 software projects and 10 programming languages, plus 8 other global security incidents.**
+**69 scripts addressing 147 CVEs across 72 software projects and 10 programming languages, plus 8 other global security incidents.**
 
 **Documentation:** open [`docs/index.html`](docs/index.html) in a browser for the offline site (every tool, a CVE index, a glossary and the manual pages in HTML), or read it online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/). The packages also install a manual page for every tool (`man psf-<tool>`) and an info manual.
 
@@ -35,7 +35,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [PHP2Shell detection rules](php/detect/README.md) | auditd, Tetragon and nftables on GNU/Linux | CVE-2026-109618, CVE-2026-109619 | Detection content |
 | [Node.js October 2026](node/README.md#nodejs-october-2026-mitigation) | Node.js on GNU/Linux; systemd for the guard | CVE-2026-111497 (Brotli) and 9 Node CVEs | Mitigation (Node only) |
 | [Brotli checker](brotli/README.md#brotli-checker-quick-start) | libbrotli and the processes using it, plus Node/Bun/Python/Ruby/PHP/Envoy/Istio/cdxgen and containers on GNU/Linux | CVE-2026-111497 (Broccoli2Shell) | Read-only check and audit |
-| [Ruby and GitLab Regexp](ruby/README.md#ruby-and-gitlab-regexp-check) | Ruby runtimes, Ruby apps and GitLab on GNU/Linux | CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264 | Read-only check and audit |
+| [Ruby and GitLab Regexp/case conversion](ruby/README.md#ruby-and-gitlab-regexp-and-case-conversion-check) | Ruby runtimes, Ruby apps and GitLab on GNU/Linux | CVE-2026-89078, CVE-2026-93577, CVE-2026-97229, CVE-2026-110264; GHSA-34m4-m9fh-gqp5 and 6 more (CVE pending) | Read-only check and audit |
 | [libheif HEIF/AVIF Decoder](heif/README.md#libheif-heifavif-decoder-check) | libheif, ImageMagick and Discourse on GNU/Linux | [writeup](https://www.hacktron.ai/blog/hacking-openai); DSA-6417-1 | Check, audit and ImageMagick coder mitigation |
 | [eMudhra CA Compromise](pki/README.md#emudhra-intermediate-ca-compromise-mitigation) | System CA store on Debian/Ubuntu/Trisquel and derivatives | [disclosure](https://emudhra.we-have-a-problem.com/); Go: CVE-2026-111943 | Mitigation |
 | [eMudhra CA Compromise on macOS](pki/README.md#emudhra-on-macos) | macOS system CA bundle `/etc/ssl/cert.pem` and Homebrew `ca-certificates` | [disclosure](https://emudhra.we-have-a-problem.com/#macos-curl); [Apple](https://support.apple.com/en-us/149555) | Check and mitigation |
@@ -104,20 +104,20 @@ Where Red Hat has published an advisory for a CVE a tool covers, the tool's READ
 
 ## 📥 Install from a package
 
-Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.19-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
+Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.20-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
 
 | File | For |
 |---|---|
-| `psf-security-patches_26.11.19-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
-| `psf-security-patches-26.11.19-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
-| `psf-security-patches-26.11.19-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
+| `psf-security-patches_26.11.20-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
+| `psf-security-patches-26.11.20-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
+| `psf-security-patches-26.11.20-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
 
 Check the files against the release's `SHA256SUMS-<version>.txt` before installing, then:
 
 ```bash
-sha256sum -c SHA256SUMS-26.11.19-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.19-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.19-1.0.0.noarch.rpm    # RPM family
+sha256sum -c SHA256SUMS-26.11.20-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.20-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.20-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/php/php2shell-mitigate.sh check             # read only
 ```
 

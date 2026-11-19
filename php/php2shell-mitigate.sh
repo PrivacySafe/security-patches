@@ -67,8 +67,9 @@
 #                                      counts as patched.
 #   PATCHED_115560_X_Y=<version>       first release fixing CVE-2026-115560 for
 #                                      branch X.Y, e.g. PATCHED_115560_8_4=8.4.28.
-#                                      No defaults yet: until PHP ships it, only a
-#                                      changelog naming the CVE counts.
+#                                      Defaults: 8.2.36 8.3.37 8.4.28 8.5.13 (19 Nov
+#                                      2026). 7.0-8.1 get no upstream fix: only a
+#                                      distro/PPA changelog listing the CVE counts.
 #   GUARD_HINT=0                       don't point to the third-party extension
 #                                      for PHP this script can't cover
 #   WEB_ROOTS="/var/www /srv/www"      read-only docroots; hunt also looks here
@@ -115,8 +116,8 @@ set -euo pipefail
 # Printed at the top of every run and written into everything the script
 # installs, so any pasted output or file says which version produced it.
 SCRIPT_NAME="php2shell-mitigate.sh"
-SCRIPT_VERSION="5.2.6"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="5.3.0"
+SCRIPT_DATE="2026-11-19"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
 # Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
@@ -138,7 +139,14 @@ patched_ver() { local n="PATCHED_${1/./_}"; echo "${!n:-${PATCHED_DEFAULT[$1]:-}
 # the two CVEs above. Fill these in as fixed releases ship, or set
 # PATCHED_115560_X_Y. Empty means "not known fixed".
 UPLOAD_CVE="CVE-2026-115560"
-declare -A PATCHED_115560_DEFAULT=()
+# Fixed on 19 November 2026, as part of a broader security release (18 CVEs
+# total; see php-session-audit.sh and php/README.md for the rest, notably
+# CVE-2026-129289, a critical PHP-FPM request-smuggling RCE this script does
+# not cover). Once a build is >= its branch's fixed release here, the
+# upload-progress drop-in this script applies is no longer needed for this
+# CVE specifically, though `cleanup` still leaves it in place unless --force
+# is given, since other PHP2Shell state may still depend on it.
+declare -A PATCHED_115560_DEFAULT=([8.2]=8.2.36 [8.3]=8.3.37 [8.4]=8.4.28 [8.5]=8.5.13)
 patched_115560_ver() { local n="PATCHED_115560_${1/./_}"; echo "${!n:-${PATCHED_115560_DEFAULT[$1]:-}}"; }
 # Branches PHP no longer fixes; only a distro or PPA backport can patch them
 EOL_VERS="7.0 7.1 7.2 7.3 7.4 8.0 8.1"

@@ -15,10 +15,15 @@
 #   2. application code switches it to "php" at runtime before session_start(),
 #   3. session.upload_progress.enabled is still on.
 #
-# The fix ships in the next regular PHP release. Until then turning upload
-# progress off (php2shell-mitigate.sh does) closes it. This script tells you
-# whether the other two conditions exist on this server, so you know whether
-# you were exposed and whether anything else depends on the switch:
+# PHP shipped the fix on 19 November 2026, in 8.2.36, 8.3.37, 8.4.28 and
+# 8.5.13 (part of a broader 18-CVE release; see php/README.md and
+# php2shell-mitigate.sh for the rest, including CVE-2026-129289, a critical
+# PHP-FPM request-smuggling RCE this script does not cover). Until every
+# php-fpm and mod_php on the host is on a fixed build, turning upload
+# progress off (php2shell-mitigate.sh does) still closes this one. This
+# script checks each installed PHP against the fixed releases, then tells
+# you whether the other two conditions exist on this server, so you know
+# whether you were exposed and whether anything else depends on the switch:
 #
 #   * the configured handler and upload-progress setting for every PHP-FPM
 #     version and pool, and for Apache mod_php, from the files PHP reads
@@ -42,8 +47,8 @@
 # =============================================================================
 set -euo pipefail
 
-SCRIPT_VERSION="1.0.2"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-11-19"
 case "${1:-}" in
   -V|--version|version) echo "php-session-audit.sh ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;;
   -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$0"; exit 0 ;;
@@ -54,6 +59,8 @@ esac
 WEB_ROOTS="${WEB_ROOTS:-/var/www /srv/www}"
 SCAN_DEPTH="${SCAN_DEPTH:-10}"
 CVE="CVE-2026-115560"
+declare -A PATCHED_115560_DEFAULT=([8.2]=8.2.36 [8.3]=8.3.37 [8.4]=8.4.28 [8.5]=8.5.13)
+patched_115560_ver() { local n="PATCHED_115560_${1/./_}"; echo "${!n:-${PATCHED_115560_DEFAULT[$1]:-}}"; }
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 [[ -t 1 ]] || { RED=''; GREEN=''; YELLOW=''; CYAN=''; NC=''; }
@@ -165,6 +172,28 @@ audit_sapi() {   # <version> <sapi dir name>
     fi
 }
 
+step "PHP version against the ${CVE} fix"
+ANY_UNPATCHED=0; ANY_PHP=0
+shopt -s nullglob
+for d in /etc/php/*/; do
+    v="$(basename "$d")"
+    [[ "$v" =~ ^[0-9]+\.[0-9]+$ ]] || continue
+    ANY_PHP=1
+    full="$(dpkg-query -W -f='${Version}' "php${v}-fpm" 2>/dev/null || true)"
+    [[ -n "$full" ]] || full="$(dpkg-query -W -f='${Version}' "php${v}-common" 2>/dev/null || true)"
+    if [[ -z "$full" ]]; then caution "PHP ${v}: couldn't read a dpkg version (not Debian/Ubuntu packaged?); check manually"; ANY_UNPATCHED=1; continue; fi
+    up="${full#*:}"; up="${up%%-*}"
+    want="$(patched_115560_ver "$v")"
+    if [[ -n "$want" ]] && dpkg --compare-versions "$up" ge "$want" 2>/dev/null; then
+        ok "PHP ${v} (${up}) is fixed for ${CVE} (>= ${want})"
+    else
+        bad "PHP ${v} (${up}) is NOT fixed for ${CVE}${want:+ (needs >= ${want})}: the conditions below still matter"
+        ANY_UNPATCHED=1
+    fi
+done
+shopt -u nullglob
+[[ $ANY_PHP -eq 1 ]] || inf "no PHP found under /etc/php; version can't be checked here"
+
 step "Configured session settings"
 
 limited_view "web roots and PHP session folders"
@@ -265,11 +294,14 @@ elif [[ $RISKY_BASE -eq 1 && $SWITCH_TO_PHP -eq 1 ]]; then
 elif [[ $RESULT -eq 0 && $PROGRESS_ON -eq 1 ]]; then
     caution "No ${CVE} precondition found, but upload progress is on. PHP still recommends turning it off."
     RESULT=2
+elif [[ $RESULT -eq 0 && $ANY_UNPATCHED -eq 0 && $ANY_PHP -eq 1 ]]; then
+    ok "No ${CVE} precondition found, and every PHP on this host is already on a build with the fix."
 elif [[ $RESULT -eq 0 ]]; then
     ok "No ${CVE} precondition found."
 else
     caution "Partial match. Review the items above; none alone is the full ${CVE} chain."
 fi
+[[ $ANY_UNPATCHED -eq 1 ]] && inf "Upgrading every PHP on this host to its fixed release (8.2.36 / 8.3.37 / 8.4.28 / 8.5.13) closes ${CVE} regardless of these preconditions."
 exit "$RESULT"
 
 # Assisted-by: Claude Opus 5.5

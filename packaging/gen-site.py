@@ -112,6 +112,7 @@ SYNONYMS = {  # words people type that the page itself does not use; added to th
     "glossary.html": "meaning means definition what is explained terms abbreviation acronym kev cwe rce xss ssrf dos lpe eol",
     "optimizely/index.html": "optimjack magecart javascript injection project javascript snippet cdn supply chain crypto clipper card skimmer coruna darksword ios exploit csp content security policy",
     "nginx/index.html": "nginx2root nginx2shell http2 http3 quic flow control window update rst stream sctp kernel root escalation docker container escape xint wiz rapid7 ikotas metnir mail proxy auth_http resolver mirror njs session tickets aio ssi",
+    "linux-kernel/index.html": "kvm guest-to-host escape nested virtualization svm amd vmcb nested page table ncr3 use-after-free terra security oren yomtov digitalocean hypervisor memory read write ebtables snat mptcp quartet module blocker",
 }
 HUBS = {"index.html", "tools.html", "cves.html", "man/index.html", "changelog.html", "about.html"}   # long lists that mention everything
 READONLY = {"check", "hunt", "scan", "audit", "version", "keys", "verify", "status", "list", "report", "csp", "rules"}
