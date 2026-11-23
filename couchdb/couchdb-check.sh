@@ -53,8 +53,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="couchdb-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -124,7 +124,7 @@ AFFECTED=0; CHECKED=0
 report() {   # label version [probe file for the distribution check]
     local label="$1" ver="$2" probe="${3:-}"
     CHECKED=$((CHECKED+1))
-    if ! is_semver "$(norm_ver "$ver")"; then caution "${label}: cannot parse version '${ver}'"; return 0; fi
+    if ! is_semver "$(norm_ver "$ver")"; then caution "${label}: cannot parse version '${ver}'; treating it as not confirmed fixed"; AFFECTED=$((AFFECTED+1)); return 0; fi
     if ! couch_affected "$ver"; then ok "${label}: CouchDB ${ver} has the fix (3.5.3 or newer)"; return 0; fi
     if [[ -n "$probe" ]]; then
         if distro_mentions "$probe" CVE-2026-86471; then

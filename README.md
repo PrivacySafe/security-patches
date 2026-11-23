@@ -13,9 +13,9 @@ Security mitigations and auditing tools shared for the public good.
   <a href="https://privacysafe.app/docs/security-patches/"><strong>📚 Read the Documentation</strong></a>
 </p>
 
-This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. We publish these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
+This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. PrivacySafe publishes these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
-**69 scripts addressing 147 CVEs across 72 software projects and 10 programming languages, plus 8 other global security incidents.**
+**74 scripts addressing 189 CVEs across 77 software projects and 10 programming languages, plus 8 other global security incidents.**
 
 **Documentation:** open [`docs/index.html`](docs/index.html) in a browser for the offline site (every tool, a CVE index, a glossary and the manual pages in HTML), or read it online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/). The packages also install a manual page for every tool (`man psf-<tool>`) and an info manual.
 
@@ -27,10 +27,10 @@ This repository contains security mitigations, system-hardening scripts, and aud
 
 | Patch | Targets | CVEs | Type |
 |---|---|---|---|
-| [PHP2Shell](php/README.md#php2shell-mitigation) | PHP-FPM 7.0 through 8.5 on Debian/Ubuntu/Trisquel and derivatives | CVE-2026-109618, CVE-2026-109619, CVE-2026-115560 | Mitigation |
+| [PHP2Shell](php/README.md#php2shell-mitigation) | PHP-FPM 7.0 through 8.5 on Debian/Ubuntu/Trisquel and derivatives | CVE-2026-109618, CVE-2026-109619, CVE-2026-115560, CVE-2026-126714 | Mitigation |
 | [PHP2Shell live watch](php/README.md#watching-live) | PHP-FPM, Apache and nginx logs on any GNU/Linux; optional systemd unit | CVE-2026-109618, CVE-2026-109619 | Read-only live monitor |
-| [PHP2Shell on cPanel](php/README.md#php2shell-on-cpanel-easyapache-4) | cPanel/WHM servers running EasyApache 4 PHP (ea-php74 to ea-php85), any handler | CVE-2026-109618, CVE-2026-109619, CVE-2026-115560 | Mitigation, check and audit |
-| [PHP session audit](php/README.md#php-session-audit-cve-2026-115560) | Any PHP host | CVE-2026-115560 | Read-only audit |
+| [PHP2Shell on cPanel](php/README.md#php2shell-on-cpanel-easyapache-4) | cPanel/WHM servers running EasyApache 4 PHP (ea-php74 to ea-php85), any handler | CVE-2026-109618, CVE-2026-109619, CVE-2026-115560, CVE-2026-126714 | Mitigation, check and audit |
+| [PHP session audit](php/README.md#php-session-audit-cve-2026-115560) | Any PHP host | CVE-2026-115560, CVE-2026-126714 | Read-only audit |
 | [PHP2Shell edge guards](php/edge/README.md) | Apache httpd (server configuration or `.htaccess`) and nginx in front of PHP, with request body and header limits, and a curl tester | CVE-2026-109618, CVE-2026-109619 | Compensating controls (log-only first) |
 | [PHP2Shell detection rules](php/detect/README.md) | auditd, Tetragon and nftables on GNU/Linux | CVE-2026-109618, CVE-2026-109619 | Detection content |
 | [Node.js October 2026](node/README.md#nodejs-october-2026-mitigation) | Node.js on GNU/Linux; systemd for the guard | CVE-2026-111497 (Brotli) and 9 Node CVEs | Mitigation (Node only) |
@@ -57,7 +57,7 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [Laravel TokenGuard](laravel/README.md#laravel-tokenguard-check) | Laravel apps on GNU/Linux | CVE-2026-114509 | Read-only check and protective middleware |
 | [Pillow 13.0.0](pillow/README.md#pillow-13-security-release-check) | Pillow in Python environments and lock files on GNU/Linux | CVE-2026-96639, CVE-2026-112900 | Read-only check |
 | [Drupal Webform](drupal/README.md#drupal-webform-check) | Drupal sites with the Webform module on GNU/Linux | CVE-2026-96355 | Read-only check |
-| [Roundcube Webmail October 2026](roundcube/README.md#roundcube-webmail-october-2026-check) | Roundcube on GNU/Linux, including copies bundled by hosting panels | CVE-2026-114716 | Read-only check and hunt |
+| [Roundcube Webmail October and November 2026](roundcube/README.md#roundcube-webmail-october-2026-check) | Roundcube on GNU/Linux, including copies bundled by hosting panels; a second, unnumbered round of 17 fixes followed the first within a month | CVE-2026-114716 | Read-only check and hunt |
 | [Next.js Server Actions](nextjs/README.md#nextjs-server-actions-check) | Next.js projects on GNU/Linux | CVE-2026-94482 | Read-only check |
 | [Craft CMS](craft/README.md#craft-cms-check) | Craft CMS 4.x and 5.x projects on GNU/Linux | CVE-2026-112777 | Read-only check |
 | [libexpat billion laughs](expat/README.md#libexpat-billion-laughs-check) | libexpat, Python's pyexpat and programs that embed expat on GNU/Linux | CVE-2026-115506 | Read-only check and embedded-copy scan |
@@ -80,6 +80,9 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [Incus](incus/README.md#incus-check) | Incus 6.0 before 6.0.7, 7.0 before 7.0.2 and 7.1 to 7.4: a confined client can write to the host as root | CVE-2026-115375, CVE-2026-115377, CVE-2026-115372 | Read-only check |
 | [LiteLLM proxy admin escalation](litellm/README.md#litellm-proxy-admin-escalation) | LiteLLM proxy 1.87.0 up to the fixed release on each line | CVE-2026-114612 | Read-only check |
 | [WordPress page-template path traversal](wordpress-pt/README.md#wordpress-pt-check) | WordPress core 4.7.0 to 7.1.1: unauthenticated path traversal, local PHP file inclusion, exploited in the wild | CVE-2026-87902 | Read-only check and hunt |
+| [Etherpad static path traversal](etherpad/README.md#static-traversal) | etherpad-lite 1.8.14 to 3.3.2: unauthenticated path traversal, reachable before auth middleware, chains to RCE via the admin plugin installer | CVE-2026-114516 | Check, hunt, nginx block (`mitigate`) and rollback |
+| [Apache Roller XML-RPC deserialization](apache-roller/README.md#xmlrpc) | Roller 4.0.0 to 6.1.5: unauthenticated deserialization RCE, exploited in the wild, CISA KEV; the admin-UI XML-RPC toggle does not gate it | CVE-2026-129448, CVE-2026-82384 | Check, hunt, `mitigate` (either named workaround) and rollback |
+| [Ghostscript Upload2Shell](ghostscript/README.md#upload2shell) | Ghostscript before 10.08.0: -dSAFER sandbox escape via a crafted font, reached through ImageMagick, Pillow, WordPress, Roundcube, CUPS and more, by content not file name | CVE-2026-125396 | Check (with a release-candidate trap caveat), hunt, ImageMagick `policy.xml` `mitigate` and rollback |
 | [WordPress upgrade-window RCE](wordpress-upgrade/README.md#wordpress-upgrade-check) | WordPress core 4.7.0 to 7.1.3: unauthenticated code execution while a core update runs, exploited in the wild | CVE-2026-119977 | Read-only check, hunt and the web server rule to add before updating |
 | [Magento, Adobe Commerce and Mage-OS BlockStrap](magento/README.md#magento-check) | Magento and Adobe Commerce 2.4.4 to 2.4.9, and Mage-OS below 3.6.0: a CVSS 10.0 unauthenticated email-template engine flaw | CVE-2026-103849 | Read-only check |
 | [Zammad session hijack and privilege escalation](zammad/README.md#zammad-check) | Zammad 6.3.0 to 6.5.4: session hijack to code execution as the zammad user, chained to root, exploited in the wild | CVE-2026-102489, CVE-2026-102490 | Read-only check and hunt |
@@ -97,6 +100,8 @@ This repository contains security mitigations, system-hardening scripts, and aud
 | [baserCMS 5](basercms/README.md#basercms-check) | baserCMS 5.0.0 to 5.4.1 (before 5.3.2 and 5.4.2): admin SQL injection, path traversal, and deserialization leading to command execution | CVE-2026-114621, CVE-2026-114622, CVE-2026-114624 | Read-only check |
 | [nginx-ui directive injection](nginx-ui/README.md#nginx-ui-check) | nginx-ui below 2.4.1: authenticated directive injection leading to RCE when nginx loads njs/Perl/Lua | CVE-2026-84316, CVE-2026-84317, CVE-2026-84318 | Read-only check |
 | [wp2shell, WordPress core RCE](wordpress/README.md#wp2shell-check) | WordPress core 6.8.0 to 6.8.5, 6.9.0 to 6.9.4 and 7.0.0 to 7.0.1: unauthenticated remote code execution, exploited in the wild | CVE-2026-63030, CVE-2026-60137 | Check, hunt, batch-route block (`mitigate`) and rollback |
+| [Apache mod_http2](apache/README.md#mod-http2) | Apache HTTP Server 2.4.55 to 2.4.70 with mod_http2 loaded and HTTP/2 enabled; standalone mod_h2 2.0.8 to 2.0.42 (archived, no fix) | CVE-2026-119618 | Check, hunt, HTTP/2 disable (`mitigate`) and rollback |
+| [MySQL client programs](mysql/README.md#client-programs) | MySQL client packages (mysql, mysqldump, mysqlbinlog and others) through the November 2026 CSPU batch; no fix exists for the 8.0 line | CVE-2026-114952 | Check, and speculative cleartext-plugin hardening (`harden`) with rollback |
 
 ### Red Hat advisories
 
@@ -136,7 +141,7 @@ Installing runs nothing: there are no install or removal scripts. The only depen
 
 ### Upgrading and removing
 
-Install a newer release the same way and it replaces the old one in place. Releases before 26.10.30 were named `psf-security-packages`. The new package replaces them, so with `apt` or `dnf` there is nothing to uninstall first. To remove the tools:
+Install a newer release the same way and it replaces the old one in place. To remove the tools:
 
 ```bash
 sudo apt remove psf-security-patches     # Debian family

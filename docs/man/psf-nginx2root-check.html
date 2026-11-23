@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-root="../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
-<title>psf-nginx2root-check(8) | PrivacySafe Security Patches</title><meta name="description" content="nginx2root: five nginx HTTP/2, HTTP/3, resolver and mail-proxy flaws">
+<title>psf-nginx2root-check(8) | PrivacySafe Security Patches</title><meta name="description" content="nginx2root: ten nginx HTTP/2, HTTP/3, resolver, mail-proxy and TLS flaws">
 <link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
 document.documentElement.className+=" js"
 // @license-end</script></head>
@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,30 +132,50 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Manual pages</a> / <span>psf-nginx2root-check(8)</span></nav>
-<article class="doc"><h1>psf-nginx2root-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/nginx/nginx2root-check.sh</code>. Tool page: <a href="../nginx/index.html">nginx</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/nginx/nginx2root-check.sh">Source</a>. With the package installed: <code>man psf-nginx2root-check</code>.</p><pre class="manual">nginx2root: five nginx HTTP/2, HTTP/3, resolver and mail-proxy flaws  (v1)
+<article class="doc"><h1>psf-nginx2root-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/nginx/nginx2root-check.sh</code>. Tool page: <a href="../nginx/index.html">nginx</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/nginx/nginx2root-check.sh">Source</a>. With the package installed: <code>man psf-nginx2root-check</code>.</p><pre class="manual">nginx2root: ten nginx HTTP/2, HTTP/3, resolver, mail-proxy and TLS flaws  (v1)
 CVE-2026-123007 CVE-2026-123633 CVE-2026-123634 CVE-2026-121810 CVE-2026-113425
+CVE-2026-118899 CVE-2026-120967 CVE-2026-120993 CVE-2026-125283 CVE-2026-123640
 
 If this software is helpful, consider a donation to our 501c3 nonprofit:
 https://privacysafe.foundation
 
 nginx 1.30.7 (stable) and 1.31.9 (mainline), released 18 November 2026, fix
-five flaws that F5 and nginx both rate 9.2 (CVSS 4.0) critical. Two were
-independently found by five separate teams (Wiz Research, Xint, Metnir,
-Rapid7 and Ikotas Labs, who also call it NGINX2Shell; it is the same two
-bugs, not a sixth): CVE-2026-123007, an HTTP/2 flow-control integer
-underflow exploitable even on a plain static-file server with no backend,
-and CVE-2026-123633, a use-after-free reachable when HTTP/2 is proxied to
-an upstream and the worker is short of connection slots. Xint found three
-more on its own as part of research it names nginx2root: CVE-2026-123634
-(a resolver use-after-free, reachable through &quot;mirror&quot; plus a request-
-derived proxy_pass target), CVE-2026-121810 (the same shape of bug over
-HTTP/3 instead of HTTP/2), and CVE-2026-113425 (a use-after-free in the
-mail proxy&#x27;s auth_http path). Xint also chained CVE-2026-123007 with an
-undisclosed, unpatched, not-yet-CVE&#x27;d Linux kernel SCTP use-after-free to
-get root on the host, including out of a Docker container; that kernel bug
-is a different, newer issue from three already-fixed 2026 SCTP flaws in the kernel&#x27;s own
-advisory history, one of them nicknamed &quot;SCTPhantom&quot;, and this
-script cannot check for it, only help you block the module that carries it.
+ten flaws in all. Five are the ones this script actively audits for,
+detailed below. The other five, fixed by the exact same two releases, are
+not separately audited: CVE-2026-118899 (high: a TLS 1.3 worker can hang in
+a loop reading a request body on any &quot;listen ... ssl;&quot; server that allows
+TLS 1.3, a denial of service rather than code execution, with no F5
+workaround published); CVE-2026-120967 (medium); and CVE-2026-120993,
+CVE-2026-125283, CVE-2026-123640 (low, opt-in features or limited impact).
+Upgrading to the fixed releases closes all ten at once; an unpatched
+version is exposed to CVE-2026-118899 on nothing more than an ordinary TLS
+1.3-enabled server block, the same way CVE-2026-123007 needs nothing but
+HTTP/2, so treat it the same way in your own risk accounting even though
+this script&#x27;s audit output doesn&#x27;t name it directive-by-directive.
+
+The five this script does audit: F5 and nginx both rate two of them 9.2
+(CVSS 4.0) critical. Two were independently found by five separate teams
+(Wiz Research, Xint, Metnir, Rapid7 and Ikotas Labs, who also call it
+NGINX2Shell; it is the same two bugs, not a sixth): CVE-2026-123007, an
+HTTP/2 flow-control integer underflow exploitable even on a plain
+static-file server with no backend, and CVE-2026-123633, a use-after-free
+reachable when HTTP/2 is proxied to an upstream and the worker is short of
+connection slots. Xint found three more on its own as part of research it
+names nginx2root: CVE-2026-123634 (a resolver use-after-free, reachable
+through &quot;mirror&quot; plus a request-derived proxy_pass target), CVE-2026-121810
+(the same shape of bug over HTTP/3 instead of HTTP/2), and CVE-2026-113425
+(a use-after-free in the mail proxy&#x27;s auth_http path). Xint also chained
+CVE-2026-123007 with a Linux kernel SCTP use-after-free in ASCONF handling,
+since assigned CVE-2026-64564 (Red Hat CVSS 3.1 7.8, present since 4.15),
+to get root on the host, including out of a Docker
+container; that kernel bug is a different, newer issue from three
+already-fixed 2026 SCTP flaws in the kernel&#x27;s own advisory history, one of
+them nicknamed &quot;SCTPhantom&quot;, and this script cannot check for it, only
+help you block the module that carries it. As of 22 November 2026, the fix
+for that kernel bug has merged into mainline (net-7.4-rc4, 19 Nov) but no
+stable kernel release carries it yet, and Docker&#x27;s default seccomp profile
+does not block SCTP sockets, so blocking the module remains the only
+stopgap for anyone who can&#x27;t run that unreleased kernel.
 
 CVE-2026-123007 affects nginx 1.9.5 through 1.31.8 and needs nothing but
 HTTP/2 turned on; it was present in every official release for more than a
@@ -160,6 +185,14 @@ traffic over one connection and a glibc memcpy implementation chosen at
 runtime on CPUs with AVX-512 (Xint&#x27;s own writeup and demo instead walk
 through a build that resolves to the AVX2 memcpy path; both are real,
 CPU-dependent variants of the same bug, not a disagreement between them).
+As of 19 November 2026 this is a complete, public, unauthenticated RCE:
+Rapid7&#x27;s repository includes a runnable client that negotiates the attack
+over real TLS and HTTP/2 and demonstrates arbitrary command execution
+against a freshly started nginx container, with no backend and no
+authentication; it targets a single, lightly loaded container and may not
+succeed as reliably against a busy production server with a &quot;messy&quot; heap
+or multiple concurrent clients, which is a property of this specific
+demonstration, not a reason an unpatched server is safe.
 
 CVE | Needs, besides an unpatched version | First affected | http2/http3 off helps?
 CVE-2026-123007 | HTTP/2 on, nothing else | 1.9.5 | yes
@@ -223,7 +256,7 @@ Usage:
                                     this if the mail proxy does not need
                                     outside access; otherwise restrict it
                                     with a firewall instead and skip this.
-                     --block-sctp   the undisclosed kernel flaw: adds
+                     --block-sctp   the kernel flaw (CVE-2026-64564): adds
                                     &quot;install sctp /bin/false&quot; under
                                     /etc/modprobe.d/, so modprobe refuses to
                                     load the sctp module from now on. Does

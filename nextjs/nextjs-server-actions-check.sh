@@ -30,7 +30,10 @@
 #
 #   check (default)  scan DIR (default /var/www /srv /opt /home).
 #                    Exit 0 = nothing exposed, 1 = an affected project with
-#                    Server Actions was found.
+#                    Server Actions was found, a version could not be
+#                    parsed, or an install is old enough to predate this
+#                    CVE's own range and so cannot be called clear of
+#                    this script's other findings either.
 #   version          print the script version.
 # Containers: with no directory argument the check also reads the project files it needs from
 # running docker and podman containers (SCAN_CONTAINERS=1, the default; 0 skips them), through a
@@ -43,8 +46,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="nextjs-server-actions-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -248,9 +251,9 @@ cmd_check() {
         found=$((found+1))
         step "next ${v} in ${dir}"
         inf "source: ${f}"
-        if ! is_semver "$v"; then caution "cannot parse version '${v}'"; continue; fi
+        if ! is_semver "$v"; then caution "cannot parse version '${v}'"; rc=1; continue; fi
         if ! next_affected "$v"; then
-            if ver_lt "$v" "13.0.0"; then ok "next ${v} is older than 13.0.0 and outside the affected range of CVE-2026-94482"
+            if ver_lt "$v" "13.0.0"; then caution "next ${v} is older than 13.0.0 and outside the affected range of CVE-2026-94482, but this is not a general Next.js health check: a version this old has almost certainly accumulated other, unrelated CVEs. Update regardless."; rc=1
             else ok "next ${v} has the fix (15.5.28+ on 15.x, 16.4.1+ on 16.x)"; fi
             continue
         fi
@@ -261,6 +264,7 @@ cmd_check() {
             rc=1
         else
             caution "no Server Action found (${ACT_CACHE[$dir]#no }): not exposed by the advisory's definition, but source checks can miss built-only apps"
+            inf "update anyway: the same fixed releases (15.5.28 and 16.4.1) also close the image optimizer flaws CVE-2026-96889 (critical), CVE-2026-114111 and CVE-2026-119347, which need no Server Action; one of them also needs sharp 0.35.5 or later"
         fi
     done
 

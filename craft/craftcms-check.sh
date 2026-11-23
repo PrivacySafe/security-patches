@@ -46,8 +46,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="craftcms-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -184,8 +184,8 @@ cmd_check() {
         st="$(craft_status "$ver")"
         case "$st" in
             fixed)   ok "Craft CMS ${ver} has the fix (4.18.8+ on 4.x, 5.11.0+ on 5.x)"; continue ;;
-            eol)     caution "Craft ${ver} is an end-of-life major version. The advisory covers 4.x and 5.x, so this copy is not described by it; move to a supported version."; continue ;;
-            unknown) caution "cannot compare version '${ver}' (a 6.x pre-release, a dev checkout or an unusual string): check the advisory GHSA-w643-x88w-6wcm"; continue ;;
+            eol)     caution "Craft ${ver} is an end-of-life major version. The advisory covers 4.x and 5.x, so this copy is not described by it; move to a supported version."; rc=1; continue ;;
+            unknown) caution "cannot compare version '${ver}' (a 6.x pre-release, a dev checkout or an unusual string): check the advisory GHSA-w643-x88w-6wcm"; rc=1; continue ;;
             vulnerable) bad "Craft CMS ${ver} is affected by CVE-2026-112777 (fixed in 4.18.8 / 5.11.0)"; rc=1 ;;
         esac
         gen="${dir}/config/general.php"

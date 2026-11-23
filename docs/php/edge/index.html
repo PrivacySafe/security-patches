@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../../couchdb/index.html">CouchDB</a></li>
 <li><a href="../../haproxy/index.html">HAProxy</a></li>
 <li><a href="../../incus/index.html">Incus</a></li>
+<li><a href="../../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../../nginx/index.html">nginx</a></li>
 <li><a href="../../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../../basercms/index.html">baserCMS</a></li>
 <li><a href="../../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../../craft/index.html">Craft CMS</a></li>
 <li><a href="../../drupal/index.html">Drupal</a></li>
+<li><a href="../../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../../grav/index.html">Grav</a></li>
 <li><a href="../../joomla/index.html">Joomla</a></li>
 <li><a href="../../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -260,7 +265,7 @@ sudo nginx -t &amp;&amp; sudo systemctl reload nginx
 <li>That log line has a limit. It is written only when the oversized cookie is the first <code>Set-Cookie</code> of the response, because Apache's log expression reads only the first value. The leak is emitted during PHP's session startup, before any application code runs, so in practice it is first. In any other position the cookie is still cut; it is just not logged.</li>
 </ul>
 <h2 id="nginx-and-oversized-response-headers">nginx and oversized response headers</h2>
-<p>nginx cannot cut a cookie by length: that needs a module we do not assume, and hiding <code>Set-Cookie</code> entirely would break sessions. It does something different by itself. nginx refuses an upstream response header larger than <code>fastcgi_buffer_size</code> (<code>proxy_buffer_size</code> when it proxies) with a <code>502</code> and <code>upstream sent too big header</code> in its error log. We sent a benign value of the leak's size (819,200 random bytes, URL-encoded as PHP encodes a session ID: 2,034,988 bytes on the wire; the encoded size of the real leak depends on its content) from PHP-FPM through nginx at several buffer sizes:</p>
+<p>nginx cannot cut a cookie by length: that needs a module that cannot be assumed to be present, and hiding <code>Set-Cookie</code> entirely would break sessions. It does something different by itself. nginx refuses an upstream response header larger than <code>fastcgi_buffer_size</code> (<code>proxy_buffer_size</code> when it proxies) with a <code>502</code> and <code>upstream sent too big header</code> in its error log. With a benign value of the leak's size (819,200 random bytes, URL-encoded as PHP encodes a session ID: 2,034,988 bytes on the wire; the encoded size of the real leak depends on its content) sent from PHP-FPM through nginx at several buffer sizes:</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
 <tr>

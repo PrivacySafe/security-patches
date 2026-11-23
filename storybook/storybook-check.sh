@@ -52,8 +52,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="storybook-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -260,7 +260,7 @@ cmd_check() {
         st="$(sb_status "$ver")"
         case "$st" in
             fixed)       ok "${ver} has the fix (8.6.19, 9.1.21, 10.6.2 or 11.0.0-alpha.6 or newer), and binds the dev server to 127.0.0.1 by default"; continue ;;
-            notaffected) ok "${ver} is older than 8.0.0, outside the advisory's range (7.x and earlier are unsupported: update anyway)"; continue ;;
+            notaffected) caution "${ver} is older than 8.0.0, outside the advisory's range (7.x and earlier are unsupported and not confirmed clear of other issues: update anyway)"; rc=1; continue ;;
             unknown)     caution "cannot compare version '${ver}': check it against 8.6.19, 9.1.21, 10.6.2 and 11.0.0-alpha.6"; rc=1; continue ;;
             vulnerable)  bad "storybook ${ver} is affected by CVE-2026-114126 (fixed in 8.6.19, 9.1.21, 10.6.2, 11.0.0-alpha.6)" ;;
         esac

@@ -60,7 +60,7 @@ Apache Traffic Server (ATS) is a caching reverse and forward proxy used in front
 
 Environment: `ATS_CONFIG_DIR` (space separated directories) replaces configuration discovery.
 
-Exit codes: `0` nothing exposed, `1` an affected version loads one of the plugins, or its configuration could not be read, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected version loads one of the plugins, its configuration could not be read, its version cannot be read or parsed, or it is older than 8.0 (long end of life), `2` bad arguments.
 
 ## How to read the result
 

@@ -77,8 +77,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="drupal-core-check.sh"
-SCRIPT_VERSION="2.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="2.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/drupal}"
 
@@ -273,15 +273,15 @@ cmd_check() {
         [[ -r "$lock" ]] && lockver="$(lock_pkg_version "$lock" drupal/core)"
         step "Drupal ${ver:-?} at ${root}"
         entity_list_check "$root" || rc=1
-        if [[ -z "$ver" ]]; then caution "version not found in ${f}"; continue; fi
+        if [[ -z "$ver" ]]; then caution "version not found in ${f}; treating it as not confirmed fixed"; rc=1; continue; fi
         [[ -n "$lockver" && "$(norm_ver "$lockver")" != "$(norm_ver "$ver")" ]] \
             && inf "composer.lock says drupal/core ${lockver}; the installed core says ${ver}; using the installed copy"
         st="$(dcore_status "$ver")"
         case "$st" in
             fixed) ok "Drupal core ${ver} has the fix (10.6.19, 11.3.19, 11.4.10 or 12.0.0-beta2 or newer)"; continue ;;
-            out)   caution "Drupal ${ver} is outside the affected range of this advisory (it is end of life; Drupal 7 has its own long-term-support fix path)"; continue ;;
-            old)   caution "Drupal ${ver} is older than 8.9.0, which the advisory does not describe; it is end of life regardless"; continue ;;
-            dev)   caution "development or unparseable version '${ver}': check the exact commit against the advisory"; continue ;;
+            out)   caution "Drupal ${ver} is outside the affected range of this advisory (it is end of life; Drupal 7 has its own long-term-support fix path), and not confirmed clear of other issues"; rc=1; continue ;;
+            old)   caution "Drupal ${ver} is older than 8.9.0, which the advisory does not describe; it is end of life regardless and not confirmed clear of other issues"; rc=1; continue ;;
+            dev)   caution "development or unparseable version '${ver}': check the exact commit against the advisory"; rc=1; continue ;;
             eol)   bad "Drupal core ${ver} is affected by CVE-2026-108097 and its branch is end of life: it will not be patched, move to 10.6.19, 11.3.19 or 11.4.10"; rc=1 ;;
             vulnerable) bad "Drupal core ${ver} is affected by CVE-2026-108097 (fixed in 10.6.19, 11.3.19, 11.4.10, 12.0.0-beta2)" ;;
         esac

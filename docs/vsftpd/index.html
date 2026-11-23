@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp" open><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>vsftpd</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#servers-proxies-and-network-services">Servers, proxies and network services</a></p><h1>vsftpd: <span class="nw">CVE-2026-119568</span> FTPS data channel hijack</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">vsftpd 3.0.5 and older with FTPS enabled on a standalone listener, GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2025-14242</span>, <span class="nw">CVE-2026-119568</span></span></dd><dt>Script</dt><dd><div class="scr"><code>vsftpd-ftps-ticket-check.sh</code> (<a href="../man/psf-vsftpd-ftps-ticket-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/vsftpd/vsftpd-ftps-ticket-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>harden</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/vsftpd/vsftpd-ftps-ticket-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#servers-proxies-and-network-services">Servers, proxies and network services</a></p><h1>vsftpd: <span class="nw">CVE-2026-119568</span> FTPS data channel hijack</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">vsftpd 3.0.5 and older with FTPS enabled on a standalone listener, GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2025-14242</span>, <span class="nw">CVE-2026-119567</span>, <span class="nw">CVE-2026-119568</span></span></dd><dt>Script</dt><dd><div class="scr"><code>vsftpd-ftps-ticket-check.sh</code> (<a href="../man/psf-vsftpd-ftps-ticket-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/vsftpd/vsftpd-ftps-ticket-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>harden</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/vsftpd/vsftpd-ftps-ticket-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside>
 <h2 id="vsftpd-ftps-data-channel-hijack">vsftpd FTPS data channel hijack</h2>
 <p>vsftpd 3.0.5 and older, built with SSL and running FTPS, has a flaw in how it ties a data connection to its user (<span class="nw">CVE-2026-119568</span>). It accepts any resumed TLS session ticket as proof that the data connection belongs to the logged-in user, without checking that the ticket came from that user's control connection. Anyone who shares the victim's IP address can use that to take over a transfer: they receive the victim's download, or the server takes the victim's upload from them.</p>
 <p>This tool tells you whether your vsftpd is exposed, protects it until upstream publishes a fixed release, and can apply optional baseline hardening. A second CVE, <span class="nw">CVE-2025-14242</span>, is a denial of service in Red Hat family packages and is covered further down.</p>
@@ -166,7 +171,7 @@ document.documentElement.className+=" js"
 <li>The binary was built with SSL support. The stock tarball has it off. Most distribution packages turn it on. The script reads this from whether the binary links OpenSSL.</li>
 <li><code>ssl_enable=YES</code> in the configuration (the default is <code>NO</code>).</li>
 <li>A standalone listener: <code>listen=YES</code> or <code>listen_ipv6=YES</code>. Debian's default configuration sets <code>listen_ipv6=YES</code>, which counts.</li>
-<li><code>require_ssl_reuse=YES</code>, which is the default. Setting it to <code>NO</code> removes the ticket requirement entirely, so the data connection is no longer tied to the control connection at all. The script reports that as exposed too (our reading, not the advisory's).</li>
+<li><code>require_ssl_reuse=YES</code>, which is the default. Setting it to <code>NO</code> removes the ticket requirement entirely, so the data connection is no longer tied to the control connection at all. The script reports that as exposed too (a PrivacySafe reading, not the advisory's).</li>
 <li>The attacker shares the victim's source IP address. Passive connections must come from the control connection's address unless <code>pasv_promiscuous=YES</code>, so this means a shared NAT address, a shared proxy or the same host.</li>
 </ol>
 <h2 id="quick-start">Quick start</h2>
@@ -268,6 +273,11 @@ VSFTPD_CONF=/etc/vsftpd/ftps.conf ./vsftpd-ftps-ticket-check.sh check
 </table></div>
 <p>What the check does: for each vsftpd it finds, it asks the package manager. A package whose changelog names <span class="nw">CVE-2025-14242</span> is reported fixed. A Red Hat family package (Red Hat, AlmaLinux, Rocky, CentOS, Oracle) whose changelog does not name it is reported as affected. RHEL 7 builds are not listed by Red Hat and are noted, not reported. Anything else (Debian, Ubuntu, a source build) is not reported, with the open question above. It decides by the package, not by the version number, because Red Hat backports under old version numbers.</p>
 <p>What to do: install your distribution's vsftpd update. Until then, <code>mitigate --allow</code> limits who can reach the port and removing accounts that do not need FTP limits who can log in. <code>harden --limits</code> caps sessions per address, which is a generic suggestion from a third-party summary and not Red Hat's advice. It does not remove the bug.</p>
+<h2 id="related-cve-2026-119567-denied-commands-through-their-x-prefixed-aliases">Related: <span class="nw">CVE-2026-119567</span>, denied commands through their X-prefixed aliases</h2>
+<p>vsftpd through 3.0.5 compares <code>cmds_denied</code> against the literal command name, so an authenticated user can still run a denied command through its RFC 775 alias: <code>XRMD</code>, <code>XMKD</code>, <code>XCWD</code>, <code>XPWD</code> and <code>XCUP</code> stand for <code>RMD</code>, <code>MKD</code>, <code>CWD</code>, <code>PWD</code> and <code>CDUP</code>. Red Hat rates it Low (CVSS 3.1 3.1). It matters only on a server that relies on <code>cmds_denied</code> to stop logged-in users from deleting or creating directories. No fixed release was named in November; Red Hat's workaround is to list the aliases as well, then restart vsftpd (which ends active sessions):</p>
+<pre tabindex="0"><code class="language-text">cmds_denied=RMD,MKD,CWD,PWD,CDUP,XRMD,XMKD,XCWD,XPWD,XCUP
+</code></pre>
+<p>The check does not audit <code>cmds_denied</code>; search for it with <code>grep -n cmds_denied /etc/vsftpd*.conf /etc/vsftpd/*.conf</code>.</p>
 <h2 id="optional-hardening-harden">Optional hardening: <code>harden</code></h2>
 <p><code>harden</code> is separate from both CVEs: it applies baseline hardening, and only the measures you choose, because each can change how clients connect. It needs root, copies every file first, restarts nothing unless you add <code>--restart</code>, and <code>rollback</code> undoes it together with <code>mitigate</code>. Each directive is written only if the installed vsftpd build knows it, because an unknown directive stops vsftpd from starting (the Ubuntu 3.0.5 build, for example, does not recognize <code>ssl_tlsv1_1</code> or <code>ssl_tlsv1_2</code>). A numeric limit that is already set and at least as strict is never loosened.</p>
 <pre tabindex="0"><code class="language-bash">sudo ./vsftpd-ftps-ticket-check.sh harden --baseline --dry-run
@@ -392,7 +402,7 @@ sudo ./vsftpd-ftps-ticket-check.sh rollback
 <li>The affected range is the one published on 30 October 2026. The CVE text names <code>ssl_data_accept()</code> and the researcher's write-up names <code>ssl_accept()</code>. They describe the same missing check.</li>
 </ul>
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../storybook/index.html">&larr; Storybook</a><a rel="next" href="../wordpress/index.html">WordPress core and plugins &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#vsftpd-ftps-data-channel-hijack">vsftpd FTPS data channel hijack</a></li><li class="l2"><a href="#what-exposes-you">What exposes you</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#cve-2025-14242-authenticated-denial-of-service-red-hat-family-packages">CVE-2025-14242: authenticated denial of service (Red Hat family packages)</a></li><li class="l2"><a href="#optional-hardening-harden">Optional hardening: harden</a></li><li class="l2"><a href="#mitigating-it">Mitigating it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#vsftpd-ftps-data-channel-hijack">vsftpd FTPS data channel hijack</a></li><li class="l2"><a href="#what-exposes-you">What exposes you</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#cve-2025-14242-authenticated-denial-of-service-red-hat-family-packages">CVE-2025-14242: authenticated denial of service (Red Hat family packages)</a></li><li class="l2"><a href="#related-cve-2026-119567-denied-commands-through-their-x-prefixed-aliases">Related: CVE-2026-119567, denied commands through their X-prefixed aliases</a></li><li class="l2"><a href="#optional-hardening-harden">Optional hardening: harden</a></li><li class="l2"><a href="#mitigating-it">Mitigating it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

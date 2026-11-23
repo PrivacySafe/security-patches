@@ -273,13 +273,15 @@ Only one run changes the host at a time: a second `block` or `rollback` waits fo
 
 ### The list
 
-Three groups, each labeled for what it is. `list` shows all 42 rows with the CVE, what a block breaks and the state on your host.
+Three groups, each labeled for what it is. `list` shows all 43 rows with the CVE, what a block breaks and the state on your host.
 
 | Group | Modules | What it means |
 |---|---|---|
-| `exploited` | `ah6` (CVE-2026-80844), `tun` (CVE-2026-81000), `pppoe` (CVE-2026-68121), `sctp` and `sctp_diag` (CVE-2026-74469), `ebt_snat` (CVE-2026-53266), `mptcp` (CVE-2026-98432, a reduction, not a fix) | Modules behind flaws that this collection has a tool for. The tools above judge the kernel; this one blocks the module |
+| `exploited` | `ah6` (CVE-2026-80844), `tun` (CVE-2026-81000), `pppoe` (CVE-2026-68121), `sctp` and `sctp_diag` (CVE-2026-74469), `ebt_snat` (CVE-2026-53266), `mptcp` (CVE-2026-98432, a reduction, not a fix), `kvm_amd` (CVE-2026-99312; blocking it stops all AMD virtualization, so prefer `linux-kernel-kvm-escape-check.sh mitigate`, which only turns off nested virtualization) | Modules behind flaws that this collection has a tool for. The tools above judge the kernel; this one blocks the module |
 | `historic` | `dccp`, `rds`, `rds_tcp`, `tipc`, `n_hdlc`, `bluetooth`, `vsock`, `vmw_vsock_virtio_transport`, `esp6` | Modules behind older, well known local root or remote flaws. `list` shows the CVE ids |
 | `hardening` | The rare filesystems `cramfs`, `freevxfs`, `jffs2`, `hfs`, `hfsplus`, `udf`, `squashfs`; `usb_storage` and `uas`; the DMA buses `firewire_core`, `firewire_ohci`, `firewire_sbp2` and `thunderbolt`; the rare protocols `ax25`, `netrom`, `rose`, `appletalk`, `x25`, `atm`, `can`, `nfc` and `ieee802154`; `parport_pc`, `ppdev`, `floppy` and `mptcp_diag`* | Attack surface that almost no system needs, in the style of the CIS benchmarks. No CVE is claimed for these. Blocking them is a policy choice, and each row says what it breaks |
+
+Blocking `sctp` also removes the surface of CVE-2026-64564, a newer SCTP use-after-free in ASCONF handling (present since 4.15) that Xint chained with nginx2root to reach host root out of a Docker container. Its fix merged into mainline on 19 November 2026 and was in no stable kernel release as of 22 November; Docker's default seccomp profile does not block SCTP sockets. See the [nginx2root](../nginx/README.md#nginx2root) section.
 
 A module marked * is one that detection depends on. `mptcp_diag` is the module `ss -M` reads to list MPTCP sockets, and this collection's own checks use it. The flawed code of CVE-2026-98432 is in IPv4 TCP, not in `mptcp_diag`, so blocking it removes no known exposure and hides the MPTCP listeners you would look for. `block --group` and `block --cve` therefore skip it and say so, and it is blocked only when you name it and add `--force`. A row you add with `--list-file` can carry the same flag as a seventh field, `keep`.
 

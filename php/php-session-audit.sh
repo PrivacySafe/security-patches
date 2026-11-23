@@ -47,8 +47,8 @@
 # =============================================================================
 set -euo pipefail
 
-SCRIPT_VERSION="1.1.0"
-SCRIPT_DATE="2026-11-19"
+SCRIPT_VERSION="1.3.0"
+SCRIPT_DATE="2026-11-22"
 case "${1:-}" in
   -V|--version|version) echo "php-session-audit.sh ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;;
   -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$0"; exit 0 ;;
@@ -61,6 +61,18 @@ SCAN_DEPTH="${SCAN_DEPTH:-10}"
 CVE="CVE-2026-115560"
 declare -A PATCHED_115560_DEFAULT=([8.2]=8.2.36 [8.3]=8.3.37 [8.4]=8.4.28 [8.5]=8.5.13)
 patched_115560_ver() { local n="PATCHED_115560_${1/./_}"; echo "${!n:-${PATCHED_115560_DEFAULT[$1]:-}}"; }
+# CVE-2026-126714 ("phpAfterShell", depthfirst, 19 Nov 2026): the same
+# upload-progress callback writes the Session file non-atomically; killing
+# the worker mid-write can splice two Sessions into one the next request
+# trusts. CVE-2026-115560's fix did not close this per depthfirst's own
+# affected-version table (dated 19 Nov 2026), which lists every current PHP
+# branch as vulnerable, the builds below included; no release is known to
+# fix it. The array is intentionally empty; fill in PATCHED_126714_X_Y
+# yourself only once you've confirmed a real fix, not from a changelog CVE
+# mention alone.
+CVE2="CVE-2026-126714"
+declare -A PATCHED_126714_DEFAULT=()
+patched_126714_ver() { local n="PATCHED_126714_${1/./_}"; echo "${!n:-${PATCHED_126714_DEFAULT[$1]:-}}"; }
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 [[ -t 1 ]] || { RED=''; GREEN=''; YELLOW=''; CYAN=''; NC=''; }
@@ -172,8 +184,8 @@ audit_sapi() {   # <version> <sapi dir name>
     fi
 }
 
-step "PHP version against the ${CVE} fix"
-ANY_UNPATCHED=0; ANY_PHP=0
+step "PHP version against the ${CVE} and ${CVE2} fixes"
+ANY_UNPATCHED=0; ANY_UNPATCHED_126714=0; ANY_PHP=0
 shopt -s nullglob
 for d in /etc/php/*/; do
     v="$(basename "$d")"
@@ -190,6 +202,13 @@ for d in /etc/php/*/; do
         bad "PHP ${v} (${up}) is NOT fixed for ${CVE}${want:+ (needs >= ${want})}: the conditions below still matter"
         ANY_UNPATCHED=1
     fi
+    want2="$(patched_126714_ver "$v")"
+    if [[ -n "$want2" ]] && dpkg --compare-versions "$up" ge "$want2" 2>/dev/null; then
+        ok "PHP ${v} (${up}) is fixed for ${CVE2} (>= ${want2}, from a PATCHED_126714 override)"
+    else
+        bad "PHP ${v} (${up}) is NOT known fixed for ${CVE2}: no release closes this as of this script's writing, independent of ${CVE} above"
+        ANY_UNPATCHED_126714=1
+    fi
 done
 shopt -u nullglob
 [[ $ANY_PHP -eq 1 ]] || inf "no PHP found under /etc/php; version can't be checked here"
@@ -205,6 +224,41 @@ for d in /etc/php/*/; do
 done
 shopt -u nullglob
 [[ $RECORDS -gt 0 ]] || inf "no PHP-FPM pools or mod_php found under /etc/php"
+
+step "FPM pools with catch_workers_output on (CVE-2026-129291)"
+# A different CVE from the same 19 November PHP release, unrelated to
+# sessions: someone who can already run PHP code in an FPM worker can run
+# commands with the FPM master's privileges, commonly root, when a pool has
+# catch_workers_output on. The fix is the same PHP upgrade as CVE-2026-115560
+# above; this step exists because the setting itself is simple to check and
+# worth flagging even for someone who hasn't read PHP's full 19 November
+# advisory. This does not mean the host is already compromised: it means the
+# setting removes one more layer if something else lets an attacker run code
+# in a worker first.
+ANY_CWO=0
+shopt -s nullglob
+for d in /etc/php/*/; do
+    v="$(basename "$d")"
+    [[ "$v" =~ ^[0-9]+\.[0-9]+$ ]] || continue
+    for pool in "/etc/php/$v/fpm/pool.d/"*.conf; do
+        [[ -f "$pool" ]] || continue
+        # catch_workers_output is a native FPM pool directive (a bare
+        # "key = value" line), not one routed through the
+        # php_value[...]/php_admin_value[...] bracket syntax pool_get
+        # parses above, so it needs its own simple key=value read.
+        cwo="$(awk -F= '
+            /^[[:space:]]*;/ { next }
+            $1 ~ /^[[:space:]]*catch_workers_output[[:space:]]*$/ {
+                v = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); print v
+            }' "$pool" 2>/dev/null | tail -1)"
+        if is_on "${cwo:-no}"; then
+            bad "PHP $v pool $(basename "$pool" .conf): catch_workers_output is on"
+            ANY_CWO=1
+        fi
+    done
+done
+shopt -u nullglob
+[[ $ANY_CWO -eq 1 ]] || ok "No FPM pool found with catch_workers_output on"
 
 step "Per-directory overrides"
 re_keys='session\.(serialize_handler|upload_progress\.enabled|save_path)'
@@ -302,7 +356,14 @@ else
     caution "Partial match. Review the items above; none alone is the full ${CVE} chain."
 fi
 [[ $ANY_UNPATCHED -eq 1 ]] && inf "Upgrading every PHP on this host to its fixed release (8.2.36 / 8.3.37 / 8.4.28 / 8.5.13) closes ${CVE} regardless of these preconditions."
+if [[ $ANY_UNPATCHED_126714 -eq 1 ]]; then
+    if [[ $PROGRESS_ON -eq 1 ]]; then
+        bad "${CVE2} ('phpAfterShell'): no PHP version on this host is known fixed for this, because no release is known to fix it at all as of this script's writing, and upload progress is on somewhere above. Upgrading does NOT close this the way it closes ${CVE}. The only confirmed mitigation is the same switch: session.upload_progress.enabled = Off (php2shell-mitigate.sh keeps it off for exactly this reason now). See php/README.md."
+        [[ $RESULT -eq 0 ]] && RESULT=2
+    else
+        caution "${CVE2} ('phpAfterShell'): no PHP version on this host is known fixed for this, but upload progress is already off everywhere found above, which closes it regardless of version. Keep it off; don't turn it back on just because a PHP upgrade reports fixed for ${CVE}."
+    fi
+fi
 exit "$RESULT"
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

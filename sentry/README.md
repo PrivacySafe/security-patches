@@ -57,7 +57,7 @@ The `tunnelRoute` option of the Sentry SDK for Next.js sends browser events to a
 | `check [DIR ...]` (default) | Reads the `@sentry/nextjs` version from `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` (v1 and Berry), `pnpm-lock.yaml`, `bun.lock` and an installed `node_modules` copy. For an affected version it reads `next.config.*` for `tunnelRoute`, guesses the bundler, and looks for routes that collide with the tunnel path |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing exposed, `1` an affected version with `tunnelRoute` on a webpack build (with a collision, or a path that cannot be checked), or a configuration that could not be read, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected version with `tunnelRoute` on a webpack build (with a collision, or a path that cannot be checked), a configuration that could not be read, a version that cannot be compared, or a release older than 9.36.0 (not confirmed clear), `2` bad arguments.
 
 ## How each condition is judged
 

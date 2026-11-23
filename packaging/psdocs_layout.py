@@ -158,7 +158,7 @@ def machine_summary(kind):
     PrivacySafe VPN .... /docs/vpn/      OpenVPN and WireGuard setup for organizations
     3NWeb protocols .... /docs/protocols/  MailerId, ASMail, 3NStorage, XSP; specs at IEEE SA Open
     Security Patches ... /docs/security-patches/  checks, hunts and protection for serious
-                         vulnerabilities; 69 scripts, 147 CVEs; software and docs are CC0
+                         vulnerabilities; 74 scripts, 189 CVEs; software and docs are CC0
     Atom feed .......... /docs/security-patches/feed.xml  (newest advisories)
     Plain-text digest .. /docs/llms.txt   Sitemap: /docs/sitemap.xml"""
     else:
@@ -167,7 +167,7 @@ def machine_summary(kind):
     servers and developer machines. For each serious vulnerability a script tells
     you whether you are exposed, looks for signs that someone already used the
     flaw, and where there is a safe way, protects the machine until you can
-    update. 69 scripts covering 147 CVEs. Plain bash. Each tool has a page, a
+    update. 74 scripts covering 189 CVEs. Plain bash. Each tool has a page, a
     manual page (man psf-NAME), and a line in the CVE index.
 
   SECTIONS

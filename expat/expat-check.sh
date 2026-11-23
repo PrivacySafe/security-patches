@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
 # libexpat billion laughs detection delay: read-only checker  (v1)
-# CVE-2026-115506
+# CVE-2026-115506 (and CVE-2026-113351, CVE-2026-117610, CVE-2026-118370, fixed
+# in the same release)
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
@@ -18,13 +19,15 @@
 # the v4 scale). No authentication is needed wherever a service parses XML from
 # an untrusted source. Reported through Google; the upstream issue is #1160.
 #
-#   Affected: libexpat through 2.9.0, that is every release so far
-#   Fix:      merged upstream on 23 October 2026 (pull request #1433) and
-#             milestoned for Expat 2.9.1
+#   Affected: libexpat through 2.9.0, that is every release before the fix
+#   Fixed:    Expat 2.10.0, released 2 November 2026. The planned 2.9.1 was
+#             never released; the fix shipped as 2.10.0 instead.
 #
-# Install Expat 2.9.1 or later when it reaches you: upstream attached the fix to
-# that milestone. The script reports every copy at 2.9.0 or older as affected and
-# 2.9.1 or newer as fixed. Distribution
+# Expat 2.10.0 also fixes CVE-2026-113351 (denial of service through
+# XML_ParserReset), CVE-2026-117610 (a crash on an initial, non-final, empty
+# subparser parse call) and CVE-2026-118370 (signed integer overflow of attIndex
+# and nPrefixes in storeAtts). The script reports every copy older than 2.10.0
+# as affected and 2.10.0 or newer as fixed. Distribution
 # packages usually backport fixes without changing the version, which the
 # script checks for.
 #
@@ -58,10 +61,10 @@
 set -uo pipefail
 
 SCRIPT_NAME="expat-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
-FIXED_VERSION="2.9.1"
+FIXED_VERSION="2.10.0"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -134,12 +137,12 @@ AFFECTED=0; CHECKED=0
 report() {   # label version [file for the distribution check]
     local label="$1" ver="$2" probe="${3:-}"
     CHECKED=$((CHECKED+1))
-    if ! is_semver "$ver"; then caution "${label}: cannot parse version '${ver}'"; return 0; fi
+    if ! is_semver "$ver"; then caution "${label}: cannot parse version '${ver}'; treating it as not confirmed fixed"; AFFECTED=$((AFFECTED+1)); return 0; fi
     if ! expat_affected "$ver"; then
         ok "${label}: expat ${ver} is ${FIXED_VERSION} or newer"; return 0
     fi
     if [[ -n "$probe" ]]; then
-        if distro_mentions "$probe" CVE-2026-115506; then
+        if distro_mentions "$probe" CVE-2026-115506 CVE-2026-113351 CVE-2026-117610 CVE-2026-118370; then
             ok "${label}: expat ${ver}, and package ${DISTRO_PKG} changelog mentions ${DISTRO_HIT}: a backported fix is likely"
             return 0
         elif [[ $? -eq 1 ]]; then
@@ -147,7 +150,7 @@ report() {   # label version [file for the distribution check]
             AFFECTED=$((AFFECTED+1)); return 0
         fi
     fi
-    bad "${label}: expat ${ver} is affected (2.9.0 and older)"
+    bad "${label}: expat ${ver} is affected (older than 2.10.0)"
     AFFECTED=$((AFFECTED+1))
     return 0
 }
@@ -315,11 +318,11 @@ cmd_check_host() {
     elif [[ $AFFECTED -eq 0 ]]; then
         info "No affected copy found (${CHECKED} checked)"
     else
-        warn "${AFFECTED} affected copy(ies) of ${CHECKED} checked. Upstream planned Expat ${FIXED_VERSION} for 26 October 2026."
+        warn "${AFFECTED} affected copy(ies) of ${CHECKED} checked. Expat ${FIXED_VERSION} (2 November 2026) fixes this and three more flaws."
         inf "Install your distribution's expat or libexpat update as soon as it ships, then restart the processes listed above."
         inf "Until then, reduce exposure (PrivacySafe recommendation): cap the size of XML bodies at the proxy, and run services that parse untrusted XML under CPU and memory limits (systemd CPUQuota and MemoryMax) so one request cannot starve the host."
         inf "libexpat exposes tuning calls for its amplification protection, but the upstream notes do not say that tightening them avoids this flaw, so do not rely on that."
-        inf "Upstream: https://github.com/libexpat/libexpat/pull/1433 and issue #1160"
+        inf "Upstream: https://blog.hartwork.org/posts/expat-2-10-0-released/ (backporters: pull request #1439 in particular)"
     fi
     [[ $AFFECTED -eq 0 ]]
 }
@@ -352,7 +355,7 @@ main() {
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
     case "$CMD" in -h|--help|help) print_help; exit 0 ;; esac
     echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
-    echo "CVE-2026-115506; affects libexpat through 2.9.0, fix planned for 2.9.1"
+    echo "CVE-2026-115506 (and three more); fixed in libexpat 2.10.0"
     case "$CMD" in
         check|deep) "cmd_${CMD}" "$@" ;;
         *) die "Unknown command: ${CMD} (check|deep|version)" ;;

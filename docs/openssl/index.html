@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>OpenSSL</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>OpenSSL DTLS handshake retransmission read (<span class="nw">CVE-2026-84782</span>)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">OpenSSL 4.0, 3.6, 3.5, 3.4, 3.0, 1.1.1 and 1.0.2 before their fixed releases: a High flaw reachable through DTLS</div></dd><dt>Severity</dt><dd>High, 8.2</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-84782</span></span></dd><dt>Script</dt><dd><div class="scr"><code>openssl-check.sh</code> (<a href="../man/psf-openssl-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/openssl/openssl-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/openssl/openssl-check.sh check</code></pre></div></dd></dl></aside>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>OpenSSL DTLS handshake retransmission read (<span class="nw">CVE-2026-84782</span>)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">OpenSSL 4.0, 3.6, 3.5, 3.4, 3.0, 1.1.1 and 1.0.2 before their fixed releases: a High flaw reachable through DTLS</div></dd><dt>Severity</dt><dd>High, 8.2</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-84782</span>, <span class="nw">CVE-2026-121481</span></span></dd><dt>Script</dt><dd><div class="scr"><code>openssl-check.sh</code> (<a href="../man/psf-openssl-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/openssl/openssl-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/openssl/openssl-check.sh check</code></pre></div></dd></dl></aside>
 <h2 id="openssl-check">OpenSSL check</h2>
 <p>OpenSSL's security release of 29 September 2026 fixed 14 flaws. One is rated High: <span class="nw">CVE-2026-84782</span>, &quot;DTLS retransmits handshake messages from a stale buffer offset&quot;. When DTLS retransmits a handshake message it can read from the wrong place in a buffer, so a remote peer may receive unintended plaintext heap memory in the handshake data, or the program may crash. CISA scored it 8.2 (confidentiality low, availability high). It was found by Laurent Gaffie of Secorizon, with the fix by Ryan Hooper. The FIPS module is not affected.</p>
 <div class="table-wrap" tabindex="0"><table>
@@ -231,6 +236,8 @@ chmod +x openssl-check.sh
 </tbody>
 </table></div>
 <p>Env: <code>OPENSSL_BIN</code>, <code>OPENSSL_PKG_VERSION</code>, <code>OPENSSL_OS_RELEASE</code>, <code>OPENSSL_CHANGELOG</code>, <code>OPENSSL_PROC</code> and <code>OPENSSL_NODE</code> override the openssl command, the package version, <code>/etc/os-release</code>, a changelog file (plain or <code>.gz</code>), <code>/proc</code> and the node command. <code>OPENSSL_NO_PACKAGE=1</code> treats the installed openssl as not owned by a package.</p>
+<h2 id="also-announced-cve-2026-121481">Also announced: <span class="nw">CVE-2026-121481</span></h2>
+<p>OpenSSL announced <span class="nw">CVE-2026-121481</span>, an overflow in the output-length arithmetic of <code>EVP_EncodeBlock</code> when a single, exceptionally large input is Base64-encoded. Upstream has not identified a practical remote path to it, and Red Hat rates its real-world reach as low although some aggregators list 9.8. The fixed releases, OpenSSL 4.0.4 and 4.1.1, were scheduled for 1 December 2026; until they ship, no version is fixed, so this script does not check for it. An application that Base64-encodes large buffers from untrusted input should cap their size.</p>
 <h2 id="update">Update</h2>
 <p>Update the OpenSSL package, then restart the services that use it (<code>needrestart</code>, or a reboot). For 3.0, 1.1.1 and 1.0.2 without a vendor backport, the public fix does not exist: move to a supported branch (3.4 or later) or use a distribution package that carries the fix.</p>
 <h2 id="sources">Sources</h2>
@@ -345,7 +352,7 @@ chmod +x openssl-check.sh
 </ul>
 <!-- rhsa:end -->
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../openssh-musl/index.html">&larr; OpenSSH musl password bypass</a><a rel="next" href="../optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#openssl-check">OpenSSL check</a></li><li class="l2"><a href="#who-is-actually-exposed">Who is actually exposed</a></li><li class="l2"><a href="#how-the-script-decides">How the script decides</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#openssl-check">OpenSSL check</a></li><li class="l2"><a href="#who-is-actually-exposed">Who is actually exposed</a></li><li class="l2"><a href="#how-the-script-decides">How the script decides</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#also-announced-cve-2026-121481">Also announced: CVE-2026-121481</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

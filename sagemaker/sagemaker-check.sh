@@ -46,8 +46,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="sagemaker-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -210,7 +210,7 @@ cmd_check_host() {
         st="$(sm_status "$ver")"
         case "$st" in
             fixed)   ok "${label}: sagemaker ${ver} has the fix" ;;
-            unknown) caution "${label}: cannot parse version '${ver}'" ;;
+            unknown) caution "${label}: cannot parse version '${ver}'; treating it as not confirmed fixed"; rc=1 ;;
             *)       bad "${label}: sagemaker ${ver} is affected by CVE-2026-112408 (fixed in 2.257.3 and 3.10.0)"; rc=1 ;;
         esac
     done < <(find "${existing[@]}" -xdev -maxdepth 9 -type d \( -iname 'sagemaker-*.dist-info' -o -iname 'sagemaker-*.egg-info' \) 2>/dev/null | sort -u)
@@ -233,7 +233,7 @@ cmd_check_host() {
         st="$(sm_status "$pin")"
         case "$st" in
             fixed)   ok "${f}: sagemaker ${pin} pinned, has the fix" ;;
-            unknown) caution "${f}: cannot parse pinned version '${pin}'" ;;
+            unknown) caution "${f}: cannot parse pinned version '${pin}'; treating it as not confirmed fixed"; rc=1 ;;
             *)       bad "${f}: sagemaker ${pin} pinned, affected by CVE-2026-112408 (fixed in 2.257.3 and 3.10.0)"; rc=1 ;;
         esac
     done < <(find "${existing[@]}" -xdev -maxdepth 8 \( -name node_modules -o -name site-packages -o -name dist-packages \) -prune -o \

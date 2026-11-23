@@ -53,8 +53,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="sentry-nextjs-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -296,7 +296,7 @@ cmd_check() {
         st="$(sentry_status "$ver")"
         case "$st" in
             fixed)       ok "${ver} has the fix (9.47.2, 10.75.2 or 11.0.0-rc.1 or newer)"; continue ;;
-            notaffected) ok "${ver} is older than 9.36.0, before the affected code (far out of date: update anyway)"; continue ;;
+            notaffected) caution "${ver} is older than 9.36.0, before the affected code (far out of date and not confirmed clear of other issues: update anyway)"; rc=1; continue ;;
             unknown)     caution "cannot compare version '${ver}': check it against 9.47.2, 10.75.2 and 11.0.0-rc.1"; rc=1; continue ;;
             vulnerable)  bad "@sentry/nextjs ${ver} is affected by CVE-2026-114139 (fixed in 9.47.2, 10.75.2, 11.0.0-rc.1)" ;;
         esac

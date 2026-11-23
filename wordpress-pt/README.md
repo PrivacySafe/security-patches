@@ -44,7 +44,7 @@ By default `check` searches `/var/www /srv /home /opt /usr/share/wordpress /usr/
 
 | Command | What it does |
 |---|---|
-| `check` (default) | Finds each WordPress install by `wp-includes/version.php`, reads the version, and reads `template.php` for the two fixes. Exit `0` nothing exposed, `1` an install without the fix or whose state is unclear |
+| `check` (default) | Finds each WordPress install by `wp-includes/version.php`, reads the version, and reads `template.php` for the two fixes. Exit `0` nothing exposed, `1` an install without the fix, whose state is unclear, or older than 4.7.0 (outside this CVE but unsupported for years) |
 | `hunt` | Reads web server logs (plain and rotated `.gz`) for an encoded traversal in the `pagename` parameter and for the scanner user agents seen in the attacks. Exit `0` nothing found, `1` a strong lead |
 | `version` | Prints the script version |
 

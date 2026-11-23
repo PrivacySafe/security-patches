@@ -1,30 +1,50 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# nginx2root: five nginx HTTP/2, HTTP/3, resolver and mail-proxy flaws  (v1)
+# nginx2root: ten nginx HTTP/2, HTTP/3, resolver, mail-proxy and TLS flaws  (v1)
 # CVE-2026-123007 CVE-2026-123633 CVE-2026-123634 CVE-2026-121810 CVE-2026-113425
+# CVE-2026-118899 CVE-2026-120967 CVE-2026-120993 CVE-2026-125283 CVE-2026-123640
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
 #
 # nginx 1.30.7 (stable) and 1.31.9 (mainline), released 18 November 2026, fix
-# five flaws that F5 and nginx both rate 9.2 (CVSS 4.0) critical. Two were
-# independently found by five separate teams (Wiz Research, Xint, Metnir,
-# Rapid7 and Ikotas Labs, who also call it NGINX2Shell; it is the same two
-# bugs, not a sixth): CVE-2026-123007, an HTTP/2 flow-control integer
-# underflow exploitable even on a plain static-file server with no backend,
-# and CVE-2026-123633, a use-after-free reachable when HTTP/2 is proxied to
-# an upstream and the worker is short of connection slots. Xint found three
-# more on its own as part of research it names nginx2root: CVE-2026-123634
-# (a resolver use-after-free, reachable through "mirror" plus a request-
-# derived proxy_pass target), CVE-2026-121810 (the same shape of bug over
-# HTTP/3 instead of HTTP/2), and CVE-2026-113425 (a use-after-free in the
-# mail proxy's auth_http path). Xint also chained CVE-2026-123007 with an
-# undisclosed, unpatched, not-yet-CVE'd Linux kernel SCTP use-after-free to
-# get root on the host, including out of a Docker container; that kernel bug
-# is a different, newer issue from three already-fixed 2026 SCTP flaws in the kernel's own
-# advisory history, one of them nicknamed "SCTPhantom", and this
-# script cannot check for it, only help you block the module that carries it.
+# ten flaws in all. Five are the ones this script actively audits for,
+# detailed below. The other five, fixed by the exact same two releases, are
+# not separately audited: CVE-2026-118899 (high: a TLS 1.3 worker can hang in
+# a loop reading a request body on any "listen ... ssl;" server that allows
+# TLS 1.3, a denial of service rather than code execution, with no F5
+# workaround published); CVE-2026-120967 (medium); and CVE-2026-120993,
+# CVE-2026-125283, CVE-2026-123640 (low, opt-in features or limited impact).
+# Upgrading to the fixed releases closes all ten at once; an unpatched
+# version is exposed to CVE-2026-118899 on nothing more than an ordinary TLS
+# 1.3-enabled server block, the same way CVE-2026-123007 needs nothing but
+# HTTP/2, so treat it the same way in your own risk accounting even though
+# this script's audit output doesn't name it directive-by-directive.
+#
+# The five this script does audit: F5 and nginx both rate two of them 9.2
+# (CVSS 4.0) critical. Two were independently found by five separate teams
+# (Wiz Research, Xint, Metnir, Rapid7 and Ikotas Labs, who also call it
+# NGINX2Shell; it is the same two bugs, not a sixth): CVE-2026-123007, an
+# HTTP/2 flow-control integer underflow exploitable even on a plain
+# static-file server with no backend, and CVE-2026-123633, a use-after-free
+# reachable when HTTP/2 is proxied to an upstream and the worker is short of
+# connection slots. Xint found three more on its own as part of research it
+# names nginx2root: CVE-2026-123634 (a resolver use-after-free, reachable
+# through "mirror" plus a request-derived proxy_pass target), CVE-2026-121810
+# (the same shape of bug over HTTP/3 instead of HTTP/2), and CVE-2026-113425
+# (a use-after-free in the mail proxy's auth_http path). Xint also chained
+# CVE-2026-123007 with a Linux kernel SCTP use-after-free in ASCONF handling,
+# since assigned CVE-2026-64564 (Red Hat CVSS 3.1 7.8, present since 4.15),
+# to get root on the host, including out of a Docker
+# container; that kernel bug is a different, newer issue from three
+# already-fixed 2026 SCTP flaws in the kernel's own advisory history, one of
+# them nicknamed "SCTPhantom", and this script cannot check for it, only
+# help you block the module that carries it. As of 22 November 2026, the fix
+# for that kernel bug has merged into mainline (net-7.4-rc4, 19 Nov) but no
+# stable kernel release carries it yet, and Docker's default seccomp profile
+# does not block SCTP sockets, so blocking the module remains the only
+# stopgap for anyone who can't run that unreleased kernel.
 #
 # CVE-2026-123007 affects nginx 1.9.5 through 1.31.8 and needs nothing but
 # HTTP/2 turned on; it was present in every official release for more than a
@@ -34,6 +54,14 @@
 # runtime on CPUs with AVX-512 (Xint's own writeup and demo instead walk
 # through a build that resolves to the AVX2 memcpy path; both are real,
 # CPU-dependent variants of the same bug, not a disagreement between them).
+# As of 19 November 2026 this is a complete, public, unauthenticated RCE:
+# Rapid7's repository includes a runnable client that negotiates the attack
+# over real TLS and HTTP/2 and demonstrates arbitrary command execution
+# against a freshly started nginx container, with no backend and no
+# authentication; it targets a single, lightly loaded container and may not
+# succeed as reliably against a busy production server with a "messy" heap
+# or multiple concurrent clients, which is a property of this specific
+# demonstration, not a reason an unpatched server is safe.
 #
 # CVE | Needs, besides an unpatched version | First affected | http2/http3 off helps?
 # CVE-2026-123007 | HTTP/2 on, nothing else | 1.9.5 | yes
@@ -97,7 +125,7 @@
 #                                     this if the mail proxy does not need
 #                                     outside access; otherwise restrict it
 #                                     with a firewall instead and skip this.
-#                      --block-sctp   the undisclosed kernel flaw: adds
+#                      --block-sctp   the kernel flaw (CVE-2026-64564): adds
 #                                     "install sctp /bin/false" under
 #                                     /etc/modprobe.d/, so modprobe refuses to
 #                                     load the sctp module from now on. Does
@@ -151,19 +179,19 @@
 set -euo pipefail
 
 # ---------- config -----------------------------------------------------------
-CVES="CVE-2026-123007 CVE-2026-123633 CVE-2026-123634 CVE-2026-121810 CVE-2026-113425"
+CVES="CVE-2026-123007 CVE-2026-123633 CVE-2026-123634 CVE-2026-121810 CVE-2026-113425 CVE-2026-118899 CVE-2026-120967 CVE-2026-120993 CVE-2026-125283 CVE-2026-123640"
 NGINX_STABLE_FIXED="${NGINX_STABLE_FIXED:-1.30.7}"
 NGINX_MAINLINE_FIXED="${NGINX_MAINLINE_FIXED:-1.31.9}"
 FIXED_BUILDS="${FIXED_BUILDS:-}"
 FIXED_BUILDS_KNOWN=""   # no confirmed distro backport build baked in yet (see README)
-CHANGELOG_MARKERS=(CVE-2026-123007 CVE-2026-123633 CVE-2026-123634 CVE-2026-121810 CVE-2026-113425)
+CHANGELOG_MARKERS=(CVE-2026-123007 CVE-2026-123633 CVE-2026-123634 CVE-2026-121810 CVE-2026-113425 CVE-2026-118899 CVE-2026-120967 CVE-2026-120993 CVE-2026-125283 CVE-2026-123640)
 SCAN_CONTAINERS="${SCAN_CONTAINERS:-1}"
 NGINX_T="${NGINX_T:-1}"
 HUNT_LOGS="${HUNT_LOGS:-}"
 HUNT_ACCESS_LOG="${HUNT_ACCESS_LOG:-/var/log/nginx/access.log}"
 SCRIPT_NAME="nginx2root-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-18"
+SCRIPT_VERSION="1.1.1"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/nginx2root}"
 ADVISORY="https://nginx.org/en/security_advisories.html"
@@ -412,7 +440,7 @@ cmd_check() {
 
     step "Linux kernel SCTP module (used to chain CVE-2026-123007 to host root in Xint's demo)"
     if [[ -r /proc/modules ]] && grep -qw sctp /proc/modules 2>/dev/null; then
-        caution "the sctp module is currently loaded. The kernel flaw Xint used has no CVE and no patch yet; this script cannot detect it, only reduce exposure. If this host does not use SCTP, see 'mitigate --block-sctp' (loading it again needs a reboot or manual unload, which this script does not do)"
+        caution "the sctp module is currently loaded. The kernel flaw Xint used is CVE-2026-64564; its fix is in mainline (19 November 2026) but in no stable kernel release as of 22 November, and this script cannot detect it, only reduce exposure. Check your distribution's kernel advisory, not the upstream version number. If this host does not use SCTP, see 'mitigate --block-sctp' (loading it again needs a reboot or manual unload, which this script does not do)"
     elif have modprobe && modprobe -n sctp >/dev/null 2>&1; then
         caution "the sctp module is not currently loaded, but it would load automatically the first time something opens an SCTP socket. If this host does not use SCTP, see 'mitigate --block-sctp'"
     else
@@ -442,7 +470,7 @@ cmd_check() {
     [[ $rc -eq 0 && $unknownz -eq 1 ]] && rc=2
     case $rc in
         0) info "No vulnerable nginx found, or none configured to reach any of the five flaws" ;;
-        1) warn "A vulnerable nginx is present. Upgrade to 1.30.7 (stable) or 1.31.9 (mainline), or your distribution's backport, then reload. CVE-2026-123007 needs nothing but HTTP/2 turned on, so treat an unpatched version as exposed to it even without a config audit; for the other four, see whether the audit above found their trigger directives, and apply the matching workaround shown there, or 'mitigate', if you can't upgrade yet. Advisory: ${ADVISORY} ; write-up: ${WRITEUP}" ;;
+        1) warn "A vulnerable nginx is present. Upgrade to 1.30.7 (stable) or 1.31.9 (mainline), or your distribution's backport, then reload: this closes all ten flaws these releases fix, not only the five this script audits. CVE-2026-123007 needs nothing but HTTP/2 turned on, and CVE-2026-118899 (high, a TLS 1.3 worker hang) needs nothing but an ordinary TLS 1.3 server block, so treat an unpatched version as exposed to both even without a config audit; for the other three this script does audit, see whether the audit above found their trigger directives, and apply the matching workaround shown there, or 'mitigate', if you can't upgrade yet. Advisory: ${ADVISORY} ; write-up: ${WRITEUP}" ;;
         *) warn "Some things couldn't be read. Run as root so 'nginx -T' and the package checks work" ;;
     esac
     return "$rc"

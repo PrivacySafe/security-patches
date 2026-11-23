@@ -28,7 +28,7 @@ All of these have to be true (the researcher's conditions):
 1. The binary was built with SSL support. The stock tarball has it off. Most distribution packages turn it on. The script reads this from whether the binary links OpenSSL.
 2. `ssl_enable=YES` in the configuration (the default is `NO`).
 3. A standalone listener: `listen=YES` or `listen_ipv6=YES`. Debian's default configuration sets `listen_ipv6=YES`, which counts.
-4. `require_ssl_reuse=YES`, which is the default. Setting it to `NO` removes the ticket requirement entirely, so the data connection is no longer tied to the control connection at all. The script reports that as exposed too (our reading, not the advisory's).
+4. `require_ssl_reuse=YES`, which is the default. Setting it to `NO` removes the ticket requirement entirely, so the data connection is no longer tied to the control connection at all. The script reports that as exposed too (a PrivacySafe reading, not the advisory's).
 5. The attacker shares the victim's source IP address. Passive connections must come from the control connection's address unless `pasv_promiscuous=YES`, so this means a shared NAT address, a shared proxy or the same host.
 
 ## Quick start
@@ -91,6 +91,16 @@ The check also reports a second vsftpd flaw that has nothing to do with FTPS.
 What the check does: for each vsftpd it finds, it asks the package manager. A package whose changelog names CVE-2025-14242 is reported fixed. A Red Hat family package (Red Hat, AlmaLinux, Rocky, CentOS, Oracle) whose changelog does not name it is reported as affected. RHEL 7 builds are not listed by Red Hat and are noted, not reported. Anything else (Debian, Ubuntu, a source build) is not reported, with the open question above. It decides by the package, not by the version number, because Red Hat backports under old version numbers.
 
 What to do: install your distribution's vsftpd update. Until then, `mitigate --allow` limits who can reach the port and removing accounts that do not need FTP limits who can log in. `harden --limits` caps sessions per address, which is a generic suggestion from a third-party summary and not Red Hat's advice. It does not remove the bug.
+
+## Related: CVE-2026-119567, denied commands through their X-prefixed aliases
+
+vsftpd through 3.0.5 compares `cmds_denied` against the literal command name, so an authenticated user can still run a denied command through its RFC 775 alias: `XRMD`, `XMKD`, `XCWD`, `XPWD` and `XCUP` stand for `RMD`, `MKD`, `CWD`, `PWD` and `CDUP`. Red Hat rates it Low (CVSS 3.1 3.1). It matters only on a server that relies on `cmds_denied` to stop logged-in users from deleting or creating directories. No fixed release was named in November; Red Hat's workaround is to list the aliases as well, then restart vsftpd (which ends active sessions):
+
+```text
+cmds_denied=RMD,MKD,CWD,PWD,CDUP,XRMD,XMKD,XCWD,XPWD,XCUP
+```
+
+The check does not audit `cmds_denied`; search for it with `grep -n cmds_denied /etc/vsftpd*.conf /etc/vsftpd/*.conf`.
 
 ## Optional hardening: `harden`
 

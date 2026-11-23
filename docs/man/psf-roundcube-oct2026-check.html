@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-root="../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
-<title>psf-roundcube-oct2026-check(8) | PrivacySafe Security Patches</title><meta name="description" content="Roundcube Webmail 1.6.20 and 1.7.5 security release: read-only checker">
+<title>psf-roundcube-oct2026-check(8) | PrivacySafe Security Patches</title><meta name="description" content="Roundcube Webmail October and November 2026 security releases: read-only checker">
 <link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
 document.documentElement.className+=" js"
 // @license-end</script></head>
@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Manual pages</a> / <span>psf-roundcube-oct2026-check(8)</span></nav>
-<article class="doc"><h1>psf-roundcube-oct2026-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/roundcube/roundcube-oct2026-check.sh</code>. Tool page: <a href="../roundcube/index.html">Roundcube</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/roundcube/roundcube-oct2026-check.sh">Source</a>. With the package installed: <code>man psf-roundcube-oct2026-check</code>.</p><pre class="manual">Roundcube Webmail 1.6.20 and 1.7.5 security release: read-only checker  (v1)
+<article class="doc"><h1>psf-roundcube-oct2026-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/roundcube/roundcube-oct2026-check.sh</code>. Tool page: <a href="../roundcube/index.html">Roundcube</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/roundcube/roundcube-oct2026-check.sh">Source</a>. With the package installed: <code>man psf-roundcube-oct2026-check</code>.</p><pre class="manual">Roundcube Webmail October and November 2026 security releases: read-only checker  (v1)
 CVE-2026-114716 (mail header injection, CVSS 8.5)
 
 If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -144,8 +149,20 @@ of a message forwarded as an attachment, and through the media type of an
 inline image). A header injection lets an attacker add or alter headers of an
 outgoing message, which feeds phishing and mail forgery from a trusted host.
 
-  Affected: Roundcube 1.6.x before 1.6.20, and 1.7.x before 1.7.5
-  Fixed:    1.6.20 and 1.7.5. These releases do not cover 1.5 and earlier.
+A second, separate round followed on 9 November 2026: 1.6.21 (LTS) and 1.7.6
+(mainline), 17 more fixes with no CVE numbers assigned to any of them. The
+release notes name an open redirect through IMAP error recovery on an
+attachment fetch, a fix so the Received header only ever carries a trusted
+hostname and a forwarded IP taken from a trusted proxy, a managesieve bug
+where a destructive filter action could run without the confirmation it
+requires, and further CSRF, SSRF and injection fixes credited mostly to a
+reporting group using the names Squirt1e, Atum, N0b0dy and Gh0u1L5, who have
+reported several of the preceding rounds too. The project has said the 1.6
+LTS branch, now four years old, will be retired, citing how error-prone its
+own backports have become; no end date was given as of this release.
+
+  Affected: Roundcube 1.6.x before 1.6.21, and 1.7.x before 1.7.6
+  Fixed:    1.6.21 and 1.7.6. These releases do not cover 1.5 and earlier.
 
 Roundcube is bundled by hosting panels. cPanel and Plesk ship their own copy
 and update it with the panel, so the panel&#x27;s changelog decides when it is safe.

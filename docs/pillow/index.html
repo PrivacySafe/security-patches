@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>Pillow</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>Pillow 13.0.0: <span class="nw">CVE-2026-96639</span> and <span class="nw">CVE-2026-112900</span> check</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Pillow in Python environments and lock files on GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-96639</span>, <span class="nw">CVE-2026-112900</span></span></dd><dt>Script</dt><dd><div class="scr"><code>pillow-oct2026-check.sh</code> (<a href="../man/psf-pillow-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/pillow/pillow-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/pillow/pillow-oct2026-check.sh check</code></pre></div></dd></dl></aside><p><a id="pillow-13-security-release-check"></a></p>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>Pillow 13.0.0: <span class="nw">CVE-2026-96639</span> and <span class="nw">CVE-2026-112900</span> check</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Pillow in Python environments and lock files on GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-96639</span>, <span class="nw">CVE-2026-112393</span>, <span class="nw">CVE-2026-112398</span>, <span class="nw">CVE-2026-112402</span>, <span class="nw">CVE-2026-112403</span>, <span class="nw">CVE-2026-112900</span></span></dd><dt>Script</dt><dd><div class="scr"><code>pillow-oct2026-check.sh</code> (<a href="../man/psf-pillow-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/pillow/pillow-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/pillow/pillow-oct2026-check.sh check</code></pre></div></dd></dl></aside><p><a id="pillow-13-security-release-check"></a></p>
 <h2 id="pillow-1300-security-release-check">Pillow 13.0.0 security release check</h2>
 <p>Pillow is one of the most widely installed imaging libraries for Python: web uploads, thumbnails, document pipelines, machine-learning data loaders. Pillow 13.0.0, announced on oss-security on 21 October 2026, fixes a long list of memory-safety and parsing bugs. This tool covers two of them. The release notes list many more, including JPEG decoder overflows, TIFF encoder overflows and PDF parsing problems, and all of them are fixed by the same upgrade.</p>
 <div class="table-wrap" tabindex="0"><table>
@@ -171,6 +176,48 @@ document.documentElement.className+=" js"
 </tr>
 </tbody>
 </table></div>
+<h2 id="older-and-distribution-packaged-pillow">Older and distribution-packaged Pillow</h2>
+<p>Pillow 13.0.0 fixed far more than the two flaws above, and many of them reach releases much older than 2.6.0. Ubuntu backported 39 of them in <a href="https://ubuntu.com/security/notices/USN-9064-1">USN-9064-1</a> on 12 November 2026, for every supported release and, through Ubuntu Pro, down to the 14.04 build of Pillow 2.3.0. Three are heap writes that can run code: <span class="nw">CVE-2026-112393</span> (saving compressed TIFF data), <span class="nw">CVE-2026-112398</span> (the FlashPix JPEG tile decoder) and <span class="nw">CVE-2026-112403</span> (the JPEG decoder at a requested draft scale). For that reason the script reports every copy older than 13.0.0, whatever its age, and treats a package changelog that names any of these, or either CVE above, as a sign that the distribution backported the fixes.</p>
+<p><a href="https://ubuntu.com/security/notices/USN-9064-2">USN-9064-2</a> followed on 16 November: the first update's fix for <span class="nw">CVE-2026-112402</span> broke resizing with the <code>NEAREST</code> filter and resizing of mode <code>1</code> and <code>P</code> images. Install both.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Ubuntu release</th>
+<th>Fixed <code>python3-pil</code> (USN-9064-1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>26.10</td>
+<td>12.3.0-1ubuntu2</td>
+</tr>
+<tr>
+<td>26.04 LTS</td>
+<td>12.1.1-2ubuntu1.5</td>
+</tr>
+<tr>
+<td>24.04 LTS</td>
+<td>10.2.0-1ubuntu1.5</td>
+</tr>
+<tr>
+<td>22.04 LTS</td>
+<td>9.0.1-1ubuntu0.7</td>
+</tr>
+<tr>
+<td>18.04 LTS (Ubuntu Pro)</td>
+<td>5.1.0-1ubuntu0.8+esm3</td>
+</tr>
+<tr>
+<td>16.04 LTS (Ubuntu Pro)</td>
+<td>3.1.2-0ubuntu1.6+esm4</td>
+</tr>
+<tr>
+<td>14.04 LTS (Ubuntu Pro, Legacy add-on)</td>
+<td>2.3.0-1ubuntu3.4+esm6</td>
+</tr>
+</tbody>
+</table></div>
+<p>20.04 LTS is in the same notice; take its version from the notice itself. A copy installed with <code>pip</code> inside a virtual environment is not touched by any distribution update and needs <code>pip install --upgrade 'Pillow&gt;=13.0.0'</code>, or a Python version that 13.x supports.</p>
 <h2 id="quick-start">Quick start</h2>
 <ol>
 <li>
@@ -213,7 +260,7 @@ chmod +x pillow-oct2026-check.sh
 </tr>
 </tbody>
 </table></div>
-<p>Exit codes: <code>0</code> nothing affected, <code>1</code> an affected version was found, <code>2</code> bad arguments.</p>
+<p>Exit codes: <code>0</code> nothing affected, <code>1</code> an affected version, a version that cannot be parsed, or a copy older than 2.6.0 (outside both CVEs, but not confirmed clear of Pillow's many other fixes) was found, <code>2</code> bad arguments.</p>
 <h2 id="how-to-read-the-result">How to read the result</h2>
 <ul>
 <li>Both bugs apply: the version is in both ranges. If <code>gs</code> is installed the script prints a critical line for <span class="nw">CVE-2026-112900</span> as well.</li>
@@ -271,7 +318,7 @@ chmod +x pillow-oct2026-check.sh
 </table></div>
 <!-- rhsa:end -->
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../php/edge/index.html">&larr; PHP2Shell edge guards</a><a rel="next" href="../plex/index.html">Plex Media Server &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#pillow-1300-security-release-check">Pillow 13.0.0 security release check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#pillow-1300-security-release-check">Pillow 13.0.0 security release check</a></li><li class="l2"><a href="#older-and-distribution-packaged-pillow">Older and distribution-packaged Pillow</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

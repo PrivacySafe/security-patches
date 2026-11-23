@@ -59,7 +59,7 @@ Forgejo is a separate project. This tool reads Gitea's version output and does n
 
 Environment: `GITEA_INI` (space separated files) replaces `app.ini` discovery.
 
-Exit codes: `0` nothing exposed, `1` an affected version that trusts a user CA, or whose configuration could not be read, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected version that trusts a user CA, or whose configuration or version could not be read, `2` bad arguments.
 
 ## Credentials are never printed
 

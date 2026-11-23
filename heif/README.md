@@ -98,7 +98,7 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/hei
 For each `libheif` the checks run in order, and the first that applies decides:
 
 1. `FIXED_BUILDS`. Distribution builds you list as fixed, for a backport the script doesn't know about. A build only counts for the same upstream version.
-2. Changelog. For a `libheif` installed from a Debian or Ubuntu package, the package changelog names DSA-6417-1 or one of the batch CVEs, and its newest entry is the installed build. Because distributions backport under old upstream numbers, this overrides the version floor: a package at `1.17.6` can read as fixed when its changelog proves it.
+2. Changelog. For a `libheif` installed from a Debian or Ubuntu package, the package changelog names DSA-6417-1 or one of the batch CVEs (CVE-2025-68431, CVE-2026-32740, CVE-2026-32741, CVE-2026-47178), and its newest entry is the installed build. Because distributions backport under old upstream numbers, this overrides the version floor: a package at `1.17.6` can read as fixed when its changelog proves it.
 3. Upstream floor. For a library that is not a distribution package (self-built or bundled), the version is at or above `HEIF_FIXED_UPSTREAM` (default 1.22.0). A dpkg-owned build with no changelog proof is reported as unknown rather than fixed, because its number alone cannot clear it.
 
 ### libheif disabling the coder as defense in depth

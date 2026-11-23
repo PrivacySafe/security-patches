@@ -62,7 +62,7 @@ The fix is two lines: the guard now requires `is_string($token)` before it queri
 | `middleware` | Prints a protective PHP middleware to standard output. It changes nothing by itself |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing exposed, `1` an affected project looks exposed or is on a branch with no upstream fix, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected project looks exposed or is on a branch with no upstream fix, or a version cannot be parsed, `2` bad arguments.
 
 ## How to read the result
 

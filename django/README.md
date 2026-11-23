@@ -54,7 +54,7 @@ Django REST framework (DRF) is the standard toolkit for building web APIs on Dja
 | `rollback [--dry-run] [--reload]` | Removes what `mitigate` added and restores the files it edited |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing affected, `1` an affected copy or pin was found, `2` bad arguments.
+Exit codes: `0` nothing affected, `1` an affected copy or pin, or one whose version cannot be parsed, was found, `2` bad arguments.
 
 Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
 

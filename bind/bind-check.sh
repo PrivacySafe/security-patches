@@ -54,8 +54,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="bind-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -284,13 +284,13 @@ cmd_check_host() {
     for b in "${bins[@]}"; do
         [[ -x "$b" ]] || { caution "${b}: not an executable file"; continue; }
         raw="$(bin_version "$b")"
-        [[ -n "$raw" ]] || { caution "${b}: could not read a BIND 9 version from -v"; continue; }
+        [[ -n "$raw" ]] || { caution "${b}: could not read a BIND 9 version from -v; treating it as not confirmed fixed"; rc=1; found=$((found+1)); continue; }
         found=$((found+1))
         step "BIND ${raw} at ${b}"
         st="$(bind_status "$raw")"
         case "$st" in
             fixed)      ok "BIND ${raw} has the fix (9.20.30, 9.21.27 or newer)"; continue ;;
-            unknown)    caution "cannot parse version '${raw}'"; continue ;;
+            unknown)    caution "cannot parse version '${raw}'; treating it as not confirmed fixed"; rc=1; continue ;;
             eol)        bad "BIND ${raw} is on an end-of-life branch (9.18 and older, or 9.19): affected by CVE-2026-94300 and ISC will not patch it" ;;
             vulnerable) bad "BIND ${raw} is affected by CVE-2026-94300 (fixed in 9.20.30 and 9.21.27)" ;;
         esac

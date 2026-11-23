@@ -54,7 +54,7 @@ The Grav Login plugin has a flaw in its invitation feature (CVE-2026-114658). Th
 
 Environment: `HUNT_ADMIN_SINCE` (default `2026-10-01`): super-user accounts modified since this date are flagged for review.
 
-Exit codes: `0` nothing affected or nothing found, `1` an affected or unreadable version, or an indicator, `2` bad arguments.
+Exit codes: `0` nothing affected or nothing found, `1` an affected or unreadable version, a version older than the affected range (not confirmed clear of other issues), or an indicator, `2` bad arguments.
 
 ## What the hunt looks for
 

@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -136,8 +141,8 @@ document.documentElement.className+=" js"
 <li>Anything that accepts request bodies. Express 5.0.0 to 5.3.0 and body-parser 2.0.0 to 2.3.0 inflate Brotli request bodies in parsers such as <code>raw()</code> and <code>json()</code>. Express and body-parser do not contain the bug, so upgrading them does not help. A bare <code>node:http</code> server does not decode bodies by itself.</li>
 <li>Anything that calls the decoder directly: <code>zlib.brotliDecompress*()</code> and <code>createBrotliDecompress()</code>, including libraries that use them on archives, caches or queue messages.</li>
 </ul>
-<p>Node.js bundles its own Brotli, so the system <code>libbrotli</code> does not matter for Node. Only the Node.js version does. You can read the bundled version with <code>node -p &quot;process.versions.brotli&quot;</code>. The Imperva Red Team has run attacker-supplied code on the official, unmodified Node.js 24.22.0 arm64 GNU/Linux image, through both a fetched response and an Express request body, so treat this as exploitable. Node.js has published no workaround of its own: upgrading the runtime is the only complete fix, and the guard below is our protective measure for services you cannot upgrade yet. After upgrading, restart every process and rebuild every container image, because a running process keeps the old decoder until it restarts.</p>
-<p>We wrote these for the Node services we couldn't upgrade the same day. There are two parts:</p>
+<p>Node.js bundles its own Brotli, so the system <code>libbrotli</code> does not matter for Node. Only the Node.js version does. You can read the bundled version with <code>node -p &quot;process.versions.brotli&quot;</code>. The Imperva Red Team has run attacker-supplied code on the official, unmodified Node.js 24.22.0 arm64 GNU/Linux image, through both a fetched response and an Express request body, so treat this as exploitable. Node.js has published no workaround of its own: upgrading the runtime is the only complete fix, and the guard below is a PrivacySafe protective measure for services you cannot upgrade yet. After upgrading, restart every process and rebuild every container image, because a running process keeps the old decoder until it restarts.</p>
+<p>These were written for Node services that could not be upgraded the same day. There are two parts:</p>
 <ol>
 <li><code>brotli-guard.cjs</code> is a small file Node loads before your application, through <code>--require</code>. It makes Node's Brotli decoder refuse to run, for CommonJS and ES modules alike, and stops <code>fetch()</code> asking servers for <code>br</code>. Compression keeps working, and so do gzip and deflate. A blocked decode fails the way corrupt input does, so code that already copes with a bad compressed body copes with this too. On a fixed runtime it goes idle by itself.</li>
 <li><code>node-oct2026-mitigate.sh</code> finds every Node runtime and process on the host, tells you which are exposed, finds the code that decodes Brotli, and loads the guard into systemd services for you. It checks the guard works on each service's own runtime before installing it, and rolls back if the service won't start with it.</li>

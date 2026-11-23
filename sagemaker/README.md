@@ -50,7 +50,7 @@ The SDK's `default_bucket()` uses an S3 bucket named `sagemaker-{region}-{AWS ac
 | `check [DIR ...]` (default) | Finds installed copies (`sagemaker-*.dist-info` and `egg-info`) and declared pins (`requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock`, `Pipfile.lock`, `environment*.yml`), and lists the Python files and notebooks that call `default_bucket()`. It makes **no AWS calls** |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing affected, `1` an affected SDK found, `2` bad arguments.
+Exit codes: `0` nothing affected, `1` an affected SDK, or a copy or pin whose version cannot be parsed, found, `2` bad arguments.
 
 ## How to read the result
 

@@ -1,24 +1,26 @@
-# Roundcube Webmail 1.6.20 and 1.7.5: CVE-2026-114716 check
+# Roundcube Webmail October and November 2026 security releases
 
 Part of the [PrivacySafe Security Patches](../README.md) collection.
 
 <a name="roundcube-webmail-october-2026-check"></a>
 
-## Roundcube Webmail October 2026 check
+## Roundcube Webmail October and November 2026 check
 
 **Script:** [`roundcube/roundcube-oct2026-check.sh`](roundcube-oct2026-check.sh)
 
-Roundcube released 1.6.20 (the LTS line) and 1.7.5 (mainline) on 19 October 2026. Both carry the same 20 security fixes, the largest batch since 1.7.0. They cover IMAP command injection through a CRLF in the `_uid` and `_flag` parameters, four mail header injection flaws, cross-site scripting, server-side request forgery, cross-site request forgery, an object injection primitive in session handling, and ImageMagick limit bypasses. The project says it strongly recommends updating every production installation.
+Roundcube released 1.6.20 (the LTS line) and 1.7.5 (mainline) on 19 October 2026. Both carry the same 20 security fixes, the largest batch since 1.7.0. They cover IMAP command injection through a CRLF in the `_uid` and `_flag` parameters, four mail header injection flaws, cross-site scripting, server-side request forgery, cross-site request forgery, an object injection primitive in session handling, and ImageMagick limit bypasses.
 
 CVE-2026-114716 is one of the mail header injection fixes. The release notes list four: through the From display-name in the Bounce action, through the `References`, `In-Reply-To`, `Message-ID` and `From` parameters, through the subject of a message forwarded as an attachment, and through the media type of an inline image. The advisory does not say which fix carries which CVE number, so this tool does not claim to tell them apart. A header injection lets an attacker add or change headers on an outgoing message, which feeds phishing and forged mail that leaves your own trusted server.
 
+A second, separate round followed on 9 November 2026: 1.6.21 (LTS) and 1.7.6 (mainline), 17 more fixes with no CVE numbers assigned to any of them. Named fixes include an open redirect through IMAP error recovery on an attachment fetch, a fix so the `Received` header only ever carries a trusted hostname and a forwarded IP taken from a trusted proxy, and a managesieve bug where a destructive filter action could run without the confirmation it requires, alongside further CSRF, SSRF and injection fixes. Most are credited to a reporting group using the names Squirt1e, Atum, N0b0dy and Gh0u1L5, who have reported several of the preceding rounds too. The project has said the 1.6 LTS branch, now four years old, will be retired, citing how error-prone its own backports have become; no end date was given as of this release. The project says it strongly recommends updating every production installation to either current release.
+
 | | |
 |---|---|
-| CVE | CVE-2026-114716 (mail header injection), rated High 8.5. The release carries 19 other fixes |
-| Affected | Roundcube 1.6.x below 1.6.20, and 1.7.x below 1.7.5 |
-| Fixed | 1.6.20 and 1.7.5 |
+| CVE | CVE-2026-114716 (mail header injection, the October release), rated High 8.5. Up to 36 other fixes across both releases carry no CVE number |
+| Affected | Roundcube 1.6.x below 1.6.21, and 1.7.x below 1.7.6 |
+| Fixed | 1.6.21 and 1.7.6 |
 | Not covered | 1.5 and earlier: these releases only cover the 1.6 and 1.7 lines |
-| Exploited | None confirmed for these 20 fixes in the release notes. Roundcube flaws have been exploited in the past, and CISA's Known Exploited Vulnerabilities catalog lists 11 of them |
+| Exploited | None confirmed for either release's fixes in the release notes; no CVE numbers were issued for the November batch. Roundcube flaws have been exploited in the past, and CISA's Known Exploited Vulnerabilities catalog lists 11 of them |
 | Hosting panels | cPanel and Plesk ship and update their own copy. The fix arrives with the panel's update, so the panel's changelog decides |
 
 ## Quick start
@@ -56,11 +58,11 @@ CVE-2026-114716 is one of the mail header injection fixes. The release notes lis
 
 | Command | What it does |
 |---|---|
-| `check [DIR ...]` (default) | Finds installs by `program/include/iniset.php`, reads `RCMAIL_VERSION` (falling back to the first release in `CHANGELOG.md`), and compares it with 1.6.20 and 1.7.5 |
+| `check [DIR ...]` (default) | Finds installs by `program/include/iniset.php`, reads `RCMAIL_VERSION` (falling back to the first release in `CHANGELOG.md`), and compares it with 1.6.21 and 1.7.6 |
 | `hunt` | Searches readable Apache, nginx and httpd access logs for `_uid` or `_flag` values that contain an encoded carriage return or line feed (`%0d`, `%0a`). Set `HUNT_LOGS` to add a log path |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing affected (or nothing found), `1` an affected install (or suspicious requests) found, `2` bad arguments.
+Exit codes: `0` nothing affected (or nothing found), `1` an affected install, an install whose version cannot be read or parsed (or suspicious requests) found, `2` bad arguments.
 
 ## How to read the result
 
@@ -71,16 +73,17 @@ Exit codes: `0` nothing affected (or nothing found), `1` an affected install (or
 
 ## Fixing it
 
-Back up the Roundcube files and database first, as the project advises, then move to 1.6.20 on the LTS line or 1.7.5 on mainline, following the upgrade steps in the release notes. On a panel-managed server, update the panel.
+Back up the Roundcube files and database first, as the project advises, then move to 1.6.21 on the LTS line or 1.7.6 on mainline, following the upgrade steps in the release notes. On a panel-managed server, update the panel.
 
 ## Sources
 
-- [Roundcube 1.6.20 release](https://github.com/roundcube/roundcubemail/releases/tag/1.6.20)
+- [Roundcube 1.6.21 release](https://github.com/roundcube/roundcubemail/releases/tag/1.6.21)
 - [Roundcube: security updates 1.6.20 and 1.7.5](https://roundcube.net/news/2026/10/19/security-updates-1.6.20-and-1.7.5)
+- [Roundcube: security updates 1.6.21 and 1.7.6](https://roundcube.net/news/2026/11/09/security-updates-1.6.21-and-1.7.6)
 
 ## Before you run it
 
-- The fix. Update to 1.6.20 or 1.7.5, which carry the same 20 security fixes. These releases do not cover 1.5 and earlier.
+- The fix. Update to 1.6.21 or 1.7.6, which carry both rounds of fixes above. These releases do not cover 1.5 and earlier.
 - Hosting panels bundle their own copy. cPanel and Plesk ship Roundcube and update it with the panel, so the panel's changelog decides when it is safe.
 - `hunt` searches web server logs for CRLF probing of the `_uid` and `_flag` parameters (the IMAP injection the same release fixes). A hit means someone has been testing your webmail, not that an attack succeeded.
 - The version is read from `program/include/iniset.php`.

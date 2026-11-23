@@ -54,7 +54,7 @@ An unvalidated runtime configuration value in Apache CouchDB lets a CouchDB **se
 
 Environment: `COUCHDB_ROOT` (default `/opt/couchdb`) and `COUCHDB_ETC` (space separated, default `/opt/couchdb/etc /etc/couchdb /usr/local/etc/couchdb`) point the script at unusual layouts.
 
-Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arguments.
+Exit codes: `0` nothing affected, `1` an affected version, or a version that cannot be parsed, was found, `2` bad arguments.
 
 ## Credentials are never printed
 

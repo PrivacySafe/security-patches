@@ -45,8 +45,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="laravel-tokenguard-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -215,7 +215,7 @@ cmd_check() {
         st="$(laravel_status "$ver")"
         case "$st" in
             fixed)      ok "laravel/framework ${ver} has the TokenGuard fix"; continue ;;
-            unknown)    caution "could not parse version '${ver}'"; continue ;;
+            unknown)    caution "could not parse version '${ver}'; treating it as not confirmed fixed"; rc=1; continue ;;
             vulnerable) bad "laravel/framework ${ver} is affected by CVE-2026-114509 (fixed in 12.68.0 / 13.29.0, 11.x from 11.56.1)" ;;
             unfixed)    bad "laravel/framework ${ver} is affected by CVE-2026-114509: upgrade to 12.68.0, 13.29.0 or, on 11.x, 11.56.1 or later" ;;
         esac

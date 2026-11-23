@@ -12,13 +12,13 @@ libexpat is the XML parser inside Python, Apache httpd, many PHP and Perl builds
 
 | | |
 |---|---|
-| CVE | CVE-2026-115506 (published 22 October 2026; upstream issue #1160) |
+| CVE | CVE-2026-115506 (published 22 October 2026; upstream issue #1160). The same release fixes CVE-2026-113351, CVE-2026-117610 and CVE-2026-118370 |
 | Severity | High: 7.5 (CVSS 3), listed as 8.7 on the CVSS 4.0 scale. Authentication is not needed wherever XML from an untrusted source is parsed |
-| Affected | libexpat through 2.9.0, which is every release so far |
-| Fix | Merged upstream on 23 October 2026 (pull request #1433) and milestoned for **Expat 2.9.1** |
+| Affected | libexpat through 2.9.0 |
+| Fix | **Expat 2.10.0**, released 2 November 2026. The planned 2.9.1 was never released |
 | Exploited | No exploitation has been reported |
 
-**Install Expat 2.9.1 or later when it reaches you.** Upstream attached the fix to the 2.9.1 milestone: the script reports every copy at 2.9.0 or older as affected and 2.9.1 or newer as fixed. Distribution packages usually backport fixes without changing the version string. The script reads the owning package's changelog for a mention of the CVE.
+**Install Expat 2.10.0 or later, or a distribution package that carries the fix.** The script reports every copy older than 2.10.0 as affected and 2.10.0 or newer as fixed, and a package whose changelog names any of the four CVEs as a likely backport. Expat 2.10.0 also fixes CVE-2026-113351 (denial of service through `XML_ParserReset`), CVE-2026-117610 (a crash on an initial, non-final, empty subparser parse call) and CVE-2026-118370 (signed integer overflow in `storeAtts`). Distribution status varies: Alpine ships 2.10.0-r0, while Debian's tracker still listed every Debian release, including bookworm and trixie, as vulnerable to CVE-2026-115506 in November. Upstream asks backporters to note pull request #1439 in particular. Programs that bundle their own copy (Python wheels, Firefox, CMake and many others) need their own update; `deep` finds them.
 
 ## Quick start
 
@@ -60,7 +60,7 @@ libexpat is the XML parser inside Python, Apache httpd, many PHP and Perl builds
 
 Environment: `EXPAT_LIB_DIRS` replaces the library search directories and `EXPAT_PY_DIRS` replaces the directories searched for interpreters.
 
-Exit codes: `0` every copy found is fixed (or none found), `1` an affected copy was found, `2` bad arguments.
+Exit codes: `0` every copy found is fixed (or none found), `1` an affected copy, or a copy whose version cannot be parsed, was found, `2` bad arguments.
 
 ## How to read the result
 
@@ -82,11 +82,11 @@ These are PrivacySafe's recommendations. They limit damage from a hostile docume
 ## Sources
 
 - [libexpat pull request #1433: precompute entity expanded sizes to detect amplification attacks early](https://github.com/libexpat/libexpat/pull/1433)
-- [libexpat release tracker for 2.9.1](https://github.com/libexpat/libexpat/issues/1416)
+- [Expat 2.10.0 release announcement](https://blog.hartwork.org/posts/expat-2-10-0-released/) and the [oss-security post](https://www.openwall.com/lists/oss-security/2026/11/02/6)
 
 ## Before you run it
 
-- The fix. Install Expat 2.9.1 or later when it reaches you (upstream attached the fix for CVE-2026-115506 to that milestone). The script reports every copy at 2.9.0 or older as affected and 2.9.1 or newer as fixed. Run it again after you upgrade.
+- The fix. Install Expat 2.10.0 or later (released 2 November 2026). The script reports every copy older than 2.10.0 as affected and 2.10.0 or newer as fixed. Run it again after you upgrade.
 - Distribution packages usually backport without changing the version. The script checks for that before calling a packaged copy affected.
 - It looks in several places. It finds libexpat shared libraries, reads the version compiled into each, asks installed Python interpreters for `pyexpat.EXPAT_VERSION`, lists running processes that have libexpat mapped (flagging those still running a replaced copy), and can scan directories for programs that carry their own copy.
 - There is no hunt. The flaw is a denial of service, and no indicators have been published.

@@ -65,8 +65,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="wordpress-pt-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -201,7 +201,7 @@ cmd_check() {
         [[ -n "$ver" ]] || { caution "could not read the version from wp-includes/version.php"; rc=1; continue; }
         st="$(wp_pt_status "$ver")"
         gd="$(guard_in_source "$root")"; bd="$(boundary_in_source "$root")"
-        if [[ "$st" == notaffected ]]; then ok "${ver} is before 4.7.0: not affected by CVE-2026-87902"; continue; fi
+        if [[ "$st" == notaffected ]]; then caution "${ver} is before 4.7.0: outside the range of CVE-2026-87902, but WordPress this old has had no security fixes for years and is not confirmed clear of other issues: update it"; rc=1; continue; fi
         if [[ "$gd" != "n/a" ]]; then
             # the source decides: both fixes present means fixed, whatever the version string says
             if [[ "$gd" == yes && "$bd" == yes ]]; then

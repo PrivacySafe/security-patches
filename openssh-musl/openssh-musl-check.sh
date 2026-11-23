@@ -3,10 +3,18 @@
 # =============================================================================
 # OpenSSH password authentication bypass on musl Linux without PAM: check, hunt
 # and a reversible mitigation  (v1)
-# No CVE at time of writing (reported 5 November 2026 by Ozgun Kultekin of
-# Wakefield; advisories from Alpine Linux and the OpenSSH project the same day.
-# The README spells the name with its proper Turkish diacritics: Ozgun here is
-# ASCII only, because this comment becomes the manual page and groff's default
+# CVE-2026-123158
+# Reported 5 November 2026 by Ozgun Kultekin of Wakefield; advisories from
+# Alpine Linux and the OpenSSH project the same day. CVE-2026-123158 was
+# assigned the same week, nicknamed "sshole" by the finder; CVSS 3.1 8.1
+# (High, not Critical, despite the name's resemblance to other "2Shell"-style
+# critical bugs in this collection). CISA added it to the Known Exploited
+# Vulnerabilities catalog on 9 November 2026 (due 12 November); multiple
+# independent reports describe exploitation attempts within hours of
+# disclosure, including one claim of a successful root compromise on an
+# Alpine honeypot via the passwordless doas path described below. The README
+# spells the name with its proper Turkish diacritics: Ozgun here is ASCII
+# only, because this comment becomes the manual page and groff's default
 # encoding cannot render them)
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -16,7 +24,7 @@
 # with UsePAM no), it checks a password itself: it hashes the attempt with
 # crypt() and compares the result to the account's stored field in /etc/shadow.
 # For an account whose stored field is too short to contain a salt, sshd
-# borrows another account's salt to hash the attempt, a fix for CVE-2016-6210
+# borrows another account's salt to hash the attempt, a timing defense against username probing
 # (timing-based user enumeration). musl's crypt() returns the literal string
 # "*" as an error indicator for a key (password) over 256 bytes; confirmed
 # against musl's own source and a real musl build for this release: a 256 byte
@@ -109,8 +117,8 @@
 set -uo pipefail
 SELF="$0"
 SCRIPT_NAME="openssh-musl-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-05"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-22"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/openssh-musl}"
 SSHD_CONFIG="${SSHD_CONFIG:-/etc/ssh/sshd_config}"
 SSHD_CONFIG_D="${SSHD_CONFIG_D:-/etc/ssh/sshd_config.d}"
@@ -176,7 +184,8 @@ needed_libs() {
 }
 links_pam() { needed_libs "$1" | grep -qi '^libpam\.so'; }
 
-# effective_sshd_t: the output of "sshd -T" for the global config, or a test stand-in
+# effective_sshd_t: the output of "sshd -T" for the global config, or the
+# SSHD_T_OUTPUT override in its place
 effective_sshd_t() {
     if [[ -n "${SSHD_T_OUTPUT:-}" ]]; then
         [[ -r "$SSHD_T_OUTPUT" ]] || return 1

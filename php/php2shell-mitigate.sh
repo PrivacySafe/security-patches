@@ -2,8 +2,16 @@
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
 # PHP2Shell mitigation for PHP-FPM 7.0 through 8.5  (v5)
-# CVE-2026-109618 / CVE-2026-109619, and CVE-2026-115560 (session upload
-# progress, announced 23 Oct 2026, fix due in the next regular PHP release)
+# CVE-2026-109618 / CVE-2026-109619, CVE-2026-115560 (session upload
+# progress, fixed 19 Nov 2026), and CVE-2026-126714 ("phpAfterShell",
+# depthfirst, 19 Nov 2026): killing the FPM worker mid-write during the same
+# upload-progress callback can splice two Session files into one the next
+# request decodes as trusted state. CVE-2026-115560's fix changed which
+# syscall ordering is used but, per depthfirst's own affected-version table,
+# did not close the underlying race; no release is known to fix it as of
+# this script's writing. The mitigation is the same for all three: keep
+# session.upload_progress off. See the UPLOAD_CVE2/PATCHED_126714 section
+# below and php/README.md.
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
@@ -32,8 +40,12 @@
 #                    no client address, so repeats cannot be counted. Changes
 #                    nothing, root optional. Exit 0 = clean, 1 = findings.
 #   cleanup          remove the ini drop-in once patched (--force to skip check).
-#                    Keeps session.upload_progress off until the build is
-#                    also fixed for CVE-2026-115560 (--force drops that too)
+#                    Keeps session.upload_progress off until the build is also
+#                    fixed for CVE-2026-115560 AND CVE-2026-126714 (--force
+#                    drops that too). CVE-2026-126714 has no known fixed
+#                    release as of this script's writing, so in practice this
+#                    stays off even on a build patched for CVE-2026-115560,
+#                    until that changes or you set PATCHED_126714_X_Y yourself
 #   version          print the script version and exit
 #   remove           remove the AppArmor profile entirely: unload it, delete
 #                    the profile, local override and disable symlink, verify.
@@ -70,6 +82,13 @@
 #                                      Defaults: 8.2.36 8.3.37 8.4.28 8.5.13 (19 Nov
 #                                      2026). 7.0-8.1 get no upstream fix: only a
 #                                      distro/PPA changelog listing the CVE counts.
+#   PATCHED_126714_X_Y=<version>       first release fixing CVE-2026-126714 for
+#                                      branch X.Y. No default: this CVE has no
+#                                      known fixed release as of this script's
+#                                      writing, so set this yourself only once
+#                                      you've confirmed a real fix for your
+#                                      branch, not from a changelog CVE mention
+#                                      alone (see php/README.md for why).
 #   GUARD_HINT=0                       don't point to the third-party extension
 #                                      for PHP this script can't cover
 #   WEB_ROOTS="/var/www /srv/www"      read-only docroots; hunt also looks here
@@ -116,7 +135,7 @@ set -euo pipefail
 # Printed at the top of every run and written into everything the script
 # installs, so any pasted output or file says which version produced it.
 SCRIPT_NAME="php2shell-mitigate.sh"
-SCRIPT_VERSION="5.3.0"
+SCRIPT_VERSION="5.4.0"
 SCRIPT_DATE="2026-11-19"
 SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
 CVES=(CVE-2026-109618 CVE-2026-109619)
@@ -148,6 +167,46 @@ UPLOAD_CVE="CVE-2026-115560"
 # is given, since other PHP2Shell state may still depend on it.
 declare -A PATCHED_115560_DEFAULT=([8.2]=8.2.36 [8.3]=8.3.37 [8.4]=8.4.28 [8.5]=8.5.13)
 patched_115560_ver() { local n="PATCHED_115560_${1/./_}"; echo "${!n:-${PATCHED_115560_DEFAULT[$1]:-}}"; }
+# CVE-2026-126714 ("phpAfterShell", depthfirst, 19 Nov 2026): the RFC1867
+# upload-progress callback still writes the Session file with pwrite()+
+# ftruncate() that aren't atomic; killing the worker mid-update (OOM, or a
+# timeout landing between the two syscalls depending on write ordering) can
+# splice the prefix of one Session with the tail of another, and the next
+# session_start() decodes the result as trusted state, up to attacker-
+# controlled deserialization. CVE-2026-115560's fix above did NOT close
+# this: it only changed which of the two syscalls runs first (pre-write vs
+# post-write truncate), which changes which interruption window is
+# exploitable, not whether one exists. depthfirst's own affected-version
+# table, dated 19 Nov 2026, lists every current PHP branch as vulnerable,
+# 8.4.28/8.5.13 (the builds PATCHED_115560 above calls "fixed") included,
+# via the post-write-truncate ordering; the only branches it calls safe are
+# the dedicated 7.4/8.0/8.1 EOL mitigation builds where the upload-progress
+# callback never opens the Session at all. No current release is known to
+# close this; the array below is intentionally empty and exists only so you
+# can fill in PATCHED_126714_X_Y yourself once (if) one does, without
+# waiting on a script update. Until then, patch_126714() always reports
+# unfixed, and `cleanup` keeps session.upload_progress off regardless of
+# whether CVE-2026-115560 is patched, because turning it back on reopens
+# this on every version this script knows about.
+declare -A PATCHED_126714_DEFAULT=()
+patched_126714_ver() { local n="PATCHED_126714_${1/./_}"; echo "${!n:-${PATCHED_126714_DEFAULT[$1]:-}}"; }
+UPLOAD_CVE2="CVE-2026-126714"
+# Same signature as patch_115560: 0 = fixed, 1 = not known fixed. Unlike
+# patch_115560, there is no non-empty default table, so this returns 1
+# (not fixed) for every branch unless you've set an override yourself.
+patch_126714() {
+    local pkg="php${PHP_VER}-fpm" full v up want
+    UPLOAD_HOW2=""
+    full="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
+    [[ -n "$full" ]] || { UPLOAD_HOW2="${pkg} isn't installed"; return 1; }
+    v="${full#*:}"; up="${v%%-*}"
+    want="$(patched_126714_ver "$PHP_VER")"
+    if [[ -n "$want" ]] && dpkg --compare-versions "$up" ge "$want"; then
+        UPLOAD_HOW2="upstream ${up} >= ${want} (PATCHED_126714 override)"; return 0
+    fi
+    UPLOAD_HOW2="${v}: no release is known to fix ${UPLOAD_CVE2} as of this script's writing (see the header)"
+    return 1
+}
 # Branches PHP no longer fixes; only a distro or PPA backport can patch them
 EOL_VERS="7.0 7.1 7.2 7.3 7.4 8.0 8.1"
 # Distro builds that carry the fix without changing the upstream version.
@@ -745,9 +804,14 @@ dropin_full() {
 dropin_upload_only() {
     printf '%s\n' \
         "; PHP2Shell mitigation, reduced: this build is patched for ${CVES[*]}," \
-        "; but ${UPLOAD_CVE} (session upload progress) is fixed only in a later release." \
+        "; but at least one of ${UPLOAD_CVE} (session upload progress) and" \
+        "; ${UPLOAD_CVE2} (phpAfterShell: the same Session file is still written" \
+        "; non-atomically during the upload-progress callback, and killing the" \
+        "; worker mid-write can splice two Sessions) is not known fixed on this" \
+        "; build. CVE-2026-126714 has no known fixed release at all as of this" \
+        "; script's writing; see php/README.md." \
         "; Written by ${SCRIPT_NAME} ${SCRIPT_VERSION}." \
-        "; Rerun ${SELF} cleanup ${HINT} once it is." \
+        "; Rerun ${SELF} cleanup ${HINT} once both are fixed." \
         "session.upload_progress.enabled = Off"
 }
 
@@ -774,11 +838,14 @@ verify() {
             stale="$(stale_fpm_pids)"
             if [[ -n "$stale" ]]; then
                 warn "...but PIDs ${stale} still run the old binary. Restart: $(svc_hint restart "$FPM_SERVICE")"
-            elif patch_115560; then
-                info "Running code is current and ${UPLOAD_CVE} is fixed too (${UPLOAD_HOW}) - the mitigation can go: ${SELF} cleanup ${HINT}"
+            elif patch_115560 && patch_126714; then
+                info "Running code is current and both ${UPLOAD_CVE} (${UPLOAD_HOW}) and ${UPLOAD_CVE2} (${UPLOAD_HOW2}) are fixed - the mitigation can go: ${SELF} cleanup ${HINT}"
             else
-                info "Running code is current. ${UPLOAD_CVE} isn't fixed yet (${UPLOAD_HOW}):"
-                info "  ${SELF} cleanup ${HINT} will keep session.upload_progress off until it is"
+                local still=""
+                patch_115560 || still="${UPLOAD_CVE} (${UPLOAD_HOW})"
+                patch_126714 || still="${still:+${still}, }${UPLOAD_CVE2} (${UPLOAD_HOW2})"
+                info "Running code is current, but not known fixed for: ${still}"
+                info "  ${SELF} cleanup ${HINT} will keep session.upload_progress off until it is. CVE-2026-126714 has no known fixed release yet; see php/README.md."
             fi ;;
         1)  warn "NOT patched (${PATCH_HOW}). Target: $(patch_target)" ;;
         *)  warn "Patch status unknown (${PATCH_HOW}). Target: $(patch_target)" ;;
@@ -1245,22 +1312,29 @@ cmd_cleanup() {
     if ! is_patched && [[ -z "$FORCE" ]]; then
         die "php${PHP_VER}-fpm doesn't look patched (${PATCH_HOW}). Target: $(patch_target). Or add --force"
     fi
-    local keep=0
-    if ! patch_115560 && [[ -z "$FORCE" ]]; then keep=1; fi
+    local keep=0 unfixed_cves=""
+    patch_115560 || unfixed_cves="${UPLOAD_CVE}"
+    patch_126714 || unfixed_cves="${unfixed_cves:+${unfixed_cves}, }${UPLOAD_CVE2}"
+    if [[ -n "$unfixed_cves" ]] && [[ -z "$FORCE" ]]; then keep=1; fi
     [[ -f "$DROP_IN_CONF" ]] && backup "$DROP_IN_CONF"
     if [[ $keep -eq 1 ]]; then
         # Written even if there's no drop-in: a v4 cleanup removed it outright
-        # and turned upload progress back on while CVE-2026-115560 is open
+        # and turned upload progress back on while one of these CVEs is open.
+        # CVE-2026-126714 has no known fixed version as of this script's
+        # writing (see the header), so in practice this stays true even on a
+        # build fully patched for CVE-2026-115560, until that changes.
         dropin_upload_only > "$DROP_IN_CONF"
-        info "Wrote $DROP_IN_CONF: session.upload_progress stays off (${UPLOAD_HOW})"
+        info "Wrote $DROP_IN_CONF: session.upload_progress stays off (unfixed: ${unfixed_cves})"
     elif [[ -f "$DROP_IN_CONF" ]]; then
         rm -f "$DROP_IN_CONF"; info "Removed $DROP_IN_CONF"
-        [[ -z "$FORCE" ]] || patch_115560 || warn "--force: session.upload_progress is back on while ${UPLOAD_CVE} is unfixed"
+        if [[ -n "$FORCE" ]] && [[ -n "$unfixed_cves" ]]; then
+            warn "--force: session.upload_progress is back on, but this is not known fixed for: ${unfixed_cves}"
+        fi
     fi
     fpm_health || die "$FPM_SERVICE failed to restart after cleanup"
     refresh_info
     if [[ $keep -eq 1 ]]; then
-        info "session.upload_progress.enabled = $(ini_val session.upload_progress.enabled) until ${UPLOAD_CVE} is fixed. AppArmor profile kept as defense-in-depth."
+        info "session.upload_progress.enabled = $(ini_val session.upload_progress.enabled) until ${unfixed_cves} $([[ "$unfixed_cves" == *,* ]] && echo "are" || echo "is") fixed. AppArmor profile kept as defense-in-depth."
     else
         info "Drop-in removed. AppArmor profile kept as defense-in-depth."
     fi
@@ -1752,4 +1826,3 @@ lock_for_change "apply enforce complain cleanup remove *" "$@"
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp" open><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="index.html" aria-current="page">Magento and Adobe Commerce</a></li>
@@ -237,7 +242,7 @@ chmod +x magento-check.sh
 <li>There is no hunt. No indicators of exploitation have been published for this flaw.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as <code>.../docker_NAME_PATH</code> is the PATH inside the container NAME. It never runs anything in a container beyond <code>find</code> and a file copy, never copies <code>.env</code> or <code>wp-config.php</code>, never keeps a staged symlink, and is skipped when you name directories yourself.</li>
 </ul>
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../litellm/index.html">&larr; LiteLLM</a><a rel="next" href="../nextjs/index.html">Next.js Server Actions &rarr;</a></nav></article></main>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../litellm/index.html">&larr; LiteLLM</a><a rel="next" href="../mysql/index.html">MySQL client programs &rarr;</a></nav></article></main>
 <aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#magento-email-template-rce-check">Magento email-template RCE check</a></li><li class="l2"><a href="#what-a-version-number-can-and-cannot-show">What a version number can and cannot show</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#there-is-no-hunt">There is no hunt</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#if-a-store-was-exposed">If a store was exposed</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">

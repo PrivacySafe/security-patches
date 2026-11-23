@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -128,7 +133,8 @@ document.documentElement.className+=" js"
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Manual pages</a> / <span>psf-expat-check(8)</span></nav>
 <article class="doc"><h1>psf-expat-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/expat/expat-check.sh</code>. Tool page: <a href="../expat/index.html">libexpat</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/expat/expat-check.sh">Source</a>. With the package installed: <code>man psf-expat-check</code>.</p><pre class="manual">libexpat billion laughs detection delay: read-only checker  (v1)
-CVE-2026-115506
+CVE-2026-115506 (and CVE-2026-113351, CVE-2026-117610, CVE-2026-118370, fixed
+in the same release)
 
 If this software is helpful, consider a donation to our 501c3 nonprofit:
 https://privacysafe.foundation
@@ -144,13 +150,15 @@ result is denial of service. Rated High (CVSS 7.5 v3; the CVE list shows 8.7 on
 the v4 scale). No authentication is needed wherever a service parses XML from
 an untrusted source. Reported through Google; the upstream issue is #1160.
 
-  Affected: libexpat through 2.9.0, that is every release so far
-  Fix:      merged upstream on 23 October 2026 (pull request #1433) and
-            milestoned for Expat 2.9.1
+  Affected: libexpat through 2.9.0, that is every release before the fix
+  Fixed:    Expat 2.10.0, released 2 November 2026. The planned 2.9.1 was
+            never released; the fix shipped as 2.10.0 instead.
 
-Install Expat 2.9.1 or later when it reaches you: upstream attached the fix to
-that milestone. The script reports every copy at 2.9.0 or older as affected and
-2.9.1 or newer as fixed. Distribution
+Expat 2.10.0 also fixes CVE-2026-113351 (denial of service through
+XML_ParserReset), CVE-2026-117610 (a crash on an initial, non-final, empty
+subparser parse call) and CVE-2026-118370 (signed integer overflow of attIndex
+and nPrefixes in storeAtts). The script reports every copy older than 2.10.0
+as affected and 2.10.0 or newer as fixed. Distribution
 packages usually backport fixes without changing the version, which the
 script checks for.
 

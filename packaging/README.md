@@ -8,8 +8,6 @@ Releases are published as three files, all named `psf-security-patches` and vers
 | Debian package | `psf-security-patches_26.11.20-1.0.0_all.deb` | upstream `26.11.20`, revision `1.0.0` |
 | RPM package | `psf-security-patches-26.11.20-1.0.0.noarch.rpm` | Version `26.11.20`, Release `1.0.0` |
 
-Releases before 26.10.30 were named `psf-security-packages`. The `.deb` declares `Replaces` and `Conflicts`, and the `.rpm` declares `Obsoletes`, for that name, so installing the new package takes the old one out.
-
 The date is the release date in UTC. The second part is the revision: it is `1.0.0` for a first release of that date and goes up if the same date needs a rebuild.
 
 ## What the packages install

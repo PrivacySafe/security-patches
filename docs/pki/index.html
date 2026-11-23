@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -139,7 +144,7 @@ document.documentElement.className+=" js"
 <p>eMudhra's <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2083449#c82">full incident report</a>, posted 10 November, revoked eight further intermediates on 7 November: EM DV/OV/EV TLS CA - G2B and G2C, and EM OV CS CA - G2B and G2C. These are a different, lesser kind of finding from the original eight, and the script treats them differently:</p>
 <ul>
 <li><strong>Not a proven weak key.</strong> The original eight are ECDSA P-384 keys with a private scalar under 256, reproducible by anyone from the public certificate; eMudhra revoked them as <code>cACompromise</code>. These eight are RSA-4096, and eMudhra's report states their signatures still verify correctly against the certified modulus. The concern is that the same 2025 ceremony handled the private key material in the volatile memory of a Python process during a wrap/unwrap step, so eMudhra &quot;cannot positively demonstrate&quot; this met its own CPS §6.2.6 key-handling rule, not that the keys are mathematically weak or have been recovered by anyone. They were revoked as <code>cessationOfOperation</code>, not <code>cACompromise</code>.</li>
-<li><strong>Detected, but not self-tested.</strong> The script now flags all eight by their own certificate SHA-256 fingerprint, taken directly from eMudhra's report (<code>check</code> and <code>status</code> report them the same way as the original eight). They are not part of the embedded self-test, the per-host <code>TEST_HOSTS</code> verification, or the leaked-key proof: those are specific to the original eight's embedded certificates and their recovered scalars, which don't exist for this set. A root program has not yet independently reproduced or corroborated these eight fingerprints the way Mozilla and others did for the first eight; they come from eMudhra's own report alone.</li>
+<li><strong>Detected, but outside the embedded self-test.</strong> The script now flags all eight by their own certificate SHA-256 fingerprint, taken directly from eMudhra's report (<code>check</code> and <code>status</code> report them the same way as the original eight). They are not part of the embedded self-test, the per-host <code>TEST_HOSTS</code> verification, or the leaked-key proof: those are specific to the original eight's embedded certificates and their recovered scalars, which don't exist for this set. A root program has not yet independently reproduced or corroborated these eight fingerprints the way Mozilla and others did for the first eight; they come from eMudhra's own report alone.</li>
 <li><strong>Their roots stay trusted.</strong> The original eight chain to emSign ECC Root CA - G3 and Sectigo's AAA Certificate Services, both of which this script distrusts outright. These eight chain to emSign Root TLS CA - G1 (the six TLS ones) and emSign Root CS CA - G2 (the two code-signing ones). Neither root is distrusted: G1 is still issuing real certificates for a university federation (InCommon) under an agreed transition, due to stop by <strong>16 November 2026</strong>, and root programs have explicitly left it trusted &quot;at this time&quot;. Distrusting G1 now would break those subscribers' valid certificates along with the compromised ones. <code>apply</code> removes only the eight specific certificates it finds in your store, the same way it already does for copies of the original eight under <code>/usr/local/share/ca-certificates</code> or <code>/etc/ssl/certs</code>.</li>
 </ul>
 <p>If <code>check</code> or <code>status</code> reports one of these eight as trusted, treat it the same as the original eight: it shouldn't be in your store, and <code>apply</code> will remove it. If you're specifically relying on G1-issued certificates (for example, from InCommon) past 16 November, watch for their migration to a replacement CA; this script does nothing to that root itself.</p>
@@ -476,7 +481,7 @@ sudo ./emudhra-macos-mitigate.sh rollback
 <li><a href="https://access.redhat.com/security/cve/CVE-2026-111943"><span class="nw">CVE-2026-111943</span></a>: 163 advisories, 2026-10-20 to 2026-11-03; 159 important, 4 critical; by stream, RHEL 8 21, RHEL 9 42, RHEL 10 21, Hummingbird 50, RHEL 8 (el8ost) 1, RHEL 8 (el8sat) 1, RHEL 9 (el9ost) 2, RHEL 9 (el9sat) 3, container image 22; most often <code>rhc</code> (10), <code>grafana-pcp</code> (9), <code>grafana</code> (9), <code>golang</code> (7). All of them: <a href="https://access.redhat.com/security/cve/CVE-2026-111943">Red Hat's CVE page</a>.</li>
 </ul>
 <!-- rhsa:end -->
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../drupal/index.html">&larr; Drupal</a><a rel="next" href="../ghostaction/index.html">GhostAction &rarr;</a></nav></article></main>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../drupal/index.html">&larr; Drupal</a><a rel="next" href="../etherpad/index.html">Etherpad static path traversal &rarr;</a></nav></article></main>
 <aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#emudhra-intermediate-ca-compromise-mitigation">eMudhra Intermediate CA Compromise Mitigation</a></li><li class="l3"><a href="#emudhra-eight-more-intermediates-revoked-7-november">eMudhra: eight more intermediates revoked, 7 November</a></li><li class="l3"><a href="#emudhra-quick-start">eMudhra quick start</a></li><li class="l3"><a href="#emudhra-commands">eMudhra commands</a></li><li class="l3"><a href="#emudhra-environment-check">eMudhra environment check</a></li><li class="l3"><a href="#emudhra-patch-detection">eMudhra patch detection</a></li><li class="l3"><a href="#emudhra-configuration">eMudhra configuration</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#emudhra-on-macos">eMudhra on macOS</a></li><li class="l3"><a href="#macos-quick-start">macOS quick start</a></li><li class="l3"><a href="#macos-commands">macOS commands</a></li><li class="l3"><a href="#macos-on-hosted-runners">macOS on hosted runners</a></li><li class="l3"><a href="#macos-configuration">macOS configuration</a></li><li class="l3"><a href="#macos-before-you-run-it">macOS before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">

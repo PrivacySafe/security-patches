@@ -18,7 +18,7 @@ rsyslog's `omfile` `dynaFile` feature builds an output file name from a template
 | Remedy | Run `mitigate` now and install the rsyslog release that fully patches CVE-2026-92709 when it is published |
 | Defense | The documented, recommended one, which works on every version: explicit secure-path handling for each untrusted value in a dynaFile path |
 | Not limited to | The RFC 5424 HOSTNAME field. Any untrusted value that reaches a path component creates the condition |
-| Exploit | A PoC reference is listed by one aggregator. The page we saw contained only the advisory text |
+| Exploit | A PoC reference is listed by one aggregator. The referenced page contained only the advisory text |
 
 **The configuration decides your exposure, not the version**, which is why this is a configuration audit. On the rsyslog 8.2312.0 default configuration it correctly reports that nothing builds a path from message data. The daily stable documentation describes new dynaFile controls and a rule that the path must stay under a fixed leading prefix, which hints that a fix is on the way. No release carries it yet, so do not wait for it.
 

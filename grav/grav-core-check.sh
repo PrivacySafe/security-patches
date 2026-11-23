@@ -56,8 +56,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="grav-core-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -201,13 +201,13 @@ cmd_check() {
                     vulnerable|prerelease) bad "Grav ${ver} is affected by CVE-2026-116019 (fixed in 2.2.13): a page editor can run arbitrary public static methods"
                         inf "update now (bin/gpm selfupgrade), then run: $0 hunt"; rc=1 ;;
                     fixed)       caution "version ${ver} is 2.2.13 or later, but Blueprint.php lacks the fix: the files do not match the version. Reinstall Grav"; rc=1 ;;
-                    notaffected) ok "Grav ${ver} is older than 2.0.15, the start of the affected range. It is far out of date, so update it anyway" ;;
+                    notaffected) caution "Grav ${ver} is older than 2.0.15, the start of the affected range. This is not confirmed clear, only outside this one CVE's range: it is far out of date, so update it anyway"; rc=1 ;;
                     *)           caution "cannot compare version '${ver}': check it against 2.2.13"; rc=1 ;;
                 esac ;;
             unreadable)
                 case "$st" in
                     fixed)       ok "Grav ${ver} is 2.2.13 or later (Blueprint.php could not be read to confirm)" ;;
-                    notaffected) ok "Grav ${ver} is older than 2.0.15, the start of the affected range. It is far out of date, so update it anyway" ;;
+                    notaffected) caution "Grav ${ver} is older than 2.0.15, the start of the affected range. This is not confirmed clear, only outside this one CVE's range: it is far out of date, so update it anyway"; rc=1 ;;
                     vulnerable)  bad "Grav ${ver} is affected by CVE-2026-116019 (fixed in 2.2.13): a page editor can run arbitrary public static methods"; inf "update now (bin/gpm selfupgrade), then run: $0 hunt"; rc=1 ;;
                     prerelease)  caution "Grav ${ver} is a pre-release of 2.2.13, not the release, and Blueprint.php could not be read to confirm the fix. Update to 2.2.13 or later"; rc=1 ;;
                     *)           caution "cannot compare version '${ver}': check it against 2.2.13"; rc=1 ;;

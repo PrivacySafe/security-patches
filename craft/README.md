@@ -52,7 +52,7 @@ Craft CMS limits which classes the Twig `create()` function may instantiate with
 | `check [DIR ...]` (default) | Finds `composer.lock` files, reads the Craft version from `vendor/craftcms/cms/src/config/app.php` when it is installed (it wins over the lock file) and otherwise from `composer.lock`, compares it with 4.18.8 and 5.11.0, and reads `config/general.php` for `allowAdminChanges` and `enableTwigSandbox` |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arguments.
+Exit codes: `0` nothing affected, `1` an affected version, a version that cannot be compared, or an end-of-life major version was found, `2` bad arguments.
 
 ## How to read the result
 

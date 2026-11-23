@@ -816,4 +816,3 @@ lock_for_change "harden unharden mw-harden mw-unharden" "$@"
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

@@ -52,7 +52,7 @@ The Storybook dev server exposes its WebSocket authentication token to any clien
 | `check [DIR ...]` (default) | Reads the `storybook` version from `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` (v1 and Berry), `pnpm-lock.yaml`, `bun.lock` and an installed `node_modules` copy; notes the Vitest addon and any `--host` in the dev script; and checks whether a Storybook dev server is running right now and on which address (default port 6006, or the `-p` of the running process) |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing exposed, `1` an affected version while a dev server is listening beyond loopback or is started with a non-loopback `--host`, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected version while a dev server is listening beyond loopback or is started with a non-loopback `--host`, a version that cannot be compared, or a release older than 8.0.0 (unsupported, not confirmed clear), `2` bad arguments.
 
 ## How to read the result
 

@@ -25,6 +25,13 @@
 #                   execution needs the attacker to control the filename and
 #                   the referenced text file. Affected: 2.6.0 up to 13.0.0.
 #
+# Pillow 13.0.0 fixed many more flaws than these two, and they reach far older
+# copies. Ubuntu backported 39 of them in USN-9064-1 (12 November 2026), down to
+# its 14.04 build of Pillow 2.3.0. Among them are heap writes that can run code:
+# CVE-2026-112393 (saving compressed TIFF), CVE-2026-112398 (FlashPix JPEG tiles)
+# and CVE-2026-112403 (JPEG draft scale). Every copy older than 13.0.0 is reported
+# for those as well, whatever its age, unless its package changelog names them.
+#
 # Fixed in 13.0.0 for both. This script is read-only: it finds Pillow in Python
 # environments (installed dist-info and egg-info metadata) and in lock files,
 # compares versions, and reports whether Ghostscript is installed, since the
@@ -36,7 +43,8 @@
 #   check (default)  scan DIR (default /usr/lib /usr/local/lib /opt /srv
 #                    /var/www /var/lib /home /root) for Pillow installs and
 #                    lock file pins. Exit 0 = nothing affected, 1 = an affected
-#                    version was found.
+#                    version, a version that cannot be parsed, or a copy old
+#                    enough to predate both bugs was found.
 #   version          print the script version.
 #
 # Distribution packages often backport fixes without changing the version
@@ -53,8 +61,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="pillow-oct2026-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -122,6 +130,9 @@ print_help() { awk 'f && /^# =+$/ {exit} f {sub(/^# ?/,""); print} /^# =+$/ {f=1
 # CVE-2026-96639 affects 11.0.0 up to 13.0.0; CVE-2026-112900 affects 2.6.0 up to 13.0.0
 affects_96639()  { ver_ge "$1" "11.0.0" && ver_lt "$1" "13.0.0"; }
 affects_112900() { ver_ge "$1" "2.6.0"  && ver_lt "$1" "13.0.0"; }
+# other 13.0.0 fixes that distributions list as reaching every older release (Ubuntu: back to 2.3.0)
+BATCH_CVES=(CVE-2026-112393 CVE-2026-112398 CVE-2026-112403)
+BATCH_TEXT="CVE-2026-112393, CVE-2026-112398 and CVE-2026-112403 (heap writes in the TIFF, FlashPix and JPEG code that can run code), also fixed in 13.0.0"
 
 GS_STATE=""
 gs_info() {
@@ -134,7 +145,7 @@ gs_info() {
 
 report_version() {   # label version source [file for distro check]
     local label="$1" ver="$2" src="$3" probe="${4:-}" hit=0
-    if ! is_semver "$ver"; then caution "${label}: cannot parse version '${ver}' (${src})"; return 0; fi
+    if ! is_semver "$ver"; then caution "${label}: cannot parse version '${ver}' (${src}); treating it as not confirmed fixed"; return 1; fi
     # a copy staged from a container is judged by that container's Ghostscript (the probe leaves a
     # marker), not the host's
     local gsv="$GS_STATE" _ref _r
@@ -152,11 +163,16 @@ report_version() {   # label version source [file for distro check]
     affects_112900 "$ver" && a11=1
     if [[ $a96 -eq 0 && $a11 -eq 0 ]]; then
         if ver_lt "$ver" "13.0.0"; then
-            ok "${label}: Pillow ${ver} predates both bugs (older than 2.6.0), but is far out of date"
+            if [[ -n "$probe" ]] && distro_mentions "$probe" "${BATCH_CVES[@]}"; then
+                ok "${label}: Pillow ${ver} predates both bugs named here, and package ${DISTRO_PKG} changelog names ${DISTRO_HIT}: the distribution has backported the 13.0.0 fixes"
+                return 0
+            fi
+            caution "${label}: Pillow ${ver} predates both bugs named here (older than 2.6.0), but not the other flaws Pillow 13.0.0 fixed: distributions list releases back to 2.3.0 as affected by ${BATCH_TEXT}"
+            return 1
         else
             ok "${label}: Pillow ${ver} is 13.0.0 or newer"
+            return 0
         fi
-        return 0
     fi
     [[ $a96 -eq 1 ]] && bad "${label}: Pillow ${ver} is affected by CVE-2026-96639 (PSD, MPO, DCX, MIC files)"
     if [[ $a11 -eq 1 ]]; then
@@ -166,9 +182,10 @@ report_version() {   # label version source [file for distro check]
             caution "${label}: Pillow ${ver} is affected by CVE-2026-112900 but no gs binary was found on PATH, so the EPS path is inert here"
         fi
     fi
+    inf "${label}: Pillow ${ver} is also affected by ${BATCH_TEXT}"
     inf "source: ${src}"
     if [[ -n "$probe" ]]; then
-        if distro_mentions "$probe" CVE-2026-96639 CVE-2026-112900; then
+        if distro_mentions "$probe" CVE-2026-96639 CVE-2026-112900 "${BATCH_CVES[@]}"; then
             ok "package ${DISTRO_PKG} changelog mentions ${DISTRO_HIT}: the distribution may have backported the fix"
             return 0
         elif [[ $? -eq 1 ]]; then
@@ -300,6 +317,7 @@ cmd_check() {
         warn "Affected Pillow found. Upgrade: pip install --upgrade 'Pillow>=13.0.0'  (check your Python version is supported by 13.x)"
         inf "Protection for CVE-2026-96639: open untrusted files with an allowlist, Image.open(f, formats=['JPEG','PNG','GIF','WEBP']), which keeps PSD, MPO, DCX and MIC out."
         inf "Protection for CVE-2026-112900: refuse EPS input, or refuse any filename that starts with '-' or '@' before it reaches Pillow, or remove Ghostscript."
+        inf "Distribution packages: Ubuntu shipped the 13.0.0 fixes in USN-9064-1 (12 November 2026) for every release back to 14.04 (Ubuntu Pro), and USN-9064-2 (16 November) fixes a regression the first update caused in resizing. Install both. Debian, Fedora and Red Hat publish their own advisories."
         inf "Pillow 13.0.0 notes: https://github.com/python-pillow/Pillow/blob/main/docs/releasenotes/13.0.0.rst"
     fi
     return "$rc"

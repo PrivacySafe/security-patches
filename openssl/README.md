@@ -56,6 +56,10 @@ chmod +x openssl-check.sh
 
 Env: `OPENSSL_BIN`, `OPENSSL_PKG_VERSION`, `OPENSSL_OS_RELEASE`, `OPENSSL_CHANGELOG`, `OPENSSL_PROC` and `OPENSSL_NODE` override the openssl command, the package version, `/etc/os-release`, a changelog file (plain or `.gz`), `/proc` and the node command. `OPENSSL_NO_PACKAGE=1` treats the installed openssl as not owned by a package.
 
+## Also announced: CVE-2026-121481
+
+OpenSSL announced CVE-2026-121481, an overflow in the output-length arithmetic of `EVP_EncodeBlock` when a single, exceptionally large input is Base64-encoded. Upstream has not identified a practical remote path to it, and Red Hat rates its real-world reach as low although some aggregators list 9.8. The fixed releases, OpenSSL 4.0.4 and 4.1.1, were scheduled for 1 December 2026; until they ship, no version is fixed, so this script does not check for it. An application that Base64-encodes large buffers from untrusted input should cap their size.
+
 ## Update
 
 Update the OpenSSL package, then restart the services that use it (`needrestart`, or a reboot). For 3.0, 1.1.1 and 1.0.2 without a vendor backport, the public fix does not exist: move to a supported branch (3.4 or later) or use a distribution package that carries the fix.

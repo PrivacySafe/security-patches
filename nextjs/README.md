@@ -51,8 +51,12 @@ Crafted requests aimed at a Next.js App Router application that has at least one
 | `check [DIR ...]` (default) | Reads the Next.js version from `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` (classic and Berry), `pnpm-lock.yaml` and installed `node_modules/next/package.json` copies. For an affected version it checks whether the project has an `app/` or `src/app/` directory and a Server Action (a `'use server'` directive outside `node_modules` and `.next`, or a `.next/server/server-reference-manifest.json` that lists actions) |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing exposed, `1` an affected project with Server Actions was found, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected project with Server Actions was found, a version could not be parsed, or a release older than 13.0.0 was found (outside this CVE, but not confirmed clear of others), `2` bad arguments.
 
+
+## The same releases fix the image optimizer
+
+Next.js 15.5.28 and 16.4.1 also fix three flaws in image optimization, where attacker-controlled content reaches the SVG and image libraries: CVE-2026-96889 (rated critical by the vendor), CVE-2026-114111 and CVE-2026-119347. They need no Server Action, so an app this script calls "not exposed" for CVE-2026-94482 still needs the update when it serves `next/image` from sources it does not control. One of the three also needs `sharp` 0.35.5 or later. Separately, Next.js 16.4.1 carries the React Server Components fix for CVE-2026-126187 (`react-server-dom-*` 19.0.9, 19.1.10, 19.2.9 and 19.3.1). Apps on 13.x and 14.x receive none of these fixes and move to 15.5.28 or later.
 ## How to read the result
 
 - Affected version with Server Actions: exposed. Upgrade, rebuild and restart.
@@ -87,7 +91,7 @@ limit_req_status 429;
 limit_req zone=next_actions burst=20 nodelay;
 ```
 
-We checked this on nginx 1.24.0 at a deliberately low rate: requests with a `Next-Action` header got a short burst of 200 responses and then 429, requests without it were never limited, and the limit recovered after a pause. Pick a rate that suits your real traffic. nginx does not limit requests whose key is empty, which is what makes the header-only behavior work.
+Checked on nginx 1.24.0 at a deliberately low rate: requests with a `Next-Action` header got a short burst of 200 responses and then 429, requests without it were never limited, and the limit recovered after a pause. Pick a rate that suits your real traffic. nginx does not limit requests whose key is empty, which is what makes the header-only behavior work.
 
 ## Sources
 

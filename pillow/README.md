@@ -19,6 +19,24 @@ Pillow is one of the most widely installed imaging libraries for Python: web upl
 | Impact | Native out-of-bounds writes and crashes. The MPO path can also read out of bounds and, in demonstrated runtime-specific profiles, run commands | Option injection into Ghostscript. Command execution needs the attacker to control the filename and the text file it names; the reported chain works with the default `-dSAFER` |
 | Severity | 9.8 Critical | Listed as 9.2 Critical |
 
+## Older and distribution-packaged Pillow
+
+Pillow 13.0.0 fixed far more than the two flaws above, and many of them reach releases much older than 2.6.0. Ubuntu backported 39 of them in [USN-9064-1](https://ubuntu.com/security/notices/USN-9064-1) on 12 November 2026, for every supported release and, through Ubuntu Pro, down to the 14.04 build of Pillow 2.3.0. Three are heap writes that can run code: CVE-2026-112393 (saving compressed TIFF data), CVE-2026-112398 (the FlashPix JPEG tile decoder) and CVE-2026-112403 (the JPEG decoder at a requested draft scale). For that reason the script reports every copy older than 13.0.0, whatever its age, and treats a package changelog that names any of these, or either CVE above, as a sign that the distribution backported the fixes.
+
+[USN-9064-2](https://ubuntu.com/security/notices/USN-9064-2) followed on 16 November: the first update's fix for CVE-2026-112402 broke resizing with the `NEAREST` filter and resizing of mode `1` and `P` images. Install both.
+
+| Ubuntu release | Fixed `python3-pil` (USN-9064-1) |
+|---|---|
+| 26.10 | 12.3.0-1ubuntu2 |
+| 26.04 LTS | 12.1.1-2ubuntu1.5 |
+| 24.04 LTS | 10.2.0-1ubuntu1.5 |
+| 22.04 LTS | 9.0.1-1ubuntu0.7 |
+| 18.04 LTS (Ubuntu Pro) | 5.1.0-1ubuntu0.8+esm3 |
+| 16.04 LTS (Ubuntu Pro) | 3.1.2-0ubuntu1.6+esm4 |
+| 14.04 LTS (Ubuntu Pro, Legacy add-on) | 2.3.0-1ubuntu3.4+esm6 |
+
+20.04 LTS is in the same notice; take its version from the notice itself. A copy installed with `pip` inside a virtual environment is not touched by any distribution update and needs `pip install --upgrade 'Pillow>=13.0.0'`, or a Python version that 13.x supports.
+
 ## Quick start
 
 1. Download the script. The repository is mirrored on GitHub and Codeberg; pick a base URL.
@@ -51,7 +69,7 @@ Pillow is one of the most widely installed imaging libraries for Python: web upl
 | `check [DIR ...]` (default) | Finds installed copies from `Pillow-*.dist-info` and `*.egg-info` metadata, and declared pins in `requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock` and `Pipfile.lock`. Compares each version with both CVEs and reports whether Ghostscript (`gs`) is on `PATH` |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arguments.
+Exit codes: `0` nothing affected, `1` an affected version, a version that cannot be parsed, or a copy older than 2.6.0 (outside both CVEs, but not confirmed clear of Pillow's many other fixes) was found, `2` bad arguments.
 
 ## How to read the result
 

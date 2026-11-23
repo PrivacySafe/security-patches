@@ -104,7 +104,7 @@ chmod +x litellm-escalation-check.sh
 ./litellm-escalation-check.sh check
 ```
 
-By default it searches `/usr/lib /usr/local/lib /opt /srv /var/lib /etc /home /root`. Pass directories to narrow it. Exit `0` nothing exposed, `1` an affected proxy, a floating image tag or the malicious 1.107.0, `2` bad arguments. It is read-only.
+By default it searches `/usr/lib /usr/local/lib /opt /srv /var/lib /etc /home /root`. Pass directories to narrow it. Exit `0` nothing exposed, `1` an affected proxy, a floating image tag, the malicious 1.107.0, a version that cannot be parsed, or a release older than 1.87.0 (not confirmed clear), `2` bad arguments. It is read-only.
 
 ### How it decides
 

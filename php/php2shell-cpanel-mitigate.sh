@@ -20,8 +20,16 @@
 #
 # What the drop-in sets:
 #   session.upload_progress.enabled = 0     every version, patched or not:
-#                                           CVE-2026-115560 is not fixed by the
-#                                           21 October releases
+#                                           closes CVE-2026-115560 on an
+#                                           unpatched build, and closes
+#                                           CVE-2026-126714 ("phpAfterShell",
+#                                           depthfirst, 19 Nov 2026: the same
+#                                           callback writes the session file
+#                                           non-atomically, and killing the
+#                                           worker mid-write can splice two
+#                                           sessions together) on every
+#                                           build, patched or not, since no
+#                                           release is known to fix that one
 #   fatal_error_backtraces = 0              PHP 8.5, unpatched builds only
 #   memory_limit = -1                       only with --memory-unlimited, and
 #                                           only on unpatched builds (PHP's own
@@ -83,8 +91,8 @@
 set -euo pipefail
 
 SCRIPT_NAME="php2shell-cpanel-mitigate.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.0"
+SCRIPT_DATE="2026-11-19"
 
 EA_ROOT="${EA_ROOT:-/opt/cpanel}"
 HOME_ROOT="${HOME_ROOT:-/home}"
@@ -480,7 +488,7 @@ cmd_check() {
     fi
     if [[ "$REVIEW" -eq 1 ]]; then caution "every version is patched, but something above is worth a look"; exit 2; fi
     ok "every version is patched and nothing needs review"
-    inf "CVE-2026-115560 is not fixed by these releases: keep session.upload_progress.enabled off (apply, then cleanup)"
+    inf "CVE-2026-126714 ('phpAfterShell') has no known fixed release: keep session.upload_progress.enabled off (apply, then cleanup), regardless of CVE-2026-115560's patch state"
 }
 
 cmd_apply() {
@@ -537,7 +545,7 @@ cmd_restore() {
         else caution "${VERS[$i]}: ${dropin} was not written by this script; left alone"; fi
     done
     if [[ "$removed" -gt 0 ]]; then
-        caution "CVE-2026-115560 is not fixed by the 21 October releases; removing the drop-in turns upload progress back on."
+        caution "CVE-2026-126714 ('phpAfterShell') has no known fixed release; removing the drop-in turns upload progress back on, which reopens it regardless of this version's CVE-2026-115560 patch state."
         if [[ "$DO_RESTART" -eq 1 ]]; then restart_services; else caution "--no-restart: restart Apache and FPM yourself"; fi
     fi
 }
@@ -552,7 +560,8 @@ cmd_cleanup() {
         patch_state "$php"
         if [[ "$PATCH_STATE" != patched && "$FORCE" -eq 0 ]]; then caution "${VERS[$i]}: still unpatched; kept as is (--force to reduce it anyway)"; continue; fi
         write_dropin "$dropin" "${MARKER}
-; CVE-2026-115560 is not fixed by the 21 October releases: keep upload progress off.
+; CVE-2026-126714 ('phpAfterShell') has no known fixed release: keep upload progress off
+; regardless of this version's CVE-2026-115560 patch state.
 session.upload_progress.enabled = 0"
         ok "${VERS[$i]}: reduced to session.upload_progress.enabled = 0"; changed=$((changed+1))
     done
@@ -574,4 +583,3 @@ case "$CMD" in
 esac
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

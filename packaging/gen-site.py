@@ -73,11 +73,11 @@ SITE = "PrivacySafe Security Patches"
 # Kinds of software, in the order a visitor looks for them.
 CATEGORIES = [
     ("Servers, proxies and network services", "Web servers, proxies, name servers, FTP, logging, databases and container hosts.",
-     ["nginx", "nginx-ui", "haproxy", "tomcat", "trafficserver", "bind", "vsftpd", "rsyslog", "couchdb", "pulsar", "incus"]),
+     ["nginx", "nginx-ui", "apache", "haproxy", "tomcat", "trafficserver", "bind", "vsftpd", "rsyslog", "couchdb", "mysql", "pulsar", "incus"]),
     ("Operating system, libraries and runtimes", "The kernel, system libraries, language runtimes and the certificate store.",
      ["linux-kernel", "apt", "openssh-musl", "openssl", "curl", "expat", "brotli", "heif", "pillow", "node", "php", "php/detect", "php/edge", "ruby", "pki"]),
     ("Content management and web applications", "WordPress, Joomla, Drupal and the other sites and services you host.",
-     ["wordpress", "wordpress-pt", "wordpress-upgrade", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex", "btcpayserver"]),
+     ["wordpress", "wordpress-pt", "wordpress-upgrade", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex", "btcpayserver", "etherpad", "apache-roller", "ghostscript"]),
     ("Developer platforms, tools and supply chain", "Developer machines, build and CI systems, frameworks and packages.",
      ["claude-code-vsx", "ghostaction", "litellm", "openapi", "storybook", "jupyter", "sentry", "nextjs", "laravel", "django", "sagemaker", "gitea", "gitlab", "jenkins", "optimizely"]),
 ]
@@ -94,6 +94,7 @@ NAMES = {  # short names for the menu and the cards
     "nextjs": "Next.js Server Actions", "jupyter": "Jupyter and nbconvert", "yootheme": "YOOtheme Pro",
     "incus": "Incus", "storybook": "Storybook", "zammad": "Zammad", "rsyslog": "rsyslog", "vsftpd": "vsftpd",
     "tomcat": "Apache Tomcat", "gitea": "Gitea", "ghostaction": "GhostAction", "litellm": "LiteLLM", "pillow": "Pillow",
+    "apache": "Apache HTTP Server mod_http2", "mysql": "MySQL client programs", "etherpad": "Etherpad static path traversal", "apache-roller": "Apache Roller XML-RPC deserialization", "ghostscript": "Ghostscript Upload2Shell sandbox escape",
     "openapi": "openapi-typescript-codegen", "laravel": "Laravel TokenGuard", "nginx-ui": "nginx-ui", "btcpayserver": "BTCPay Server",
     "openssh-musl": "OpenSSH musl password bypass",
     "optimizely": "Optimizely OPTIMJACK supply-chain compromise",

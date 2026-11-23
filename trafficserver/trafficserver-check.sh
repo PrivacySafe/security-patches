@@ -59,8 +59,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="trafficserver-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -278,14 +278,14 @@ cmd_check_host() {
     for b in "${bins[@]}"; do
         [[ -x "$b" ]] || { caution "${b}: not an executable file"; continue; }
         ver="$(bin_version "$b")"
-        [[ -n "$ver" ]] || { caution "${b}: could not read a version from -V"; continue; }
+        [[ -n "$ver" ]] || { caution "${b}: could not read a version from -V; treating it as not confirmed fixed"; rc=1; found=$((found+1)); continue; }
         found=$((found+1))
         step "Apache Traffic Server ${ver} at ${b}"
         st="$(ats_status "$ver")"
         case "$st" in
             fixed)   ok "Traffic Server ${ver} has the fix (9.2.16, 10.1.5, 10.2.1 or newer)"; continue ;;
-            outside) caution "Traffic Server ${ver} is older than 8.0: outside the stated range, and long end of life"; continue ;;
-            unknown) caution "cannot parse version '${ver}'"; continue ;;
+            outside) caution "Traffic Server ${ver} is older than 8.0: outside the stated range of this CVE, but long end of life and not confirmed clear of other issues: update regardless"; rc=1; continue ;;
+            unknown) caution "cannot parse version '${ver}'; treating it as not confirmed fixed"; rc=1; continue ;;
             eol)     bad "Traffic Server ${ver} is on an end-of-life branch (8.x, 9.0, 9.1 or 10.0): in the affected range and Apache will not patch it. Move to 9.2.16, 10.1.5 or 10.2.1 or newer." ;;
             vulnerable) bad "Traffic Server ${ver} is in the affected range (fixed in 9.2.16, 10.1.5 and 10.2.1)" ;;
         esac

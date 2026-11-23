@@ -55,8 +55,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="gitea-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -227,7 +227,7 @@ cmd_check_host() {
     for b in "${bins[@]}"; do
         [[ -x "$b" ]] || { caution "${b}: not an executable file"; continue; }
         ver="$(bin_version "$b")"
-        [[ -n "$ver" ]] || { caution "${b}: could not read a Gitea version from --version"; continue; }
+        [[ -n "$ver" ]] || { caution "${b}: could not read a Gitea version from --version; treating it as not confirmed fixed"; rc=1; found=$((found+1)); continue; }
         found=$((found+1))
         step "Gitea ${ver} at ${b}"
         if ! gitea_affected "$ver"; then ok "Gitea ${ver} has the fix (28.2.0 or newer)"; continue; fi

@@ -57,7 +57,7 @@ HAProxy's HTTP/2 code does not treat a truncated PING frame as a short read (CVE
 
 Environment: `HAPROXY_CFG` (space-separated files or directories) replaces configuration discovery. `STATE_DIR` (default `/var/lib/psf-security-patches/haproxy`) holds the backups and the manifest that `rollback` reads.
 
-Exit codes: `0` nothing exposed, `1` an affected version is exposed, its configuration could not be read, or it is on the unfixable 3.1 branch, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected version is exposed, its configuration could not be read, it is on the unfixable 3.1 branch, its version cannot be read or parsed, or it is a 3.5 development build, `2` bad arguments.
 
 Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
 

@@ -55,8 +55,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="jupyter-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -140,8 +140,8 @@ report() {   # kind label version src projdir
     if [[ "$kind" == server ]]; then st="$(server_status "$ver")"; else st="$(nbconvert_status "$ver")"; fi
     case "$st" in
         fixed)       ok "${label}: ${kind/server/jupyter_server} ${ver} has the fix"; [[ "$kind" == server ]] && inf "even on a fixed Jupyter Server, do not manually register the deprecated jupyter_server.gateway.handlers module: it still omits the authorization check"; return 0 ;;
-        notaffected) ok "${label}: ${kind/server/jupyter_server} ${ver} is older than the affected range"; return 0 ;;
-        unknown)     caution "${label}: cannot parse version '${ver}'"; return 0 ;;
+        notaffected) caution "${label}: ${kind/server/jupyter_server} ${ver} is older than the affected range named here, but is not confirmed clear of other issues: update regardless"; return 1 ;;
+        unknown)     caution "${label}: cannot parse version '${ver}'; treating it as not confirmed fixed"; return 1 ;;
     esac
     inf "source: ${src}"
     if [[ "$kind" == nbconvert ]]; then

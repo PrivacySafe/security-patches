@@ -152,8 +152,8 @@
 set -euo pipefail
 
 SCRIPT_NAME="claude-code-vsx-oct2026-check.sh"
-SCRIPT_VERSION="1.3.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.3.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 REF="https://cursor.com/blog/claude-code-extension-security-notice"
 FIXED_VER="2.1.314"
@@ -889,12 +889,15 @@ qdir_init() {
     local root stamp
     if [[ -n "$BACKUP_ROOT" ]]; then root="$BACKUP_ROOT"
     elif [[ "$(id -u)" -eq 0 ]]; then root="/var/backups/claude-code-vsx-oct2026"
-    else root="${HOME:-/tmp}/claude-code-vsx-oct2026-backup"; fi
+    elif [[ -n "${HOME:-}" ]]; then root="${HOME}/claude-code-vsx-oct2026-backup"
+    # never a shared folder such as /tmp, where another user could create the path first
+    else die "HOME is not set: set BACKUP_ROOT to a folder only you can write"; fi
     stamp="$(date +%Y%m%d-%H%M%S)-$$"
     QDIR="${root}/${stamp}"
     if [[ "$DRY" -eq 1 ]]; then return 0; fi
     (umask 077; mkdir -p "${QDIR}/items") || die "cannot create the backup folder ${QDIR}"
     chmod 700 "$QDIR" 2>/dev/null || true
+    [[ -O "$QDIR" && ! -L "$QDIR" ]] || die "the backup folder ${QDIR} is not owned by this account: set BACKUP_ROOT to a folder only you can write"
     : >"${QDIR}/MANIFEST.txt"
 }
 quarantine_item() {

@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -129,10 +134,18 @@ document.documentElement.className+=" js"
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Manual pages</a> / <span>psf-openssh-musl-check(8)</span></nav>
 <article class="doc"><h1>psf-openssh-musl-check(8)</h1><p class="meta">Script: <code>/opt/psf-security-patches/openssh-musl/openssh-musl-check.sh</code>. Tool page: <a href="../openssh-musl/index.html">OpenSSH musl password bypass</a>. <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/openssh-musl/openssh-musl-check.sh">Source</a>. With the package installed: <code>man psf-openssh-musl-check</code>.</p><pre class="manual">OpenSSH password authentication bypass on musl Linux without PAM: check, hunt
 and a reversible mitigation  (v1)
-No CVE at time of writing (reported 5 November 2026 by Ozgun Kultekin of
-Wakefield; advisories from Alpine Linux and the OpenSSH project the same day.
-The README spells the name with its proper Turkish diacritics: Ozgun here is
-ASCII only, because this comment becomes the manual page and groff&#x27;s default
+CVE-2026-123158
+Reported 5 November 2026 by Ozgun Kultekin of Wakefield; advisories from
+Alpine Linux and the OpenSSH project the same day. CVE-2026-123158 was
+assigned the same week, nicknamed &quot;sshole&quot; by the finder; CVSS 3.1 8.1
+(High, not Critical, despite the name&#x27;s resemblance to other &quot;2Shell&quot;-style
+critical bugs in this collection). CISA added it to the Known Exploited
+Vulnerabilities catalog on 9 November 2026 (due 12 November); multiple
+independent reports describe exploitation attempts within hours of
+disclosure, including one claim of a successful root compromise on an
+Alpine honeypot via the passwordless doas path described below. The README
+spells the name with its proper Turkish diacritics: Ozgun here is ASCII
+only, because this comment becomes the manual page and groff&#x27;s default
 encoding cannot render them)
 
 If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -142,7 +155,7 @@ When sshd is built against musl libc without PAM (or built with PAM but run
 with UsePAM no), it checks a password itself: it hashes the attempt with
 crypt() and compares the result to the account&#x27;s stored field in /etc/shadow.
 For an account whose stored field is too short to contain a salt, sshd
-borrows another account&#x27;s salt to hash the attempt, a fix for CVE-2016-6210
+borrows another account&#x27;s salt to hash the attempt, a timing defense against username probing
 (timing-based user enumeration). musl&#x27;s crypt() returns the literal string
 &quot;*&quot; as an error indicator for a key (password) over 256 bytes; confirmed
 against musl&#x27;s own source and a real musl build for this release: a 256 byte

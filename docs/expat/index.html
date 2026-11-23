@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>libexpat</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>libexpat: <span class="nw">CVE-2026-115506</span> billion laughs detection delay</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">libexpat, Python's pyexpat and programs that embed expat on GNU/Linux</div></dd><dt>Severity</dt><dd>High: 7.5 (CVSS 3), listed as 8.7 on the CVSS 4.0 scale. Authentication is not needed wherever XML from an untrusted source is parsed</dd><dt>Exploited</dt><dd>No exploitation has been reported</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-115506</span></span></dd><dt>Script</dt><dd><div class="scr"><code>expat-check.sh</code> (<a href="../man/psf-expat-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/expat/expat-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; also: <code>deep</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/expat/expat-check.sh check</code></pre></div></dd></dl></aside>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>libexpat: <span class="nw">CVE-2026-115506</span> billion laughs detection delay</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">libexpat, Python's pyexpat and programs that embed expat on GNU/Linux</div></dd><dt>Severity</dt><dd>High: 7.5 (CVSS 3), listed as 8.7 on the CVSS 4.0 scale. Authentication is not needed wherever XML from an untrusted source is parsed</dd><dt>Exploited</dt><dd>No exploitation has been reported</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-113351</span>, <span class="nw">CVE-2026-115506</span>, <span class="nw">CVE-2026-117610</span>, <span class="nw">CVE-2026-118370</span></span></dd><dt>Script</dt><dd><div class="scr"><code>expat-check.sh</code> (<a href="../man/psf-expat-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/expat/expat-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; also: <code>deep</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/expat/expat-check.sh check</code></pre></div></dd></dl></aside>
 <h2 id="libexpat-billion-laughs-check">libexpat billion laughs check</h2>
 <p>libexpat is the XML parser inside Python, Apache httpd, many PHP and Perl builds, Subversion, Mercurial, D-Bus, fontconfig, Firefox and a very long list of other programs. Its defense against &quot;billion laughs&quot; entity amplification notices the amplification too late (<span class="nw">CVE-2026-115506</span>), so a modest crafted XML document can still burn a lot of CPU and memory before the protection steps in. Any service that parses XML from an untrusted source can be knocked over. Upstream attached the fix to the 2.9.1 milestone.</p>
 <div class="table-wrap" tabindex="0"><table>
@@ -135,7 +140,7 @@ document.documentElement.className+=" js"
 <tbody>
 <tr>
 <td>CVE</td>
-<td><span class="nw">CVE-2026-115506</span> (published 22 October 2026; upstream issue #1160)</td>
+<td><span class="nw">CVE-2026-115506</span> (published 22 October 2026; upstream issue #1160). The same release fixes <span class="nw">CVE-2026-113351</span>, <span class="nw">CVE-2026-117610</span> and <span class="nw">CVE-2026-118370</span></td>
 </tr>
 <tr>
 <td>Severity</td>
@@ -143,11 +148,11 @@ document.documentElement.className+=" js"
 </tr>
 <tr>
 <td>Affected</td>
-<td>libexpat through 2.9.0, which is every release so far</td>
+<td>libexpat through 2.9.0</td>
 </tr>
 <tr>
 <td>Fix</td>
-<td>Merged upstream on 23 October 2026 (pull request #1433) and milestoned for <strong>Expat 2.9.1</strong></td>
+<td><strong>Expat 2.10.0</strong>, released 2 November 2026. The planned 2.9.1 was never released</td>
 </tr>
 <tr>
 <td>Exploited</td>
@@ -155,7 +160,7 @@ document.documentElement.className+=" js"
 </tr>
 </tbody>
 </table></div>
-<p><strong>Install Expat 2.9.1 or later when it reaches you.</strong> Upstream attached the fix to the 2.9.1 milestone: the script reports every copy at 2.9.0 or older as affected and 2.9.1 or newer as fixed. Distribution packages usually backport fixes without changing the version string. The script reads the owning package's changelog for a mention of the CVE.</p>
+<p><strong>Install Expat 2.10.0 or later, or a distribution package that carries the fix.</strong> The script reports every copy older than 2.10.0 as affected and 2.10.0 or newer as fixed, and a package whose changelog names any of the four CVEs as a likely backport. Expat 2.10.0 also fixes <span class="nw">CVE-2026-113351</span> (denial of service through <code>XML_ParserReset</code>), <span class="nw">CVE-2026-117610</span> (a crash on an initial, non-final, empty subparser parse call) and <span class="nw">CVE-2026-118370</span> (signed integer overflow in <code>storeAtts</code>). Distribution status varies: Alpine ships 2.10.0-r0, while Debian's tracker still listed every Debian release, including bookworm and trixie, as vulnerable to <span class="nw">CVE-2026-115506</span> in November. Upstream asks backporters to note pull request #1439 in particular. Programs that bundle their own copy (Python wheels, Firefox, CMake and many others) need their own update; <code>deep</code> finds them.</p>
 <h2 id="quick-start">Quick start</h2>
 <ol>
 <li>
@@ -207,7 +212,7 @@ chmod +x expat-check.sh
 </tbody>
 </table></div>
 <p>Environment: <code>EXPAT_LIB_DIRS</code> replaces the library search directories and <code>EXPAT_PY_DIRS</code> replaces the directories searched for interpreters.</p>
-<p>Exit codes: <code>0</code> every copy found is fixed (or none found), <code>1</code> an affected copy was found, <code>2</code> bad arguments.</p>
+<p>Exit codes: <code>0</code> every copy found is fixed (or none found), <code>1</code> an affected copy, or a copy whose version cannot be parsed, was found, <code>2</code> bad arguments.</p>
 <h2 id="how-to-read-the-result">How to read the result</h2>
 <ul>
 <li>Every host will show affected until a fixed package ships. That is accurate, not noise. Use the script to track the position and to find the copies that will need attention.</li>
@@ -227,11 +232,11 @@ chmod +x expat-check.sh
 <h2 id="sources">Sources</h2>
 <ul>
 <li><a href="https://github.com/libexpat/libexpat/pull/1433">libexpat pull request #1433: precompute entity expanded sizes to detect amplification attacks early</a></li>
-<li><a href="https://github.com/libexpat/libexpat/issues/1416">libexpat release tracker for 2.9.1</a></li>
+<li><a href="https://blog.hartwork.org/posts/expat-2-10-0-released/">Expat 2.10.0 release announcement</a> and the <a href="https://www.openwall.com/lists/oss-security/2026/11/02/6">oss-security post</a></li>
 </ul>
 <h2 id="before-you-run-it">Before you run it</h2>
 <ul>
-<li>The fix. Install Expat 2.9.1 or later when it reaches you (upstream attached the fix for <span class="nw">CVE-2026-115506</span> to that milestone). The script reports every copy at 2.9.0 or older as affected and 2.9.1 or newer as fixed. Run it again after you upgrade.</li>
+<li>The fix. Install Expat 2.10.0 or later (released 2 November 2026). The script reports every copy older than 2.10.0 as affected and 2.10.0 or newer as fixed. Run it again after you upgrade.</li>
 <li>Distribution packages usually backport without changing the version. The script checks for that before calling a packaged copy affected.</li>
 <li>It looks in several places. It finds libexpat shared libraries, reads the version compiled into each, asks installed Python interpreters for <code>pyexpat.EXPAT_VERSION</code>, lists running processes that have libexpat mapped (flagging those still running a replaced copy), and can scan directories for programs that carry their own copy.</li>
 <li>There is no hunt. The flaw is a denial of service, and no indicators have been published.</li>

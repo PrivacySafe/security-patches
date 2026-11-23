@@ -51,8 +51,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="grav-login-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -185,7 +185,7 @@ cmd_check() {
         st="$(login_status "$ver")"
         case "$st" in
             fixed)       ok "Login ${ver} has the fix (3.9.13 or newer)" ;;
-            notaffected) ok "Login ${ver} is older than 3.6.0, the start of the affected range. It is far out of date, so update it anyway." ;;
+            notaffected) caution "Login ${ver} is older than 3.6.0, the start of the affected range. This is not confirmed clear, only outside this one CVE's range: it is far out of date, so update it anyway."; rc=1 ;;
             unknown)     caution "cannot compare version '${ver}': check it against 3.9.13"; rc=1 ;;
             vulnerable)  bad "Login ${ver} is affected by CVE-2026-114658 (fixed in 3.9.13): a page author can create a super user account through an invitation form"
                          inf "update now (bin/gpm update login, or the Admin plugin), then run: $0 hunt"

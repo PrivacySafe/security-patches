@@ -82,8 +82,8 @@
 set -uo pipefail
 SELF="$0"
 SCRIPT_NAME="linux-kernel-kvm-escape-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-20"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-22"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/linux-kernel-kvm-escape}"
 MODPROBE_FILE="/etc/modprobe.d/psf-kvm-amd-nested-off.conf"
 ADVISORY="https://www.terra.security/blog/kvm-guest-to-host-escape"
@@ -318,20 +318,19 @@ cmd_mitigate() {
         return 0
     fi
     if ! have modprobe; then die "modprobe not found: cannot reload kvm_amd here"; fi
-    if ! modprobe -r kvm_amd 2>/tmp/psf-kvm-rm.$$; then
-        bad "could not unload kvm_amd: $(cat /tmp/psf-kvm-rm.$$ 2>/dev/null)"
+    # modprobe's messages are captured in a variable, never in a file: a fixed or PID-based
+    # name under /tmp could be a symlink planted by another local user
+    local mp_err
+    if ! mp_err="$(modprobe -r kvm_amd 2>&1 >/dev/null)"; then
+        bad "could not unload kvm_amd: ${mp_err}"
         caution "this almost always means a VM is still running on it. Stop every VM on this host, then try again"
-        rm -f /tmp/psf-kvm-rm.$$
         return 1
     fi
-    rm -f /tmp/psf-kvm-rm.$$
     ok "unloaded kvm_amd"
-    if ! modprobe kvm_amd 2>/tmp/psf-kvm-ins.$$; then
-        bad "could not reload kvm_amd: $(cat /tmp/psf-kvm-ins.$$ 2>/dev/null)"
-        rm -f /tmp/psf-kvm-ins.$$
+    if ! mp_err="$(modprobe kvm_amd 2>&1 >/dev/null)"; then
+        bad "could not reload kvm_amd: ${mp_err}"
         return 1
     fi
-    rm -f /tmp/psf-kvm-ins.$$
     ok "reloaded kvm_amd"
     local np; np="$(nested_param)"
     if [[ "$np" == "N" || "$np" == "0" ]]; then ok "kvm_amd nested=${np}: confirmed off"

@@ -129,7 +129,7 @@ Eight plugin problems: seven vulnerabilities and one supply-chain compromise. Th
 | Fixed | 7.9.2 | 3.0.124 (the clean replacement). **An update alone does not remove what the malware left behind** | 1.1.41. **An update does not remove administrator accounts already created** | 4.9.6. **An update does not undo account takeovers** |
 | Severity | High 7.5 | 9.8 Critical | 9.8 Critical | 9.8 Critical |
 | Needs | The HTML optimization feature on, and comments from unauthenticated visitors being published | The tainted copy to have been activated. Reports say it does nothing until then | Nothing: the flaw is reachable without an account | No credentials (a CVSS 9.8 score implies none are required) |
-| Exploitation | None known to us | The malware shipped through the vendor's own update channel | A Nuclei template exists and is tagged as known-exploited by VulnCheck's list. Another tracker says no public proof of concept exists. Treat exploitation as plausible | None known to us. Patchstack rates it high priority and expects mass exploitation |
+| Exploitation | None publicly known | The malware shipped through the vendor's own update channel | A Nuclei template exists and is tagged as known-exploited by VulnCheck's list. Another tracker says no public proof of concept exists. Treat exploitation as plausible | None publicly known. Patchstack rates it high priority and expects mass exploitation |
 
 Two booking plugins and a registration plugin, covered by the same script:
 
@@ -141,7 +141,7 @@ Two booking plugins and a registration plugin, covered by the same script:
 | Fixed | 5.7.5. The advisory references the 5.7.5 code for the fixed helper; the advisory does not say "fixed in" in so many words | 2.4.12 or later (Patchstack's solution) | 4.0.5 |
 | Severity | 9.1 Critical (CVSS 3.1) | 9.3 Critical | 8.8 High (CVSS 3.1) |
 | Needs | Nothing: no account is required | The advisory does not state a required role; a 9.3 score implies none | A low-privilege account (privileges required: low), such as a registered user |
-| Exploitation | None known to us | None known to us | None known to us |
+| Exploitation | None publicly known | None publicly known | None publicly known |
 
 One more plugin, exploited since 7 October 2026:
 

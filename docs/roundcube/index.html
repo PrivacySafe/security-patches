@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-root="../">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
-<title>Roundcube Webmail 1.6.20 and 1.7.5: CVE-2026-114716 check | PrivacySafe Security Patches</title><meta name="description" content="Roundcube on GNU/Linux, including copies bundled by hosting panels">
+<title>Roundcube Webmail October and November 2026 security releases | PrivacySafe Security Patches</title><meta name="description" content="Roundcube on GNU/Linux, including copies bundled by hosting panels; a second, unnumbered round of 17 fixes followed the first within a month">
 <link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
 document.documentElement.className+=" js"
 // @license-end</script></head>
@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp" open><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,24 +132,25 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>Roundcube</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>Roundcube Webmail 1.6.20 and 1.7.5: <span class="nw">CVE-2026-114716</span> check</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Roundcube on GNU/Linux, including copies bundled by hosting panels</div></dd><dt>The fix</dt><dd>1.6.20 and 1.7.5</dd><dt>Exploited</dt><dd>None confirmed for these 20 fixes in the release notes. Roundcube flaws have been exploited in the past, and CISA's Known Exploited Vulnerabilities catalog lists 11 of them</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-114716</span></span></dd><dt>Script</dt><dd><div class="scr"><code>roundcube-oct2026-check.sh</code> (<a href="../man/psf-roundcube-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/roundcube/roundcube-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/roundcube/roundcube-oct2026-check.sh check</code></pre></div></dd></dl></aside>
-<h2 id="roundcube-webmail-october-2026-check">Roundcube Webmail October 2026 check</h2>
-<p>Roundcube released 1.6.20 (the LTS line) and 1.7.5 (mainline) on 19 October 2026. Both carry the same 20 security fixes, the largest batch since 1.7.0. They cover IMAP command injection through a CRLF in the <code>_uid</code> and <code>_flag</code> parameters, four mail header injection flaws, cross-site scripting, server-side request forgery, cross-site request forgery, an object injection primitive in session handling, and ImageMagick limit bypasses. The project says it strongly recommends updating every production installation.</p>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>Roundcube Webmail October and November 2026 security releases</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Roundcube on GNU/Linux, including copies bundled by hosting panels; a second, unnumbered round of 17 fixes followed the first within a month</div></dd><dt>The fix</dt><dd>1.6.21 and 1.7.6</dd><dt>Exploited</dt><dd>None confirmed for either release's fixes in the release notes; no CVE numbers were issued for the November batch. Roundcube flaws have been exploited in the past, and CISA's Known Exploited Vulnerabilities catalog lists 11 of them</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-114716</span></span></dd><dt>Script</dt><dd><div class="scr"><code>roundcube-oct2026-check.sh</code> (<a href="../man/psf-roundcube-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/roundcube/roundcube-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/roundcube/roundcube-oct2026-check.sh check</code></pre></div></dd></dl></aside><p><a id="roundcube-webmail-october-2026-check"></a></p>
+<h2 id="roundcube-webmail-october-and-november-2026-check">Roundcube Webmail October and November 2026 check</h2>
+<p>Roundcube released 1.6.20 (the LTS line) and 1.7.5 (mainline) on 19 October 2026. Both carry the same 20 security fixes, the largest batch since 1.7.0. They cover IMAP command injection through a CRLF in the <code>_uid</code> and <code>_flag</code> parameters, four mail header injection flaws, cross-site scripting, server-side request forgery, cross-site request forgery, an object injection primitive in session handling, and ImageMagick limit bypasses.</p>
 <p><span class="nw">CVE-2026-114716</span> is one of the mail header injection fixes. The release notes list four: through the From display-name in the Bounce action, through the <code>References</code>, <code>In-Reply-To</code>, <code>Message-ID</code> and <code>From</code> parameters, through the subject of a message forwarded as an attachment, and through the media type of an inline image. The advisory does not say which fix carries which CVE number, so this tool does not claim to tell them apart. A header injection lets an attacker add or change headers on an outgoing message, which feeds phishing and forged mail that leaves your own trusted server.</p>
+<p>A second, separate round followed on 9 November 2026: 1.6.21 (LTS) and 1.7.6 (mainline), 17 more fixes with no CVE numbers assigned to any of them. Named fixes include an open redirect through IMAP error recovery on an attachment fetch, a fix so the <code>Received</code> header only ever carries a trusted hostname and a forwarded IP taken from a trusted proxy, and a managesieve bug where a destructive filter action could run without the confirmation it requires, alongside further CSRF, SSRF and injection fixes. Most are credited to a reporting group using the names Squirt1e, Atum, N0b0dy and Gh0u1L5, who have reported several of the preceding rounds too. The project has said the 1.6 LTS branch, now four years old, will be retired, citing how error-prone its own backports have become; no end date was given as of this release. The project says it strongly recommends updating every production installation to either current release.</p>
 <div class="table-wrap" tabindex="0"><table>
 
 <tbody>
 <tr>
 <td>CVE</td>
-<td><span class="nw">CVE-2026-114716</span> (mail header injection), rated High 8.5. The release carries 19 other fixes</td>
+<td><span class="nw">CVE-2026-114716</span> (mail header injection, the October release), rated High 8.5. Up to 36 other fixes across both releases carry no CVE number</td>
 </tr>
 <tr>
 <td>Affected</td>
-<td>Roundcube 1.6.x below 1.6.20, and 1.7.x below 1.7.5</td>
+<td>Roundcube 1.6.x below 1.6.21, and 1.7.x below 1.7.6</td>
 </tr>
 <tr>
 <td>Fixed</td>
-<td>1.6.20 and 1.7.5</td>
+<td>1.6.21 and 1.7.6</td>
 </tr>
 <tr>
 <td>Not covered</td>
@@ -152,7 +158,7 @@ document.documentElement.className+=" js"
 </tr>
 <tr>
 <td>Exploited</td>
-<td>None confirmed for these 20 fixes in the release notes. Roundcube flaws have been exploited in the past, and CISA's Known Exploited Vulnerabilities catalog lists 11 of them</td>
+<td>None confirmed for either release's fixes in the release notes; no CVE numbers were issued for the November batch. Roundcube flaws have been exploited in the past, and CISA's Known Exploited Vulnerabilities catalog lists 11 of them</td>
 </tr>
 <tr>
 <td>Hosting panels</td>
@@ -199,7 +205,7 @@ chmod +x roundcube-oct2026-check.sh
 <tbody>
 <tr>
 <td><code>check [DIR ...]</code> (default)</td>
-<td>Finds installs by <code>program/include/iniset.php</code>, reads <code>RCMAIL_VERSION</code> (falling back to the first release in <code>CHANGELOG.md</code>), and compares it with 1.6.20 and 1.7.5</td>
+<td>Finds installs by <code>program/include/iniset.php</code>, reads <code>RCMAIL_VERSION</code> (falling back to the first release in <code>CHANGELOG.md</code>), and compares it with 1.6.21 and 1.7.6</td>
 </tr>
 <tr>
 <td><code>hunt</code></td>
@@ -211,7 +217,7 @@ chmod +x roundcube-oct2026-check.sh
 </tr>
 </tbody>
 </table></div>
-<p>Exit codes: <code>0</code> nothing affected (or nothing found), <code>1</code> an affected install (or suspicious requests) found, <code>2</code> bad arguments.</p>
+<p>Exit codes: <code>0</code> nothing affected (or nothing found), <code>1</code> an affected install, an install whose version cannot be read or parsed (or suspicious requests) found, <code>2</code> bad arguments.</p>
 <h2 id="how-to-read-the-result">How to read the result</h2>
 <ul>
 <li>Distribution packages. Debian, Ubuntu, RHEL and others backport fixes without changing the version string. For copies owned by a <code>dpkg</code> or <code>rpm</code> package the script reads the package changelog and reports a mention of the CVE. Check your distribution's security tracker as well.</li>
@@ -220,22 +226,23 @@ chmod +x roundcube-oct2026-check.sh
 <li>A clean hunt means no indicator was found in the logs that remain (logs rotate, and POST bodies are not logged).</li>
 </ul>
 <h2 id="fixing-it">Fixing it</h2>
-<p>Back up the Roundcube files and database first, as the project advises, then move to 1.6.20 on the LTS line or 1.7.5 on mainline, following the upgrade steps in the release notes. On a panel-managed server, update the panel.</p>
+<p>Back up the Roundcube files and database first, as the project advises, then move to 1.6.21 on the LTS line or 1.7.6 on mainline, following the upgrade steps in the release notes. On a panel-managed server, update the panel.</p>
 <h2 id="sources">Sources</h2>
 <ul>
-<li><a href="https://github.com/roundcube/roundcubemail/releases/tag/1.6.20">Roundcube 1.6.20 release</a></li>
+<li><a href="https://github.com/roundcube/roundcubemail/releases/tag/1.6.21">Roundcube 1.6.21 release</a></li>
 <li><a href="https://roundcube.net/news/2026/10/19/security-updates-1.6.20-and-1.7.5">Roundcube: security updates 1.6.20 and 1.7.5</a></li>
+<li><a href="https://roundcube.net/news/2026/11/09/security-updates-1.6.21-and-1.7.6">Roundcube: security updates 1.6.21 and 1.7.6</a></li>
 </ul>
 <h2 id="before-you-run-it">Before you run it</h2>
 <ul>
-<li>The fix. Update to 1.6.20 or 1.7.5, which carry the same 20 security fixes. These releases do not cover 1.5 and earlier.</li>
+<li>The fix. Update to 1.6.21 or 1.7.6, which carry both rounds of fixes above. These releases do not cover 1.5 and earlier.</li>
 <li>Hosting panels bundle their own copy. cPanel and Plesk ship Roundcube and update it with the panel, so the panel's changelog decides when it is safe.</li>
 <li><code>hunt</code> searches web server logs for CRLF probing of the <code>_uid</code> and <code>_flag</code> parameters (the IMAP injection the same release fixes). A hit means someone has been testing your webmail, not that an attack succeeded.</li>
 <li>The version is read from <code>program/include/iniset.php</code>.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. The check finds installs inside running docker and podman containers by their marker file, copies only the files it reads into a private temporary directory, and judges them like a host install. A path shown as <code>.../docker_NAME_PATH</code> is the PATH inside the container NAME. It never runs anything in a container beyond <code>find</code> and a file copy, never copies <code>.env</code> or <code>wp-config.php</code>, never keeps a staged symlink, and is skipped when you name directories yourself.</li>
 </ul>
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../plex/index.html">&larr; Plex Media Server</a><a rel="next" href="../rsyslog/index.html">rsyslog &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#roundcube-webmail-october-2026-check">Roundcube Webmail October 2026 check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#roundcube-webmail-october-and-november-2026-check">Roundcube Webmail October and November 2026 check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

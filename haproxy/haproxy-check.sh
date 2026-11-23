@@ -91,8 +91,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="haproxy-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/haproxy}"
 
@@ -368,7 +368,7 @@ cmd_check_host() {
     for b in "${bins[@]}"; do
         [[ -x "$b" ]] || { caution "${b}: not an executable file"; continue; }
         raw="$(bin_version "$b")"
-        [[ -n "$raw" ]] || { caution "${b}: could not read a version from -v"; continue; }
+        [[ -n "$raw" ]] || { caution "${b}: could not read a version from -v; treating it as not confirmed fixed"; rc=1; found=$((found+1)); continue; }
         found=$((found+1))
         step "HAProxy ${raw} at ${b}"
         st="$(haproxy_status "$raw")"
@@ -378,8 +378,8 @@ cmd_check_host() {
                          [[ "$raw" =~ \.(hum|el)[0-9] ]] && caution "Red Hat shipped RHSA-2026:83844 for its 3.0 build (haproxy-3.0.30-0.1.hum1) against this CVE, although HAProxy gives 3.1 as the first affected line. If ${raw} is a Red Hat build older than that release, update it (see the README)"
                          continue ;;
             fixed)       ok "HAProxy ${raw} has the fix (3.2.26, 3.3.17, 3.4.7 or newer)" ;;
-            dev)         caution "HAProxy ${raw} is a 3.5 development build: check that it includes the fix 'properly handle short reads on PING frames'"; continue ;;
-            unknown)     caution "cannot parse version '${raw}'"; continue ;;
+            dev)         caution "HAProxy ${raw} is a 3.5 development build: check that it includes the fix 'properly handle short reads on PING frames'"; rc=1; continue ;;
+            unknown)     caution "cannot parse version '${raw}'; treating it as not confirmed fixed"; rc=1; continue ;;
             eol)         bad "HAProxy ${raw} is on 3.1, which is affected and end of life: move to 3.2.26, 3.3.17 or 3.4.7 or newer"; rc=1 ;;
             vulnerable)  bad "HAProxy ${raw} is affected by CVE-2026-110353 (fixed in 3.2.26, 3.3.17 and 3.4.7)" ;;
         esac

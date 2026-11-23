@@ -50,7 +50,7 @@ Part of the [PrivacySafe Security Patches](../README.md) collection.
 | `check [DIR ...]` (default) | Finds installed copies (`jupyter_server-*.dist-info`, `nbconvert-*.dist-info` and egg-info) and declared pins (`requirements*.txt`, `poetry.lock`, `uv.lock`, `pdm.lock`, `Pipfile.lock`). For Jupyter Server it reads `jupyter_server_config.py` and `.json`, `jupyter_config.*` and `jupyter_notebook_config.*` (and `jupyter_server_config.d/*.json`) for `GatewayClient.url` and `authorizer_class`, and reads the arguments of running jupyter processes |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing exposed, `1` an affected nbconvert, or an affected Jupyter Server with a gateway and a custom authorizer, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected nbconvert, an affected Jupyter Server with a gateway and a custom authorizer, a version that cannot be parsed, or a release older than the affected range (not confirmed clear of other issues), `2` bad arguments.
 
 ## How to read the result
 

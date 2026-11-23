@@ -72,8 +72,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="drf-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/drf}"
 
@@ -194,7 +194,7 @@ authtoken_use() {   # project dir -> prints findings about authtoken and TokenPr
 TOKEN_REMEDIATE=0
 report_version() {   # label version source [dist-info dir for Django] [project dir for authtoken] [probe file]
     local label="$1" ver="$2" src="$3" di="${4:-}" proj="${5:-}" probe="${6:-}" sd d dv note
-    if ! is_semver "$ver"; then caution "${label}: cannot parse version '${ver}' (${src})"; return 0; fi
+    if ! is_semver "$ver"; then caution "${label}: cannot parse version '${ver}' (${src}); treating it as not confirmed fixed"; return 1; fi
     if ! drf_affected "$ver"; then ok "${label}: Django REST framework ${ver} has both fixes (3.18.2 or newer)"; return 0; fi
     bad "${label}: Django REST framework ${ver} is affected by CVE-2026-114138 (Accept header CPU exhaustion, fixed in 3.18.2)"
     if drf_token_range "$ver"; then

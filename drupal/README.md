@@ -51,7 +51,7 @@ The Webform module does not sufficiently exclude certain format templates from t
 | `check [DIR ...]` (default) | Reads the Webform version from `composer.lock` and from each module's own `webform/webform.info.yml`, compares it with the fixed versions, and scans exported configuration (`webform.webform.*.yml`) for elements that use a custom multiple-value format |
 | `version` | Prints the script version |
 
-Exit codes: `0` nothing affected, `1` an affected version was found, `2` bad arguments.
+Exit codes: `0` nothing affected, `1` an affected version, a version that cannot be read or parsed, or a release outside the advisory's range (end of life, not confirmed clear) was found, `2` bad arguments.
 
 Commands that change the host need root. Run them with `sudo` from an admin account, not from a root login, so the change is recorded against a person. The script stops and prints the exact command if you forget:
 

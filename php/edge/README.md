@@ -91,7 +91,7 @@ Two consequences to know about:
 
 ## nginx and oversized response headers
 
-nginx cannot cut a cookie by length: that needs a module we do not assume, and hiding `Set-Cookie` entirely would break sessions. It does something different by itself. nginx refuses an upstream response header larger than `fastcgi_buffer_size` (`proxy_buffer_size` when it proxies) with a `502` and `upstream sent too big header` in its error log. We sent a benign value of the leak's size (819,200 random bytes, URL-encoded as PHP encodes a session ID: 2,034,988 bytes on the wire; the encoded size of the real leak depends on its content) from PHP-FPM through nginx at several buffer sizes:
+nginx cannot cut a cookie by length: that needs a module that cannot be assumed to be present, and hiding `Set-Cookie` entirely would break sessions. It does something different by itself. nginx refuses an upstream response header larger than `fastcgi_buffer_size` (`proxy_buffer_size` when it proxies) with a `502` and `upstream sent too big header` in its error log. With a benign value of the leak's size (819,200 random bytes, URL-encoded as PHP encodes a session ID: 2,034,988 bytes on the wire; the encoded size of the real leak depends on its content) sent from PHP-FPM through nginx at several buffer sizes:
 
 | nginx settings | Response | nginx error log |
 |---|---|---|

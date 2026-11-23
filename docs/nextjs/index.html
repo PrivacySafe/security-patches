@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>Next.js Server Actions</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#developer-platforms-tools-and-supply-chain">Developer platforms, tools and supply chain</a></p><h1>Next.js: <span class="nw">CVE-2026-94482</span> Server Actions denial of service</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Next.js projects on GNU/Linux</div></dd><dt>The fix</dt><dd>15.5.28 and 16.4.1</dd><dt>Severity</dt><dd>High: 7.5 (CVSS 3), 8.2 (CVSS 4.0)</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-94482</span></span></dd><dt>Script</dt><dd><div class="scr"><code>nextjs-server-actions-check.sh</code> (<a href="../man/psf-nextjs-server-actions-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/nextjs/nextjs-server-actions-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/nextjs/nextjs-server-actions-check.sh check</code></pre></div></dd><dt>Related</dt><dd><a href="../sentry/index.html">Sentry for Next.js</a></dd></dl></aside>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#developer-platforms-tools-and-supply-chain">Developer platforms, tools and supply chain</a></p><h1>Next.js: <span class="nw">CVE-2026-94482</span> Server Actions denial of service</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Next.js projects on GNU/Linux</div></dd><dt>The fix</dt><dd>15.5.28 and 16.4.1</dd><dt>Severity</dt><dd>High: 7.5 (CVSS 3), 8.2 (CVSS 4.0)</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-94482</span>, <span class="nw">CVE-2026-96889</span>, <span class="nw">CVE-2026-114111</span>, <span class="nw">CVE-2026-119347</span>, <span class="nw">CVE-2026-126187</span></span></dd><dt>Script</dt><dd><div class="scr"><code>nextjs-server-actions-check.sh</code> (<a href="../man/psf-nextjs-server-actions-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/nextjs/nextjs-server-actions-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/nextjs/nextjs-server-actions-check.sh check</code></pre></div></dd><dt>Related</dt><dd><a href="../sentry/index.html">Sentry for Next.js</a></dd></dl></aside>
 <h2 id="nextjs-server-actions-check">Next.js Server Actions check</h2>
 <p>Crafted requests aimed at a Next.js App Router application that has at least one Server Action can cause excessive CPU consumption and block the processing of further requests in the same Node.js process. No authentication is needed.</p>
 <div class="table-wrap" tabindex="0"><table>
@@ -201,7 +206,9 @@ chmod +x nextjs-server-actions-check.sh
 </tr>
 </tbody>
 </table></div>
-<p>Exit codes: <code>0</code> nothing exposed, <code>1</code> an affected project with Server Actions was found, <code>2</code> bad arguments.</p>
+<p>Exit codes: <code>0</code> nothing exposed, <code>1</code> an affected project with Server Actions was found, a version could not be parsed, or a release older than 13.0.0 was found (outside this CVE, but not confirmed clear of others), <code>2</code> bad arguments.</p>
+<h2 id="the-same-releases-fix-the-image-optimizer">The same releases fix the image optimizer</h2>
+<p>Next.js 15.5.28 and 16.4.1 also fix three flaws in image optimization, where attacker-controlled content reaches the SVG and image libraries: <span class="nw">CVE-2026-96889</span> (rated critical by the vendor), <span class="nw">CVE-2026-114111</span> and <span class="nw">CVE-2026-119347</span>. They need no Server Action, so an app this script calls &quot;not exposed&quot; for <span class="nw">CVE-2026-94482</span> still needs the update when it serves <code>next/image</code> from sources it does not control. One of the three also needs <code>sharp</code> 0.35.5 or later. Separately, Next.js 16.4.1 carries the React Server Components fix for <span class="nw">CVE-2026-126187</span> (<code>react-server-dom-*</code> 19.0.9, 19.1.10, 19.2.9 and 19.3.1). Apps on 13.x and 14.x receive none of these fixes and move to 15.5.28 or later.</p>
 <h2 id="how-to-read-the-result">How to read the result</h2>
 <ul>
 <li>Affected version with Server Actions: exposed. Upgrade, rebuild and restart.</li>
@@ -228,7 +235,7 @@ limit_req_status 429;
 # in the server or location that proxies to Next.js
 limit_req zone=next_actions burst=20 nodelay;
 </code></pre>
-<p>We checked this on nginx 1.24.0 at a deliberately low rate: requests with a <code>Next-Action</code> header got a short burst of 200 responses and then 429, requests without it were never limited, and the limit recovered after a pause. Pick a rate that suits your real traffic. nginx does not limit requests whose key is empty, which is what makes the header-only behavior work.</p>
+<p>Checked on nginx 1.24.0 at a deliberately low rate: requests with a <code>Next-Action</code> header got a short burst of 200 responses and then 429, requests without it were never limited, and the limit recovered after a pause. Pick a rate that suits your real traffic. nginx does not limit requests whose key is empty, which is what makes the header-only behavior work.</p>
 <h2 id="sources">Sources</h2>
 <ul>
 <li><a href="https://github.com/advisories/GHSA-p3m5-59mp-jv5r">GitHub advisory GHSA-p3m5-59mp-jv5r</a></li>
@@ -241,8 +248,8 @@ limit_req zone=next_actions burst=20 nodelay;
 <li>There is no hunt. The flaw is a denial of service, and no indicators have been published.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. In each running container, a read-only probe lists the project files this check needs: lockfiles, <code>package.json</code>, route directory names, the few source files that contain <code>'use server'</code>, <code>config/auth.php</code> and similar. Only those files are copied into a private temporary folder, and the normal check judges that folder like a host directory. The App Router and Server Action checks work on the copied lockfile, the build manifest, the existence of <code>app/</code> or <code>src/app/</code>, and the source files that contain <code>'use server'</code>, so a container project is judged by the same rules as a host project. A staged symlink is never kept, paths the container reports are validated, and nothing is run in a container beyond <code>find</code>, <code>grep</code> and <code>test</code>. The copies are removed on exit. A path shown as <code>.../docker_NAME/PATH</code> is the PATH inside the container NAME. It is skipped when you name directories yourself.</li>
 </ul>
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../magento/index.html">&larr; Magento and Adobe Commerce</a><a rel="next" href="../nextcloud/index.html">Nextcloud Collabora &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#nextjs-server-actions-check">Next.js Server Actions check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#throttling-at-the-proxy-while-you-upgrade">Throttling at the proxy while you upgrade</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../mysql/index.html">&larr; MySQL client programs</a><a rel="next" href="../nextcloud/index.html">Nextcloud Collabora &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#nextjs-server-actions-check">Next.js Server Actions check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#the-same-releases-fix-the-image-optimizer">The same releases fix the image optimizer</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#throttling-at-the-proxy-while-you-upgrade">Throttling at the proxy while you upgrade</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

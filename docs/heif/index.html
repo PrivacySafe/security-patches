@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>libheif</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>libheif: HEIF/AVIF decoder flaw</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">libheif, ImageMagick and Discourse on GNU/Linux</div></dd><dt>Covers</dt><dd>No CVE number (see the description below)</dd><dt>Script</dt><dd><div class="scr"><code>libheif-oct2026-check.sh</code> (<a href="../man/psf-libheif-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/heif/libheif-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>harden</code>; also: <code>policy</code>, <code>unharden</code>, <code>mw-harden</code>, <code>mw-unharden</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/heif/libheif-oct2026-check.sh check</code></pre></div></dd></dl></aside>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>libheif: HEIF/AVIF decoder flaw</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">libheif, ImageMagick and Discourse on GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2025-68431</span>, <span class="nw">CVE-2026-32740</span>, <span class="nw">CVE-2026-32741</span>, <span class="nw">CVE-2026-47178</span></span></dd><dt>Script</dt><dd><div class="scr"><code>libheif-oct2026-check.sh</code> (<a href="../man/psf-libheif-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/heif/libheif-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>harden</code>; also: <code>policy</code>, <code>unharden</code>, <code>mw-harden</code>, <code>mw-unharden</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/heif/libheif-oct2026-check.sh check</code></pre></div></dd></dl></aside>
 <h2 id="libheif-heifavif-decoder-check">libheif HEIF/AVIF Decoder Check</h2>
 <p>A heap buffer overflow in <code>libheif</code>, the HEIF and AVIF image decoder, was used to get remote code execution on a Discourse forum and then pivot further into the services behind it. The decode path is reached by uploading a crafted HEIF or AVIF image: an app that processes user images hands the file to ImageMagick (or libvips), which calls <code>libheif</code>. Disabling a single &quot;image uploads&quot; setting does not reliably close it, because avatars, emoji, oneboxed remote images and other surfaces feed the same conversion path.</p>
 <p>The fix is to update <code>libheif</code> (and <code>libde265</code>, the HEVC codec it calls) and rebuild anything that bundles them. For a Discourse Docker install this means a container rebuild, not a web-interface update, because the old library stays in the image until it is rebuilt:</p>
@@ -234,7 +239,7 @@ curl -fsSL https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/hei
 <p>For each <code>libheif</code> the checks run in order, and the first that applies decides:</p>
 <ol>
 <li><code>FIXED_BUILDS</code>. Distribution builds you list as fixed, for a backport the script doesn't know about. A build only counts for the same upstream version.</li>
-<li>Changelog. For a <code>libheif</code> installed from a Debian or Ubuntu package, the package changelog names DSA-6417-1 or one of the batch CVEs, and its newest entry is the installed build. Because distributions backport under old upstream numbers, this overrides the version floor: a package at <code>1.17.6</code> can read as fixed when its changelog proves it.</li>
+<li>Changelog. For a <code>libheif</code> installed from a Debian or Ubuntu package, the package changelog names DSA-6417-1 or one of the batch CVEs (<span class="nw">CVE-2025-68431</span>, <span class="nw">CVE-2026-32740</span>, <span class="nw">CVE-2026-32741</span>, <span class="nw">CVE-2026-47178</span>), and its newest entry is the installed build. Because distributions backport under old upstream numbers, this overrides the version floor: a package at <code>1.17.6</code> can read as fixed when its changelog proves it.</li>
 <li>Upstream floor. For a library that is not a distribution package (self-built or bundled), the version is at or above <code>HEIF_FIXED_UPSTREAM</code> (default 1.22.0). A dpkg-owned build with no changelog proof is reported as unknown rather than fixed, because its number alone cannot clear it.</li>
 </ol>
 <h3 id="libheif-disabling-the-coder-as-defense-in-depth">libheif disabling the coder as defense in depth</h3>

@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -130,7 +135,7 @@ document.documentElement.className+=" js"
 <article class="doc"><p class="kicker-line"><a href="../tools.html#operating-system-libraries-and-runtimes">Operating system, libraries and runtimes</a></p><h1>Brotli: <span class="nw">CVE-2026-111497</span> checker and ecosystem notes</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">libbrotli and the processes using it, plus Node/Bun/Python/Ruby/PHP/Envoy/Istio/cdxgen and containers on GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-111497</span></span></dd><dt>Script</dt><dd><div class="scr"><code>brotli-oct2026-check.sh</code> (<a href="../man/psf-brotli-oct2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/brotli/brotli-oct2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/brotli/brotli-oct2026-check.sh check</code></pre></div></dd><dt>Related</dt><dd><a href="../node/index.html">Node.js</a></dd></dl></aside>
 <h2 id="cve-2026-111497-is-not-only-a-nodejs-bug"><span class="nw">CVE-2026-111497</span> is not only a Node.js bug</h2>
 <p><span class="nw">CVE-2026-111497</span>, known as Broccoli2Shell, is an out-of-bounds write in the Brotli decoder (<code>libbrotli</code> 1.0.3 through 1.2.0). A crafted Brotli stream can crash a program, leak memory or run code. GitHub rates it 9.2 Critical and Node.js rates it High. It was first called Node2Shell, until it became clear that the flaw is in Brotli itself.</p>
-<p>The guard and scripts here cover Node.js because that is what we run, but the flaw reaches much further. The decoder reads a block switch that cannot happen as &quot;need more input&quot; and keeps writing attacker bytes past the end of an eight-byte internal buffer. That corrupts nearby decoder state, which is how a malformed stream becomes a crash, a memory leak or remote code execution. The upstream fix is google/brotli commit <code>0ed4268</code> (with <code>50a9b70</code>, <code>b418fa8</code> and <code>da98063</code>), and it returns a hard format error to the caller.
+<p>CISA added <span class="nw">CVE-2026-111497</span> to its Known Exploited Vulnerabilities catalog on 27 October 2026. The guard covers Node.js, but the flaw reaches much further. The decoder reads a block switch that cannot happen as &quot;need more input&quot; and keeps writing attacker bytes past the end of an eight-byte internal buffer. That corrupts nearby decoder state, which is how a malformed stream becomes a crash, a memory leak or remote code execution. The upstream fix is google/brotli commit <code>0ed4268</code> (with <code>50a9b70</code>, <code>b418fa8</code> and <code>da98063</code>), and it returns a hard format error to the caller.
 Node.js bundles that decoder, but so do many other things, and the same CVE has advisories across the ecosystem (some people are now calling the broadened picture &quot;HTTP2Shell&quot;, since any HTTP path that decodes untrusted Brotli can be a route to it). Review all applications and services that decompress Brotli data from untrusted sources, not only those using Node.js.</p>
 <p>A read-only checker, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/brotli/brotli-oct2026-check.sh"><code>brotli/brotli-oct2026-check.sh</code></a>, finds <code>libbrotli</code> on the host, the processes that still have it loaded, and <code>libbrotli</code> inside running containers. It also finds the runtimes that bundle their own Brotli: Node.js, Bun, Python's <code>brotli</code> and <code>brotlicffi</code>, the Ruby <code>brotli</code> gem, the PHP <code>brotli</code> extension, Envoy, Istio and cdxgen. It reports which are fixed. It changes nothing. It only tells you what to update. For the many projects that vendor their own copy, see <a href="#projects-that-bundle-their-own-copy">Projects that bundle their own copy</a> below. Fixed versions, reviewed 25 October 2026:</p>
 <div class="table-wrap" tabindex="0"><table>

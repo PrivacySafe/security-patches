@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp" open><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="index.html" aria-current="page">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -127,7 +132,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">Home</a> / <a href="../tools.html">Tools</a> / <span>BTCPay Server</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>BTCPay Server: hot wallet thefts on 2.4.1 and earlier (no CVE)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">BTCPay Server 2.4.1 and earlier, on a Docker host or any server you can reach by address; GNU/Linux</div></dd><dt>Covers</dt><dd>No CVE number (see the description below)</dd><dt>Script</dt><dd><div class="scr"><code>btcpayserver-nov2026-check.sh</code> (<a href="../man/psf-btcpayserver-nov2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/btcpayserver/btcpayserver-nov2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>harden</code>; also: <code>recover</code>, <code>preserve</code>, <code>tor</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/btcpayserver/btcpayserver-nov2026-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside>
+<article class="doc"><p class="kicker-line"><a href="../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>BTCPay Server: hot wallet thefts on 2.4.1 and earlier (no CVE)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">BTCPay Server 2.4.1 and earlier, on a Docker host or any server you can reach by address; GNU/Linux</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-98432</span></span></dd><dt>Script</dt><dd><div class="scr"><code>btcpayserver-nov2026-check.sh</code> (<a href="../man/psf-btcpayserver-nov2026-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/btcpayserver/btcpayserver-nov2026-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>harden</code>; also: <code>recover</code>, <code>preserve</code>, <code>tor</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/btcpayserver/btcpayserver-nov2026-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside>
 <h2 id="btcpay-server-check">BTCPay Server check</h2>
 <p>On <strong>1 November 2026</strong> the BTCPay Server project received reports of Bitcoin and Litecoin stolen from hot wallets. Its investigation found that the attacks targeted servers running <strong>BTCPay Server 2.4.1 (released 23 July 2026) or earlier</strong>, using a different method against the vulnerability that <strong>2.4.2</strong> fixed on 7 August. There is no CVE number, and the project has not published the method.</p>
 <p><strong>The fix is not an update.</strong> For a server that ran 2.4.1 or earlier, the project recommends moving to a <strong>fresh server with a new wallet</strong>, after sweeping what is left in the old hot wallet. That holds even if you saw no theft, and even if you updated after the project's warning, because updating cannot remove access an attacker may already have. The project has seen no impact on servers that were already on 2.4.2 or later when it warned operators at 22:25 UTC on 1 November.</p>
@@ -222,7 +227,7 @@ sudo ./btcpayserver-nov2026-check.sh preserve --out /root
 </tr>
 <tr>
 <td><code>harden [--url URL] [DIR ...]</code></td>
-<td>Runs <code>check</code>, then reviews network-reachable ports, higher-exposure fragments, retired integrations, enabled LND routes, the IPv4 options filter, SSH settings, the keys in root's <code>authorized_keys</code>, custom fragments, the <code>btcpayserver-docker</code> checkout, the server administrators and Tor, and lists the steps that cannot be checked from here.</td>
+<td>Runs <code>check</code>, then reviews network-reachable ports, higher-exposure fragments, retired integrations, enabled LND routes, the IPv4 options filter (it drops inbound IPv4 TCP packets with IP options until the kernel is patched for <span class="nw">CVE-2026-98432</span>), SSH settings, the keys in root's <code>authorized_keys</code>, custom fragments, the <code>btcpayserver-docker</code> checkout, the server administrators and Tor, and lists the steps that cannot be checked from here.</td>
 </tr>
 <tr>
 <td><code>tor [status|enable|disable]</code></td>
@@ -312,8 +317,13 @@ sudo ./btcpayserver-nov2026-check.sh tor disable
 <li><code>ss</code> or <code>netstat</code>, and root, are needed for the full port review and for container logs.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>.</li>
 </ul>
+<!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->
+<h2 id="red-hat-advisories">Red Hat advisories</h2>
+<p>Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-03) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on <a href="https://access.redhat.com/security/security-updates/#/cve">Red Hat's CVE database</a>.</p>
+<p><a href="https://access.redhat.com/security/cve/CVE-2026-98432"><span class="nw">CVE-2026-98432</span></a>: 12 advisories, listed in the <a href="../linux-kernel/index.html#red-hat-advisories">Red Hat advisories section of the linux-kernel README</a>.</p>
+<!-- rhsa:end -->
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../brotli/index.html">&larr; Brotli</a><a rel="next" href="../claude-code-vsx/index.html">Claude Code extension backdoor &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#btcpay-server-check">BTCPay Server check</a></li><li class="l2"><a href="#what-to-do">What to do</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#signs-on-the-host">Signs on the host</a></li><li class="l2"><a href="#preserve-the-evidence">Preserve the evidence</a></li><li class="l2"><a href="#for-scheduled-jobs-and-monitoring">For scheduled jobs and monitoring</a></li><li class="l2"><a href="#harden-the-new-server">Harden the new server</a></li><li class="l2"><a href="#tor-enable-or-disable">Tor: enable or disable</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#btcpay-server-check">BTCPay Server check</a></li><li class="l2"><a href="#what-to-do">What to do</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#signs-on-the-host">Signs on the host</a></li><li class="l2"><a href="#preserve-the-evidence">Preserve the evidence</a></li><li class="l2"><a href="#for-scheduled-jobs-and-monitoring">For scheduled jobs and monitoring</a></li><li class="l2"><a href="#harden-the-new-server">Harden the new server</a></li><li class="l2"><a href="#tor-enable-or-disable">Tor: enable or disable</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

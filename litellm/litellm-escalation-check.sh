@@ -56,8 +56,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="litellm-escalation-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.0.2"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -222,8 +222,8 @@ cmd_check_host() {
         case "$s" in
             malicious)   bad "${lab}: litellm ${v} is the MALICIOUS release (supply-chain compromise), not this CVE: stop and run litellm-oct2026-check.sh; treat the host as compromised"; rc=1 ;;
             fixed)       ok "${lab}: litellm ${v} has the fix" ;;
-            notaffected) ok "${lab}: litellm ${v} is older than 1.87.0, before the affected code (very old: update anyway)" ;;
-            unknown)     caution "${lab}: cannot parse version '${v}'"; rc=1 ;;
+            notaffected) caution "${lab}: litellm ${v} is older than 1.87.0, before the affected code (very old and not confirmed clear of other issues: update anyway)"; rc=1 ;;
+            unknown)     caution "${lab}: cannot parse version '${v}'; treating it as not confirmed fixed"; rc=1 ;;
             affected)
                 if [[ "$prx" == 1 || $any_proxy -eq 1 ]]; then
                     bad "${lab}: litellm ${v} is affected by CVE-2026-114612 and proxy evidence was found: an internal_user can become proxy_admin and run commands (fixed in 1.100.4, 1.101.3, 1.102.2, 1.103.1, 1.104.0-rc.2)"; rc=1

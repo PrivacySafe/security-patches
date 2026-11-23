@@ -23,7 +23,11 @@
 # which only discloses memory or crashes the process). Fixed in Ruby 4.0.10,
 # 3.4.13 and 3.3.14 (18 Nov 2026). A few trackers have started calling this
 # batch "Ruby2Shell"; that name is not Ruby's own and this script does not
-# rely on it.
+# rely on it. As of 19 November 2026, CVE-2026-132825 has been assigned to
+# GHSA-34m4-m9fh-gqp5 specifically (the one-byte case-conversion overflow);
+# the other six GHSAs in this batch have no CVE yet. The CVE number is
+# tracked alongside the GHSA below purely for anyone searching by it; it
+# does not change which builds are affected or what this script checks.
 #
 # This batch is broader than October's: the case-conversion half is reached
 # by String#upcase/downcase/capitalize/swapcase (and their bang forms) on an
@@ -123,8 +127,8 @@ GITLAB_ROOT="${GITLAB_ROOT:-/opt/gitlab}"
 DISCOURSE_ROOT="${DISCOURSE_ROOT:-/var/discourse}"
 DISCOURSE_APP="${DISCOURSE_APP:-/var/www/discourse}"
 SCRIPT_NAME="ruby-regexp-oct2026-check.sh"
-SCRIPT_VERSION="2.0.0"
-SCRIPT_DATE="2026-11-19"
+SCRIPT_VERSION="2.0.1"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 RUBY_ADVISORY="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/"
 RUBY_ADVISORY_NOV="https://www.ruby-lang.org/en/news/2026/11/18/multiple-vulnerabilities-in-regexp-and-string/"
@@ -672,4 +676,3 @@ esac
 main "$@"; exit
 
 # Assisted-by: Claude Opus 5.5
-# Assisted-by: Claude Sonnet 5.5

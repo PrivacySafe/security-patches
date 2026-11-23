@@ -62,6 +62,7 @@ document.documentElement.className+=" js"
 <li><a href="../yootheme/index.html">22 Oct: YOOtheme Pro</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../apache/index.html">Apache HTTP Server mod_http2</a></li>
 <li><a href="../pulsar/index.html">Apache Pulsar</a></li>
 <li><a href="../tomcat/index.html">Apache Tomcat</a></li>
 <li><a href="../trafficserver/index.html">Apache Traffic Server</a></li>
@@ -69,6 +70,7 @@ document.documentElement.className+=" js"
 <li><a href="../couchdb/index.html">CouchDB</a></li>
 <li><a href="../haproxy/index.html">HAProxy</a></li>
 <li><a href="../incus/index.html">Incus</a></li>
+<li><a href="../mysql/index.html">MySQL client programs</a></li>
 <li><a href="../nginx/index.html">nginx</a></li>
 <li><a href="../nginx-ui/index.html">nginx-ui</a></li>
 <li><a href="../rsyslog/index.html">rsyslog</a></li>
@@ -92,10 +94,13 @@ document.documentElement.className+=" js"
 <li><a href="../ruby/index.html">Ruby and GitLab regexp</a></li>
 </ul></details>
 <details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
 <li><a href="../basercms/index.html">baserCMS</a></li>
 <li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
 <li><a href="../craft/index.html">Craft CMS</a></li>
 <li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
 <li><a href="../grav/index.html">Grav</a></li>
 <li><a href="../joomla/index.html">Joomla</a></li>
 <li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
@@ -212,7 +217,7 @@ GITEA_INI=/etc/gitea/app.ini ./gitea-check.sh check
 </tbody>
 </table></div>
 <p>Environment: <code>GITEA_INI</code> (space separated files) replaces <code>app.ini</code> discovery.</p>
-<p>Exit codes: <code>0</code> nothing exposed, <code>1</code> an affected version that trusts a user CA, or whose configuration could not be read, <code>2</code> bad arguments.</p>
+<p>Exit codes: <code>0</code> nothing exposed, <code>1</code> an affected version that trusts a user CA, or whose configuration or version could not be read, <code>2</code> bad arguments.</p>
 <h2 id="credentials-are-never-printed">Credentials are never printed</h2>
 <p><code>SSH_TRUSTED_USER_CA_KEYS</code> holds public keys, which are not secret, but the script still <strong>never prints it</strong> and says only that a CA is set.</p>
 <h2 id="how-to-read-the-result">How to read the result</h2>
@@ -238,7 +243,7 @@ GITEA_INI=/etc/gitea/app.ini ./gitea-check.sh check
 <li>It never prints your CA keys. From <code>app.ini</code> it reports whether a user CA is trusted and the principal policy word, and nothing else.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. A read-only probe in each container captures the output of <code>gitea --version</code> and a reduced <code>app.ini</code> that holds only the two <code>[server]</code> settings this check reads (<code>SSH_AUTHORIZED_PRINCIPALS_ALLOW</code>, and whether <code>SSH_TRUSTED_USER_CA_KEYS</code> is set, as a bare <code>x</code>). The script then runs once per container, in isolation, against that copy, so one container's configuration never changes another's result. The CA key, the database password and every other <code>app.ini</code> value stay in the container. The copies are removed on exit. A path shown as <code>.../docker_NAME/...</code> is inside the container NAME. It is skipped when you name a binary or directory yourself.</li>
 </ul>
-<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../ghostaction/index.html">&larr; GhostAction</a><a rel="next" href="../gitlab/index.html">GitLab &rarr;</a></nav></article></main>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../ghostscript/index.html">&larr; Ghostscript Upload2Shell sandbox escape</a><a rel="next" href="../gitlab/index.html">GitLab &rarr;</a></nav></article></main>
 <aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#gitea-check">Gitea check</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#credentials-are-never-printed">Credentials are never printed</a></li><li class="l2"><a href="#how-to-read-the-result">How to read the result</a></li><li class="l2"><a href="#fixing-it">Fixing it</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">

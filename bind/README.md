@@ -57,7 +57,7 @@ Replaying a GSS-TSIG signed UDP message can corrupt memory in `named`, the BIND 
 
 Environment: `NAMED_CONF` (space separated files) replaces configuration discovery.
 
-Exit codes: `0` nothing exposed, `1` an affected version is exposed or its configuration could not be read, `2` bad arguments.
+Exit codes: `0` nothing exposed, `1` an affected version is exposed, its configuration could not be read, or its version cannot be read or parsed, `2` bad arguments.
 
 ## How to read the result
 
@@ -69,7 +69,7 @@ Exit codes: `0` nothing exposed, `1` an affected version is exposed or its confi
 
 ## Fixing it
 
-Upgrade to 9.20.30 or 9.21.27, or to a distribution build that carries the fix, then restart `named`. ISC lists no workaround. If you do not use GSS-TSIG, removing those settings is our suggestion rather than ISC's, and it does not replace the update.
+Upgrade to 9.20.30 or 9.21.27, or to a distribution build that carries the fix, then restart `named`. ISC lists no workaround. If you do not use GSS-TSIG, removing those settings is a PrivacySafe suggestion rather than ISC's, and it does not replace the update.
 
 ## Sources
 

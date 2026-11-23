@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
-# Roundcube Webmail 1.6.20 and 1.7.5 security release: read-only checker  (v1)
+# Roundcube Webmail October and November 2026 security releases: read-only checker  (v1)
 # CVE-2026-114716 (mail header injection, CVSS 8.5)
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
@@ -18,8 +18,20 @@
 # inline image). A header injection lets an attacker add or alter headers of an
 # outgoing message, which feeds phishing and mail forgery from a trusted host.
 #
-#   Affected: Roundcube 1.6.x before 1.6.20, and 1.7.x before 1.7.5
-#   Fixed:    1.6.20 and 1.7.5. These releases do not cover 1.5 and earlier.
+# A second, separate round followed on 9 November 2026: 1.6.21 (LTS) and 1.7.6
+# (mainline), 17 more fixes with no CVE numbers assigned to any of them. The
+# release notes name an open redirect through IMAP error recovery on an
+# attachment fetch, a fix so the Received header only ever carries a trusted
+# hostname and a forwarded IP taken from a trusted proxy, a managesieve bug
+# where a destructive filter action could run without the confirmation it
+# requires, and further CSRF, SSRF and injection fixes credited mostly to a
+# reporting group using the names Squirt1e, Atum, N0b0dy and Gh0u1L5, who have
+# reported several of the preceding rounds too. The project has said the 1.6
+# LTS branch, now four years old, will be retired, citing how error-prone its
+# own backports have become; no end date was given as of this release.
+#
+#   Affected: Roundcube 1.6.x before 1.6.21, and 1.7.x before 1.7.6
+#   Fixed:    1.6.21 and 1.7.6. These releases do not cover 1.5 and earlier.
 #
 # Roundcube is bundled by hosting panels. cPanel and Plesk ship their own copy
 # and update it with the panel, so the panel's changelog decides when it is safe.
@@ -54,8 +66,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="roundcube-oct2026-check.sh"
-SCRIPT_VERSION="1.0.1"
-SCRIPT_DATE="2026-11-03"
+SCRIPT_VERSION="1.1.1"
+SCRIPT_DATE="2026-11-22"
 SELF="$0"
 
 # ---------- common helpers (the same block is used in every check script) ----
@@ -124,8 +136,8 @@ roundcube_status() {
     local v; v="$(norm_ver "$1")"
     is_semver "$v" || { echo unknown; return; }
     case "${v%.*}" in
-        1.6) ver_lt "$v" "1.6.20" && echo vulnerable || echo fixed ;;
-        1.7) ver_lt "$v" "1.7.5"  && echo vulnerable || echo fixed ;;
+        1.6) ver_lt "$v" "1.6.21" && echo vulnerable || echo fixed ;;
+        1.7) ver_lt "$v" "1.7.6"  && echo vulnerable || echo fixed ;;
         *)   if ver_lt "$v" "1.6.0"; then echo eol; else echo fixed; fi ;;
     esac
 }
@@ -206,13 +218,13 @@ cmd_check() {
         ver="$(rc_version "$f")"
         found=$((found+1))
         step "Roundcube ${ver:-?} at ${root}"
-        if [[ -z "$ver" ]]; then caution "version not found in ${f}"; continue; fi
+        if [[ -z "$ver" ]]; then caution "version not found in ${f}; treating it as not confirmed fixed"; rc=1; continue; fi
         st="$(roundcube_status "$ver")"
         case "$st" in
-            fixed)   ok "Roundcube ${ver} has the 1.6.20 / 1.7.5 fixes"; continue ;;
-            unknown) caution "could not parse version '${ver}'"; continue ;;
-            eol)     bad "Roundcube ${ver} is on a branch these releases do not cover (1.5 and earlier): move to 1.6.20 or 1.7.5" ;;
-            vulnerable) bad "Roundcube ${ver} is affected by CVE-2026-114716 and 19 other fixes (fixed in 1.6.20 / 1.7.5)" ;;
+            fixed)   ok "Roundcube ${ver} has the 1.6.21 / 1.7.6 fixes"; continue ;;
+            unknown) caution "could not parse version '${ver}'; treating it as not confirmed fixed"; rc=1; continue ;;
+            eol)     bad "Roundcube ${ver} is on a branch these releases do not cover (1.5 and earlier): move to 1.6.21 or 1.7.6" ;;
+            vulnerable) bad "Roundcube ${ver} is affected by CVE-2026-114716 and up to 36 other fixes across the October and November rounds (fixed in 1.6.21 / 1.7.6)" ;;
         esac
         if distro_mentions "$f" CVE-2026-114716; then
             ok "package ${DISTRO_PKG} changelog mentions ${DISTRO_HIT}: the distribution may have backported the fix"
@@ -231,8 +243,8 @@ cmd_check() {
     elif [[ $rc -eq 0 ]]; then
         info "No affected Roundcube found (${found} checked)"
     else
-        warn "Affected Roundcube found. Update to 1.6.20 (LTS) or 1.7.5, and back up first as the project advises."
-        inf "Release notes: https://roundcube.net/news/2026/10/19/security-updates-1.6.20-and-1.7.5"
+        warn "Affected Roundcube found. Update to 1.6.21 (LTS) or 1.7.6, and back up first as the project advises."
+        inf "Release notes: https://roundcube.net/news/2026/11/09/security-updates-1.6.21-and-1.7.6"
         inf "Then run: $0 hunt   to look for probing of the IMAP injection parameters."
     fi
     return "$rc"
@@ -281,7 +293,7 @@ main() {
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
     case "$CMD" in -h|--help|help) print_help; exit 0 ;; esac
     echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
-    echo "CVE-2026-114716; fixed in Roundcube 1.6.20 and 1.7.5"
+    echo "CVE-2026-114716 and 16 later unnumbered fixes; fixed in Roundcube 1.6.21 and 1.7.6"
     case "$CMD" in
         check|hunt) "cmd_${CMD}" "$@" ;;
         *) die "Unknown command: ${CMD} (check|hunt|version)" ;;

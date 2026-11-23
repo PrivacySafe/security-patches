@@ -17,7 +17,7 @@ Two Tomcat bugs disclosed on 20 October 2026 can hand one user's response, or pa
 | Fixed | 11.0.27 | 11.0.27, 10.1.61, 9.0.123 |
 | Needs | The AJP connector in use | HTTP/2 enabled, and asynchronous servlets |
 | Rating | Apache rates it Important; CVE trackers list 9.1 Critical (CVSS 3.1) | Apache rates it Important; CVE trackers list 9.1 Critical (CVSS 3.1) |
-| Exploited | The CISA SSVC entry says none known, and no public exploit is known to us | None confirmed as of 21 October 2026 |
+| Exploited | The CISA SSVC entry says none known, and no public exploit is known | None confirmed as of 21 October 2026 |
 
 Both were announced on oss-security by Mark Thomas of the Tomcat team on 20 October 2026. The AJP bug was found by Tuomo Hänninen. The advisory for the HTTP/2 bug does not name a finder.
 
