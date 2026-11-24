@@ -1,0 +1,1828 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: CC0-1.0
+# =============================================================================
+# PHP2Shell mitigation for PHP-FPM 7.0 through 8.5  (v5)
+# CVE-2026-109618 / CVE-2026-109619, CVE-2026-115560 (session upload
+# progress, fixed 19 Nov 2026), and CVE-2026-126714 ("phpAfterShell",
+# depthfirst, 19 Nov 2026): killing the FPM worker mid-write during the same
+# upload-progress callback can splice two Session files into one the next
+# request decodes as trusted state. CVE-2026-115560's fix changed which
+# syscall ordering is used but, per depthfirst's own affected-version table,
+# did not close the underlying race; no release is known to fix it as of
+# this script's writing. The mitigation is the same for all three: keep
+# session.upload_progress off. See the UPLOAD_CVE2/PATCHED_126714 section
+# below and php/README.md.
+#
+# If this software is helpful, consider a donation to our 501c3 nonprofit:
+# https://privacysafe.foundation
+#
+# This script was released ahead of patches for two 0day vulns in php.
+#
+# Usage (as root):
+#   ./php2shell-mitigate.sh [command] [--php X.Y] [--force] [--ignore-env]
+#
+#   check            environment report only; changes nothing, root optional
+#                    (exit 0 = ok, 1 = hard blocker, 2 = needs --ignore-env)
+#   apply (default)  drop-in + AppArmor profile, safe-load, per FPM version
+#   enforce          switch profile(s) to enforce; refuses if complain mode
+#                    logged unhandled accesses (override with --force)
+#   complain         switch profile(s) back to complain
+#   status           mitigation state and recent AppArmor events
+#   hunt             read-only: scan logs for signs of exploitation or the
+#                    memory-corruption crashes these bugs cause, plus the
+#                    request, source-address, proof-file and live process
+#                    indicators from the 24 October 2026 phpot honeypot
+#                    report (https://github.com/0x4D31/honeypot-data/blob/main/reports/php2shell/2026-10-24-confirmed-rce.md):
+#                    both request fingerprint forms, leak-sized
+#                    responses, TCP peers of flagged processes, auditd events
+#                    (see runtimes/php/detect/) and nginx's "upstream sent too big
+#                    header" error. It says so when pre-script OOM lines carry
+#                    no client address, so repeats cannot be counted. Changes
+#                    nothing, root optional. Exit 0 = clean, 1 = findings.
+#   cleanup          remove the ini drop-in once patched (--force to skip check).
+#                    Keeps session.upload_progress off until the build is also
+#                    fixed for CVE-2026-115560 AND CVE-2026-126714 (--force
+#                    drops that too). CVE-2026-126714 has no known fixed
+#                    release as of this script's writing, so in practice this
+#                    stays off even on a build patched for CVE-2026-115560,
+#                    until that changes or you set PATCHED_126714_X_Y yourself
+#   version          print the script version and exit
+#   remove           remove the AppArmor profile entirely: unload it, delete
+#                    the profile, local override and disable symlink, verify.
+#                    Leaves the ini drop-in (that's cleanup). No patch needed.
+#
+#   --php X.Y        act on one version only (default: every installed
+#                    version in SUPPORTED_VERS)
+#   --ignore-env     proceed past soft environment blockers (live unpatched
+#                    mod_php, live sites only on skipped versions). Hard
+#                    blockers (non-Debian, no service manager, no AppArmor,
+#                    not root, no supported FPM) can't be overridden.
+#
+# Every command first checks, in order: OS (Debian, Ubuntu, Trisquel and
+# popular derivatives), PHP-FPM versions and their package source, web
+# servers (Apache/nginx and what PHP they use), then system (root, init
+# system, container, AppArmor, tools). It reports, then refuses to start only
+# if it can't work safely. Derivatives and non-systemd init (sysvinit/OpenRC)
+# are supported. Each version's patch state is reported from three signals:
+# upstream version, known distro backport builds, and the package changelog.
+#
+# Env overrides:
+#   PHP_VER=X.Y                        same as --php X.Y (an exported PHP_VER therefore
+#                                      limits the run to that version)
+#   SUPPORTED_VERS="7.0 ... 8.5"       versions this script will touch
+#   FIXED_BUILDS="7.4.33-1+deb11u9"    extra fixed distro builds (backports)
+#   PATCHED_X_Y=<version>              first fixed upstream release for branch
+#                                      X.Y, e.g. PATCHED_8_4=8.4.27. Defaults:
+#                                      8.2.35 8.3.36 8.4.27 8.5.12 (21 Oct 2026).
+#                                      7.0-8.1 get no upstream fix: only a
+#                                      distro/PPA changelog listing both CVEs
+#                                      counts as patched.
+#   PATCHED_115560_X_Y=<version>       first release fixing CVE-2026-115560 for
+#                                      branch X.Y, e.g. PATCHED_115560_8_4=8.4.28.
+#                                      Defaults: 8.2.36 8.3.37 8.4.28 8.5.13 (19 Nov
+#                                      2026). 7.0-8.1 get no upstream fix: only a
+#                                      distro/PPA changelog listing the CVE counts.
+#   PATCHED_126714_X_Y=<version>       first release fixing CVE-2026-126714 for
+#                                      branch X.Y. No default: this CVE has no
+#                                      known fixed release as of this script's
+#                                      writing, so set this yourself only once
+#                                      you've confirmed a real fix for your
+#                                      branch, not from a changelog CVE mention
+#                                      alone (see runtimes/php/README.md for why).
+#   GUARD_HINT=0                       don't point to the third-party extension
+#                                      for PHP this script can't cover
+#   WEB_ROOTS="/var/www /srv/www"      read-only docroots; hunt also looks here
+#                                      for proof-style files
+#   HUNT_IPS="15.204.59.70 162.35.99.94"
+#                                      source addresses reported in confirmed
+#                                      exploitation (2026-10-24); hunt flags
+#                                      them in web logs. Aging indicator: a hit
+#                                      means the address touched you, not what
+#                                      it did. HUNT_IPS="" turns it off
+#   HUNT_ATTEMPT_IPS="104.28.208.84 144.48.4.242"
+#                                      addresses the same report names as
+#                                      sending exploit-shaped requests with no
+#                                      shell seen: attempt indicators, not
+#                                      confirmed RCE. Shared or proxy addresses
+#                                      are possible. HUNT_ATTEMPT_IPS="" off
+#   COOKIE_MAX=4096                    hunt flags a PHPSESSID value this many
+#                                      characters long in a log that records
+#                                      response cookies (0 = off). The leak in
+#                                      the phpot report was 819,200 bytes decoded
+#   RESP_BYTES_MAX=500000              hunt flags a POST whose logged response
+#                                      is this many bytes (0 = off). Only logs
+#                                      that count headers can show it: Apache
+#                                      %O, the Debian/Ubuntu default
+#   PROOF_SINCE=2026-10-01             hunt's proof-file scan ignores older files
+#   HUNT_PROC_ALLOW='rotatelogs|cronolog|logger'
+#                                      regex on the command line: hunt's live
+#                                      process check ignores matches (Apache
+#                                      piped-log helpers are normal)
+#   WRITABLE_PATHS="..."               rwk paths (uploads, cache)
+#
+# Debian/Ubuntu/Trisquel layout (distro packages, ondrej/sury PPA). Each version gets
+# its own drop-in, profile, local override and backups; a failure on one
+# version doesn't stop the others.
+#      PSF_LOCK_WAIT    seconds a run that changes the host waits for another one that is already
+#                       changing it (default 30), then stops with exit 2; the lock is STATE_DIR/.lock
+# =============================================================================
+
+# Commands run as "cmd_${CMD}", which shellcheck can't follow
+# shellcheck disable=SC2329
+set -euo pipefail
+
+# ---------- config -----------------------------------------------------------
+# Printed at the top of every run and written into everything the script
+# installs, so any pasted output or file says which version produced it.
+SCRIPT_NAME="php2shell-mitigate.sh"
+SCRIPT_VERSION="5.4.0"
+SCRIPT_DATE="2026-11-19"
+SUPPORTED_VERS="${SUPPORTED_VERS:-7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5}"
+CVES=(CVE-2026-109618 CVE-2026-109619)
+# Upstream fixed releases, 21 Oct 2026. Override per branch with PATCHED_X_Y.
+# CAUTION (observed 2026-10-22): an ASan double-free in the Zend allocator
+# (free -> __zend_free -> _efree, zend_alloc.c) was reproduced on 8.5.12 (the
+# release listed below as fixed) via the built-in CLI server (php -S), with a
+# crafted POST body. Unconfirmed on a stock (non-ASan) release build, and it may
+# be a distinct bug rather than an incomplete fix for CVE-2026-109618/-109619.
+# The baseline is left as-is pending confirmation. If you want the script to stop
+# treating 8.5.12 as safe on your hosts, raise the bar: PATCHED_8_5=8.5.13 (or
+# the real fixed release once it ships) makes 8.5.12 read as unpatched, so the
+# mitigations stay applied and `check` won't report an all-clear.
+declare -A PATCHED_DEFAULT=([8.2]=8.2.35 [8.3]=8.3.36 [8.4]=8.4.27 [8.5]=8.5.12)
+patched_ver() { local n="PATCHED_${1/./_}"; echo "${!n:-${PATCHED_DEFAULT[$1]:-}}"; }
+# CVE-2026-115560 (23 Oct 2026): RCE through session upload progress when an
+# app configured with serialize_handler php_binary/php_serialize switches to
+# "php" at runtime before session_start(). PHP fixes it in the next regular
+# release; until then upload progress must stay off even on a build patched for
+# the two CVEs above. Fill these in as fixed releases ship, or set
+# PATCHED_115560_X_Y. Empty means "not known fixed".
+UPLOAD_CVE="CVE-2026-115560"
+# Fixed on 19 November 2026, as part of a broader security release (18 CVEs
+# total; see php-session-audit.sh and runtimes/php/README.md for the rest, notably
+# CVE-2026-129289, a critical PHP-FPM request-smuggling RCE this script does
+# not cover). Once a build is >= its branch's fixed release here, the
+# upload-progress drop-in this script applies is no longer needed for this
+# CVE specifically, though `cleanup` still leaves it in place unless --force
+# is given, since other PHP2Shell state may still depend on it.
+declare -A PATCHED_115560_DEFAULT=([8.2]=8.2.36 [8.3]=8.3.37 [8.4]=8.4.28 [8.5]=8.5.13)
+patched_115560_ver() { local n="PATCHED_115560_${1/./_}"; echo "${!n:-${PATCHED_115560_DEFAULT[$1]:-}}"; }
+# CVE-2026-126714 ("phpAfterShell", depthfirst, 19 Nov 2026): the RFC1867
+# upload-progress callback still writes the Session file with pwrite()+
+# ftruncate() that aren't atomic; killing the worker mid-update (OOM, or a
+# timeout landing between the two syscalls depending on write ordering) can
+# splice the prefix of one Session with the tail of another, and the next
+# session_start() decodes the result as trusted state, up to attacker-
+# controlled deserialization. CVE-2026-115560's fix above did NOT close
+# this: it only changed which of the two syscalls runs first (pre-write vs
+# post-write truncate), which changes which interruption window is
+# exploitable, not whether one exists. depthfirst's own affected-version
+# table, dated 19 Nov 2026, lists every current PHP branch as vulnerable,
+# 8.4.28/8.5.13 (the builds PATCHED_115560 above calls "fixed") included,
+# via the post-write-truncate ordering; the only branches it calls safe are
+# the dedicated 7.4/8.0/8.1 EOL mitigation builds where the upload-progress
+# callback never opens the Session at all. No current release is known to
+# close this; the array below is intentionally empty and exists only so you
+# can fill in PATCHED_126714_X_Y yourself once (if) one does, without
+# waiting on a script update. Until then, patch_126714() always reports
+# unfixed, and `cleanup` keeps session.upload_progress off regardless of
+# whether CVE-2026-115560 is patched, because turning it back on reopens
+# this on every version this script knows about.
+declare -A PATCHED_126714_DEFAULT=()
+patched_126714_ver() { local n="PATCHED_126714_${1/./_}"; echo "${!n:-${PATCHED_126714_DEFAULT[$1]:-}}"; }
+UPLOAD_CVE2="CVE-2026-126714"
+# Same signature as patch_115560: 0 = fixed, 1 = not known fixed. Unlike
+# patch_115560, there is no non-empty default table, so this returns 1
+# (not fixed) for every branch unless you've set an override yourself.
+patch_126714() {
+    local pkg="php${PHP_VER}-fpm" full v up want
+    UPLOAD_HOW2=""
+    full="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
+    [[ -n "$full" ]] || { UPLOAD_HOW2="${pkg} isn't installed"; return 1; }
+    v="${full#*:}"; up="${v%%-*}"
+    want="$(patched_126714_ver "$PHP_VER")"
+    if [[ -n "$want" ]] && dpkg --compare-versions "$up" ge "$want"; then
+        UPLOAD_HOW2="upstream ${up} >= ${want} (PATCHED_126714 override)"; return 0
+    fi
+    UPLOAD_HOW2="${v}: no release is known to fix ${UPLOAD_CVE2} as of this script's writing (see the header)"
+    return 1
+}
+# Branches PHP no longer fixes; only a distro or PPA backport can patch them
+EOL_VERS="7.0 7.1 7.2 7.3 7.4 8.0 8.1"
+# Distro builds that carry the fix without changing the upstream version.
+# Ubuntu USN-8948-1/-2 (21 Oct 2026). Debian (DSA-6574-1) and sury ship the new
+# upstream release instead, which the PATCHED_DEFAULT check already covers.
+declare -A BACKPORT_FIXED=(
+    [7.0]="7.0.33-0ubuntu0.16.04.16+esm22"
+    [7.2]="7.2.24-0ubuntu0.18.04.17+esm14"
+    [7.4]="7.4.3-4ubuntu2.29+esm5"
+    [8.1]="8.1.2-1ubuntu2.28"
+    [8.3]="8.3.6-0ubuntu0.24.04.13"
+    [8.5]="8.5.4-0ubuntu1.5 8.5.9-0ubuntu2.1"
+)
+# Ubuntu 14.04 (ESM Legacy) fixed PHP 5.5 in USN-8948 too. Trusty's FPM is
+# /usr/sbin/php5-fpm under upstart, which this script can't mitigate, but the
+# environment check reports whether the installed php5 packages carry the fix.
+TRUSTY_PHP5_FIXED="5.5.9+dfsg-1ubuntu4.29+esm18"
+# For PHP this script can't protect and no package will fix (end-of-life
+# branches without a backport, PHP 5, mod_php, PHP built outside dpkg), point
+# to a third-party PHP extension that removes the upload-progress handler and
+# carries a fixed multipart parser. We don't ship or vouch for it: it's linked
+# so admins with nothing else know it exists. Set GUARD_HINT=0 to silence it.
+LEGACY_GUARD_URL="https://github.com/HOSTED-POWER/php_uploadprogress_guard"
+GUARD_HINT="${GUARD_HINT:-1}"; GUARD_HINT_SHOWN=0
+# Add fixed builds as they're published, e.g. a Debian LTS/ELTS 7.4 update
+FIXED_BUILDS="${FIXED_BUILDS:-}"
+MARKER="# managed-by: php2shell-mitigation"
+# the process id keeps two runs in the same second from sharing a directory and overwriting the first backup
+BACKUP_ROOT="/var/backups/php2shell/$(date +%Y%m%d-%H%M%S)-$$"
+WEB_ROOTS="${WEB_ROOTS:-/var/www /srv/www}"
+HUNT_IPS="${HUNT_IPS-15.204.59.70 162.35.99.94}"
+HUNT_ATTEMPT_IPS="${HUNT_ATTEMPT_IPS-104.28.208.84 144.48.4.242}"
+COOKIE_MAX="${COOKIE_MAX:-4096}"
+RESP_BYTES_MAX="${RESP_BYTES_MAX:-500000}"
+PROOF_SINCE="${PROOF_SINCE:-2026-10-01}"
+HUNT_PROC_ALLOW="${HUNT_PROC_ALLOW:-rotatelogs|cronolog|logger}"
+WRITABLE_PATHS="${WRITABLE_PATHS:-}"
+START_TS="$(date '+%Y-%m-%d %H:%M:%S')"
+SELF="$0"
+
+# ---------- output -----------------------------------------------------------
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+info()  { echo -e "${GREEN}[+]${NC} $*"; }
+warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
+step()  { echo -e "\n${CYAN}=====${NC} $* ${CYAN}=====${NC}"; }
+die()   { echo -e "${RED}[-] FATAL:${NC} $*" >&2; exit 1; }
+is_root() { [[ "${EUID:-$(id -u)}" -eq 0 ]]; }
+SELF_CMD="$(printf '%q ' "$0" "$@")"; SELF_CMD="${SELF_CMD% }"
+# need_root WHAT [HOW]: stop unless root, and name the sudo command to run instead. HOW ends the
+# message (default: offer --dry-run); pass "" for a command that has no dry run.
+need_root() {
+    local how="${2-, or add --dry-run to see what it would do}" msg
+    if is_root; then root_note; return 0; fi
+    if command -v sudo >/dev/null 2>&1; then msg="${1}: run it as root, for example: sudo ${SELF_CMD}${how}"
+    else msg="${1}: run it as root (sudo is not installed here)${how}"; fi
+    die "$msg"
+}
+# root_note: one line, never a stop, for someone logged in as the root account itself while sudo is
+# available. Shown once, only on a terminal, not under sudo or in a container. PSF_NO_ROOT_NOTE=1 hides it.
+ROOT_NOTED=0
+root_note() {
+    [[ $ROOT_NOTED -eq 0 ]] || return 0
+    ROOT_NOTED=1
+    [[ -z "${PSF_NO_ROOT_NOTE:-}" && -z "${SUDO_USER:-}" && -t 2 && ! -f /.dockerenv ]] || return 0
+    command -v sudo >/dev/null 2>&1 && [[ "$(logname 2>/dev/null || true)" == root ]] || return 0
+    echo "[!] You are logged in as the root account. Prefer a named admin account and sudo, which records who made the change (PSF_NO_ROOT_NOTE=1 hides this note)." >&2
+}
+
+# ---------- service manager --------------------------------------------------
+# systemd when it's PID 1; otherwise service(8) + init scripts (sysvinit or
+# OpenRC, as on Devuan, MX and antiX). Debian's php-fpm init scripts support
+# status, restart and reload.
+have_systemd() { [[ -d /run/systemd/system ]]; }
+svc_active() {
+    if have_systemd; then systemctl is-active --quiet "$1" 2>/dev/null
+    else service "$1" status >/dev/null 2>&1; fi
+}
+svc_enabled() {
+    if have_systemd; then systemctl is-enabled --quiet "$1" 2>/dev/null; return; fi
+    if command -v rc-update >/dev/null; then rc-update show 2>/dev/null | grep -E "^[[:space:]]*$1[[:space:]]" >/dev/null; return; fi
+    compgen -G "/etc/rc[2-5].d/S*$1" >/dev/null
+}
+svc_do() {   # restart|reload <service>
+    if have_systemd; then systemctl "$1" "$2"; else service "$2" "$1"; fi
+}
+svc_hint() { if have_systemd; then echo "systemctl $1 $2"; else echo "service $2 $1"; fi; }
+
+# ---------- per-version context ----------------------------------------------
+set_ver() {
+    PHP_VER="$1"
+    FPM_BIN="/usr/sbin/php-fpm${PHP_VER}"
+    FPM_ETC="/etc/php/${PHP_VER}/fpm"
+    FPM_INI_DIR="${FPM_ETC}/conf.d"
+    FPM_SERVICE="php${PHP_VER}-fpm"
+    AA_NAME="usr.sbin.php-fpm${PHP_VER}"
+    AA_PROFILE="/etc/apparmor.d/${AA_NAME}"
+    AA_LOCAL="/etc/apparmor.d/local/${AA_NAME}"
+    AA_DISABLE="/etc/apparmor.d/disable/${AA_NAME}"
+    DROP_IN_CONF="${FPM_INI_DIR}/99-php2shell-mitigation.ini"
+    BACKUP_DIR="${BACKUP_ROOT}/${PHP_VER}"
+    PATCHED_VER="$(patched_ver "$PHP_VER")"
+    # Fallback only (real value comes from FPM -i): the API dir the package ships
+    DEFAULT_EXT_DIR="$(dpkg -L "php${PHP_VER}-common" 2>/dev/null | grep -m1 -E '^/usr/lib/php/[0-9]{8}$' || true)"
+    HINT="--php ${PHP_VER}"
+    FPM_INFO=""
+    # Don't start services the admin had stopped; test config only
+    if svc_active "$FPM_SERVICE" || svc_enabled "$FPM_SERVICE"; then
+        SVC_LIVE=1
+    else
+        SVC_LIVE=0
+    fi
+}
+
+detect_versions() {
+    local b v
+    shopt -s nullglob
+    for b in /usr/sbin/php-fpm[0-9]*; do
+        v="${b#/usr/sbin/php-fpm}"
+        [[ -x "$b" && "$v" =~ ^[0-9]+\.[0-9]+$ ]] || continue
+        # unsupported versions were already reported by env_check
+        [[ " $SUPPORTED_VERS " != *" $v "* ]] || echo "$v"
+    done | sort -V
+    shopt -u nullglob
+}
+
+# ---------- helpers ----------------------------------------------------------
+backup() {   # <file> [name in the backup directory]
+    # the profile, its local override and its disable link all share one base name, so remove
+    # passes distinct names; copying them under their own names overwrote each other
+    local name="${2:-$(basename "$1")}"
+    mkdir -p "$BACKUP_DIR"
+    cp -a "$1" "$BACKUP_DIR/$name"
+    info "Backed up $1 -> $BACKUP_DIR/$name"
+}
+
+refresh_info() { FPM_INFO="$("$FPM_BIN" -i 2>/dev/null || true)"; }
+
+ini_val() { awk -F' => ' -v k="$1" '$1==k {print $2; exit}' <<<"$FPM_INFO"; }
+
+ini_path() {   # absolute path or fallback; strips "N;MODE;" prefixes
+    local v; v="$(ini_val "$1")"; v="${v##*;}"
+    if [[ "$v" == /* ]]; then echo "${v%/}"; else echo "$2"; fi
+}
+
+collect_log_paths() {
+    {
+        grep -hE '^[[:space:]]*(error_log|slowlog|access\.log|php_(admin_)?value\[error_log\])[[:space:]]*=' \
+            "${FPM_ETC}/php-fpm.conf" "${FPM_ETC}"/pool.d/*.conf 2>/dev/null \
+          | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*;.*$//; s/^"(.*)"$/\1/; s/\$pool/*/g' || true
+        ini_val error_log
+    } | grep '^/' | sort -u || true
+}
+
+listen_sockets() {
+    grep -hE '^[[:space:]]*listen[[:space:]]*=' "${FPM_ETC}"/pool.d/*.conf 2>/dev/null \
+      | sed -E 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*;.*$//' | grep '^/' || true
+}
+
+# systemd's count of automatic restarts. Units with Restart=on-failure (the
+# PHP 8.4+ packaging) can look active between crashes, so health also
+# requires this not to grow while we watch.
+nrestarts() { have_systemd && systemctl show -p NRestarts --value "$1" 2>/dev/null || echo 0; }
+
+# Config test always; restart + reload (SIGUSR2 self re-exec) only for live services
+fpm_health() {
+    "$FPM_BIN" -t >/dev/null 2>&1 || return 1
+    if [[ $SVC_LIVE -eq 0 ]]; then
+        warn "$FPM_SERVICE is stopped and disabled - config tested only, not started"
+        return 0
+    fi
+    local n0 n1
+    svc_do restart "$FPM_SERVICE" >/dev/null 2>&1 || return 1
+    n0="$(nrestarts "$FPM_SERVICE")"
+    sleep 2; svc_active "$FPM_SERVICE" || return 1
+    svc_do reload "$FPM_SERVICE" >/dev/null 2>&1 || return 1
+    sleep 2; svc_active "$FPM_SERVICE" || return 1
+    n1="$(nrestarts "$FPM_SERVICE")"
+    if [[ "${n1:-0}" -gt "${n0:-0}" ]]; then
+        warn "$FPM_SERVICE restarted itself $(( n1 - n0 )) time(s) during the check (crash loop under Restart=on-failure)"
+        return 1
+    fi
+    local s
+    for s in $(listen_sockets); do
+        [[ -S "$s" ]] || { warn "Listen socket missing: $s"; return 1; }
+    done
+}
+
+# Accepts "YYYY-mm-dd HH:MM:SS" or "-24h"
+aa_since_epoch() { if [[ "$1" == -24h ]]; then echo $(( $(date +%s) - 86400 )); else date -d "$1" +%s; fi; }
+
+# AppArmor records reach different places: the journal (kernel or audit
+# transport), auditd's audit.log when auditd runs, or syslog's kern.log on
+# systems without systemd. Read all of them; dedupe on the audit(epoch:serial) id.
+aa_raw() {
+    local since="$1" f
+    if have_systemd && command -v journalctl >/dev/null; then
+        journalctl -k --since "@${since}" --no-pager 2>/dev/null | grep -F 'apparmor="' || true
+        journalctl _TRANSPORT=audit --since "@${since}" --no-pager 2>/dev/null | grep -F 'apparmor="' || true
+    fi
+    for f in /var/log/audit/audit.log /var/log/kern.log /var/log/kern.log.1 /var/log/syslog; do
+        [[ -r "$f" ]] && { grep -hF 'apparmor="' "$f" 2>/dev/null || true; }
+    done
+    dmesg 2>/dev/null | grep -F 'apparmor="' || true
+}
+
+aa_events() {
+    local since; since="$(aa_since_epoch "$1")"
+    aa_raw "$since" \
+      | grep -E 'apparmor="(DENIED|ALLOWED|AUDIT)"' \
+      | grep -F "profile=\"${FPM_BIN}\"" \
+      | awk -v s="$since" 'match($0, /audit\([0-9]+\.[0-9]+:[0-9]+\)/) {
+            id = substr($0, RSTART + 6, RLENGTH - 7); split(id, t, ".")
+            if (t[1] + 0 >= s && !seen[id]++) print }' || true
+}
+
+aa_event_summary() {
+    aa_events "$1" \
+      | sed -nE 's/.*apparmor="([A-Z]+)".*operation="([^"]+)".*name="([^"]+)".*requested_mask="([^"]+)".*/\1 \2 \4 \3/p' \
+      | sort | uniq -c | sort -rn || true
+}
+
+# Start of the window for "what has this profile logged": the later of 24h
+# ago and the profile file's last write (apply regenerates it; enforce and
+# complain rewrite its flags). Events logged under an older profile, such as
+# one generated by an earlier version of this script, say nothing about the
+# rules loaded now.
+profile_since() {
+    local day p
+    day="$(date -d '-24 hours' '+%Y-%m-%d %H:%M:%S')"
+    p="$(date -r "$AA_PROFILE" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$day")"
+    if [[ "$(date -d "$p" +%s)" -gt "$(date -d "$day" +%s)" ]]; then echo "$p"; else echo "$day"; fi
+}
+
+is_managed() { [[ -f "$AA_PROFILE" ]] && grep -qF "$MARKER" "$AA_PROFILE"; }
+
+current_mode() {
+    if grep -qE "^${FPM_BIN} flags=\([^)]*complain" "$AA_PROFILE" 2>/dev/null; then echo complain; else echo enforce; fi
+}
+
+set_mode() {   # complain|enforce - written into the file so it survives reloads
+    sed -i -E "s|^(${FPM_BIN} flags=)\([^)]*\)|\1(attach_disconnected,$1)|" "$AA_PROFILE"
+    sed -i -E "s|^(${FPM_BIN} flags=\(attach_disconnected),enforce\)|\1)|" "$AA_PROFILE"
+    apparmor_parser -r "$AA_PROFILE"
+    info "Profile now in $(current_mode) mode"
+}
+
+unload_profile() {
+    apparmor_parser -R "$AA_PROFILE" 2>/dev/null || true
+    mkdir -p "$(dirname "$AA_DISABLE")"; ln -sf "$AA_PROFILE" "$AA_DISABLE"
+    warn "Profile unloaded and disabled (remove $AA_DISABLE to re-enable)"
+}
+
+# Is the installed package fixed? Sets PATCH_HOW. Returns 0 patched,
+# 1 not patched, 2 can't tell. Three independent signals, strongest first:
+#   1. upstream version >= first fixed release (Debian, sury, upstream builds)
+#   2. same upstream version as a known distro backport, and >= that build
+#   3. the package changelog names both CVEs (catches backports not listed)
+# Package dates aren't used: embargoed fixes are often dated before the public
+# release, and a later unrelated rebuild doesn't contain the fix.
+patch_status() {   # [package], default php${PHP_VER}-fpm
+    local pkg="${1:-php${PHP_VER}-fpm}" full v up f cl c have_cl=0 below=""
+    PATCH_HOW=""
+    full="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
+    if [[ -z "$full" ]]; then PATCH_HOW="${pkg} isn't an installed dpkg package"; return 2; fi
+    v="${full#*:}"; up="${v%%-*}"
+
+    if [[ -n "$PATCHED_VER" ]] && dpkg --compare-versions "$up" ge "$PATCHED_VER"; then
+        PATCH_HOW="${v}: upstream ${up} >= ${PATCHED_VER}"; return 0
+    fi
+    for f in ${BACKPORT_FIXED[$PHP_VER]:-} $FIXED_BUILDS; do
+        [[ "${f%%-*}" == "$up" ]] || continue
+        if dpkg --compare-versions "$v" ge "$f"; then PATCH_HOW="${v} >= fixed build ${f}"; return 0; fi
+        below="$f"
+    done
+    for cl in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/php${PHP_VER}-common/changelog.Debian.gz"; do
+        [[ -f "$cl" ]] || continue
+        # Only trust a changelog whose newest entry is the installed build
+        [[ "$(zcat "$cl" 2>/dev/null | head -1)" == *"(${v})"* ]] || continue
+        have_cl=1
+        for c in "${CVES[@]}"; do zgrep -q "$c" "$cl" || continue 2; done
+        PATCH_HOW="${v}: changelog lists ${CVES[*]}"; return 0
+    done
+    if [[ -n "$below" ]]; then PATCH_HOW="${v} is older than fixed build ${below}"; return 1; fi
+    # Only Ubuntu fixes these branches without changing the upstream version
+    # (8.3.6-0ubuntu...). sury and Debian ship the new upstream release
+    # (DSA-6574-1: 8.4.27-1~deb13u1), so for any non-Ubuntu build an older
+    # upstream is not fixed. Reached only when no changelog decided it.
+    # (sury's Ubuntu builds say "+ubuntu24.04.1+deb.sury.org" but are sury's)
+    if [[ -n "$PATCHED_VER" ]] && [[ "$v" == *sury* || "$v" != *ubuntu* ]]; then
+        PATCH_HOW="${v}: upstream ${up} < ${PATCHED_VER}; $( [[ "$v" == *sury* ]] && echo "sury ships" || echo "non-Ubuntu builds ship" ) the upstream fix rather than backporting"
+        return 1
+    fi
+    if [[ $have_cl -eq 1 ]]; then PATCH_HOW="${v}: below the first fixed release, no known backport, changelog doesn't list the CVEs"; return 1; fi
+    PATCH_HOW="${v}: no changelog to check (docs stripped?) and no known fixed build"; return 2
+}
+is_patched() { patch_status; }
+
+# Is the installed build also fixed for CVE-2026-115560? Upstream version
+# (once known) or a changelog that names it. 0 = fixed, 1 = not known fixed.
+patch_115560() {
+    local pkg="php${PHP_VER}-fpm" full v up want cl
+    UPLOAD_HOW=""
+    full="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
+    [[ -n "$full" ]] || { UPLOAD_HOW="${pkg} isn't installed"; return 1; }
+    v="${full#*:}"; up="${v%%-*}"
+    want="$(patched_115560_ver "$PHP_VER")"
+    if [[ -n "$want" ]] && dpkg --compare-versions "$up" ge "$want"; then
+        UPLOAD_HOW="upstream ${up} >= ${want}"; return 0
+    fi
+    for cl in "/usr/share/doc/${pkg}/changelog.Debian.gz" "/usr/share/doc/php${PHP_VER}-common/changelog.Debian.gz"; do
+        [[ -f "$cl" ]] || continue
+        [[ "$(zcat "$cl" 2>/dev/null | head -1)" == *"(${v})"* ]] || continue
+        if zgrep -q "$UPLOAD_CVE" "$cl"; then UPLOAD_HOW="changelog lists ${UPLOAD_CVE}"; return 0; fi
+    done
+    UPLOAD_HOW="${v}: no release or changelog yet that fixes ${UPLOAD_CVE}"
+    return 1
+}
+
+# PHP 8.5 added fatal_error_backtraces, the producer in the confirmed
+# CVE-2026-109619 RCE. Older branches don't have the directive.
+has_fatal_backtraces() { dpkg --compare-versions "$PHP_VER" ge 8.5; }
+
+# Processes still executing the pre-upgrade binary: dpkg replaced the file, but
+# the running FPM keeps the old (deleted) inode until it's restarted.
+stale_fpm_pids() {
+    local p e out=""
+    for p in /proc/[0-9]*; do
+        e="$(readlink "$p/exe" 2>/dev/null)" || continue
+        [[ "$e" == "${FPM_BIN} (deleted)" ]] && out+="${p#/proc/} "
+    done
+    echo "${out% }"
+}
+
+# For the environment report, outside set_ver: "<rc>|<how>|<stale pids>"
+patch_report() {   # <version> [package]
+    (
+        PHP_VER="$1"; PATCHED_VER="$(patched_ver "$1")"; FPM_BIN="/usr/sbin/php-fpm$1"
+        rc=0; patch_status "${2:-}" || rc=$?
+        echo "${rc}|${PATCH_HOW}|$( [[ -z "${2:-}" ]] && stale_fpm_pids )"
+    )
+}
+
+patch_target() {
+    local b="${BACKPORT_FIXED[$PHP_VER]:-}"
+    if [[ -n "$PATCHED_VER" ]]; then echo "PHP ${PATCHED_VER}+${b:+, Ubuntu build ${b// / or }+,} or a distro build listing ${CVES[*]}"
+    elif [[ -n "$b" ]]; then echo "Ubuntu build ${b// / or }+ (ESM/backport), or a distro build listing ${CVES[*]}"
+    else echo "a distro/PPA build listing ${CVES[*]} (no upstream fix for ${PHP_VER}; set PATCHED_${PHP_VER/./_} if one appears)"; fi
+}
+
+global_preflight() {
+    step "Preflight"
+    need_root "this changes the host" ""
+    command -v dpkg-query >/dev/null || die "Debian/Ubuntu (dpkg) layout required"
+    if ! command -v apparmor_parser >/dev/null && [[ $CMD == apply ]]; then
+        apt-get install -y --no-install-recommends apparmor || die "Could not install apparmor"
+    fi
+    aa-status --enabled 2>/dev/null || warn "AppArmor not enabled in the kernel - profiles will not apply"
+}
+
+ver_preflight() {
+    [[ -x "$FPM_BIN" ]] || die "$FPM_BIN not found"
+    [[ -d "$FPM_INI_DIR" ]] || die "$FPM_INI_DIR missing - unexpected PHP layout"
+    if [[ " $EOL_VERS " == *" $PHP_VER "* ]]; then
+        warn "PHP ${PHP_VER} is past upstream end of life and PHP won't fix it. Unless your distro (Debian LTS/ELTS, Ubuntu ESM) or the sury PPA backports the fix, this mitigation is permanent. Plan an upgrade to 8.2+."
+    fi
+
+    # v1 left backups inside /etc/apparmor.d/, where they load as duplicate profiles
+    local f
+    shopt -s nullglob
+    for f in /etc/apparmor.d/"${AA_NAME}"*.bak*; do
+        [[ -e "$f" ]] || continue
+        mkdir -p "$BACKUP_DIR"; mv "$f" "$BACKUP_DIR/"
+        warn "Moved stale backup out of /etc/apparmor.d: ${f##*/} -> $BACKUP_DIR/"
+    done
+    shopt -u nullglob
+
+    info "Binary   : $FPM_BIN ($( [[ $SVC_LIVE -eq 1 ]] && echo live || echo stopped/disabled ))"
+    info "Drop-in  : $DROP_IN_CONF"
+    info "AppArmor : $AA_PROFILE (+ local: $AA_LOCAL)"
+}
+
+# ---------- profile generation -----------------------------------------------
+write_profile() {   # $1 = output path, $2 = mode
+    local out="$1" mode="$2" p r
+    refresh_info
+    local ext_dir sess_dir upload_dir temp_dir
+    ext_dir="$(ini_path extension_dir "$DEFAULT_EXT_DIR")"
+    [[ "$ext_dir" == /* ]] || die "Could not determine extension_dir for PHP ${PHP_VER}"
+    sess_dir="$(ini_path session.save_path /var/lib/php/sessions)"
+    upload_dir="$(ini_path upload_tmp_dir /tmp)"
+    temp_dir="$(ini_path sys_temp_dir /tmp)"
+
+    local log_rules="" root_rules="" writable_rules=""
+    while IFS= read -r p; do [[ -n "$p" ]] && log_rules+="  ${p} rw,"$'\n'; done < <(collect_log_paths)
+    for r in $WEB_ROOTS;      do root_rules+="  ${r%/}/ r,"$'\n'"  ${r%/}/** r,"$'\n'; done
+    for r in $WRITABLE_PATHS; do writable_rules+="  ${r%/}/ r,"$'\n'"  ${r%/}/** rwk,"$'\n'; done
+
+    local flags="attach_disconnected"; [[ "$mode" == complain ]] && flags+=",complain"
+    # Pin rule semantics where the parser knows ABIs (AppArmor 3.0+). Without
+    # it the profile compiles against whatever this release and kernel
+    # support, so the same rules can mean different things on Ubuntu and
+    # Debian 13. AppArmor 2.13 (Ubuntu 20.04, Debian 11) can't parse it.
+    local abi_line=""; [[ -f /etc/apparmor.d/abi/3.0 ]] && abi_line="abi <abi/3.0>,"
+
+    cat > "$out" <<AAEOF
+${MARKER}
+# AppArmor profile for php-fpm ${PHP_VER}: PHP2Shell mitigation
+# Generated $(date -u +%FT%TZ) by ${SCRIPT_NAME} ${SCRIPT_VERSION} (${SELF}). Regenerated on every run:
+# put site-specific rules in ${AA_LOCAL} (never overwritten).
+# Switch modes with: ${SELF} enforce ${HINT} | ${SELF} complain ${HINT}
+
+${abi_line}
+include <tunables/global>
+
+${FPM_BIN} flags=(${flags}) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  # --- Mitigation core: block shells and other binaries ---------------
+  # audit: log every attempt. /usr/sbin is deliberately NOT explicitly
+  # denied: deny beats allow, and FPM re-execs itself on reload. Every
+  # other sbin binary is still implicitly denied in enforce mode.
+  # Note: this also blocks mail() (runs /bin/sh -> sendmail) and
+  # ImageMagick delegates. Use SMTP from PHP if mail is needed.
+  audit deny /{,usr/}{,local/}bin/** x,
+  audit deny /snap/bin/** x,
+  ${FPM_BIN} mrix,
+
+  deny /etc/shadow rw,
+  deny /etc/gshadow rw,
+  deny /etc/sudoers rw,
+  deny /etc/sudoers.d/** rw,
+  deny /etc/passwd w,
+  deny /root/** rw,
+
+  # --- FPM runtime ----------------------------------------------------
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability kill,
+  capability net_bind_service,
+  capability setgid,
+  capability setuid,
+  capability sys_resource,
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network unix stream,
+  network unix dgram,
+
+  signal (send, receive) peer=@{profile_name},
+  signal (receive) peer=unconfined,
+
+  # systemd readiness: every Debian/Ubuntu/sury unit is Type=notify. Without
+  # this, FPM can't send READY=1 in enforce mode and systemd fails the start
+  # after TimeoutStartSec.
+  @{run}/systemd/notify w,
+
+  # PHP config, extensions, shared libs and data
+  /etc/php/${PHP_VER}/** r,
+  ${ext_dir}/** mr,
+  /usr/lib/php/** r,
+  /usr/lib/@{multiarch}/** mr,
+  /usr/share/** r,
+  /etc/ImageMagick-*/** r,
+  /etc/fonts/** r,
+  /etc/{localtime,timezone,mime.types,magic} r,
+
+  # Runtime sockets
+  /run/php/** rwk,
+  /run/mysqld/mysqld.sock rw,
+  /run/postgresql/.s.PGSQL.* rw,
+  /run/redis/*.sock rw,
+
+  # Logs, derived from FPM config at generation time
+${log_rules}  /var/log/php${PHP_VER}-fpm*.log rw,
+  /var/log/php/** rw,
+
+  # Sessions, uploads, temp (k = flock, needed for file sessions)
+  ${sess_dir}/ r,
+  ${sess_dir}/** rwk,
+  ${upload_dir}/ r,
+  ${upload_dir}/** rwk,
+  ${temp_dir}/ r,
+  ${temp_dir}/** rwk,
+  /tmp/ r,
+  /tmp/** rwk,
+
+  # Web roots (read-only) and writable app paths
+${root_rules}${writable_rules}
+  # Kernel info read by PHP and extensions
+  @{PROC}/@{pid}/{status,stat,cmdline,maps,mounts,mountinfo} r,
+  @{PROC}/@{pid}/fd/ r,
+  @{PROC}/{meminfo,cpuinfo,loadavg,stat} r,
+  @{PROC}/sys/kernel/random/boot_id r,
+  /sys/kernel/mm/transparent_hugepage/** r,
+  /sys/devices/system/cpu/** r,
+
+  include if exists <local/${AA_NAME}>
+}
+AAEOF
+}
+
+ensure_local() {
+    [[ -f "$AA_LOCAL" ]] && return 0
+    mkdir -p "$(dirname "$AA_LOCAL")"
+    cat > "$AA_LOCAL" <<LOCALEOF
+# Site-specific rules for ${FPM_BIN}. Never overwritten by ${SELF}.
+# Examples:
+#   /var/www/example.com/wp-content/uploads/** rwk,
+#   /srv/app/storage/** rwk,
+LOCALEOF
+    info "Created $AA_LOCAL"
+}
+
+# ---------- per-version commands ---------------------------------------------
+cmd_apply() {
+    ver_preflight
+
+    step "PHP ${PHP_VER} 1/3  session.upload_progress"
+    local want
+    want="$(dropin_full)"
+    if [[ -f "$DROP_IN_CONF" ]] && [[ "$(cat "$DROP_IN_CONF")" == "$want" ]]; then
+        info "Drop-in already current"
+    else
+        [[ -f "$DROP_IN_CONF" ]] && backup "$DROP_IN_CONF"
+        printf '%s\n' "$want" > "$DROP_IN_CONF"
+        info "Written: $DROP_IN_CONF"
+    fi
+
+    step "PHP ${PHP_VER} 2/3  AppArmor"
+    local mode=complain
+    if is_managed && [[ "$(current_mode)" == enforce ]]; then
+        mode=enforce; info "Existing profile is enforcing - keeping enforce mode"
+    fi
+    if [[ -f "$AA_PROFILE" ]] && ! is_managed; then warn "Replacing unmanaged profile (backed up below)"; fi
+
+    TMP_PROFILE="$(mktemp /tmp/php2shell-aa.XXXXXX)"
+    trap 'rm -f "${TMP_PROFILE:-}"' EXIT
+    ensure_local
+    write_profile "$TMP_PROFILE" "$mode"
+    apparmor_parser -QK "$TMP_PROFILE" 2>&1 \
+        || die "Generated profile failed to parse - no AppArmor profile was installed or changed (the ini drop-in from step 1 stays in place). Inspect: $TMP_PROFILE"
+    info "Profile syntax OK"
+
+    [[ -f "$AA_PROFILE" ]] && backup "$AA_PROFILE"
+    install -m 0644 "$TMP_PROFILE" "$AA_PROFILE"
+    info "Installed $AA_PROFILE ($mode)"
+
+    if [[ -e "$AA_DISABLE" ]]; then
+        warn "$AA_DISABLE exists - profile written but NOT loaded. Remove it and rerun to activate."
+    else
+        apparmor_parser -r "$AA_PROFILE"
+        info "Profile loaded"
+    fi
+
+    step "PHP ${PHP_VER} 3/3  Test and restart $FPM_SERVICE"
+    "$FPM_BIN" -t 2>&1 | tail -2 || true
+    if ! fpm_health; then
+        warn "FPM failed under the new profile"
+        aa_event_summary "$START_TS"
+        if [[ "$(current_mode)" == enforce ]]; then
+            set_mode complain
+            fpm_health && die "Fell back to complain mode; FPM is up. Add the paths above to $AA_LOCAL, then: ${SELF} enforce ${HINT}"
+        fi
+        if "$FPM_BIN" -t >/dev/null 2>&1; then
+            unload_profile; fpm_health || true
+            die "FPM fails even in complain mode - profile unloaded so the service stays up. Check the $FPM_SERVICE log (journalctl -xeu $FPM_SERVICE, or /var/log/php${PHP_VER}-fpm.log)"
+        fi
+        die "FPM config test fails independent of AppArmor: $FPM_BIN -t"
+    fi
+    info "$FPM_SERVICE healthy"
+
+    verify
+    if [[ "$(current_mode)" == complain ]]; then
+        echo -e "  Next: run real traffic, then ${SELF} status ${HINT}; add legit paths to $AA_LOCAL; then ${SELF} enforce ${HINT}"
+    fi
+}
+
+# The drop-in apply writes, and the reduced one cleanup leaves while
+# CVE-2026-115560 is still open
+dropin_full() {
+    printf '%s\n' \
+        "; PHP2Shell mitigation (${CVES[*]} ${UPLOAD_CVE})" \
+        "; Written by ${SCRIPT_NAME} ${SCRIPT_VERSION}" \
+        "; Remove with: ${SELF} cleanup ${HINT}  (once patched)" \
+        "session.upload_progress.enabled = Off"
+    if has_fatal_backtraces; then printf '%s\n' "fatal_error_backtraces = Off"; fi
+}
+dropin_upload_only() {
+    printf '%s\n' \
+        "; PHP2Shell mitigation, reduced: this build is patched for ${CVES[*]}," \
+        "; but at least one of ${UPLOAD_CVE} (session upload progress) and" \
+        "; ${UPLOAD_CVE2} (phpAfterShell: the same Session file is still written" \
+        "; non-atomically during the upload-progress callback, and killing the" \
+        "; worker mid-write can splice two Sessions) is not known fixed on this" \
+        "; build. CVE-2026-126714 has no known fixed release at all as of this" \
+        "; script's writing; see php/README.md." \
+        "; Written by ${SCRIPT_NAME} ${SCRIPT_VERSION}." \
+        "; Rerun ${SELF} cleanup ${HINT} once both are fixed." \
+        "session.upload_progress.enabled = Off"
+}
+
+verify() {
+    refresh_info
+    local up; up="$(ini_val session.upload_progress.enabled)"
+    if [[ "$up" =~ ^(Off|0)$ ]]; then info "session.upload_progress.enabled = $up"
+    else warn "session.upload_progress.enabled = '${up:-unknown}' - drop-in not effective"; fi
+    if has_fatal_backtraces; then
+        local fb; fb="$(ini_val fatal_error_backtraces)"
+        if [[ "$fb" =~ ^(Off|0)$ ]]; then info "fatal_error_backtraces = $fb"
+        else warn "fatal_error_backtraces = '${fb:-unknown}' - drop-in not effective (the confirmed 8.5 RCE producer stays on)"; fi
+    fi
+    local loaded; loaded="$(aa-status 2>/dev/null | grep -cF "$FPM_BIN" || true)"
+    info "AppArmor: $( [[ "$loaded" -gt 0 ]] && echo loaded || echo 'NOT loaded' ), file mode: $(current_mode)"
+    if [[ $SVC_LIVE -eq 1 ]]; then
+        if svc_active "$FPM_SERVICE"; then info "$FPM_SERVICE active"; else warn "$FPM_SERVICE NOT running"; fi
+    else
+        info "$FPM_SERVICE stopped/disabled (left as found)"
+    fi
+    local prc=0 stale; patch_status || prc=$?
+    case $prc in
+        0)  info "php${PHP_VER}-fpm patched (${PATCH_HOW})"
+            stale="$(stale_fpm_pids)"
+            if [[ -n "$stale" ]]; then
+                warn "...but PIDs ${stale} still run the old binary. Restart: $(svc_hint restart "$FPM_SERVICE")"
+            elif patch_115560 && patch_126714; then
+                info "Running code is current and both ${UPLOAD_CVE} (${UPLOAD_HOW}) and ${UPLOAD_CVE2} (${UPLOAD_HOW2}) are fixed - the mitigation can go: ${SELF} cleanup ${HINT}"
+            else
+                local still=""
+                patch_115560 || still="${UPLOAD_CVE} (${UPLOAD_HOW})"
+                patch_126714 || still="${still:+${still}, }${UPLOAD_CVE2} (${UPLOAD_HOW2})"
+                info "Running code is current, but not known fixed for: ${still}"
+                info "  ${SELF} cleanup ${HINT} will keep session.upload_progress off until it is. CVE-2026-126714 has no known fixed release yet; see php/README.md."
+            fi ;;
+        1)  warn "NOT patched (${PATCH_HOW}). Target: $(patch_target)" ;;
+        *)  warn "Patch status unknown (${PATCH_HOW}). Target: $(patch_target)" ;;
+    esac
+}
+
+cmd_enforce() {
+    is_managed || die "No managed profile at $AA_PROFILE - run ${SELF} ${HINT} first"
+    local win; win="$(profile_since)"
+    local seen; seen="$(aa_event_summary "$win" | grep -v ' exec ' || true)"
+    if [[ -n "$seen" && -z "$FORCE" ]]; then
+        warn "Complain mode logged these accesses since ${win} (would be DENIED in enforce):"
+        echo "$seen"
+        die "Add legitimate paths to $AA_LOCAL, rerun ${SELF} ${HINT}, then retry. Or add --force"
+    fi
+    local since; since="$(date '+%Y-%m-%d %H:%M:%S')"
+    set_mode enforce
+    if ! fpm_health; then
+        aa_event_summary "$since"
+        set_mode complain; fpm_health || true
+        die "FPM failed under enforce - reverted to complain. Add the paths above to $AA_LOCAL."
+    fi
+    info "$FPM_SERVICE healthy under enforce"
+    local ev; ev="$(aa_event_summary "$since")"
+    [[ -z "$ev" ]] || { warn "Events since enforcing:"; echo "$ev"; }
+}
+
+cmd_complain() {
+    is_managed || die "No managed profile at $AA_PROFILE"
+    set_mode complain
+    fpm_health || die "$FPM_SERVICE failed to restart"
+}
+
+cmd_status() {
+    if [[ ! -f "$DROP_IN_CONF" ]] && ! is_managed; then
+        warn "Mitigation not applied to PHP ${PHP_VER}"; return 0
+    fi
+    verify
+    local win; win="$(profile_since)"
+    echo "  AppArmor events since ${win}, when the current profile was written or 24h ago (count verdict op mask path):"
+    local ev; ev="$(aa_event_summary "$win")"
+    if [[ -n "$ev" ]]; then sed 's/^/    /' <<<"$ev"; else echo "    none"; fi
+}
+
+# ---------- hunt: read-only log triage ---------------------------------------
+# These bugs execute below the application, so app logs hold little. What they
+# leave is memory-corruption crashes and, where exploited, a PHP worker running
+# something it shouldn't. hunt reads logs only; it never changes anything and
+# doesn't need root (though without it some logs aren't readable). It reports
+# counts and recent samples, and names the before/after date so a spike is
+# visible. A finding is a lead to investigate, never proof on its own: buggy
+# extensions crash workers too, and the upload-progress field is in legitimate
+# forms. The signatures were confirmed against real php-fpm 8.4 output.
+# 21 October is the patch date. Amazon Threat Intelligence reported an
+# exploitation attempt in its honeypot telemetry from 17 October, four days
+# earlier. It is the only source we know of for that date, so treat it as the
+# likely start, not a settled fact. Use it as the default baseline so a "quiet
+# before" period is more likely to be quiet; override with HUNT_SINCE if your
+# own logs show something earlier.
+DISCLOSURE_DATE="${HUNT_SINCE:-2026-10-17}"
+
+# Logs worth reading: every version's FPM error_log (from its own config),
+# the common defaults, the web servers, and the journal.
+hunt_log_files() {
+    local v
+    for v in $SUPPORTED_VERS; do
+        FPM_ETC="/etc/php/${v}/fpm"
+        collect_log_paths 2>/dev/null
+        echo "/var/log/php${v}-fpm.log"
+    done
+    printf '%s\n' /var/log/php-fpm.log /var/log/php_errors.log /var/log/php/*.log \
+        /var/log/apache2/error.log /var/log/apache2/*error*.log \
+        /var/log/httpd/error_log /var/log/nginx/error.log /var/log/syslog /var/log/messages
+    # web-server-declared PHP error logs (e.g. php_admin_value[error_log] via .htaccess is out of scope; pool logs already covered)
+}
+
+# De-duplicated, readable log files that exist
+hunt_logs() {
+    hunt_log_files | sort -u | while read -r f; do
+        # expand a single trailing * glob safely
+        if [[ "$f" == *'*'* ]]; then
+            compgen -G "$f" 2>/dev/null || true
+        else
+            [[ -r "$f" ]] && echo "$f"
+        fi
+    done | sort -u
+}
+
+# grep a set of files, print match count and the last few, with context label.
+# $1 = label, $2 = extended regex, rest = files
+hunt_grep() {
+    local label="$1" re="$2"; shift 2
+    # grep exits 1 when nothing matches; under `set -o pipefail` that would
+    # abort the whole run, so every grep here is wrapped to swallow it.
+    local n; n="$( { grep -hE "$re" "$@" 2>/dev/null || true; } | wc -l | tr -d ' ')"
+    if [[ "${n:-0}" -gt 0 ]]; then
+        warn "${label}: ${n} line(s)"
+        { grep -hE "$re" "$@" 2>/dev/null || true; } | tail -4 | sed 's/^/      /'
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else
+        info "${label}: none"
+    fi
+}
+
+# Count matches before vs on/after the disclosure date, when lines are dated
+# "[DD-Mon-YYYY" (FPM). A rough spike check, best-effort only.
+hunt_spike() {
+    local re="$1"; shift
+    local d; d="$(date -d "$DISCLOSURE_DATE" +%s 2>/dev/null || echo 0)"
+    [[ "$d" -gt 0 ]] || return 0
+    local before=0 after=0 line ts
+    while IFS= read -r line; do
+        if [[ "$line" =~ \[([0-9]{2}-[A-Za-z]{3}-[0-9]{4}) ]]; then
+            ts="$(date -d "${BASH_REMATCH[1]//-/ }" +%s 2>/dev/null || echo 0)"
+            [[ "$ts" -eq 0 ]] && continue
+            if [[ "$ts" -lt "$d" ]]; then before=$((before+1)); else after=$((after+1)); fi
+        fi
+    done < <(grep -hE "$re" "$@" 2>/dev/null || true)
+    [[ $((before+after)) -gt 0 ]] && echo "      dated split: ${before} before ${DISCLOSURE_DATE}, ${after} on/after"
+    return 0
+}
+
+# Web access logs: request-level indicators live here, not in the error logs
+# hunt_logs() returns. Current and first-rotated files only (plain text).
+hunt_access_files() {
+    local g f
+    shopt -s nullglob
+    for g in /var/log/apache2/*access*.log /var/log/apache2/*access*.log.1 \
+             /var/log/httpd/access_log /var/log/httpd/access_log-* \
+             /var/log/nginx/access.log /var/log/nginx/access.log.1 /var/log/nginx/*access*.log; do
+        for f in $g; do [[ -r "$f" && -f "$f" ]] && echo "$f"; done
+    done | sort -u
+    shopt -u nullglob
+}
+
+# Clients with two or more pre-script out-of-memory errors ("... in Unknown on
+# line 0"): the memory-pressure stages of the confirmed chain. One is ordinary;
+# repeats from one client are not. Reads Apache "[client IP:port]" and nginx
+# "client: IP," forms.
+hunt_oom_clients() {   # files...
+    local top
+    top="$( { grep -hE '(Allowed memory size of [0-9]+ bytes exhausted|Out of memory).*in Unknown on line 0' "$@" 2>/dev/null || true; } \
+        | awk '
+            match($0,/\[client [0-9a-fA-F:.]+\]/) { s=substr($0,RSTART+8,RLENGTH-9); sub(/:[0-9]+$/,"",s); c[s]++; next }
+            match($0,/client: [0-9a-fA-F:.]+,/)   { s=substr($0,RSTART+8,RLENGTH-9); c[s]++ }
+            END { for (k in c) if (c[k] >= 2) print c[k], k }' \
+        | sort -rn | head -5)"
+    if [[ -n "$top" ]]; then
+        warn "Clients with 2+ pre-script out-of-memory errors (memory-pressure stages of the confirmed chain):"
+        sed 's/^/      /' <<<"$top"
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else
+        info "Clients with 2+ pre-script out-of-memory errors: none"
+    fi
+    local unattr
+    unattr="$( { grep -hE '(Allowed memory size of [0-9]+ bytes exhausted|Out of memory).*in Unknown on line 0' "$@" 2>/dev/null || true; } \
+        | { grep -vE '\[client [0-9a-fA-F:.]+\]|client: [0-9a-fA-F:.]+,' || true; } | wc -l | tr -d ' ')"
+    if [[ "${unattr:-0}" -gt 0 ]]; then
+        inf_hunt "${unattr} pre-script out-of-memory line(s) carry no client address (PHP's own error_log format has none), so repeats from one client cannot be counted for them. Under mod_php, leave error_log unset so PHP errors go to Apache's error log."
+    fi
+}
+
+# Files whose whole content is `id` output, left by the proof commands in the
+# confirmed chain (e.g. `id>/tmp/x1`, `id>/var/www/html/p1`). Looks in the temp
+# directories and the web roots, for small files newer than PROOF_SINCE. File
+# names are the attacker's choice, so the content is the signal.
+hunt_proof_files() {
+    local d depth f found=0 r
+    local -a dirs=(/tmp /var/tmp /dev/shm)
+    for r in $WEB_ROOTS; do [[ -d "$r" ]] && dirs+=("$r"); done
+    for d in "${dirs[@]}"; do
+        [[ -d "$d" ]] || continue
+        depth=1; [[ " $WEB_ROOTS " == *" $d "* ]] && depth=3
+        while IFS= read -r -d '' f; do
+            # The FIRST line must be a full id(1) record ("uid=N(name) gid=N(name)"),
+            # not merely any line that starts with uid=.
+            if head -n 1 "$f" 2>/dev/null | grep -qE '^uid=[0-9]+\([^)]*\) gid=[0-9]+\('; then
+                found=1
+                warn "File whose content is id(1) output: ${f}  ($(head -1 "$f" 2>/dev/null | cut -c1-80))"
+            fi
+        done < <(find "$d" -maxdepth "$depth" -type f -size -400c -newermt "$PROOF_SINCE" -print0 2>/dev/null)
+    done
+    if [[ $found -eq 1 ]]; then HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else info "Files containing id(1) output in temp dirs or web roots since ${PROOF_SINCE}: none"; fi
+}
+
+# Shells and tools running RIGHT NOW with a web server or PHP worker in their
+# ancestry (up to four levels). A one-shot look, so it only catches processes
+# that are still alive; the confirmed chain's shells were short-lived, and one
+# whose worker has died is re-parented to init and no longer links to it. Apps
+# that legitimately shell out (ImageMagick, sendmail) will show here too.
+hunt_procs() {
+    local WEB_RE='^(apache2|httpd|httpd\.(worker|event|prefork)|php-fpm[0-9.]*|php-cgi[0-9.]*|lsphp[0-9]*|frankenphp|nginx)$'
+    local SUSP_RE='^(sh|dash|bash|ash|zsh|ksh|busybox|curl|wget|nc|ncat|netcat|socat|php[0-9.]*|python[0-9.]*|perl|ruby|openssl|base64|mkfifo|whoami|uname|hostname|id)$'
+    local -A comm=() ppid=()
+    local d p c line rest pp a depth hit cmd uid peers found=0
+    for d in /proc/[0-9]*; do
+        p="${d#/proc/}"
+        { read -r c < "$d/comm"; } 2>/dev/null || continue
+        { read -r line < "$d/stat"; } 2>/dev/null || continue
+        rest="${line##*) }"; read -r _ pp _ <<<"$rest"; pp="${pp:-0}"
+        comm[$p]="$c"; ppid[$p]="$pp"
+    done
+    for p in "${!comm[@]}"; do
+        [[ "${comm[$p]}" =~ $SUSP_RE ]] || continue
+        a="${ppid[$p]}"; depth=0; hit=""
+        while [[ -n "$a" && "$a" != 0 && "$a" != 1 && $depth -lt 4 ]]; do
+            if [[ "${comm[$a]:-}" =~ $WEB_RE ]]; then hit="$a"; break; fi
+            a="${ppid[$a]:-0}"; depth=$((depth + 1))
+        done
+        [[ -n "$hit" ]] || continue
+        cmd="$(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | cut -c1-160)"
+        if [[ -n "$HUNT_PROC_ALLOW" && "$cmd" =~ $HUNT_PROC_ALLOW ]]; then continue; fi
+        uid="$(stat -c %u "/proc/$p" 2>/dev/null || echo '?')"
+        found=1
+        peers="$(proc_peers "$p")"
+        warn "Running now: ${comm[$p]} (pid ${p}, uid ${uid}) under ${comm[$hit]} (pid ${hit}): ${cmd:-(no cmdline)}${peers:+  [tcp: ${peers}]}"
+    done
+    if [[ $found -eq 1 ]]; then HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else info "Shells/tools running now under a web or PHP worker: none"; fi
+}
+
+# TCP peers of a pid as STATE->peer, e.g. "SYN-SENT->203.0.113.9:8080". Needs ss
+# and, for another user's process, root. Prints nothing when there are none; a
+# process that has exited is gone, so this only helps for live ones.
+proc_peers() {
+    command -v ss >/dev/null 2>&1 || return 0
+    { ss -tnapH 2>/dev/null || true; } | awk -v pat="pid=$1," 'index($0,pat) { print $1 "->" $5 }' | head -3 | paste -sd, - || true
+}
+
+# Leak-sized responses. The disclosure stage of the confirmed chain returned a
+# PHPSESSID of 819,200 bytes decoded (about 2 MB on the wire) in Set-Cookie. Two checks,
+# both leads: (1) one PHPSESSID value of COOKIE_MAX or more characters in any
+# log that records response cookies; (2) a POST whose logged response size is
+# RESP_BYTES_MAX or more. (2) needs a log that counts header bytes: Apache %O
+# (the Debian/Ubuntu default "combined" format) or nginx $bytes_sent. Body-only
+# formats (Apache %b, nginx's default $body_bytes_sent) cannot show it. The
+# cookie value is never printed: it may be leaked process memory.
+hunt_big_responses() {   # files...
+    local out head ck rs
+    out="$(awk -v cmax="$COOKIE_MAX" -v rmax="$RESP_BYTES_MAX" '
+        { line = $0
+          if (cmax > 0 && length(line) >= cmax) {
+              i = index(line, "PHPSESSID=")
+              if (i > 0) {
+                  v = substr(line, i + 10); j = match(v, /[;" ]/); l = (j > 0) ? j - 1 : length(v)
+                  if (l >= cmax) { ck++; if (ckn < 3) { ckn++; ckx[ckn] = FILENAME ":" FNR ": a PHPSESSID value of " l " characters" } }
+              }
+          }
+          if (rmax > 0 && index(line, "\"POST ") > 0 && match(line, /" [0-9][0-9][0-9] [0-9]+/)) {
+              m = substr(line, RSTART, RLENGTH); split(m, a, " "); sz = a[3] + 0
+              if (sz >= rmax) { rs++; if (rsn < 3) { rsn++; rsx[rsn] = FILENAME ":" FNR ": POST response of " sz " bytes: " substr(line, 1, 120) } }
+          }
+        }
+        END { print ck + 0, rs + 0
+              for (k = 1; k <= ckn; k++) print ckx[k]
+              for (k = 1; k <= rsn; k++) print rsx[k] }
+    ' "$@" 2>/dev/null || true)"
+    head="$(sed -n 1p <<<"$out")"; ck="${head%% *}"; rs="${head##* }"
+    if [[ "${ck:-0}" -gt 0 ]]; then
+        warn "PHPSESSID values of ${COOKIE_MAX}+ characters in logs (leak-sized; value not shown): ${ck}"
+        sed -n '2,$p' <<<"$out" | grep 'PHPSESSID value' | sed 's/^/      /' || true
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else
+        info "PHPSESSID values of ${COOKIE_MAX}+ characters in logs: none (only visible if a log records response cookies)"
+    fi
+    if [[ "${rs:-0}" -gt 0 ]]; then
+        warn "POST responses of ${RESP_BYTES_MAX}+ bytes in access logs (lead; legitimate large POST responses exist): ${rs}"
+        sed -n '2,$p' <<<"$out" | grep 'POST response' | sed 's/^/      /' || true
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    else
+        info "POST responses of ${RESP_BYTES_MAX}+ bytes in access logs: none (needs a log that counts header bytes: Apache %O, nginx \$bytes_sent)"
+    fi
+}
+
+# auditd: program starts by the web-server account, if the rule from runtimes/php/detect/
+# is loaded (key php2shell_web_exec). Execve auditing is the way to see a
+# short-lived shell that the process poll above misses.
+hunt_audit() {
+    if ! command -v ausearch >/dev/null 2>&1; then
+        inf_hunt "auditd is not installed, so program starts were not checked from the audit log (runtimes/php/detect/ has a rule)."
+        return 0
+    fi
+    if [[ $EUID -ne 0 ]]; then inf_hunt "Reading the audit log needs root; skipped."; return 0; fi
+    local out n
+    # --input-logs and a closed stdin matter: without them ausearch reads an open
+    # pipe (as under "ssh host cmd") and blocks forever. The timeout is a backstop.
+    local tmo=""; command -v timeout >/dev/null 2>&1 && tmo="timeout 30"
+    out="$( { $tmo ausearch --input-logs -k php2shell_web_exec -ts this-week -i </dev/null 2>/dev/null || true; } )"
+    n="$(grep -c '^type=SYSCALL' <<<"$out" || true)"
+    if [[ "${n:-0}" -gt 0 ]]; then
+        warn "auditd: ${n} program start(s) by the web-server account this week (key php2shell_web_exec); check the parent and command:"
+        grep '^type=SYSCALL' <<<"$out" | sed -E 's/.*(ppid=[0-9]+).*(comm=[^ ]+).*(exe=[^ ]+).*/      \1 \2 \3/' | tail -5 || true
+        HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+    elif command -v auditctl >/dev/null 2>&1 && auditctl -l 2>/dev/null | grep php2shell_web_exec >/dev/null; then
+        info "auditd: rule loaded, no program starts by the web-server account this week"
+    else
+        inf_hunt "auditd is present but the php2shell_web_exec rule is not loaded; see runtimes/php/detect/ to add it."
+    fi
+}
+
+HUNT_FINDINGS=0
+cmd_hunt() {
+    step "Log triage (read-only)"
+    [[ $EUID -eq 0 ]] || warn "Not root - logs you can't read were skipped"
+
+    mapfile -t LOGS < <(hunt_logs)
+    if [[ ${#LOGS[@]} -eq 0 ]]; then
+        warn "No readable PHP or web-server logs found. Looked for FPM error_logs, /var/log/php*, Apache and nginx logs."
+        echo "  If your logs live elsewhere, point hunt at them: WEB_ROOTS is unrelated; pass paths via the FPM config's error_log, or grep them by hand with the patterns in this function."
+        return 0
+    fi
+    info "Reading ${#LOGS[@]} log file(s)"
+
+    step "1/4  Memory-corruption crashes"
+    # FPM master logs a crashed worker as: "child N exited on signal 11 (SIGSEGV)".
+    # SIGSEGV(11), SIGABRT(6), SIGBUS(7) are the ones memory corruption produces.
+    hunt_grep "PHP-FPM worker crashes (SIGSEGV/SIGABRT/SIGBUS)" \
+        'exited on signal (6|7|11)( |\()' "${LOGS[@]}"
+    hunt_spike 'exited on signal (6|7|11)( |\()' "${LOGS[@]}"
+    # Apache mod_php crash line
+    hunt_grep "Apache worker crashes (AH00052 / exit signal)" \
+        'AH00052|child pid [0-9]+ exit signal (Segmentation|Bus|Abort)' "${LOGS[@]}"
+    # Zend/glibc allocator panics seen on corruption (incl. USE_ZEND_ALLOC=0 staging)
+    hunt_grep "Allocator panic (zend_mm heap / glibc double free / malloc)" \
+        'zend_mm_heap corrupted|double free detected|free\(\): |malloc\(\): |corrupted (top size|size vs. prev_size)' "${LOGS[@]}"
+    # Sanitizer / Zend-allocator crash backtrace (observed 2026-10-22). ASan and
+    # debug/staging builds report the double-free in words the glibc/Zend panic
+    # regex above misses, and name the Zend allocator frames. Catches it in any
+    # log the sanitizer's stderr was captured to (console builds print to the
+    # terminal, so redirect php -S / FPM stderr to a file for this to see it).
+    hunt_grep "Sanitizer/Zend-allocator crash backtrace (ASan double-free / UAF, zend_alloc frames)" \
+        'AddressSanitizer: (attempting )?(double-free|heap-use-after-free|heap-buffer-overflow)|SUMMARY: AddressSanitizer|in (__zend_free|_efree|_emalloc|_erealloc)( |\()|zend_alloc\.c:[0-9]+' "${LOGS[@]}"
+    # Built-in CLI server (php -S) in a crash backtrace. It's a development tool
+    # and not the FPM path these CVEs target, but the same allocator double-free
+    # was reproduced through it on 2026-10-22, and a dev server facing untrusted
+    # traffic is its own exposure. NOTE: the AppArmor layer confines php-fpm, not
+    # the `php` CLI binary, so it does NOT contain an exploit of the dev server -
+    # the only fixes there are patching PHP and not exposing `php -S`.
+    hunt_grep "PHP CLI dev server in crash path (php -S; not covered by the AppArmor profile)" \
+        'php_cli_server_(dispatch|recv_event_read_request|do_event|poller)|PHP [0-9.]+ Development Server' "${LOGS[@]}"
+    # Kernel view of the same crashes
+    if [[ $EUID -eq 0 ]] && have_systemd && command -v journalctl >/dev/null; then
+        local kre='(php-fpm|php[0-9.]*-fpm|apache2|httpd)[^ ]*.*(segfault|general protection|trap)'
+        local kn; kn="$( { journalctl -k --since "-14 days" 2>/dev/null || true; } | { grep -cE "$kre" || true; } )"
+        if [[ "${kn:-0}" -gt 0 ]]; then
+            warn "Kernel segfault/GPF entries naming php-fpm/apache (last 14d): ${kn}"
+            { journalctl -k --since "-14 days" 2>/dev/null || true; } | { grep -E "$kre" || true; } | tail -3 | sed 's/^/      /'
+            HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+        else
+            info "Kernel segfault/GPF entries naming php-fpm/apache (last 14d): none"
+        fi
+    fi
+    # Core dumps
+    if command -v coredumpctl >/dev/null; then
+        local cd; cd="$( { coredumpctl list --no-pager 2>/dev/null || true; } | { grep -ciE 'php-fpm|php[0-9.]|apache2|httpd' || true; } )"
+        if [[ "${cd:-0}" -gt 0 ]]; then
+            warn "Core dumps from php-fpm/apache: ${cd} (coredumpctl list)"; HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+        fi
+    fi
+
+    step "2/4  Signs of the attack path"
+    # php2shell's OOM producer: a flood of memory_limit fatals, or requests that
+    # hit it. One is ordinary; a burst from one client around a crash is not.
+    hunt_grep "Out-of-memory / memory_limit fatals" \
+        'Allowed memory size of [0-9]+ bytes exhausted|Out of memory \(alloc' "${LOGS[@]}"
+    hunt_spike 'Allowed memory size of [0-9]+ bytes exhausted' "${LOGS[@]}"
+    # Upload-progress field: part of the 109619 path and of older LFI chains.
+    # Appears in access logs / mod_security, not usually error logs.
+    hunt_grep "PHP_SESSION_UPLOAD_PROGRESS seen in logs (triage signal, also in legit forms)" \
+        'PHP_SESSION_UPLOAD_PROGRESS' "${LOGS[@]}"
+    # Serialized-object variant (seen 2026-10-21): a PHP gadget chain is sent in
+    # the upload-progress field and fires from the session on the next request.
+    # The object sits in the POST body and session file (not logs); what reaches
+    # a log is the campaign marker and the deserialization erroring.
+    hunt_grep "p2s object-injection marker (campaign IOC)" \
+        'p2s:[a-z]' "${LOGS[@]}"
+    hunt_grep "PHP object injection / unserialize errors (session-deserialization path)" \
+        'unserialize\(\): (Error|Function|Class|Extra)|__PHP_Incomplete_Class|session_decode\(\)|[Ff]ailed to decode session' "${LOGS[@]}"
+
+    step "3/4  Post-exploitation residue"
+    # FPM/Apache executing a shell or tool is what nearly every PHP intrusion
+    # shows. If the AppArmor profile is loaded in complain or enforce mode, its
+    # own log of exec attempts is the strongest local signal.
+    local anyaa=0 v
+    for v in $(detect_versions 2>/dev/null); do
+        set_ver "$v" 2>/dev/null || continue
+        is_managed || continue
+        anyaa=1
+        local ex; ex="$(aa_event_summary '-7d' 2>/dev/null | grep ' exec ' || true)"
+        if [[ -n "$ex" ]]; then
+            warn "AppArmor blocked/logged FPM ${v} exec attempts (last 7d) - FPM tried to run a binary:"
+            sed 's/^/      /' <<<"$ex"; HUNT_FINDINGS=$((HUNT_FINDINGS + 1))
+        else
+            info "AppArmor FPM ${v}: no exec attempts logged (last 7d)"
+        fi
+    done
+    [[ $anyaa -eq 1 ]] || inf_hunt "No managed AppArmor profile loaded, so no exec log to check. Applying this script's profile in complain mode turns FPM exec attempts into a signal here."
+    # Webshell-shaped writes mentioned in logs (very rough; real check is on disk)
+    hunt_grep "Shell/interpreter/tool names in PHP or web logs (context-dependent)" \
+        '(php-fpm|php-cgi|apache2|httpd)[^ ]*.*(/bin/(ba)?sh|/dev/tcp/|fsockopen|mkfifo|nc |ncat |wget |curl .*(-o|http)|certutil|whoami|uname -a)' "${LOGS[@]}"
+    # A shell spawned by a worker that then errors: the broken p2s probe command
+    # lands here, as does failed command injection generally.
+    hunt_grep "Shell exec error from an FPM worker (failed command injection)" \
+        'said into stderr[^"]*"[^"]*(ba)?sh:|(ba)?sh:( [0-9]+:)? .*(cannot (open|create)|No such file|[Ss]yntax error|unexpected (token|end)|[Rr]ead-only file system)|(ba)?sh:[^"]*(wget|curl|ncat?|php[0-9.]*|python[0-9.]*|perl|whoami|uname|hostname|base64|busybox|mkfifo): (command )?not found' "${LOGS[@]}"
+
+    step "4/4  Indicators from the 2026-10-24 confirmed-exploitation report"
+    # A honeypot report (phpot) tied 35 Apache-parent /bin/sh starts to complete
+    # HTTP requests on single-worker Apache mod_php (PHP 8.4.26). Its chain was
+    # four multipart POSTs (the stages answered 200; the last never reached the
+    # access log because the worker died). The request fingerprint and the
+    # source addresses are weak, fast-aging leads; the proof files, the
+    # per-client OOM repeats and the process check are the stronger ones.
+    hunt_oom_clients "${LOGS[@]}"
+    mapfile -t ALOGS < <(hunt_access_files)
+    if [[ ${#ALOGS[@]} -gt 0 ]]; then
+        info "Reading ${#ALOGS[@]} access log file(s)"
+        hunt_grep "Request fingerprint q<N>=v&q<N>=v&q<N>=v, short or seven-digit form (public PoC family; weak, easily changed)" \
+            '[?&]q[0-9]{1,8}=v&q[0-9]{1,8}=v&q[0-9]{1,8}=v' "${ALOGS[@]}"
+        hunt_big_responses "${ALOGS[@]}" "${LOGS[@]}"
+        if [[ -n "$HUNT_IPS" ]]; then
+            local ipre="" ip
+            for ip in $HUNT_IPS; do ipre+="${ipre:+|}${ip//./\\.}"; done
+            hunt_grep "Traffic from addresses reported in confirmed exploitation (aging indicator)" \
+                "(^|[^0-9.:])(${ipre})([^0-9]|\$)" "${ALOGS[@]}" "${LOGS[@]}"
+        fi
+        if [[ -n "$HUNT_ATTEMPT_IPS" ]]; then
+            local aipre="" aip
+            for aip in $HUNT_ATTEMPT_IPS; do aipre+="${aipre:+|}${aip//./\\.}"; done
+            hunt_grep "Traffic from addresses that sent exploit-shaped requests (attempt indicators, not confirmed RCE; shared addresses possible)" \
+                "(^|[^0-9.:])(${aipre})([^0-9]|\$)" "${ALOGS[@]}" "${LOGS[@]}"
+        fi
+    else
+        inf_hunt "No readable web access logs found, so the request fingerprint and source-address checks were skipped."
+    fi
+    hunt_grep "Edge guard cut a leak-sized Set-Cookie (runtimes/php/edge/ Apache cookie guard fired)" \
+        'php2shell-guard: oversized Set-Cookie' "${LOGS[@]}"
+    hunt_grep "nginx refused an oversized upstream response header (a leak-sized Set-Cookie does at default buffer sizes; large legitimate headers do too, so a lead only)" \
+        'upstream sent too big header' "${LOGS[@]}"
+    hunt_proof_files
+    hunt_procs
+    hunt_audit
+
+    step "Hunt summary"
+    if [[ $HUNT_FINDINGS -eq 0 ]]; then
+        info "No signatures matched. These bugs can corrupt memory silently, so a patched server is the fix."
+        return 0
+    fi
+    warn "${HUNT_FINDINGS} signature group(s) matched. None is proof of compromise on its own."
+    echo "  Next steps:"
+    echo "    - Compare counts against a quiet period before ${DISCLOSURE_DATE}; a spike is the real signal. Amazon reported an exploitation attempt from 17 October, four days before the 21 October patch, so a quiet period needs to predate that."
+    echo "    - Correlate crashes with memory_limit fatals and multipart POSTs from the same client IP."
+    echo "    - Check the web root for new/modified files, and for new cron jobs, scheduled tasks and accounts."
+    echo "    - Preserve web-server and PHP logs before they rotate."
+    echo "    - Apache mod_php hosts: this script's AppArmor profile applies to PHP-FPM only, and the ini drop-in is one layer for CVE-2026-109618. Patching PHP and restarting Apache is the fix; runtimes/php/edge/ holds optional request and response guards."
+    echo "    - A process poll misses a shell that starts and exits between samples. To record every program the web-server account starts, load the auditd rule in runtimes/php/detect/ (or watch Tetragon process_exec events; the filter is there too)."
+    echo "    - Patch: the only complete fix is an updated PHP (8.5.12 / 8.4.27 / 8.3.36 / 8.2.35) or your distro's backport."
+    echo "    - Caveat (2026-10-22): an allocator double-free was reproduced on 8.5.12 via the CLI server; if you saw the sanitizer/CLI-server signatures above, 8.5.12 may not be the last word on the 8.5 branch. Keep the AppArmor layer enforced and watch for a follow-up release."
+    return 1
+}
+inf_hunt() { echo -e "  ${CYAN}note:${NC} $*"; }
+
+cmd_cleanup() {
+    if ! is_patched && [[ -z "$FORCE" ]]; then
+        die "php${PHP_VER}-fpm doesn't look patched (${PATCH_HOW}). Target: $(patch_target). Or add --force"
+    fi
+    local keep=0 unfixed_cves=""
+    patch_115560 || unfixed_cves="${UPLOAD_CVE}"
+    patch_126714 || unfixed_cves="${unfixed_cves:+${unfixed_cves}, }${UPLOAD_CVE2}"
+    if [[ -n "$unfixed_cves" ]] && [[ -z "$FORCE" ]]; then keep=1; fi
+    [[ -f "$DROP_IN_CONF" ]] && backup "$DROP_IN_CONF"
+    if [[ $keep -eq 1 ]]; then
+        # Written even if there's no drop-in: a v4 cleanup removed it outright
+        # and turned upload progress back on while one of these CVEs is open.
+        # CVE-2026-126714 has no known fixed version as of this script's
+        # writing (see the header), so in practice this stays true even on a
+        # build fully patched for CVE-2026-115560, until that changes.
+        dropin_upload_only > "$DROP_IN_CONF"
+        info "Wrote $DROP_IN_CONF: session.upload_progress stays off (unfixed: ${unfixed_cves})"
+    elif [[ -f "$DROP_IN_CONF" ]]; then
+        rm -f "$DROP_IN_CONF"; info "Removed $DROP_IN_CONF"
+        if [[ -n "$FORCE" ]] && [[ -n "$unfixed_cves" ]]; then
+            warn "--force: session.upload_progress is back on, but this is not known fixed for: ${unfixed_cves}"
+        fi
+    fi
+    fpm_health || die "$FPM_SERVICE failed to restart after cleanup"
+    refresh_info
+    if [[ $keep -eq 1 ]]; then
+        info "session.upload_progress.enabled = $(ini_val session.upload_progress.enabled) until ${unfixed_cves} $([[ "$unfixed_cves" == *,* ]] && echo "are" || echo "is") fixed. AppArmor profile kept as defense-in-depth."
+    else
+        info "Drop-in removed. AppArmor profile kept as defense-in-depth."
+    fi
+    echo "  The profile still confines FPM (blocks it running a shell etc.), which the patch doesn't do."
+    echo "  Recommended now that you're patched and the app is known-good: ${SELF} enforce ${HINT}"
+    echo "  To remove the profile instead (both files, unload, verify): ${SELF} remove ${HINT}"
+}
+
+# Fully remove this version's AppArmor profile: unload it from the kernel, then
+# delete the generated profile, the local override, and any disable symlink.
+# Leaves the ini drop-in alone (that's cleanup's job). Safe to run when the
+# profile is already gone. Does not need the package to be patched.
+cmd_remove() {
+    if [[ ! -f "$AA_PROFILE" && ! -f "$AA_LOCAL" && ! -e "$AA_DISABLE" ]]; then
+        info "No AppArmor profile for PHP ${PHP_VER} to remove"
+        return 0
+    fi
+    if [[ -f "$AA_PROFILE" ]] && ! is_managed; then
+        die "$AA_PROFILE exists but wasn't created by this script (no '${MARKER}' marker). Leaving it alone; remove it by hand if you're sure."
+    fi
+    # Unload from the kernel first, so running workers stop being confined.
+    if command -v apparmor_parser >/dev/null && [[ -f "$AA_PROFILE" ]]; then
+        if apparmor_parser -R "$AA_PROFILE" 2>/dev/null; then
+            info "Unloaded profile from the kernel"
+        else
+            warn "apparmor_parser -R failed (profile may not have been loaded)"
+        fi
+    fi
+    local f label
+    for f in "$AA_PROFILE" "$AA_LOCAL" "$AA_DISABLE"; do
+        case "$f" in "$AA_PROFILE") label="$AA_NAME" ;; "$AA_LOCAL") label="local.${AA_NAME}" ;; *) label="disable.${AA_NAME}" ;; esac
+        if [[ -e "$f" || -L "$f" ]]; then backup "$f" "$label" 2>/dev/null || true; rm -f "$f"; info "Removed $f"; fi
+    done
+    # Verify the kernel no longer confines FPM. Running workers can keep a
+    # profile reference until they recycle, so a leftover count isn't fatal:
+    # report it and say how to clear it.
+    local still
+    still="$(aa-status 2>/dev/null | grep -cF "$FPM_BIN" || true)"
+    if [[ "${still:-0}" -gt 0 ]]; then
+        warn "aa-status still lists ${FPM_BIN} (${still} entr$([[ $still -eq 1 ]] && echo y || echo ies))."
+        echo "  Running workers keep the old profile until they recycle. Clear it with:"
+        echo "    $(svc_hint restart "$FPM_SERVICE")"
+        return 0
+    fi
+    info "aa-status no longer lists ${FPM_BIN}; profile fully removed"
+}
+
+# ---------- environment check ------------------------------------------------
+# Runs before anything is changed, in this order: OS, PHP, web servers, system.
+# Hard blockers always stop the run. Soft blockers stop it unless --ignore-env
+# is given. Cautions are reported but never stop it.
+OS_SUPPORTED="debian ubuntu trisquel"
+OS_DERIVATIVES="linuxmint pop elementary zorin neon kali raspbian pureos parrot deepin tuxedo devuan mx antix sparky q4os peppermint bunsenlabs siduction"
+declare -A DISTRO_PHP=([trusty]=5.5 [stretch]=7.0 [buster]=7.3 [bullseye]=7.4 [bookworm]=8.2 [trixie]=8.4
+                       [xenial]=7.0 [bionic]=7.2 [focal]=7.4 [jammy]=8.1 [noble]=8.3 [resolute]=8.5)
+declare -A TRISQUEL_BASE=([etiona]=bionic [nabia]=focal [aramo]=jammy [ecne]=noble)
+declare -A DEBIAN_MAJOR=([9]=stretch [10]=buster [11]=bullseye [12]=bookworm [13]=trixie)
+ENV_HARD=(); ENV_SOFT=(); ENV_PHP=(); RUNNING_WIRED=(); MUTATES=0
+
+ok()      { echo -e "  ${GREEN}✓${NC} $*"; }
+inf()     { echo -e "  • $*"; }
+caution() { echo -e "  ${YELLOW}!${NC} $*"; }
+soft()    { ENV_SOFT+=("$1"); echo -e "  ${YELLOW}✗${NC} $1 ${YELLOW}[stops; --ignore-env overrides]${NC}"; [[ -z "${2:-}" ]] || echo -e "      $2"; }
+hard()    { ENV_HARD+=("$1"); echo -e "  ${RED}✗${NC} $1 ${RED}[stops]${NC}"; [[ -z "${2:-}" ]] || echo -e "      $2"; }
+section() { echo -e "\n  ${CYAN}$*${NC}"; }
+in_list() { [[ " $2 " == *" $1 "* ]]; }
+
+svc_state() {
+    if svc_active "$1"; then echo running
+    elif svc_enabled "$1"; then echo "enabled, not running"
+    else echo stopped; fi
+}
+
+fpm_refs() {   # PHP versions a web server config points at, via phpX.Y-fpm.sock or php-fpm.sock
+    local alt
+    grep -rhoE 'php(-|[0-9]+\.[0-9]+-)fpm\.sock' "$@" 2>/dev/null | sort -u | while read -r s; do
+        if [[ "$s" == php-fpm.sock ]]; then   # unversioned alternative -> current target
+            alt="$(readlink /etc/alternatives/php-fpm.sock 2>/dev/null || true)"
+            [[ "$alt" =~ php([0-9]+\.[0-9]+)-fpm\.sock$ ]] && echo "${BASH_REMATCH[1]}"
+        else
+            s="${s#php}"; echo "${s%-fpm.sock}"
+        fi
+    done | sort -uV || true
+}
+
+check_os() {
+    section "1/4  Operating system"
+    if [[ ! -r /etc/os-release ]]; then
+        hard "/etc/os-release missing - can't identify the distribution"; return 1
+    fi
+    local kv id like pretty code ubu deb
+    kv="$(. /etc/os-release; printf '%s\x1f' "${ID:-}" "${ID_LIKE:-}" "${PRETTY_NAME:-unknown}" \
+          "${VERSION_CODENAME:-}" "${UBUNTU_CODENAME:-}" "${DEBIAN_CODENAME:-}")"
+    IFS=$'\x1f' read -r id like pretty code ubu deb <<<"$kv"
+
+    if in_list "$id" "$OS_SUPPORTED"; then
+        ok "$pretty (supported)"
+    elif in_list "$id" "$OS_DERIVATIVES"; then
+        ok "$pretty (known derivative, ID=$id)"
+    elif in_list ubuntu "$like" || in_list debian "$like"; then
+        ok "$pretty (Debian/Ubuntu derivative, ID=$id, ID_LIKE=$like)"
+    elif [[ -r /etc/debian_version ]]; then
+        ok "$pretty (Debian-based: /etc/debian_version present, ID=$id)"
+    else
+        hard "$pretty is not Debian, Ubuntu, Trisquel or a derivative (ID=$id)" \
+             "This script assumes dpkg, /etc/php/X.Y and AppArmor. RHEL/Fedora/SUSE/Arch/Alpine need a different approach. On a cPanel server with EasyApache 4 PHP, use php2shell-cpanel-mitigate.sh instead."
+        return 1
+    fi
+
+    if [[ -d /opt/cpanel ]]; then
+        caution "cPanel found: its EasyApache 4 PHP (/opt/cpanel/ea-php*) is not covered by this script. Use php2shell-cpanel-mitigate.sh for it."
+    fi
+
+    # Base release, used only to tell the user what PHP their distro ships
+    local base="" fam=debian
+    if [[ "$id" == ubuntu || "$id" == trisquel || -n "$ubu" ]] || in_list ubuntu "$like"; then fam=ubuntu; fi
+    if [[ $fam == ubuntu ]]; then
+        base="$ubu"
+        [[ -n "$base" || "$id" != ubuntu ]] || base="$code"
+        [[ -n "$base" || "$id" != trisquel ]] || base="${TRISQUEL_BASE[$code]:-}"
+    else
+        base="$deb"
+        [[ -n "$base" ]] || { [[ "$id" =~ ^(debian|raspbian)$ ]] && base="$code"; } || true
+        if [[ -z "$base" && -r /etc/debian_version ]]; then
+            local dv; dv="$(cut -d. -f1 /etc/debian_version)"; base="${DEBIAN_MAJOR[$dv]:-}"
+        fi
+    fi
+    # Derivatives often reuse their base's codename (MX, Kali-style setups)
+    [[ -n "$base" || -z "$code" || -z "${DISTRO_PHP[$code]:-}" ]] || base="$code"
+    if [[ -n "$base" ]]; then
+        local dp="${DISTRO_PHP[$base]:-}"
+        inf "Base: ${fam^} ${base}${dp:+, distro PHP ${dp}}"
+        if [[ -n "$dp" ]] && ! in_list "$dp" "$SUPPORTED_VERS"; then
+            caution "Distro PHP ${dp} isn't in SUPPORTED_VERS (${SUPPORTED_VERS}) and will be skipped"
+        fi
+    else
+        caution "Couldn't determine the Debian/Ubuntu base release"
+    fi
+
+    command -v dpkg-query >/dev/null || { hard "dpkg-query not found - Debian package layout required"; return 1; }
+    return 0
+}
+
+# Once per run: the full pointer; after that, a short reference to it
+legacy_guard_hint() {   # <what>
+    [[ "$GUARD_HINT" == 1 ]] || return 0
+    if [[ $GUARD_HINT_SHOWN -eq 0 ]]; then
+        GUARD_HINT_SHOWN=1
+        echo -e "      ${CYAN}Need protection for $1?${NC} Third-party option, not part of this project and not"
+        echo "      reviewed by us: ${LEGACY_GUARD_URL}"
+        echo "      A PHP extension (5.4 to 8.5, any SAPI) that removes the upload-progress handler and"
+        echo "      carries a fixed multipart parser. Read it, build it from source rather than using"
+        echo "      prebuilt binaries, and test on staging: it runs inside every PHP process."
+    else
+        echo "      (for $1, see the third-party extension linked above)"
+    fi
+}
+
+report_patch() {   # <version> <package> <service>
+    local rep rc how stale
+    rep="$(patch_report "$1" "$2")"; rc="${rep%%|*}"; rep="${rep#*|}"; how="${rep%%|*}"; stale="${rep#*|}"
+    case $rc in
+        0) ok "  patched: ${how}"
+           [[ -z "$stale" ]] || caution "  but PIDs ${stale} still run the old binary - restart: $(svc_hint restart "$3")" ;;
+        1) caution "  NOT patched: ${how}. Upgrade: apt-get install --only-upgrade $2"
+           # No upstream fix for EOL branches; mod_php isn't covered here at all
+           if in_list "$1" "$EOL_VERS" || [[ "$2" == libapache2-mod-php* ]]; then legacy_guard_hint "$2"; fi ;;
+        *) caution "  patch status unknown: ${how}" ;;
+    esac
+    return "$rc"
+}
+
+# Ubuntu 14.04's unversioned php5 packages (php5-fpm, libapache2-mod-php5,
+# php5-cgi). Reported only: no FPM layer here runs under upstart.
+check_php5() {
+    local pkg pv
+    for pkg in php5-fpm libapache2-mod-php5 php5-cgi; do
+        pv="$(dpkg-query -W -f='${db:Status-Status} ${Version}' "$pkg" 2>/dev/null || true)"
+        [[ "$pv" == installed\ * ]] || continue
+        pv="${pv#installed }"
+        if dpkg --compare-versions "$pv" ge "$TRUSTY_PHP5_FIXED"; then
+            ok "${pkg} ${pv} - patched (>= ${TRUSTY_PHP5_FIXED}, USN-8948). Not mitigated by this script; none needed once restarted"
+        else
+            caution "${pkg} ${pv} - NOT patched and not covered by this script. Fixed in ${TRUSTY_PHP5_FIXED} (Ubuntu Pro, ESM Legacy): apt-get install --only-upgrade ${pkg}, then restart its service"
+            legacy_guard_hint "${pkg} without Ubuntu Pro"
+        fi
+    done
+}
+
+check_php() {
+    section "2/4  PHP"
+    local b v pv src
+    shopt -s nullglob
+    for b in /usr/sbin/php-fpm[0-9]*; do
+        v="${b#/usr/sbin/php-fpm}"
+        [[ -x "$b" && "$v" =~ ^[0-9]+\.[0-9]+$ ]] || continue
+        pv="$(dpkg-query -W -f='${Version}' "php${v}-fpm" 2>/dev/null || true)"
+        if   [[ -z "$pv" ]];       then src="not installed by dpkg"
+        elif [[ "$pv" == *sury* ]]; then src="ondrej/sury"
+        else src="distro"; fi
+        if [[ "$v" == 5.* ]]; then
+            caution "php${v}-fpm ${pv:-?} (${src}) - PHP 5.4+ is reported affected, but 5.x isn't covered by this script. Upgrade."
+            legacy_guard_hint "PHP ${v}"
+        elif ! in_list "$v" "$SUPPORTED_VERS"; then
+            caution "php${v}-fpm ${pv:-?} (${src}) - not in SUPPORTED_VERS, will be skipped. Check whether this branch is affected."
+        elif [[ -n "$ONLY_VER" && "$v" != "$ONLY_VER" ]]; then
+            inf "php${v}-fpm ${pv:-?} (${src}) - skipped (--php ${ONLY_VER})"
+        elif [[ -z "$pv" ]]; then
+            soft "php${v}-fpm present but not owned by dpkg - patch detection and backups assume packaged PHP"
+            legacy_guard_hint "a PHP built outside dpkg"
+            ENV_PHP+=("$v")
+        else
+            ok "php${v}-fpm ${pv} (${src}), service $(svc_state "php${v}-fpm") - will be handled"
+            in_list "$v" "$EOL_VERS" && caution "PHP ${v} is end of life: no upstream fix, only distro/PPA backports"
+            report_patch "$v" "php${v}-fpm" "php${v}-fpm" || true   # informational, never stops the run
+            ENV_PHP+=("$v")
+        fi
+    done
+    check_php5
+    shopt -u nullglob
+
+    local cli; cli="$(readlink -f /usr/bin/php 2>/dev/null || true)"
+    [[ "$cli" =~ php([0-9]+\.[0-9]+)$ ]] && inf "Default CLI: PHP ${BASH_REMATCH[1]} (CLI isn't exposed to the web; not touched)"
+
+    # PHP this script cannot see or protect
+    local p
+    for p in /usr/local/sbin/php-fpm* /usr/local/bin/php-fpm* /opt/*/sbin/php-fpm* /opt/*/bin/php-fpm*; do
+        [[ -x "$p" ]] && caution "Non-packaged PHP-FPM at $p - NOT covered by this script"
+    done
+    [[ -d /usr/local/lsws ]] && caution "LiteSpeed lsphp under /usr/local/lsws - NOT covered (it doesn't use php-fpm)"
+
+    if [[ -n "$ONLY_VER" ]] && ! in_list "$ONLY_VER" "$SUPPORTED_VERS"; then
+        hard "--php ${ONLY_VER} is not in SUPPORTED_VERS (${SUPPORTED_VERS})"
+    elif [[ ${#ENV_PHP[@]} -eq 0 ]]; then
+        hard "No PHP-FPM ${ONLY_VER:-in SUPPORTED_VERS (${SUPPORTED_VERS})} installed under /usr/sbin" \
+             "Nothing to mitigate. If PHP runs inside Apache (mod_php) see the web server section."
+    fi
+}
+
+check_web() {
+    section "3/4  Web servers"
+    local any=0 st ver v f modphp=()
+
+    if [[ -x /usr/sbin/apache2 ]]; then
+        any=1; st="$(svc_state apache2)"
+        ver="$(/usr/sbin/apache2 -v 2>/dev/null | sed -n 's/^Server version: //p' || true)"
+        local mpm=""
+        shopt -s nullglob
+        for f in /etc/apache2/mods-enabled/mpm_*.load; do mpm="${f##*/mpm_}"; mpm="${mpm%.load}"; done
+        for f in /etc/apache2/mods-enabled/php*.load; do v="${f##*/php}"; modphp+=("${v%.load}"); done
+        shopt -u nullglob
+        inf "Apache: ${ver:-installed}, ${st}${mpm:+, MPM ${mpm}}"
+        local refs; refs="$(fpm_refs /etc/apache2/sites-enabled /etc/apache2/conf-enabled)"
+        [[ -z "$refs" ]] || inf "  → php-fpm via proxy_fcgi: ${refs//$'\n'/ }"
+        [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
+        for v in "${modphp[@]+"${modphp[@]}"}"; do
+            caution "Apache has mod_php ${v} enabled - PHP inside Apache is not covered by this script (mod_php is the configuration a 2026-10-24 honeypot report confirmed 35 shell executions on; the ini setting is one layer for CVE-2026-109618 and the AppArmor layer here applies to PHP-FPM only, so upgrade PHP and restart Apache)"
+            local mrc=0; report_patch "$v" "libapache2-mod-php${v}" apache2 || mrc=$?
+            if [[ $mrc -eq 0 ]]; then
+                if grep -lsF "libphp${v}.so (deleted)" /proc/[0-9]*/maps >/dev/null 2>&1; then
+                    caution "  Apache still has the old libphp${v}.so loaded - restart: $(svc_hint restart apache2)"
+                fi
+            elif [[ "$st" == running && $CMD == apply ]]; then
+                local modphp_ini="'session.upload_progress.enabled = Off'"
+                dpkg --compare-versions "$v" ge 8.5 && modphp_ini+=" 'fatal_error_backtraces = Off'"
+                soft "Apache is running mod_php ${v}, which isn't patched and isn't covered by this script" \
+                     "Upgrade libapache2-mod-php${v} and restart Apache. Until then: printf '%s\\n' ${modphp_ini} > /etc/php/${v}/apache2/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart apache2). To filter requests before they reach mod_php, see runtimes/php/edge/ (optional guards; the fix is the patched PHP)"
+            fi
+        done
+    fi
+
+    if [[ -x /usr/sbin/nginx ]]; then
+        any=1; st="$(svc_state nginx)"
+        ver="$(/usr/sbin/nginx -v 2>&1 | sed -n 's/^nginx version: //p' || true)"
+        inf "nginx: ${ver:-installed}, ${st}"
+        local refs; refs="$(fpm_refs /etc/nginx)"
+        [[ -z "$refs" ]] || inf "  → php-fpm via fastcgi_pass: ${refs//$'\n'/ }"
+        [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
+        if grep -rqE '^[[:space:]]*fastcgi_pass[[:space:]]+[^;/]+:[0-9]+' /etc/nginx 2>/dev/null; then
+            caution "nginx has TCP fastcgi_pass upstream(s) - can't map those to a PHP version; check pool 'listen =' lines"
+        fi
+    fi
+
+    # Less common servers: report only
+    local name bin
+    for name in angie lighttpd caddy; do
+        bin="$(command -v "$name" 2>/dev/null || true)"; [[ -n "$bin" ]] || continue
+        any=1; st="$(svc_state "$name")"
+        local refs; refs="$(fpm_refs "/etc/${name}")"
+        inf "${name}: ${st}${refs:+ → php-fpm ${refs//$'\n'/ }}"
+        [[ "$st" == running ]] && for v in $refs; do RUNNING_WIRED+=("$v"); done
+    done
+
+    [[ $any -eq 1 ]] || caution "No Apache, nginx, angie, lighttpd or caddy found - FPM may be served remotely; mitigation still applies to FPM"
+
+    # Cross-check: what's actually serving traffic vs what we'll touch
+    local w covered=0 seen=" "
+    for w in "${RUNNING_WIRED[@]+"${RUNNING_WIRED[@]}"}"; do
+        in_list "$w" "$seen" && continue; seen+="$w "
+        if in_list "$w" "${ENV_PHP[*]:-}"; then covered=1
+        elif [[ ! -x "/usr/sbin/php-fpm${w}" ]]; then caution "A running web server points at php${w}-fpm, which isn't installed (stale config?)"
+        else caution "A running web server uses php${w}-fpm, which this run will NOT touch"; fi
+    done
+    if [[ $CMD == apply && ${#RUNNING_WIRED[@]} -gt 0 && $covered -eq 0 ]]; then
+        soft "None of the PHP-FPM versions your running web server uses would be mitigated" \
+             "Live: $(echo "${RUNNING_WIRED[@]}" | tr ' ' '\n' | sort -uV | xargs). Handled: ${ENV_PHP[*]:-none}."
+    fi
+}
+
+check_system() {
+    section "4/4  System"
+    if [[ $EUID -ne 0 ]]; then
+        if [[ $CMD == check ]]; then caution "Not root - some results may be incomplete"
+        else hard "Must run as root: sudo ${SELF_CMD}"; fi
+    else
+        ok "Running as root"
+    fi
+
+    local init; init="$(cat /proc/1/comm 2>/dev/null || echo unknown)"
+    if have_systemd; then
+        ok "systemd is PID 1"
+    elif command -v service >/dev/null; then
+        ok "No systemd (PID 1 is ${init}) - using service(8) and init scripts, AppArmor events from audit.log/kern.log/dmesg"
+        local v
+        for v in "${ENV_PHP[@]+"${ENV_PHP[@]}"}"; do
+            [[ -x "/etc/init.d/php${v}-fpm" ]] || hard "No /etc/init.d/php${v}-fpm - can't restart FPM ${v} without systemd"
+        done
+    else
+        hard "Neither systemd nor service(8) available (PID 1 is ${init})" \
+             "This script has to restart FPM and confirm it came back."
+    fi
+
+    local ct; ct="$(systemd-detect-virt --container 2>/dev/null || true)"
+    [[ -z "$ct" || "$ct" == none ]] || caution "Running inside a container (${ct}) - AppArmor profiles usually have to be loaded from the host"
+
+    local aa_on=0
+    [[ "$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)" == Y ]] && aa_on=1
+    if [[ $aa_on -eq 1 ]]; then
+        ok "AppArmor enabled in the kernel"
+    elif [[ $MUTATES -eq 1 ]]; then
+        hard "AppArmor isn't enabled in the kernel - the profile can't be loaded" \
+             "To apply just the ini layer by hand: echo 'session.upload_progress.enabled = Off' > /etc/php/X.Y/fpm/conf.d/99-php2shell-mitigation.ini && $(svc_hint restart phpX.Y-fpm)"
+    else
+        caution "AppArmor isn't enabled in the kernel"
+    fi
+    [[ -e /sys/fs/selinux/enforce ]] && caution "SELinux is active - AppArmor and SELinux don't normally run together here"
+
+    if command -v apparmor_parser >/dev/null; then
+        ok "apparmor_parser present"
+    elif [[ $CMD == apply ]]; then
+        inf "apparmor package not installed - apply will install it"
+        [[ -z "$(dpkg --audit 2>/dev/null)" ]] || caution "dpkg reports half-installed packages; installing apparmor may fail (dpkg --audit)"
+    elif [[ $MUTATES -eq 1 ]]; then
+        hard "apparmor_parser not installed - run apply first"
+    fi
+
+    local t missing=()
+    for t in awk sed grep zgrep install mktemp readlink date; do
+        command -v "$t" >/dev/null || missing+=("$t")
+    done
+    [[ ${#missing[@]} -eq 0 ]] || hard "Missing tools: ${missing[*]}"
+}
+
+env_check() {
+    [[ "$CMD" =~ ^(apply|enforce|complain)$ ]] && MUTATES=1
+    step "Environment check"
+    if check_os; then
+        check_php
+        check_web
+    else
+        echo "      (skipping PHP and web server checks)"
+    fi
+    check_system
+
+    step "Verdict"
+    local r
+    if [[ ${#ENV_HARD[@]} -gt 0 ]]; then
+        echo -e "${RED}Not starting.${NC} ${#ENV_HARD[@]} blocking problem(s):"
+        for r in "${ENV_HARD[@]}"; do echo "  - $r"; done
+        if [[ ${#ENV_SOFT[@]} -gt 0 ]]; then
+            echo "Also (overridable):"; for r in "${ENV_SOFT[@]}"; do echo "  - $r"; done
+        fi
+        echo "Nothing was changed."
+        exit 1
+    fi
+    if [[ ${#ENV_SOFT[@]} -gt 0 ]]; then
+        if [[ -n "$IGNORE_ENV" && $CMD != check ]]; then
+            warn "--ignore-env: proceeding despite ${#ENV_SOFT[@]} problem(s):"
+            for r in "${ENV_SOFT[@]}"; do echo "  - $r"; done
+            return 0
+        fi
+        echo -e "${YELLOW}Not starting.${NC} ${#ENV_SOFT[@]} problem(s) need a decision:"
+        for r in "${ENV_SOFT[@]}"; do echo "  - $r"; done
+        [[ $CMD == check ]] || echo "Review the report above. To proceed anyway: ${SELF} ${CMD} --ignore-env"
+        echo "Nothing was changed."
+        exit 2
+    fi
+    if [[ $CMD == check ]]; then info "Environment OK - nothing blocks apply"; exit 0; fi
+    info "Environment OK - starting ${CMD}"
+}
+
+# ---------- dispatch ---------------------------------------------------------
+# Wrapped in main and ended with exit on the same line: bash parses all of
+# main before running it, so re-downloading or editing this file while a run
+# is in progress can't make bash read the rest from a shifted offset.
+main() {
+CMD="${1:-apply}"; [[ $# -gt 0 ]] && shift
+ONLY_VER="${PHP_VER:-}"; FORCE=""; IGNORE_ENV=""
+case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
+case "$CMD" in -h|--help) awk 'f && /^# =+$/ {exit} f {sub(/^# ?/, ""); print} /^# =+$/ {f=1}' "$SELF"; exit 0 ;; --*) set -- "$CMD" "$@"; CMD=apply ;; esac
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --php)   ONLY_VER="${2:?--php needs a version, e.g. 8.2}"; shift 2 ;;
+        --php=*) ONLY_VER="${1#*=}"; shift ;;
+        --force) FORCE=1; shift ;;
+        --ignore-env) IGNORE_ENV=1; shift ;;
+        *) die "Unknown option: $1" ;;
+    esac
+done
+echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
+case "$CMD" in check|apply|enforce|complain|status|cleanup|remove|hunt) ;; *) die "Unknown command: $CMD (check|apply|enforce|complain|status|cleanup|remove|hunt)" ;; esac
+
+# hunt is global and read-only: it doesn't mitigate a version, it reads logs
+# across all of them. Run it on its own, without the apply/enforce environment
+# gate, and exit with its own status.
+if [[ "$CMD" == hunt ]]; then
+    cmd_hunt; exit $?
+fi
+
+env_check      # exits here for "check", or if the environment blocks the run
+global_preflight
+
+mapfile -t VERS < <(detect_versions)
+if [[ -n "$ONLY_VER" ]]; then
+    [[ " $SUPPORTED_VERS " == *" $ONLY_VER "* ]] || die "PHP $ONLY_VER not in SUPPORTED_VERS ($SUPPORTED_VERS)"
+    [[ " ${VERS[*]} " == *" $ONLY_VER "* ]] || die "php-fpm${ONLY_VER} not installed (found: ${VERS[*]:-none})"
+    VERS=("$ONLY_VER")
+fi
+[[ ${#VERS[@]} -gt 0 ]] || die "No supported php-fpm found (looked for: $SUPPORTED_VERS)"
+info "PHP-FPM versions: ${VERS[*]}"
+
+# Each version runs in its own subshell so one failure doesn't stop the rest
+FAILED=()
+for v in "${VERS[@]}"; do
+    step "PHP ${v} - ${CMD}"
+    set +e
+    ( set -e; set_ver "$v"; "cmd_${CMD}" )
+    rc=$?
+    set -e
+    [[ $rc -eq 0 ]] || FAILED+=("$v")
+done
+
+step "Summary"
+for v in "${VERS[@]}"; do
+    if [[ " ${FAILED[*]:-} " == *" $v "* ]]; then echo -e "  ${RED}✗${NC} PHP $v"; else echo -e "  ${GREEN}✓${NC} PHP $v"; fi
+done
+if [[ "$CMD" == apply ]]; then
+    echo -e "\n${RED}REMINDER:${NC} new profiles start in complain mode (log only) until you run enforce."
+fi
+[[ ${#FAILED[@]} -eq 0 ]] || exit 1
+}
+# ---------- one change at a time ---------------------------------------------------------------------
+# lock_for_change CMDS ARGS...: when a command that changes this host is asked for, and it is not a dry run
+# (a * in CMDS stands for the default command, for a tool whose default changes the host),
+# run the script again under flock(1), so two runs cannot interleave their changes. The second run waits
+# PSF_LOCK_WAIT seconds (default 30) and then stops with exit 2. flock -o leaves the lock with the waiting
+# flock process, so a service this script starts does not inherit it and hold it. The lock file is
+# STATE_DIR/.lock, or /var/lib/psf-security-patches/<script>/.lock. Without flock (macOS) nothing is locked.
+# PSF_LOCK_HELD marks the re-run so it does not lock again: the script sets it, leave it unset.
+lock_for_change() {
+    [[ -z "${PSF_LOCK_HELD:-}" ]] || return 0
+    local lk_cmds=" $1 " lk_arg lk_hit=0 lk_words=0 lk_dir lk_rc; shift
+    for lk_arg in "$@"; do
+        case "$lk_arg" in --dry-run|-h|--help|help|-V|--version|version) return 0 ;; esac
+        [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
+        case "$lk_arg" in -*) ;; *) lk_words=$((lk_words + 1)) ;; esac
+    done
+    [[ $lk_words -eq 0 && "$lk_cmds" == *" * "* ]] && lk_hit=1      # no command named, and the default command changes the host
+    [[ $lk_hit -eq 1 ]] || return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    lk_dir="${STATE_DIR:-/var/lib/psf-security-patches/${SCRIPT_NAME%.sh}}"
+    { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0
+    lk_rc=0; PSF_LOCK_HELD=1 flock -o -E 99 -w "${PSF_LOCK_WAIT:-30}" "$lk_dir/.lock" "${BASH:-bash}" "$0" "$@" || lk_rc=$?   # || keeps set -e from stopping here
+    [[ $lk_rc -eq 99 ]] && die "another run of ${SCRIPT_NAME} that changes this host is still in progress after ${PSF_LOCK_WAIT:-30} seconds (lock: $lk_dir/.lock): wait for it to finish, then run it again"
+    exit "$lk_rc"
+}
+lock_for_change "apply enforce complain cleanup remove *" "$@"
+
+main "$@"; exit
+
+# Assisted-by: Claude Opus 5.5

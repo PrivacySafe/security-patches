@@ -30,8 +30,14 @@
 #       Check the repository against the index: sections up to date, every CVE with an advisory placed or
 #       excluded on purpose, every advisory id cited anywhere really in the data. Exit 1 on a problem.
 #   rhsa.py fetch --after YYYY-MM-DD --out LIST.json [--merge LIST.json]
-#       Download Red Hat's list from its Security Data API (the only command that uses the network);
-#       find --live CVE asks the same API for one CVE. Both can be pointed at another server with --url.
+#       Download Red Hat's list from the CSAF index of its Security Data API (the only command that uses
+#       the network); find --live CVE asks the same API for one CVE. Both can be pointed at another server
+#       with --url.
+#   rhsa.py fetch --by-cve --repo DIR [--cve CVE]... --after YYYY-MM-DD --out LIST.json
+#       The same list, built CVE by CVE: for each CVE the READMEs and the placement table name, Red Hat's
+#       CVE record gives the advisories that fix it, and each advisory's CSAF document gives its date,
+#       severity, CVEs and packages. Far fewer requests than the whole list, and it reads only the
+#       documented CVE record and the CSAF standard.
 #   rhsa.py stats [--index FILE]     what the index holds
 #
 # A Red Hat build is judged by its RPM release, not by the upstream version, because Red Hat backports
@@ -47,6 +53,7 @@
 import argparse
 import collections
 import csv
+import gzip
 import json
 import os
 import re
@@ -54,13 +61,15 @@ import signal
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "1.0.0"
-DATE = "2026-11-03"
+VERSION = "1.0.1"
+DATE = "2026-11-23"
 HERE = os.path.dirname(os.path.abspath(__file__))
-API = "https://access.redhat.com/hydra/rest/securitydata/cvrf.json"
+# The CSAF index of the Security Data API. Red Hat retired the CVRF index (cvrf.json), which now answers 404.
+API = "https://access.redhat.com/hydra/rest/securitydata/csaf.json"
 INDEX = os.path.join(HERE, "data", "rhsa-index.json")
 PLACEMENT = os.path.join(HERE, "placement.json")
 BEGIN_RE = re.compile(r"<!-- rhsa:begin[^\n]*-->")
@@ -105,9 +114,10 @@ def read_list(path):
 
 def fetch_list(url=API, after=None, before=None, cve=None, per_page=1000):
     """Red Hat's Security Data API -> the same {RHSA: record} as read_list. The one place the tool uses the network."""
-    out, page = {}, 1
+    out, page, seen_cve_field, fields = {}, 1, False, set()
     while True:
-        q = {"per_page": per_page, "page": page}
+        # the API compresses with gzip unless asked not to, and urllib does not undo it: ask, and undo it anyway
+        q = {"per_page": per_page, "page": page, "isCompressed": "false"}
         for k, v in (("after", after), ("before", before), ("cve", cve)):
             if v:
                 q[k] = v
@@ -117,23 +127,170 @@ def fetch_list(url=API, after=None, before=None, cve=None, per_page=1000):
                 req = urllib.request.Request(
                     url + "?" + urllib.parse.urlencode(q), headers={"User-Agent": "rhsa.py/" + VERSION}
                 )
-                got = json.load(urllib.request.urlopen(req, timeout=60))
+                raw = urllib.request.urlopen(req, timeout=60).read()
+                if raw[:2] == b"\x1f\x8b":
+                    raw = gzip.decompress(raw)
+                got = json.loads(raw.decode("utf-8"))
                 break
             except Exception as e:
                 if attempt == 2:
-                    sys.exit("rhsa.py: cannot fetch %s: %s" % (url, e))
+                    hint = ""
+                    if getattr(e, "code", None) == 404 and url.rstrip("/").endswith("cvrf.json"):
+                        hint = " (Red Hat retired the CVRF index: use %s)" % API
+                    sys.exit("rhsa.py: cannot fetch %s: %s%s" % (url, e, hint))
                 time.sleep(2 * (attempt + 1))
+        if not isinstance(got, list):
+            sys.exit("rhsa.py: %s did not answer with a list of advisories" % url)
         for r in got:
+            if not isinstance(r, dict):
+                continue
+            fields.update(r)
+            cv = None
+            for k in ("CVEs", "cves", "cve_ids", "CVE"):
+                if k in r:
+                    cv, seen_cve_field = r[k], True
+                    break
+            if isinstance(cv, str):
+                cv = [c for c in re.split(r"[\s,]+", cv) if c]
             if str(r.get("RHSA", "")).startswith("RHSA-"):
                 out[r["RHSA"]] = dict(
                     date=str(r.get("released_on", ""))[:10],
                     severity=str(r.get("severity", "")).lower(),
-                    cves=list(r.get("CVEs") or []),
+                    cves=list(cv or []),
                     packages="; ".join(r.get("released_packages") or []),
                 )
         if len(got) < per_page:
+            if out and not seen_cve_field:
+                # the index names no CVEs: ask the CVE index for each advisory (cve.json?advisory=RHSA-...), the way
+                # Red Hat's own example script does; stop only if that names none either
+                base = url.rsplit("/", 1)[0]
+                print("the advisory index names no CVEs: asking %s/cve.json for each of %d advisories" % (base, len(out)),
+                      file=sys.stderr)
+                named = 0
+                for n, rhsa in enumerate(sorted(out), 1):
+                    rows = get_json("%s/cve.json?%s" % (base, urllib.parse.urlencode(
+                        {"advisory": rhsa, "per_page": 1000, "isCompressed": "false"}))) or []
+                    cves = sorted({str(c.get("CVE")) for c in rows if isinstance(c, dict) and str(c.get("CVE", "")).startswith("CVE-")})
+                    out[rhsa]["cves"] = cves
+                    named += bool(cves)
+                    if n % 100 == 0:
+                        print("  %d of %d advisories" % (n, len(out)), file=sys.stderr)
+                    time.sleep(0.05)
+                if not named:
+                    sys.exit("rhsa.py: %s lists advisories but names no CVEs in them (fields: %s), and %s/cve.json "
+                             "named none for them either; the API may have changed" % (url, ", ".join(sorted(fields)) or "none", base))
             return out
         page += 1
+
+
+def get_json(url):
+    """GET a JSON document from the API: None on 404; gzip undone; two retries; stop on any other failure."""
+    err = None
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "rhsa.py/" + VERSION})
+            raw = urllib.request.urlopen(req, timeout=60).read()
+            if raw[:2] == b"\x1f\x8b":
+                raw = gzip.decompress(raw)
+            return json.loads(raw.decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            err = e
+        except Exception as e:
+            err = e
+        if attempt < 2:
+            time.sleep(2 * (attempt + 1))
+    sys.exit("rhsa.py: cannot fetch %s: %s" % (url, err))
+
+
+RHSA_RE = re.compile(r"RHSA-\d{4}:\d+")
+# the package at the end of a CSAF product id, name-epoch:version-release.arch, after the product and, for a
+# module package, the module's name:stream:version:context
+CSAF_PKG_RE = re.compile(r"([A-Za-z0-9_.+~^-]+-\d+:[^\s:]+-[^\s:]+)$")
+# name-version-release with no epoch, as Red Hat's list writes CoreOS builds (rhcos-x86_64-417.94.202611061051-0)
+CSAF_NOEPOCH_RE = re.compile(r"^[A-Za-z0-9_.+~^-]+-\d[^\s:]*-[^\s:]+$")
+
+
+def csaf_ids(node, out):
+    """Every product_id string anywhere in a CSAF product tree."""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k == "product_id" and isinstance(v, str):
+                out.add(v)
+            else:
+                csaf_ids(v, out)
+    elif isinstance(node, list):
+        for v in node:
+            csaf_ids(v, out)
+    return out
+
+
+def csaf_record(doc):
+    """A CSAF 2.0 advisory document -> {date, severity, cves, packages} as in Red Hat's list."""
+    d = doc.get("document") or {}
+    date = str((d.get("tracking") or {}).get("initial_release_date") or "")[:10]
+    severity = str((d.get("aggregate_severity") or {}).get("text") or "").lower()
+    cves = sorted({v["cve"] for v in doc.get("vulnerabilities") or [] if isinstance(v, dict) and v.get("cve")})
+    pkgs = set()
+    for pid in csaf_ids(doc.get("product_tree") or {}, set()):
+        if "@sha256:" in pid:
+            # a container image: product:namespace/name@sha256:digest_arch; with the registry in front, the name
+            # keeps its namespace, as in Red Hat's list
+            img = pid.partition(":")[2]
+            pkgs.add(img if img.startswith("registry.") else "registry.redhat.io/" + img)
+            continue
+        m = CSAF_PKG_RE.search(pid)
+        if m:
+            pkgs.add(m.group(1))
+        elif CSAF_NOEPOCH_RE.match(pid.partition(":")[2]):
+            pkgs.add(pid.partition(":")[2])
+    return dict(date=date, severity=severity, cves=cves, packages="; ".join(sorted(pkgs)))
+
+
+def fetch_by_cve(url, cves, after=None, before=None, pause=0.1):
+    """For each CVE, Red Hat's CVE record names the advisories that fix it (affected_release); each advisory's
+    CSAF document gives the record. Returns {RHSA: record} and a count of CVEs Red Hat has no record of."""
+    base = url.rsplit("/", 1)[0]
+    found, named, unknown = collections.defaultdict(list), collections.defaultdict(set), 0
+    for n, cve in enumerate(sorted(cves), 1):
+        rec = get_json("%s/cve/%s.json" % (base, cve))
+        if rec is None:
+            unknown += 1
+        else:
+            for ar in rec.get("affected_release") or []:
+                if not isinstance(ar, dict):
+                    continue
+                ids = RHSA_RE.findall(str(ar.get("advisory") or "")) or RHSA_RE.findall(json.dumps(ar))
+                for rhsa in ids[:1]:
+                    found[rhsa].append(ar)
+                    named[rhsa].add(cve)
+        if n % 25 == 0:
+            print("  %d of %d CVEs read, %d advisories so far" % (n, len(cves), len(found)), file=sys.stderr)
+        time.sleep(pause)
+    out = {}
+    for n, rhsa in enumerate(sorted(found), 1):
+        doc = get_json("%s/csaf/%s.json" % (base, rhsa))
+        if doc is not None:
+            r = csaf_record(doc)
+        else:
+            # no CSAF document: what the CVE records say, without a severity
+            ars = found[rhsa]
+            r = dict(
+                date=str(ars[0].get("release_date") or "")[:10],
+                severity="",
+                cves=sorted(named[rhsa]),
+                packages="; ".join(sorted({str(a.get("package")) for a in ars if a.get("package")})),
+            )
+        if not r["date"]:
+            r["date"] = str(found[rhsa][0].get("release_date") or "")[:10]
+        if (after and r["date"] < after) or (before and r["date"] >= before):
+            continue
+        out[rhsa] = r
+        if n % 25 == 0:
+            print("  %d of %d advisories read" % (n, len(found)), file=sys.stderr)
+        time.sleep(pause)
+    return out, unknown
 
 
 def write_list(path, adv):
@@ -166,7 +323,10 @@ def parse_pkg(entry):
     """name-[epoch:]version-release[.arch] (or a Hummingbird, module or container form) -> a dict."""
     e = entry.strip()
     if e.startswith("registry.") or "@sha256:" in e:
-        name = e.split("@sha256")[0].split("/", 1)[-1]
+        # registry.redhat.io/namespace/name or namespace/name: drop the first part only when it is a registry host
+        path = e.split("@sha256")[0]
+        first, sep, rest = path.partition("/")
+        name = rest if sep and ("." in first or ":" in first or first == "localhost") else path
         return dict(name=name, epoch="0", ver="", rel="", stream="container image", kind="image", src=True)
     if "::" in e:
         e = e.split("::", 1)[0]
@@ -506,7 +666,7 @@ def section(path, plc, idx):
     labels = {}
     for p, ww in plc.items():
         for c in ww.get("cves", []):
-            labels.setdefault(c, ww.get("label") or p.split("/")[0])
+            labels.setdefault(c, ww.get("label") or (p.split("/")[-2] if "/" in p else p))
     for c, target in sorted(w.get("point", {}).items()):
         if c in idx["cves"]:
             lines += [
@@ -733,12 +893,27 @@ def stream_arg(s):
 
 
 def cmd_fetch(a):
-    adv = fetch_list(a.url, a.after, a.before, per_page=a.per_page)
+    unknown = None
+    if a.by_cve:
+        wanted = set(a.cve or [])
+        if a.repo:
+            wanted |= repo_cves(a.repo) | placed_cves(load_placement(a.placement)[0])
+        if not wanted:
+            sys.exit("rhsa.py: fetch --by-cve needs --repo DIR (the CVEs its READMEs name) or --cve CVE")
+        print("reading Red Hat's records for %d CVEs" % len(wanted), file=sys.stderr)
+        adv, unknown = fetch_by_cve(a.url, wanted, a.after, a.before)
+    else:
+        adv = fetch_list(a.url, a.after, a.before, per_page=a.per_page)
     if a.merge and os.path.exists(a.merge):
         old = read_list(a.merge)
         old.update(adv)
         adv = old
+    if not adv:
+        print("fetched: no advisories" + ("" if unknown is None else " (%d CVEs have no Red Hat record)" % unknown))
+        return 1
     write_list(a.out, adv)
+    if unknown:
+        print("%d CVEs have no Red Hat record (Red Hat does not ship them, or has not assessed them)" % unknown)
     ds = sorted(x["date"] for x in adv.values())
     print(
         "fetched: %d advisories (%s to %s) -> %s" % (len(adv), ds[0], ds[-1], a.out)
@@ -1067,6 +1242,10 @@ def main(argv):
     p.add_argument("--merge", help="add the new advisories to this existing list first")
     p.add_argument("--url", default=API, help=URLH)
     p.add_argument("--per-page", type=int, default=1000, help="records asked for per request")
+    p.add_argument("--by-cve", action="store_true", help="build the list CVE by CVE from Red Hat's CVE records and CSAF documents")
+    p.add_argument("--repo", help="with --by-cve: the CVEs its READMEs and the placement table name")
+    p.add_argument("--cve", action="append", help="with --by-cve: this CVE too (repeat it for more)")
+    p.add_argument("--placement", default=PLACEMENT, help=PLC)
     p.set_defaults(fn=cmd_fetch)
     p = sp.add_parser(
         "index",

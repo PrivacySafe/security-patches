@@ -125,7 +125,9 @@ payload() {
   cp -a "$WORK/$TOP/packaging/rhsa/." "$1/opt/psf-security-patches/rhsa/"
   chmod 0755 "$1/opt/psf-security-patches/rhsa/rhsa.py"
   rm -rf "$1/opt/psf-security-patches/packaging" "$1/opt/psf-security-patches/docs" "$1/opt/psf-security-patches/.gitattributes" "$1/opt/psf-security-patches/.gitignore"
-  install -m 0644 "$ROOT/php/php2shell-watch.service" "$1/usr/lib/systemd/system/"
+  install -m 0644 "$ROOT/runtimes/php/php2shell-watch.service" "$1/usr/lib/systemd/system/"
+  # the unit in the repository runs a copy in /usr/local/sbin; the packaged one runs the installed script
+  sed -i 's#^ExecStart=/usr/local/sbin/php2shell-watch.sh#ExecStart=/opt/psf-security-patches/runtimes/php/php2shell-watch.sh#' "$1/usr/lib/systemd/system/php2shell-watch.service"
 }
 
 # Manual pages and the info manual, compressed, for both packages.

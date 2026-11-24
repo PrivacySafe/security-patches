@@ -146,6 +146,10 @@ A contribution submitted to an AGPL-licensed repository must be compatible with 
 
 Software source files should carry an `SPDX-License-Identifier: AGPL-3.0-or-later` marker where the format permits one.
 
+### Where a new tool goes
+
+Each tool has its own folder, with its script and a README, inside one of six category folders: `servers/` (web, mail and database servers, proxies, management servers), `system/` (the kernel, the package manager, OpenSSH, TLS and system libraries), `runtimes/` (PHP, Node.js, Ruby, Java), `web-apps/` (content management systems and the applications people host), `developer/` (developer machines, CI, frameworks and packages) and `threats/` (attack tools and campaigns that are not a single flaw). Pick the category that fits what the tool protects, and add the folder to that category's list in `packaging/gen-site.py`. Please do not add top-level folders.
+
 ## Documentation contributions
 
 Documentation intended for publication with the 3NWeb architecture, protocol specifications, or PrivacySafe guides is licensed under **Apache License 2.0 (`Apache-2.0`)** and is intended to be contributed through [IEEE SA Open](https://opensource.ieee.org/3nweb) under the [IEEE SA Open CLA](https://opensource.ieee.org/community/cla/apache).

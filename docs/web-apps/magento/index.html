@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
+<title>Magento, Adobe Commerce and Mage-OS: PolyShell, CVE-2026-71362, StyleSmuggler and BlockStrap | PrivacySafe Security Patches</title><meta name="description" content="Magento and Adobe Commerce 2.4.4 to 2.4.9 and Mage-OS: unauthenticated upload to code execution (PolyShell), customer account takeover, and two CVSS 10.0 template-engine RCEs, three of them exploited and in CISA KEV; the StyleSmuggler hotfix is in no release, the October one included">
+<link rel="jslicense" href="../../weblabels.html"><link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
+<body class="docs">
+<a class="skip-link" href="#top">Skip to main content</a>
+<header class="topbar">
+<div aria-label="Site navigation" class="wrap nav">
+<a aria-label="PrivacySafe home" class="brand header-brand" href="https://privacysafe.app/">
+<img alt="PrivacySafe" class="brand-logo" height="192" src="../../assets/img/privacysafe-logo.svg" width="1696"/>
+</a>
+<nav aria-label="Primary" class="navlinks">
+<a href="https://privacysafe.app/#download">Download</a>
+<a href="https://privacysafe.app/#apps">Apps</a>
+<a href="https://privacysafe.app/#identity">Identity</a>
+<a href="https://privacysafe.app/#trust">Trust</a>
+<a href="https://privacysafe.app/docs/" rel="noopener noreferrer" target="_blank">Docs</a>
+<a href="https://privacysafe.social" rel="noopener noreferrer" target="_blank">Social</a>
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+</nav>
+<div class="nav-actions">
+<a class="btn soft" href="https://privacysafe.app/#apps">Learn More</a>
+<a class="btn primary" href="https://privacysafe.app/#download">Get PrivacySafe</a>
+<a aria-label="Download" class="btn hamb" href="https://privacysafe.app/#download">
+<svg class="ico ico-download" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.900 2.800h2.200v9.100l3.300-3.300 1.600 1.600L12 16.100 6 10.200l1.600-1.600 3.300 3.300V2.800zM4 18.400h16v2.200H4v-2.200z"/></svg>
+</a>
+</div>
+</div>
+</header>
+<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul><li><a href="../../index.html">Home</a></li><li><a href="../../tools.html" aria-current="page">Tools</a></li><li><a href="../../cves.html">CVEs</a></li><li><a href="../../how-it-works.html">How it works</a></li><li><a href="../../install.html">Install</a></li><li><a href="../../man/index.html">Manual pages</a></li><li><a href="https://privacysafe.app/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online <svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg></a></li></ul></div></nav>
+<div class="doc-page"><div class="wrap doc-layout"><nav class="docs-side" aria-label="Security Patches"><div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div><details class="side-box" open><summary>Menu</summary><ul class="start">
+<li><a href="../../index.html">Home</a></li>
+<li><a href="../../how-it-works.html">How the tools work</a></li>
+<li><a href="../../glossary.html">Glossary</a></li>
+<li><a href="../../install.html">Install and update</a></li>
+<li><a href="../../tools.html">All tools</a></li>
+<li><a href="../../cves.html">Find a CVE</a></li>
+<li><a href="../../man/index.html">Manual pages</a></li>
+<li><a href="../../changelog.html">Changelog</a></li>
+<li><a href="../../security.html">Security policy</a></li>
+<li><a href="../../about.html">About and support</a></li>
+</ul>
+<details class="grp"><summary>Newest: 2 to 23 November 2026</summary><ul>
+<li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
+<li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
+<li><a href="../aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../../runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
+<li><a href="../../system/pam-mysql/index.html">23 Oct: pam-mysql</a></li>
+<li><a href="../../threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
+<li><a href="../../developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
+<li><a href="../../developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
+<li><a href="../apache-roller/index.html">22 Oct: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../../system/ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
+<li><a href="../../system/linux-kernel/index.html">20 Oct: Linux kernel</a></li>
+<li><a href="../../servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
+<li><a href="../../runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
+<li><a href="../../servers/nginx/index.html">18 Oct: nginx</a></li>
+<li><a href="../../developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../../system/openssh-musl/index.html">5 Oct: OpenSSH musl password bypass</a></li>
+<li><a href="../wordpress-upgrade/index.html">4 Oct: WordPress upgrade window</a></li>
+<li><a href="../../system/apt/index.html">4 Oct: APT</a></li>
+<li><a href="../../system/pki/index.html">2 Oct: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+</ul></details>
+<details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../../servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/pulsar/index.html">Apache Pulsar</a></li>
+<li><a href="../../servers/tomcat/index.html">Apache Tomcat</a></li>
+<li><a href="../../servers/trafficserver/index.html">Apache Traffic Server</a></li>
+<li><a href="../../servers/bind/index.html">BIND 9</a></li>
+<li><a href="../../servers/couchdb/index.html">CouchDB</a></li>
+<li><a href="../../servers/haproxy/index.html">HAProxy</a></li>
+<li><a href="../../servers/incus/index.html">Incus</a></li>
+<li><a href="../../servers/mysql/index.html">MySQL client programs</a></li>
+<li><a href="../../servers/n-central/index.html">N-central and Apache Axis</a></li>
+<li><a href="../../servers/nginx/index.html">nginx</a></li>
+<li><a href="../../servers/nginx-ui/index.html">nginx-ui</a></li>
+<li><a href="../../servers/rsyslog/index.html">rsyslog</a></li>
+<li><a href="../../servers/vmware/index.html">VMware vCenter</a></li>
+<li><a href="../../servers/vsftpd/index.html">vsftpd</a></li>
+</ul></details>
+<details class="grp"><summary>Operating system and libraries</summary><ul>
+<li><a href="../../system/apt/index.html">APT</a></li>
+<li><a href="../../system/brotli/index.html">Brotli</a></li>
+<li><a href="../../system/curl/index.html">curl</a></li>
+<li><a href="../../system/pki/index.html">eMudhra CA compromise</a></li>
+<li><a href="../../system/ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../../system/expat/index.html">libexpat</a></li>
+<li><a href="../../system/heif/index.html">libheif</a></li>
+<li><a href="../../system/linux-kernel/index.html">Linux kernel</a></li>
+<li><a href="../../system/openssh-musl/index.html">OpenSSH musl password bypass</a></li>
+<li><a href="../../system/openssl/index.html">OpenSSL</a></li>
+<li><a href="../../system/pam-mysql/index.html">pam-mysql</a></li>
+<li><a href="../../system/pillow/index.html">Pillow</a></li>
+</ul></details>
+<details class="grp"><summary>Language runtimes</summary><ul>
+<li><a href="../../runtimes/java/index.html">Java4Shell (OpenJDK)</a></li>
+<li><a href="../../runtimes/node/index.html">Node.js</a></li>
+<li><a href="../../runtimes/php/index.html">PHP2Shell</a></li>
+<li><a href="../../runtimes/php/detect/index.html">PHP2Shell detection rules</a></li>
+<li><a href="../../runtimes/php/edge/index.html">PHP2Shell edge guards</a></li>
+<li><a href="../../runtimes/ruby/index.html">Ruby and GitLab regexp</a></li>
+</ul></details>
+<details class="grp" open><summary>Content management and web applications</summary><ul>
+<li><a href="../apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../basercms/index.html">baserCMS</a></li>
+<li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
+<li><a href="../craft/index.html">Craft CMS</a></li>
+<li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../grav/index.html">Grav</a></li>
+<li><a href="../aspnet/index.html">Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../joomla/index.html">Joomla</a></li>
+<li><a href="index.html" aria-current="page">Magento and Adobe Commerce</a></li>
+<li><a href="../nextcloud/index.html">Nextcloud Collabora</a></li>
+<li><a href="../plex/index.html">Plex Media Server</a></li>
+<li><a href="../roundcube/index.html">Roundcube</a></li>
+<li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
+<li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../wordpress-upgrade/index.html">WordPress upgrade window</a></li>
+<li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
+<li><a href="../zammad/index.html">Zammad</a></li>
+</ul></details>
+<details class="grp"><summary>Developer platforms, tools and supply chain</summary><ul>
+<li><a href="../../developer/binary-parser/index.html">binary-parser</a></li>
+<li><a href="../../developer/claude-code-vsx/index.html">Claude Code extension backdoor</a></li>
+<li><a href="../../developer/django/index.html">Django REST framework</a></li>
+<li><a href="../../developer/ghostaction/index.html">GhostAction</a></li>
+<li><a href="../../developer/gitea/index.html">Gitea</a></li>
+<li><a href="../../developer/gitlab/index.html">GitLab</a></li>
+<li><a href="../../developer/iterm2/index.html">iTerm2 (macOS)</a></li>
+<li><a href="../../developer/jenkins/index.html">Jenkins plugins</a></li>
+<li><a href="../../developer/jupyter/index.html">Jupyter and nbconvert</a></li>
+<li><a href="../../developer/laravel/index.html">Laravel TokenGuard</a></li>
+<li><a href="../../developer/litellm/index.html">LiteLLM</a></li>
+<li><a href="../../developer/nextjs/index.html">Next.js Server Actions</a></li>
+<li><a href="../../developer/openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../../developer/optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../../developer/sagemaker/index.html">SageMaker SDK</a></li>
+<li><a href="../../developer/sentry/index.html">Sentry for Next.js</a></li>
+<li><a href="../../developer/storybook/index.html">Storybook</a></li>
+</ul></details>
+<details class="grp"><summary>Active threats</summary><ul>
+<li><a href="../../threats/agentic-attacks/index.html">AI attack frameworks</a></li>
+</ul></details>
+</details></nav>
+<main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>Magento and Adobe Commerce</span></nav>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>Magento, Adobe Commerce and Mage-OS: PolyShell, <span class="nw">CVE-2026-71362</span>, StyleSmuggler and BlockStrap</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Magento and Adobe Commerce 2.4.4 to 2.4.9 and Mage-OS: unauthenticated upload to code execution (PolyShell), customer account takeover, and two CVSS 10.0 template-engine RCEs, three of them exploited and in CISA KEV; the StyleSmuggler hotfix is in no release, the October one included</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-48356</span>, <span class="nw">CVE-2026-71362</span>, <span class="nw">CVE-2026-75650</span>, <span class="nw">CVE-2026-103849</span></span></dd><dt>Script</dt><dd><div class="scr"><code>magento-check.sh</code> (<a href="../../man/psf-magento-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/web-apps/magento/magento-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/web-apps/magento/magento-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="magento-check"></a></p>
+<h2 id="magento-exploited-flaws-check-hunt-and-upload-folder-guard">Magento exploited-flaws check, hunt and upload-folder guard</h2>
+<p>Four flaws hit Magento Open Source, Adobe Commerce and Mage-OS in 2026, and three of them were attacked before most stores had patched. Each has its own fix, and one of them changes no version string, so a store can look current and still be open. The script judges each flaw separately, looks for what the attacks leave behind, and closes the folder PolyShell writes into.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Flaw</th>
+<th>What it does</th>
+<th>Exploited</th>
+<th>Fixed in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><span class="nw">CVE-2026-48356</span></strong>, PolyShell</td>
+<td>Unauthenticated file upload through the guest-cart REST API (<code>/V1/guest-carts/:cartId/items</code>). A polyglot, a valid GIF or PNG with PHP inside, lands in <code>pub/media/custom_options/quote/</code>; where the web server runs PHP from there, it is remote code execution. CVSS 9.3</td>
+<td>Since March 2026; CISA KEV 27 October 2026</td>
+<td>July 2026 releases (APSB26-73, <code>-2026-jul</code>); Mage-OS 2.2.1 and every 3.x</td>
+</tr>
+<tr>
+<td><strong><span class="nw">CVE-2026-71362</span></strong></td>
+<td>Customer account takeover without authentication (incorrect authorization). CVSS 9.1</td>
+<td>Shortly after disclosure; CISA KEV 24 September 2026</td>
+<td>August 2026 releases (APSB26-92, <code>-2026-aug</code>); Mage-OS 3.4.0</td>
+</tr>
+<tr>
+<td><strong><span class="nw">CVE-2026-75650</span></strong>, StyleSmuggler</td>
+<td>Unauthenticated remote code execution through template <code>styles</code> parameters, in two stages: PHP stored in a report or log file, then included through a GraphQL gadget chain. CVSS 10.0</td>
+<td>From 4 September 2026, three days before the fix; CISA KEV 8 September 2026</td>
+<td><strong>Only</strong> Adobe's hotfix VULN-39341 (APSB26-146, 7 September 2026); Mage-OS 3.5.0</td>
+</tr>
+<tr>
+<td><strong><span class="nw">CVE-2026-103849</span></strong>, BlockStrap</td>
+<td>A bypass of the StyleSmuggler fix through a second-pass directive in email templates. CVSS 10.0</td>
+<td>Not confirmed in the sources used here</td>
+<td>October 2026 releases (APSB26-153, <code>-2026-oct</code>); Mage-OS 3.6.0</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The October release does not include the StyleSmuggler hotfix.</strong> Sansec states that the October patch does not carry VULN-39341 and that Adobe's patch registry does not list it as a prerequisite; Adobe recommends applying both. A store on <code>2.4.8-2026-oct</code> without the hotfix is still open to StyleSmuggler.</p>
+<p>Adobe published no fix for any of the four below Adobe Commerce and Magento Open Source 2.4.4. Scandiweb backported the StyleSmuggler fix to 41 older releases (2.2.0 to 2.4.3-p3); those patches are not reviewed here.</p>
+<h2 id="what-a-version-number-can-and-cannot-show">What a version number can and cannot show</h2>
+<p>Adobe ships these fixes as full releases with a dated name (<code>2.4.9-2026-oct</code>), as isolated patches and as a hotfix, and the last two do not change the version string. The script gives a firm answer where one exists and names what to confirm where it does not:</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Install</th>
+<th>PolyShell</th>
+<th><span class="nw">CVE-2026-71362</span></th>
+<th>StyleSmuggler</th>
+<th>BlockStrap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dated release <code>-2026-jul</code> or later</td>
+<td>Fixed</td>
+<td>August or later: fixed</td>
+<td>Needs evidence of the hotfix</td>
+<td>October or later: fixed</td>
+</tr>
+<tr>
+<td>Dated release before that</td>
+<td>Exposed</td>
+<td>Exposed</td>
+<td>Needs evidence of the hotfix</td>
+<td>Exposed</td>
+</tr>
+<tr>
+<td>Any other Magento or Adobe Commerce 2.4.4 to 2.4.9 version (<code>2.4.8-p5</code>, <code>2.4.9</code>)</td>
+<td>Confirm</td>
+<td>Confirm</td>
+<td>Needs evidence of the hotfix</td>
+<td>Confirm</td>
+</tr>
+<tr>
+<td>Below 2.4.4</td>
+<td>Out of Adobe support: exposed</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Mage-OS</td>
+<td>2.2.1 or later</td>
+<td>3.4.0 or later</td>
+<td>3.5.0 or later</td>
+<td>3.6.0 or later</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sources disagree on plain <code>2.4.9</code>: Sansec reports that the May release of 2.4.9 carried the PolyShell fix, while Adobe's bulletin and the CVE record list 2.4.9 as affected and <code>2.4.9-2026-jul</code> as fixed. The script follows Adobe and asks you to confirm.</p>
+<p>For StyleSmuggler, the script looks for evidence that the hotfix was applied: <code>VULN-39341</code> in <code>composer.json</code> (a <code>cweagans/composer-patches</code> entry), <code>composer.lock</code> or <code>.magento.env.yaml</code>, a patch file in <code>m2-hotfixes/</code> or <code>patches/</code> that names it, or the <code>disrex/stylesmuggler-adobe-patches</code> package, which applies Adobe's patch through Composer. A reference is evidence, not proof; confirm with Adobe's tool:</p>
+<pre tabindex="0"><code class="language-bash">vendor/bin/magento-patches -n status | grep &quot;39341\|Status&quot;
+</code></pre>
+<p>The <code>ceymox/module-style-smuggler-shield</code> module and a CLI-only guard in the DI <code>ArrayScanner</code> are reported as community mitigations, not as the fix.</p>
+<h2 id="the-upload-folder">The upload folder</h2>
+<p>PolyShell writes into <code>pub/media/custom_options/</code> whether or not the server ever runs the file. Whether the upload becomes code execution depends on the web server: on nginx a <code>location ~ \.php$</code> that comes first, or a plain prefix rule it overrides, sends <code>/media/custom_options/.../index.php</code> to PHP-FPM. The check reads:</p>
+<ul>
+<li><strong>nginx</strong> (when nginx runs, or <code>WEB_SERVERS=nginx</code>): every configuration file under the usual folders and every absolute file they include (the store's <code>nginx.conf.sample</code> included), for a <code>location</code> naming <code>custom_options</code> that denies (<code>deny all</code>, <code>return 403</code>, <code>404</code> or <code>444</code>). A <code>^~</code> prefix wins wherever it is; a regex location must come before the first PHP regex location in its file; a plain prefix is overridden by a PHP regex location and is reported as not closing the folder. An <code>include</code> of the guard snippet counts; the snippet file on its own does not. Files that are links are not read.</li>
+<li><strong>Apache and LiteSpeed</strong> (when they run, or with no server seen): <code>pub/media/custom_options/.htaccess</code> must deny all access (<code>Require all denied</code>, or <code>Deny from all</code>), comments aside. An <code>.htaccess</code> that only turns the PHP engine off still serves the file. A link is reported, not read.</li>
+<li><strong>The folder itself:</strong> files already in it are counted, and any PHP file or file carrying PHP code is reported as a compromise.</li>
+</ul>
+<p>On a release that carries the fix, an open folder is a warning (defense in depth); on any other, it is critical.</p>
+<h2 id="quick-start">Quick start</h2>
+<pre tabindex="0"><code class="language-bash">curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/web-apps/magento/magento-check.sh
+less magento-check.sh
+chmod +x magento-check.sh
+./magento-check.sh check
+sudo ./magento-check.sh hunt
+sudo ./magento-check.sh mitigate --dry-run
+</code></pre>
+<p>By default it looks for <code>bin/magento</code> under <code>/var/www /srv /home /opt</code>. Pass directories to narrow it.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code> (default)</td>
+<td>Read-only. Finds installs, reads the distribution and version from <code>composer.lock</code> (or <code>composer.json</code> for a git checkout), judges the four flaws, looks for hotfix evidence, and reads the upload-folder rules. Also reads installs in running docker and podman containers (<code>SCAN_CONTAINERS=1</code>, the default); for those, the container's web server rules are not read. Exit <code>0</code> nothing exposed, <code>1</code> exposed or unconfirmed</td>
+</tr>
+<tr>
+<td><code>hunt</code></td>
+<td>Read-only. Looks for what the attacks leave behind (next section). Exit <code>0</code> nothing found, <code>1</code> findings or leads</td>
+</tr>
+<tr>
+<td><code>mitigate [--dry-run] [--no-nginx] [DIR ...]</code></td>
+<td>Root. Writes <code>pub/media/custom_options/.htaccess</code> where it is missing or does not deny, and the nginx guard <code>/etc/nginx/snippets/psf-magento-guard.conf</code>. Includes nothing and reloads nothing</td>
+</tr>
+<tr>
+<td><code>rollback [--dry-run]</code></td>
+<td>Root. Puts back every file <code>mitigate</code> changed and removes the files it created</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version</td>
+</tr>
+</tbody>
+</table></div>
+<p>Settings: <code>HUNT_DAYS</code> (30), <code>SCAN_CONTAINERS</code> (1), <code>WEB_SERVERS</code> (the servers to judge, <code>nginx</code>, <code>apache</code> or both; default: the running ones), <code>NGINX_DIRS</code>, <code>NGINX_SNIPPET_DIR</code> (<code>/etc/nginx/snippets</code>), <code>LOG_DIRS</code>, <code>STATE_DIR</code> (<code>/var/lib/psf-security-patches/magento-check</code>), <code>PSF_LOCK_WAIT</code> (30).</p>
+<h2 id="hunt">Hunt</h2>
+<p>Indicators come from Sansec's PolyShell and StyleSmuggler research and the disrex StyleSmuggler incident notes. Addresses rotate within days: a match is a lead, and a miss proves nothing. A finding (<code>CRIT</code>) is something a stock store does not have; a lead (<code>WARN</code>) is an attempt or a pattern worth reading.</p>
+<p><strong>In each store:</strong></p>
+<ul>
+<li>Files in the upload folder that are PHP or carry PHP code, with polyglot images named as such (Sansec's commonest drop is a <code>GIF89a</code> file called <code>780index.php</code>, the option ID before <code>index.php</code>).</li>
+<li>Any PHP file under <code>pub/media</code>, which holds none in a stock store, including the second StyleSmuggler crew's <code>pub/media/catalog/product/cache/ss_&lt;hex&gt;/sync_&lt;hex&gt;.php</code>.</li>
+<li>The <code>accesson.php</code> backdoor, which the PolyShell crew sprays into <code>assets/images/</code> folders inside every top-level folder it can write to, and any PHP in such a folder.</li>
+<li>Webshell and beacon strings in PHP outside the packages: the <code>8194460</code> beacon (<code>409723*20</code>), the two webshell password hashes, the second crew's <code>X-Cache-Token</code> value, the <code>gl_google_advisor_</code> cookie, and the stage-one labels <code>MGPROOF::</code> and <code>MGKWSIM::</code>.</li>
+<li><code>vendor/magento/framework/App/View.php</code> reading a cookie or decoding base64, which is the cookie-triggered remote include Sansec found.</li>
+<li>PHP code or StyleSmuggler markers stored in <code>var/report/</code> (stage one of the chain), PHP open tags in <code>var/log/*.log</code>, and the <code>exception.log</code> signatures: Laminas <code>ClassMapAutoloader</code> errors (one per stage-two attempt; <code>Map file provided does not exist</code> marks a failed include), <code>Requested store is not found (&lt;?</code> (the recon probe), and a GraphQL error about a <code>$guard</code> variable no Magento schema declares.</li>
+<li><code>mgproof717.txt</code>, and the gs-netcat <code>defunct</code> and <code>defunct.dat</code> files.</li>
+</ul>
+<p><strong>On the host:</strong></p>
+<ul>
+<li>A process whose name is a bracketed kernel-thread name but which runs a real program: kernel threads have no command line and belong to root, so <code>[kworker/u:8:0]</code> on a site account is the StyleSmuggler implant.</li>
+<li>A process with a system name (<code>fc-cache</code>, <code>chronyd</code>, <code>gvfsd-user</code>, <code>kworker</code>, <code>sshd</code>, <code>bash</code>) running a binary from <code>/tmp</code>, <code>/var/tmp</code>, <code>/dev/shm</code>, <code>~/.local/share/.gvfsd/</code> or <code>~/.cache/fontconfig/</code>; a <code>chronyd</code> that does not run from a system folder; an <code>sshd: &lt;user&gt;@notty</code> whose parent is PID 1 (the WraithC2 disguise).</li>
+<li>The published drop paths (<code>/tmp/.kw_*</code>, <code>/tmp/.fc-&lt;hex&gt;/fc-cache</code>, <code>/tmp/.fc_&lt;hex&gt;.lock</code>, <code>/tmp/.chrony-&lt;hex&gt;/chronyd</code>, <code>~/.local/share/.gvfsd/gvfsd-user</code>, <code>~/.cache/fontconfig/fc-cache</code>) and the php-fpm private <code>/tmp</code> drops (<code>.dbus-session-*</code>, <code>.pipewire-session-*</code>, <code>.dbus/.c2</code>, <code>.gsusr-*/defunct</code>, <code>adminer.version</code>).</li>
+<li>Cron entries for those binaries, read from the spool files themselves, because the implant writes the spool directly and leaves no syslog line.</li>
+<li>SHA-256 of every file and running binary it flags, against the published hashes.</li>
+<li>Open connections to the published command servers.</li>
+</ul>
+<p><strong>In the access logs</strong> (nginx, Apache, LiteSpeed, <code>/var/www</code> and <code>/home</code>, last <code>HUNT_DAYS</code> days, compressed files included): PHP requested from the upload folder and answered 200 (a finding), <code>accesson.php</code> or a cache shell answered 200, probes for PHP in the upload folder, addresses that posted to a guest cart and then requested the upload folder, StyleSmuggler requests (<code>styles[</code>, <code>template_styles</code>, <code>generatorClass</code>, <code>with_resolved</code>, PHP in the PayPal response query), and the published source addresses.</p>
+<p><strong>In the database</strong>, which the script does not open: the crews store skimmer loaders in CMS blocks and pages and in the HTML head setting, and Sansec found a fully patched store compromised through a rogue administrator. <code>hunt</code> prints read-only queries for <code>cms_block</code>, <code>cms_page</code>, <code>core_config_data</code> (<code>design/head/*</code>) and <code>admin_user</code>, with the published loader domains. Add your table prefix if the store uses one.</p>
+<p>If <code>hunt</code> finds anything: keep the evidence (do not reboot; <code>/proc/&lt;pid&gt;/exe</code> can be the only copy of a deleted binary), remove the cron entries before stopping the processes, and rotate the encryption key and every credential it protected, at the source: admin passwords, integration and OAuth tokens, payment gateway credentials, database credentials, SSH and deploy keys. Rotating the key alone does not undo what was already read.</p>
+<h2 id="mitigate">Mitigate</h2>
+<p><code>mitigate</code> closes the upload folder. It is a guard, not a fix: uploads still reach the disk until the July 2026 fix is in, and StyleSmuggler needs the hotfix.</p>
+<ul>
+<li><strong><code>.htaccess</code>:</strong> written in every install where it is missing or does not deny, with the PHP engine off and all access denied (<code>Require all denied</code>, and <code>Deny from all</code> for servers without <code>mod_authz_core</code>). Magento serves customer uploads through its own controller, which this does not affect. The file is written <strong>as the account that owns the folder</strong> (with <code>setpriv</code>, or <code>runuser</code>), so a link the web account plants cannot turn it into a root write elsewhere. Inside the folder nothing follows a link: the folder is opened with <code>O_NOFOLLOW</code>, a new file is created with <code>O_EXCL</code> beside the target and renamed over it, and an <code>.htaccess</code> or a <code>custom_options</code> that is a link is reported and left alone. An existing file is copied to <code>STATE_DIR</code> first, and its mode is kept. A missing <code>custom_options</code> folder is created by the owner of <code>pub/media</code>.</li>
+<li><strong>nginx snippet:</strong> <code>/etc/nginx/snippets/psf-magento-guard.conf</code> closes the upload folder and any PHP under <code>media</code> (under both <code>/media/</code> and <code>/pub/media/</code>), and closes the connection (<code>444</code>) on the StyleSmuggler query strings, raw and percent-encoded, PHP in the query string, and PHP in the <code>User-Agent</code> or <code>Store</code> header. Nothing includes it and nothing is reloaded. Add it at the top of each Magento <code>server</code> block, above every PHP location, then test and reload:</li>
+</ul>
+<pre tabindex="0"><code class="language-nginx">server {
+    include snippets/psf-magento-guard.conf;
+    # ... the store's own locations follow
+}
+</code></pre>
+<pre tabindex="0"><code class="language-bash">sudo nginx -t &amp;&amp; sudo systemctl reload nginx
+</code></pre>
+<p>The query-string rules stop the requests seen in the wild. The same parameters sent in a POST body pass them, which is why they do not replace the hotfix.</p>
+<p>On Apache, the StyleSmuggler requests can be closed with mod_rewrite in the store's virtual host (the same caveat applies):</p>
+<pre tabindex="0"><code class="language-apache">RewriteEngine On
+RewriteCond %{QUERY_STRING} (styles(\[|%5B)|template_styles|generatorClass|with_resolved|&lt;\?|%3C%3F) [NC]
+RewriteRule ^ - [F]
+RewriteCond %{HTTP:Store} &lt;\? [OR]
+RewriteCond %{HTTP_USER_AGENT} &lt;\?(php|=) [NC]
+RewriteRule ^ - [F]
+</code></pre>
+<p><code>rollback</code> restores each copied file (newest run first, so the true original comes back last) and removes the files <code>mitigate</code> created, unless a created file was changed since, which it reports and leaves for you. Then remove any <code>include</code> line you added.</p>
+<h2 id="update">Update</h2>
+<ul>
+<li><strong>Adobe Commerce and Magento Open Source 2.4.4 to 2.4.9:</strong> move to the October 2026 release for your line (<code>-2026-oct</code>), which carries the PolyShell, August and BlockStrap fixes, and apply hotfix VULN-39341 from APSB26-146 as well.</li>
+<li><strong>Mage-OS:</strong> 3.6.0 or later.</li>
+<li><strong>Below 2.4.4:</strong> no Adobe fix exists; upgrade.</li>
+<li><strong>Every environment that faces the internet</strong>, staging included.</li>
+</ul>
+<h2 id="sources">Sources</h2>
+<ul>
+<li><a href="https://sansec.io/research/magento-polyshell">Sansec: PolyShell</a>: the upload path, affected web server setups, payloads, filenames, <code>accesson.php</code>, loader domains and scanner addresses</li>
+<li><a href="https://sansec.io/research/stylesmuggler-0day">Sansec: StyleSmuggler</a>: the two stages, the implants, persistence, the second crew and the indicators</li>
+<li><a href="https://sansec.io/research/blockstrap-magento-rce">Sansec: BlockStrap</a>: including that the October patch does not carry VULN-39341</li>
+<li><a href="https://github.com/disrex-group/stylesmuggler-mitigation">disrex: StyleSmuggler mitigation notes</a>: the process check, the query-string patterns and further indicators</li>
+<li><a href="https://www.adobe.com/trust/security/products/commerce/apsb26-153.html">Adobe APSB26-153</a>; Adobe APSB26-146, APSB26-92 and APSB26-73</li>
+<li><a href="https://experienceleague.adobe.com/en/docs/commerce-knowledge-base/kb/announcements/commerce-apsb26-146">Experience League: APSB26-146 hotfix</a></li>
+<li><a href="https://github.com/mage-os/mageos-magento2/releases/tag/3.4.0">Mage-OS 3.4.0</a>, <a href="https://github.com/mage-os/mageos-magento2/releases/tag/3.5.0">3.5.0</a> and <a href="https://mage-os.org/releases/2026-03-18-mage-os-2-2-1-release/">2.2.1</a> release notes</li>
+<li><a href="https://scandiweb.com/blog/magento-security-news/">Scandiweb: Magento security news</a>: the CISA listing dates</li>
+</ul>
+<h2 id="before-you-run-it">Before you run it</h2>
+<ul>
+<li><strong>The hotfix needs evidence.</strong> No release carries VULN-39341, so a dated or current version never settles StyleSmuggler. A reference in the project files is evidence; Adobe's <code>magento-patches status</code> is the confirmation.</li>
+<li><strong>A clean hunt is not a clean store.</strong> The script does not read the database, does not see stores in other containers' file systems beyond the files it copies for <code>check</code>, and reads only the logs it can reach; run it as root, and run the printed queries.</li>
+<li><strong>The nginx reading is a static reading.</strong> It follows absolute <code>include</code> paths but not relative ones, does not evaluate <code>if</code> or <code>map</code>, and judges the order of locations within one file. <code>nginx -T</code> shows the configuration as nginx sees it.</li>
+<li><strong>The <code>.htaccess</code> needs <code>AllowOverride</code>.</strong> Apache ignores it where overrides are off; then put the same rules in the virtual host.</li>
+<li><strong>mitigate needs python3 and <code>setpriv</code> or <code>runuser</code>.</strong> It refuses to write a store folder without switching to its owner.</li>
+<li>A Mage-OS pre-release is not the release: <code>3.6.0-rc1</code> is reported with a warning.</li>
+<li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. It copies only the files it reads into a private temporary directory, never runs anything in a container beyond <code>find</code> and a file copy, and never keeps a staged link.</li>
+</ul>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../../developer/litellm/index.html">&larr; LiteLLM</a><a rel="next" href="../../servers/mysql/index.html">MySQL client programs &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#magento-exploited-flaws-check-hunt-and-upload-folder-guard">Magento exploited-flaws check, hunt and upload-folder guard</a></li><li class="l2"><a href="#what-a-version-number-can-and-cannot-show">What a version number can and cannot show</a></li><li class="l2"><a href="#the-upload-folder">The upload folder</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#hunt">Hunt</a></li><li class="l2"><a href="#mitigate">Mitigate</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
+<section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
+<div class="wrap">
+<article class="card has-partner">
+<h2 class="eco-title" id="ecosystem-title">The PrivacySafe Ecosystem</h2>
+<a class="partner-mark" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+<img src="../../assets/img/ivy-logo-horizontal-white.svg" alt="Shop at Ivy Cyber" width="328" height="73" loading="lazy" decoding="async"/>
+</a>
+<p><strong>Ivy Cyber</strong> offers PrivacySafe products and services in the USA and has partnerships with 3NSoft in Canada and Kuip Limited in the European Union. Enterprise services and consulting are available at <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">ivycyber.com</a>
+</p><p><strong>PrivacySafe Foundation</strong> is a 501(c)(3) nonprofit public charity that supports the development of the PrivacySafe applications, along with the components they rely upon: 3NWeb protocols, filesystem, documentation, and reference implementations.</p>
+<div class="pullout">
+<a class="foundation-mark" href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank"><img src="../../assets/img/logo-foundation.svg" alt="PrivacySafe Foundation" width="218" height="47" loading="lazy" decoding="async"/></a>
+<p class="pullout-text">Donations to <a href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank">PrivacySafe Foundation</a> support education, research, documentation, and public code. Purchases from <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber</a> support PrivacySafe products, services, hosting, and technical support. <strong class="pullout-lead">Together, we're building a better web.</strong></p>
+</div>
+<div class="split-actions">
+<a class="btn primary" href="https://www.zeffy.com/en-US/ticketing/cybersecurity-education-and-tech" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-heart" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="currentColor" d="M12 20.6 10.6 19.3C5.7 14.9 2.5 12 2.5 8.4 2.5 5.5 4.8 3.2 7.7 3.2c1.6 0 3.2.8 4.3 2.05C13.1 4 14.7 3.2 16.3 3.2c2.9 0 5.2 2.3 5.2 5.2 0 3.6-3.2 6.5-8.1 10.9L12 20.6Z"/> </svg>
+Donate to PrivacySafe Foundation
+</a>
+<a class="btn ghost" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+Buy PrivacySafe products &amp; services
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost" href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-code" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.6 4.8l-3.2 14.4"/> </svg>
+Browse our Source Code
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+</article>
+</div>
+</section>
+<footer>
+<div class="wrap">
+<div class="footer-community">
+<section aria-labelledby="footer-about-title" class="footer-panel footer-about">
+<h2 class="sr-only" id="footer-about-title">About PrivacySafe</h2>
+<img alt="PrivacySafe" class="footer-logo" height="192" src="../../assets/img/privacysafe-logo.svg" width="1696"/>
+<p>PrivacySafe creates a secure sandbox environment for your organization which you can tie to your domain, your authentication methods, and your access controls.</p>
+<h3>Follow Us</h3>
+<div aria-label="PrivacySafe social links" class="social-links">
+<a aria-label="PrivacySafe on Mastodon" class="social-link" href="https://privacysafe.social/@privacysafe" rel="me noopener noreferrer" target="_blank" title="Mastodon">
+<svg class="ico ico-mastodon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg>
+</a><a aria-label="PrivacySafe on Bluesky" class="social-link" href="https://bsky.app/profile/privacysafe.social" rel="me noopener noreferrer" target="_blank" title="Bluesky">
+<svg class="ico ico-bluesky" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026"/></svg>
+</a><a aria-label="PrivacySafe on Twitter X" class="social-link" href="https://x.com/GetPrivacySafe" rel="nofollow noopener noreferrer" target="_blank" title="Twitter X">
+<svg class="ico ico-x-twitter" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+</a><a aria-label="PrivacySafe on LinkedIn" class="social-link" href="https://www.linkedin.com/company/privacysafe-app" rel="noopener noreferrer" target="_blank" title="LinkedIn">
+<svg class="ico ico-linkedin" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.200 3.600a1.700 1.700 0 1 0 0 3.400 1.700 1.700 0 0 0 0-3.400zM5.600 10.400v7.800h3.200v-7.800H5.600zm4.800 0v7.800h3.200v-4c0-1.100.4-1.700 1.300-1.700s1.300.6 1.300 1.700v4h3.200v-4.400c0-2.300-1.100-3.600-3.200-3.600-1.200 0-2.200.5-2.700 1.300v-1.100h-3.100z"/></svg>
+</a><a aria-label="PrivacySafe on YouTube" class="social-link" href="https://www.youtube.com/@privacysafe" rel="noopener noreferrer" target="_blank" title="YouTube">
+<svg class="ico ico-youtube" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+</a><a aria-label="PrivacySafe on Instagram" class="social-link" href="https://www.instagram.com/getprivacysafe/" rel="noopener noreferrer" target="_blank" title="Instagram">
+<svg class="ico ico-instagram" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>
+</a>
+<!--<a aria-label="Signal @ivycyber.01" class="social-link" href="https://signal.me/#eu/nmRqQrmMcXaq6cyfP8ckVaf-LniNZwhc5VatIEgC3y39lIYFNBBFF5NvpFurg6UA" rel="noopener noreferrer" target="_blank" title="Signal">
+<span aria-hidden="true" class="ico ico-signal"></span>
+</a>-->
+<!--<a aria-label="Ivy Cyber on Facebook" class="social-link" href="https://www.facebook.com/ivycyber" rel="noopener noreferrer" target="_blank" title="Facebook">
+<span aria-hidden="true" class="ico ico-facebook"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on TikTok" class="social-link" href="https://www.tiktok.com/@bitsontape" rel="noopener noreferrer" target="_blank" title="TikTok">
+<span aria-hidden="true" class="ico ico-tiktok"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Telegram" class="social-link" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank" title="Telegram">
+<span aria-hidden="true" class="ico ico-telegram"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Substack" class="social-link" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank" title="Substack">
+<span aria-hidden="true" class="ico ico-substack"></span>
+</a>--></div>
+</section>
+<section aria-labelledby="newsletter-title" class="footer-panel newsletter-panel">
+<div class="card-footnote">
+<a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank"><img class="newsletter-avatar" src="../../assets/img/bitsontape-avatar.png" alt="Bits On Tape logo: two reels of open-reel tape arranged as a heart" width="200" height="200" loading="lazy" decoding="async"/></a>
+<h2 id="newsletter-title">Subscribe to Our Newsletter</h2>
+<p><a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">Bits On Tape</a> is our newsletter: a replay of science and technology stories by cyber experts, covering cybersecurity, privacy, free software, AI, and digital culture. Get the latest updates on our PrivacySafe ecosystem as we continue building and launching.</p>
+<div class="card-footnote-actions">
+<a class="btn primary small" href="https://psafe.ly/WaaEkp" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-envelope" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+Subscribe free
+</a>
+<a class="btn ghost small" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">
+Read past issues
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost small" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-telegram" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M21.6 3.2 18.4 20c-.24 1.18-.88 1.47-1.79.91l-4.88-3.6-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.97 9.05-8.18c.39-.35-.09-.55-.61-.2L6.01 13.74 1.2 12.24c-1.05-.33-1.07-1.05.22-1.55L20.2 3.45c.87-.32 1.63.2 1.4-.25Z"></path></svg>
+Join Telegram group
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+<p class="newsletter-note">We hate spam as much as you do and comply with CAN-SPAM regulation.</p>
+</div>
+</section>
+</div>
+<div class="footer-inner">
+<nav aria-label="Footer links" class="footer-links">
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+<a href="https://ivycyber.com/security-policy/" rel="nofollow noopener noreferrer" target="_blank">Security &amp; Bug Bounty</a>
+<a href="https://ivycyber.com/privacy-policy/" rel="nofollow noopener noreferrer" target="_blank">Privacy Policy</a>
+<a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
+<a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
+</nav>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="../../weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+</div>
+</div>
+</footer>
+<script src="../../assets/site.js" defer></script></body>
+</html>

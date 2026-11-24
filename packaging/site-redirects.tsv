@@ -1,0 +1,64 @@
+# Pages of the documentation site that moved, so that an address published before the move keeps
+# working. One line per page: the old path and the new path, separated by a tab, both relative to
+# the site root (docs/security-patches/ on privacysafe.app). gen-site.py --theme privacysafe-app
+# writes a page at each old path that forwards to the new one (meta refresh, noindex, canonical
+# address of the new page). 26.11.23 moved every tool page into its category folder.
+apache/index.html	servers/apache/index.html
+apt/index.html	system/apt/index.html
+basercms/index.html	web-apps/basercms/index.html
+bind/index.html	servers/bind/index.html
+brotli/index.html	system/brotli/index.html
+btcpayserver/index.html	web-apps/btcpayserver/index.html
+claude-code-vsx/index.html	developer/claude-code-vsx/index.html
+couchdb/index.html	servers/couchdb/index.html
+craft/index.html	web-apps/craft/index.html
+curl/index.html	system/curl/index.html
+django/index.html	developer/django/index.html
+drupal/index.html	web-apps/drupal/index.html
+etherpad/index.html	web-apps/etherpad/index.html
+expat/index.html	system/expat/index.html
+ghostaction/index.html	developer/ghostaction/index.html
+gitea/index.html	developer/gitea/index.html
+gitlab/index.html	developer/gitlab/index.html
+grav/index.html	web-apps/grav/index.html
+haproxy/index.html	servers/haproxy/index.html
+heif/index.html	system/heif/index.html
+incus/index.html	servers/incus/index.html
+jenkins/index.html	developer/jenkins/index.html
+joomla/index.html	web-apps/joomla/index.html
+jupyter/index.html	developer/jupyter/index.html
+laravel/index.html	developer/laravel/index.html
+linux-kernel/index.html	system/linux-kernel/index.html
+litellm/index.html	developer/litellm/index.html
+magento/index.html	web-apps/magento/index.html
+mysql/index.html	servers/mysql/index.html
+nextcloud/index.html	web-apps/nextcloud/index.html
+nextjs/index.html	developer/nextjs/index.html
+nginx-ui/index.html	servers/nginx-ui/index.html
+nginx/index.html	servers/nginx/index.html
+node/index.html	runtimes/node/index.html
+openapi/index.html	developer/openapi/index.html
+openssh-musl/index.html	system/openssh-musl/index.html
+openssl/index.html	system/openssl/index.html
+optimizely/index.html	developer/optimizely/index.html
+php/detect/index.html	runtimes/php/detect/index.html
+php/edge/index.html	runtimes/php/edge/index.html
+php/index.html	runtimes/php/index.html
+pillow/index.html	system/pillow/index.html
+pki/index.html	system/pki/index.html
+plex/index.html	web-apps/plex/index.html
+pulsar/index.html	servers/pulsar/index.html
+roundcube/index.html	web-apps/roundcube/index.html
+rsyslog/index.html	servers/rsyslog/index.html
+ruby/index.html	runtimes/ruby/index.html
+sagemaker/index.html	developer/sagemaker/index.html
+sentry/index.html	developer/sentry/index.html
+storybook/index.html	developer/storybook/index.html
+tomcat/index.html	servers/tomcat/index.html
+trafficserver/index.html	servers/trafficserver/index.html
+vsftpd/index.html	servers/vsftpd/index.html
+wordpress-pt/index.html	web-apps/wordpress-pt/index.html
+wordpress-upgrade/index.html	web-apps/wordpress-upgrade/index.html
+wordpress/index.html	web-apps/wordpress/index.html
+yootheme/index.html	web-apps/yootheme/index.html
+zammad/index.html	web-apps/zammad/index.html

@@ -18,7 +18,7 @@ $ /opt/psf-security-patches/rhsa/rhsa.py verify --rpm
 $ /opt/psf-security-patches/rhsa/rhsa.py find CVE-2026-98432 --stream 9.6
 ```
 
-The index that comes with the package covers the CVEs the tools cover, for Red Hat's list of 2026-04-01 to 2026-11-03. For a later list, or for every CVE in it, download the list and check against it directly:
+The index that comes with the package covers the CVEs the tools cover, for Red Hat's list of 2026-04-01 to 2026-11-23. For a later list, or for every CVE in it, download the list and check against it directly:
 
 ```
 $ /opt/psf-security-patches/rhsa/rhsa.py fetch --after 2026-04-01 --out /var/tmp/rhsa.json
@@ -31,7 +31,7 @@ $ /opt/psf-security-patches/rhsa/rhsa.py verify --rpm --list /var/tmp/rhsa.json
 |---|---|
 | `rhsa.py` | The tool. `rhsa.py --help` and `rhsa.py COMMAND --help` list every option. |
 | `placement.json` | Which advisories go into which README, and why some READMEs are left out. Edit this, not the READMEs. |
-| `data/rhsa-index.json` | The index the tool works from: the advisories for the CVEs the READMEs name, built from Red Hat's list of 2026-04-01 to 2026-11-03. |
+| `data/rhsa-index.json` | The index the tool works from: the advisories for the CVEs the READMEs name, built from Red Hat's list of 2026-04-01 to 2026-11-23. |
 | `README.md` | This page. |
 
 The tests are `internal/tests/rhsa_test.sh.txt` in the big zip of the release (they are not in the repository).
@@ -83,7 +83,9 @@ A verdict is a fact about the release. Whether the flaw can be reached on your h
 
 ## Refresh the data
 
-`rhsa.py fetch --after 2026-11-03 --out LIST.json --merge LIST.json` downloads Red Hat's list from its Security Data API and adds it to an existing one; `rhsa.py find CVE --live` asks the API about one CVE. They are the only commands that use the network. They expect the `cvrf.json` endpoint of the Security Data API (parameters `after`, `before`, `cve`, `per_page` and `page`; fields `RHSA`, `severity`, `released_on`, `CVEs` and `released_packages`), and `--url` points them at another server.
+`rhsa.py fetch --after 2026-11-23 --out LIST.json --merge LIST.json` downloads Red Hat's list from its Security Data API and adds it to an existing one; `rhsa.py find CVE --live` asks the API about one CVE. They are the only commands that use the network. They read the CSAF index of the Security Data API, `https://access.redhat.com/hydra/rest/securitydata/csaf.json` (parameters `after`, `before`, `cve`, `per_page` and `page`; fields `RHSA`, `severity`, `released_on`, `released_packages` and the CVE list), and `--url` points them at another server. Red Hat retired the CVRF index, `cvrf.json`, which `rhsa.py` 1.0.0 used: it now answers 404. They ask for an uncompressed answer and decompress one that comes gzip-compressed anyway. If the index rows name no CVEs, `fetch` asks the CVE index for each advisory (`cve.json?advisory=RHSA-…`, field `CVE`), as Red Hat's own example script does; a full list then takes one request per advisory, several thousand for a year. If that names no CVEs either, it stops instead of writing an empty list.
+
+`rhsa.py fetch --by-cve --repo DIR --after 2026-04-01 --out LIST.json` builds the same list another way, CVE by CVE: for each CVE the READMEs under `DIR` and `placement.json` name (add more with `--cve`), Red Hat's CVE record (`/cve/CVE-….json`, its `affected_release` entries) names the advisories that fix it, and each advisory's CSAF document (`/csaf/RHSA-….json`) gives its date (`document.tracking.initial_release_date`), severity (`document.aggregate_severity`), CVEs and packages, the source and binary packages and container images of its product tree. It reads only the documented CVE record and the CSAF standard, and asks a few hundred small questions instead of downloading every advisory. An advisory with no CSAF document is kept from what the CVE records say, without a severity. The index built from it covers only the CVEs it was asked about, which is all `index` and `docs` need; `verify --list` with such a list knows only those CVEs.
 
 Red Hat's list comes as a CSV or a JSON file with these columns: `Release Date`, `RHSA`, `Severity`, `Synopsis`, `CVE Count`, `CVEs`, `Packages`, `Advisory URL`, `CSAF URL`. The list of advisory and CVE pairs is optional: the CVEs are read from the `CVEs` column, and a pairs file is only compared with them (the tool says whether it agrees).
 
@@ -101,8 +103,8 @@ Streams and packages are read from package names, because Red Hat's list has no 
 ## The index in numbers
 
 ```
-list: 7577 advisories for 5662 CVEs, 2026-04-01 to 2026-11-03 (Red Hat security advisories (RHSA), redhat_rhsa_2026-04-01_to_2026-11-03.csv)
-index: 396 advisories for 37 CVEs; severity {'important': 351, 'critical': 41, 'moderate': 4}
+list: 8833 advisories for 6641 CVEs, 2026-04-01 to 2026-11-23 (Red Hat security advisories (RHSA), redhat_rhsa_2026-04-01_to_2026-11-23.json)
+index: 663 advisories for 78 CVEs; severity {'important': 502, 'critical': 149, 'moderate': 12}
 ```
 
 ---

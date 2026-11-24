@@ -72,34 +72,38 @@ SITE = "PrivacySafe Security Patches"
 
 # Kinds of software, in the order a visitor looks for them.
 CATEGORIES = [
-    ("Servers, proxies and network services", "Web servers, proxies, name servers, FTP, logging, databases and container hosts.",
-     ["nginx", "nginx-ui", "apache", "haproxy", "tomcat", "trafficserver", "bind", "vsftpd", "rsyslog", "couchdb", "mysql", "pulsar", "incus"]),
-    ("Operating system, libraries and runtimes", "The kernel, system libraries, language runtimes and the certificate store.",
-     ["linux-kernel", "apt", "openssh-musl", "openssl", "curl", "expat", "brotli", "heif", "pillow", "node", "php", "php/detect", "php/edge", "ruby", "pki"]),
+    ("Servers, proxies and network services", "Web and mail servers, proxies, databases, directory and management servers.",
+     ["servers/nginx", "servers/nginx-ui", "servers/apache", "servers/haproxy", "servers/tomcat", "servers/trafficserver", "servers/bind", "servers/vsftpd", "servers/rsyslog", "servers/couchdb", "servers/mysql", "servers/pulsar", "servers/incus", "servers/vmware", "servers/n-central"]),
+    ("Operating system and libraries", "The kernel, the package manager, OpenSSH, TLS and the libraries applications load.",
+     ["system/linux-kernel", "system/apt", "system/openssh-musl", "system/openssl", "system/curl", "system/expat", "system/brotli", "system/heif", "system/pillow", "system/pam-mysql", "system/pki", "system/ghostscript"]),
+    ("Language runtimes", "PHP, Node.js, Ruby and Java, and the flaws in them.",
+     ["runtimes/node", "runtimes/php", "runtimes/ruby", "runtimes/java", "runtimes/php/detect", "runtimes/php/edge"]),
     ("Content management and web applications", "WordPress, Joomla, Drupal and the other sites and services you host.",
-     ["wordpress", "wordpress-pt", "wordpress-upgrade", "joomla", "drupal", "grav", "craft", "basercms", "magento", "yootheme", "nextcloud", "roundcube", "zammad", "plex", "btcpayserver", "etherpad", "apache-roller", "ghostscript"]),
+     ["web-apps/wordpress", "web-apps/wordpress-pt", "web-apps/wordpress-upgrade", "web-apps/joomla", "web-apps/drupal", "web-apps/grav", "web-apps/craft", "web-apps/basercms", "web-apps/magento", "web-apps/yootheme", "web-apps/nextcloud", "web-apps/roundcube", "web-apps/zammad", "web-apps/plex", "web-apps/btcpayserver", "web-apps/etherpad", "web-apps/apache-roller", "web-apps/aspnet"]),
     ("Developer platforms, tools and supply chain", "Developer machines, build and CI systems, frameworks and packages.",
-     ["claude-code-vsx", "ghostaction", "litellm", "openapi", "storybook", "jupyter", "sentry", "nextjs", "laravel", "django", "sagemaker", "gitea", "gitlab", "jenkins", "optimizely"]),
+     ["developer/claude-code-vsx", "developer/ghostaction", "developer/litellm", "developer/openapi", "developer/binary-parser", "developer/storybook", "developer/jupyter", "developer/sentry", "developer/nextjs", "developer/laravel", "developer/django", "developer/sagemaker", "developer/gitea", "developer/gitlab", "developer/jenkins", "developer/optimizely", "developer/iterm2"]),
+    ("Active threats", "Attack tools and campaigns that are not a single flaw: what they leave behind, and how to find them.",
+     ["threats/agentic-attacks"]),
 ]
 NAMES = {  # short names for the menu and the cards
-    "wordpress": "WordPress core and plugins", "linux-kernel": "Linux kernel", "drupal": "Drupal", "grav": "Grav",
-    "brotli": "Brotli", "ruby": "Ruby and GitLab regexp", "gitlab": "GitLab", "django": "Django REST framework",
-    "jenkins": "Jenkins plugins", "joomla": "Joomla", "nextcloud": "Nextcloud Collabora", "php": "PHP2Shell",
-    "php/detect": "PHP2Shell detection rules", "php/edge": "PHP2Shell edge guards", "heif": "libheif", "expat": "libexpat",
-    "pulsar": "Apache Pulsar", "sentry": "Sentry for Next.js", "magento": "Magento and Adobe Commerce",
-    "plex": "Plex Media Server", "pki": "eMudhra CA compromise", "haproxy": "HAProxy", "node": "Node.js", "nginx": "nginx",
-    "curl": "curl", "apt": "APT", "openssl": "OpenSSL", "roundcube": "Roundcube", "trafficserver": "Apache Traffic Server",
-    "wordpress-pt": "WordPress path traversal", "wordpress-upgrade": "WordPress upgrade window", "bind": "BIND 9", "couchdb": "CouchDB", "craft": "Craft CMS",
-    "basercms": "baserCMS", "claude-code-vsx": "Claude Code extension backdoor", "sagemaker": "SageMaker SDK",
-    "nextjs": "Next.js Server Actions", "jupyter": "Jupyter and nbconvert", "yootheme": "YOOtheme Pro",
-    "incus": "Incus", "storybook": "Storybook", "zammad": "Zammad", "rsyslog": "rsyslog", "vsftpd": "vsftpd",
-    "tomcat": "Apache Tomcat", "gitea": "Gitea", "ghostaction": "GhostAction", "litellm": "LiteLLM", "pillow": "Pillow",
-    "apache": "Apache HTTP Server mod_http2", "mysql": "MySQL client programs", "etherpad": "Etherpad static path traversal", "apache-roller": "Apache Roller XML-RPC deserialization", "ghostscript": "Ghostscript Upload2Shell sandbox escape",
-    "openapi": "openapi-typescript-codegen", "laravel": "Laravel TokenGuard", "nginx-ui": "nginx-ui", "btcpayserver": "BTCPay Server",
-    "openssh-musl": "OpenSSH musl password bypass",
-    "optimizely": "Optimizely OPTIMJACK supply-chain compromise",
+    "web-apps/wordpress": "WordPress core and plugins", "system/linux-kernel": "Linux kernel", "web-apps/drupal": "Drupal", "web-apps/grav": "Grav",
+    "system/brotli": "Brotli", "runtimes/ruby": "Ruby and GitLab regexp", "developer/gitlab": "GitLab", "developer/django": "Django REST framework",
+    "developer/jenkins": "Jenkins plugins", "web-apps/joomla": "Joomla", "web-apps/nextcloud": "Nextcloud Collabora", "runtimes/php": "PHP2Shell",
+    "runtimes/php/detect": "PHP2Shell detection rules", "runtimes/php/edge": "PHP2Shell edge guards", "system/heif": "libheif", "system/expat": "libexpat",
+    "servers/pulsar": "Apache Pulsar", "developer/sentry": "Sentry for Next.js", "web-apps/magento": "Magento and Adobe Commerce",
+    "web-apps/plex": "Plex Media Server", "system/pki": "eMudhra CA compromise", "servers/haproxy": "HAProxy", "runtimes/node": "Node.js", "servers/nginx": "nginx",
+    "system/curl": "curl", "system/apt": "APT", "system/openssl": "OpenSSL", "web-apps/roundcube": "Roundcube", "servers/trafficserver": "Apache Traffic Server",
+    "web-apps/wordpress-pt": "WordPress path traversal", "web-apps/wordpress-upgrade": "WordPress upgrade window", "servers/bind": "BIND 9", "servers/couchdb": "CouchDB", "web-apps/craft": "Craft CMS",
+    "web-apps/basercms": "baserCMS", "developer/claude-code-vsx": "Claude Code extension backdoor", "developer/sagemaker": "SageMaker SDK",
+    "developer/nextjs": "Next.js Server Actions", "developer/jupyter": "Jupyter and nbconvert", "web-apps/yootheme": "YOOtheme Pro",
+    "servers/incus": "Incus", "developer/storybook": "Storybook", "web-apps/zammad": "Zammad", "servers/rsyslog": "rsyslog", "servers/vsftpd": "vsftpd",
+    "servers/tomcat": "Apache Tomcat", "developer/gitea": "Gitea", "developer/ghostaction": "GhostAction", "developer/litellm": "LiteLLM", "system/pillow": "Pillow",
+    "servers/apache": "Apache HTTP Server mod_http2", "servers/mysql": "MySQL client programs", "web-apps/etherpad": "Etherpad static path traversal", "web-apps/apache-roller": "Apache Roller XML-RPC deserialization", "system/ghostscript": "Ghostscript Upload2Shell sandbox escape",
+    "developer/openapi": "openapi-typescript-codegen", "developer/binary-parser": "binary-parser", "web-apps/aspnet": "Idunno.AntiCsrf on IIS and Mono", "servers/vmware": "VMware vCenter", "servers/n-central": "N-central and Apache Axis", "runtimes/java": "Java4Shell (OpenJDK)", "system/pam-mysql": "pam-mysql", "developer/iterm2": "iTerm2 (macOS)", "threats/agentic-attacks": "AI attack frameworks", "developer/laravel": "Laravel TokenGuard", "servers/nginx-ui": "nginx-ui", "web-apps/btcpayserver": "BTCPay Server",
+    "system/openssh-musl": "OpenSSH musl password bypass",
+    "developer/optimizely": "Optimizely OPTIMJACK supply-chain compromise",
 }
-RELATED = [["php", "php/detect", "php/edge"], ["wordpress", "wordpress-pt", "wordpress-upgrade"], ["node", "brotli"], ["ruby", "gitlab"], ["nextjs", "sentry"], ["grav", "craft"]]
+RELATED = [["runtimes/php", "runtimes/php/detect", "runtimes/php/edge"], ["web-apps/wordpress", "web-apps/wordpress-pt", "web-apps/wordpress-upgrade"], ["runtimes/node", "system/brotli"], ["runtimes/ruby", "developer/gitlab"], ["developer/nextjs", "developer/sentry"], ["web-apps/grav", "web-apps/craft"]]
 FACT_KEYS = [("Fixed", "The fix"), ("Move to", "The fix"), ("Remedy", "The fix"), ("Severity", "Severity"), ("Exploited", "Exploited")]
 PROTECT_WORDS = re.compile(r"mitigat|workaround|protect|rollback|guard|block|rule|hardening|deactivat|clean", re.I)
 SYNONYMS = {  # words people type that the page itself does not use; added to the search index only
@@ -107,13 +111,13 @@ SYNONYMS = {  # words people type that the page itself does not use; added to th
     "install.html": "checksum checksums sha256 verify download apt dnf deb rpm package uninstall remove removal upgrade",
     "how-it-works.html": "docker podman containers exit code exit codes dry run dry-run rollback mitigate hunt check settings environment variable state backups root",
     "cves.html": "cve number identifier vulnerability",
-    "wordpress-upgrade/index.html": "wordpress core update upgrade staging wp-config race condition rce wp-content upgrade",
-    "apt/index.html": "debian ubuntu package manager apt-get dpkg updates mirror proxy retries",
-    "openssh-musl/index.html": "ssh sshd musl crypt star asterisk password alpine openwrt buildroot yocto locked account no password login bypass usepam pam match block",
+    "web-apps/wordpress-upgrade/index.html": "wordpress core update upgrade staging wp-config race condition rce wp-content upgrade",
+    "system/apt/index.html": "debian ubuntu package manager apt-get dpkg updates mirror proxy retries",
+    "system/openssh-musl/index.html": "ssh sshd musl crypt star asterisk password alpine openwrt buildroot yocto locked account no password login bypass usepam pam match block",
     "glossary.html": "meaning means definition what is explained terms abbreviation acronym kev cwe rce xss ssrf dos lpe eol",
-    "optimizely/index.html": "optimjack magecart javascript injection project javascript snippet cdn supply chain crypto clipper card skimmer coruna darksword ios exploit csp content security policy",
-    "nginx/index.html": "nginx2root nginx2shell http2 http3 quic flow control window update rst stream sctp kernel root escalation docker container escape xint wiz rapid7 ikotas metnir mail proxy auth_http resolver mirror njs session tickets aio ssi",
-    "linux-kernel/index.html": "kvm guest-to-host escape nested virtualization svm amd vmcb nested page table ncr3 use-after-free terra security oren yomtov digitalocean hypervisor memory read write ebtables snat mptcp quartet module blocker",
+    "developer/optimizely/index.html": "optimjack magecart javascript injection project javascript snippet cdn supply chain crypto clipper card skimmer coruna darksword ios exploit csp content security policy",
+    "servers/nginx/index.html": "nginx2root nginx2shell http2 http3 quic flow control window update rst stream sctp kernel root escalation docker container escape xint wiz rapid7 ikotas metnir mail proxy auth_http resolver mirror njs session tickets aio ssi",
+    "system/linux-kernel/index.html": "kvm guest-to-host escape nested virtualization svm amd vmcb nested page table ncr3 use-after-free terra security oren yomtov digitalocean hypervisor memory read write ebtables snat mptcp quartet module blocker",
 }
 HUBS = {"index.html", "tools.html", "cves.html", "man/index.html", "changelog.html", "about.html"}   # long lists that mention everything
 READONLY = {"check", "hunt", "scan", "audit", "version", "keys", "verify", "status", "list", "report", "csp", "rules"}
@@ -819,6 +823,30 @@ intro = ('<h1>Manual pages</h1><p>Every script, and the Red Hat advisory checker
          '<div class="table-wrap"><table class="tools-table"><thead><tr><th>Page</th><th>What it covers</th></tr></thead><tbody>')
 intro += "".join(f'<tr><td><a href="{n}.html">{esc(n)}(8)</a></td><td>{esc(t)}</td></tr>' for n, t in rows_m) + "</tbody></table></div>"
 add("man/index.html", "Manual pages", intro, desc="Manual pages for every PrivacySafe security script.", wide=True)
+
+# Moved pages (packaging/site-redirects.tsv): on privacysafe.app, a page at each old address forwards to the new
+# one, so links published before a move keep working. Not search entries and not in the sitemap; the offline copy
+# has no old addresses to keep and gets none.
+REDIRECTS = []
+for _line in read("packaging/site-redirects.tsv").splitlines():
+    if _line.strip() and not _line.startswith("#"):
+        _old, _new = _line.split("\t"); REDIRECTS.append((_old.strip(), _new.strip()))
+if APP:
+    _titles = {p["url"]: p["title"] for p in pages}
+    for _old, _new in REDIRECTS:
+        if os.path.exists(os.path.join(OUT, _old)): sys.exit(f"site-redirects.tsv: {_old} would replace a page this build wrote")
+        if not os.path.exists(os.path.join(OUT, _new)): sys.exit(f"site-redirects.tsv: {_old} points to {_new}, which this build did not write")
+        _rel = posixpath.relpath(_new, posixpath.dirname(_old) or ".")
+        if _rel.endswith("index.html"): _rel = _rel[:-len("index.html")] or "./"
+        _t = _titles.get(_new, "the new page")
+        _body = (f'<h1>This page has moved</h1><p>The page for <a href="{esc(_rel)}">{esc(_t)}</a> now sits in its category folder. '
+                 f'Your browser goes there on its own; if it does not, follow the link, and update any bookmark or link that brought you here.</p>')
+        _h = page_html(_old, "Page moved", _body, desc=f"This page moved: {_t}.", crumb="Page moved")
+        _h = _h.replace(canon(_old), canon(_new))
+        _meta = f'<meta http-equiv="refresh" content="0; url={esc(canon(_new))}"/><meta name="robots" content="noindex"/>'
+        _at = '<meta charset="utf-8"/>' if '<meta charset="utf-8"/>' in _h else '<meta charset="utf-8">'
+        if _at not in _h: sys.exit(f"redirect page {_old}: no charset meta to place the refresh after")
+        write(_old, _h.replace(_at, _at + _meta, 1))
 
 _404 = None if APP else page_html("404.html", "Page not found", '<h1>Page not found</h1><p>That page is not here. Try the <a href="index.html">home page</a>, the <a href="tools.html">list of tools</a>, the <a href="cves.html">CVE index</a> or the search box above.</p>')
 if BASE_PATH and _404: _404 = _404.replace("<head>", f'<head><base href="{esc(BASE_PATH)}">', 1)

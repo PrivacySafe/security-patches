@@ -15,6 +15,12 @@ applies to everything in this repository.
 See LICENSE for the full CC0 1.0 legal code. Third-party components retain
 their original copyright notices and licenses.
 
+One file carries a different notice: threats/agentic-attacks/indicators.tsv,
+a list of indicators of compromise. Most of its rows come from the
+agentic-attack-detections project, Copyright (c) 2026 ThreatDefence Pty Ltd
+and contributors, under the MIT license; the file keeps that notice in its
+header. The script that reads it is CC0 like the rest of this repository.
+
 CC0 does not waive trademark or patent rights. PrivacySafe(R) and 3NWeb(R)
 are registered trademarks. PrivacySafe Foundation(TM) and Ivy Cyber(TM) are
 pending trademarks.

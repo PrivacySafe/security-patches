@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
+<title>Apache Roller security releases | PrivacySafe Security Patches</title><meta name="description" content="Roller 4.0.0 to 6.1.5: unauthenticated deserialization RCE, exploited in the wild, CISA KEV; the admin-UI XML-RPC toggle does not gate it">
+<link rel="jslicense" href="../../weblabels.html"><link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
+<body class="docs">
+<a class="skip-link" href="#top">Skip to main content</a>
+<header class="topbar">
+<div aria-label="Site navigation" class="wrap nav">
+<a aria-label="PrivacySafe home" class="brand header-brand" href="https://privacysafe.app/">
+<img alt="PrivacySafe" class="brand-logo" height="192" src="../../assets/img/privacysafe-logo.svg" width="1696"/>
+</a>
+<nav aria-label="Primary" class="navlinks">
+<a href="https://privacysafe.app/#download">Download</a>
+<a href="https://privacysafe.app/#apps">Apps</a>
+<a href="https://privacysafe.app/#identity">Identity</a>
+<a href="https://privacysafe.app/#trust">Trust</a>
+<a href="https://privacysafe.app/docs/" rel="noopener noreferrer" target="_blank">Docs</a>
+<a href="https://privacysafe.social" rel="noopener noreferrer" target="_blank">Social</a>
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+</nav>
+<div class="nav-actions">
+<a class="btn soft" href="https://privacysafe.app/#apps">Learn More</a>
+<a class="btn primary" href="https://privacysafe.app/#download">Get PrivacySafe</a>
+<a aria-label="Download" class="btn hamb" href="https://privacysafe.app/#download">
+<svg class="ico ico-download" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.900 2.800h2.200v9.100l3.300-3.300 1.600 1.600L12 16.100 6 10.200l1.600-1.600 3.300 3.300V2.800zM4 18.400h16v2.200H4v-2.200z"/></svg>
+</a>
+</div>
+</div>
+</header>
+<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul><li><a href="../../index.html">Home</a></li><li><a href="../../tools.html" aria-current="page">Tools</a></li><li><a href="../../cves.html">CVEs</a></li><li><a href="../../how-it-works.html">How it works</a></li><li><a href="../../install.html">Install</a></li><li><a href="../../man/index.html">Manual pages</a></li><li><a href="https://privacysafe.app/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online <svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg></a></li></ul></div></nav>
+<div class="doc-page"><div class="wrap doc-layout"><nav class="docs-side" aria-label="Security Patches"><div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div><details class="side-box" open><summary>Menu</summary><ul class="start">
+<li><a href="../../index.html">Home</a></li>
+<li><a href="../../how-it-works.html">How the tools work</a></li>
+<li><a href="../../glossary.html">Glossary</a></li>
+<li><a href="../../install.html">Install and update</a></li>
+<li><a href="../../tools.html">All tools</a></li>
+<li><a href="../../cves.html">Find a CVE</a></li>
+<li><a href="../../man/index.html">Manual pages</a></li>
+<li><a href="../../changelog.html">Changelog</a></li>
+<li><a href="../../security.html">Security policy</a></li>
+<li><a href="../../about.html">About and support</a></li>
+</ul>
+<details class="grp" open><summary>Newest: 2 to 23 November 2026</summary><ul>
+<li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
+<li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
+<li><a href="../aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../../runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
+<li><a href="../../system/pam-mysql/index.html">23 Oct: pam-mysql</a></li>
+<li><a href="../../threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
+<li><a href="../../developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
+<li><a href="../../developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
+<li><a href="index.html" aria-current="page">22 Oct: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../../system/ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
+<li><a href="../../system/linux-kernel/index.html">20 Oct: Linux kernel</a></li>
+<li><a href="../../servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
+<li><a href="../../runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
+<li><a href="../../servers/nginx/index.html">18 Oct: nginx</a></li>
+<li><a href="../../developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../../system/openssh-musl/index.html">5 Oct: OpenSSH musl password bypass</a></li>
+<li><a href="../wordpress-upgrade/index.html">4 Oct: WordPress upgrade window</a></li>
+<li><a href="../../system/apt/index.html">4 Oct: APT</a></li>
+<li><a href="../../system/pki/index.html">2 Oct: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+</ul></details>
+<details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="../../servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/pulsar/index.html">Apache Pulsar</a></li>
+<li><a href="../../servers/tomcat/index.html">Apache Tomcat</a></li>
+<li><a href="../../servers/trafficserver/index.html">Apache Traffic Server</a></li>
+<li><a href="../../servers/bind/index.html">BIND 9</a></li>
+<li><a href="../../servers/couchdb/index.html">CouchDB</a></li>
+<li><a href="../../servers/haproxy/index.html">HAProxy</a></li>
+<li><a href="../../servers/incus/index.html">Incus</a></li>
+<li><a href="../../servers/mysql/index.html">MySQL client programs</a></li>
+<li><a href="../../servers/n-central/index.html">N-central and Apache Axis</a></li>
+<li><a href="../../servers/nginx/index.html">nginx</a></li>
+<li><a href="../../servers/nginx-ui/index.html">nginx-ui</a></li>
+<li><a href="../../servers/rsyslog/index.html">rsyslog</a></li>
+<li><a href="../../servers/vmware/index.html">VMware vCenter</a></li>
+<li><a href="../../servers/vsftpd/index.html">vsftpd</a></li>
+</ul></details>
+<details class="grp"><summary>Operating system and libraries</summary><ul>
+<li><a href="../../system/apt/index.html">APT</a></li>
+<li><a href="../../system/brotli/index.html">Brotli</a></li>
+<li><a href="../../system/curl/index.html">curl</a></li>
+<li><a href="../../system/pki/index.html">eMudhra CA compromise</a></li>
+<li><a href="../../system/ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../../system/expat/index.html">libexpat</a></li>
+<li><a href="../../system/heif/index.html">libheif</a></li>
+<li><a href="../../system/linux-kernel/index.html">Linux kernel</a></li>
+<li><a href="../../system/openssh-musl/index.html">OpenSSH musl password bypass</a></li>
+<li><a href="../../system/openssl/index.html">OpenSSL</a></li>
+<li><a href="../../system/pam-mysql/index.html">pam-mysql</a></li>
+<li><a href="../../system/pillow/index.html">Pillow</a></li>
+</ul></details>
+<details class="grp"><summary>Language runtimes</summary><ul>
+<li><a href="../../runtimes/java/index.html">Java4Shell (OpenJDK)</a></li>
+<li><a href="../../runtimes/node/index.html">Node.js</a></li>
+<li><a href="../../runtimes/php/index.html">PHP2Shell</a></li>
+<li><a href="../../runtimes/php/detect/index.html">PHP2Shell detection rules</a></li>
+<li><a href="../../runtimes/php/edge/index.html">PHP2Shell edge guards</a></li>
+<li><a href="../../runtimes/ruby/index.html">Ruby and GitLab regexp</a></li>
+</ul></details>
+<details class="grp" open><summary>Content management and web applications</summary><ul>
+<li><a href="index.html" aria-current="page">Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../basercms/index.html">baserCMS</a></li>
+<li><a href="../btcpayserver/index.html">BTCPay Server</a></li>
+<li><a href="../craft/index.html">Craft CMS</a></li>
+<li><a href="../drupal/index.html">Drupal</a></li>
+<li><a href="../etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="../grav/index.html">Grav</a></li>
+<li><a href="../aspnet/index.html">Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../joomla/index.html">Joomla</a></li>
+<li><a href="../magento/index.html">Magento and Adobe Commerce</a></li>
+<li><a href="../nextcloud/index.html">Nextcloud Collabora</a></li>
+<li><a href="../plex/index.html">Plex Media Server</a></li>
+<li><a href="../roundcube/index.html">Roundcube</a></li>
+<li><a href="../wordpress/index.html">WordPress core and plugins</a></li>
+<li><a href="../wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="../wordpress-upgrade/index.html">WordPress upgrade window</a></li>
+<li><a href="../yootheme/index.html">YOOtheme Pro</a></li>
+<li><a href="../zammad/index.html">Zammad</a></li>
+</ul></details>
+<details class="grp"><summary>Developer platforms, tools and supply chain</summary><ul>
+<li><a href="../../developer/binary-parser/index.html">binary-parser</a></li>
+<li><a href="../../developer/claude-code-vsx/index.html">Claude Code extension backdoor</a></li>
+<li><a href="../../developer/django/index.html">Django REST framework</a></li>
+<li><a href="../../developer/ghostaction/index.html">GhostAction</a></li>
+<li><a href="../../developer/gitea/index.html">Gitea</a></li>
+<li><a href="../../developer/gitlab/index.html">GitLab</a></li>
+<li><a href="../../developer/iterm2/index.html">iTerm2 (macOS)</a></li>
+<li><a href="../../developer/jenkins/index.html">Jenkins plugins</a></li>
+<li><a href="../../developer/jupyter/index.html">Jupyter and nbconvert</a></li>
+<li><a href="../../developer/laravel/index.html">Laravel TokenGuard</a></li>
+<li><a href="../../developer/litellm/index.html">LiteLLM</a></li>
+<li><a href="../../developer/nextjs/index.html">Next.js Server Actions</a></li>
+<li><a href="../../developer/openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="../../developer/optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../../developer/sagemaker/index.html">SageMaker SDK</a></li>
+<li><a href="../../developer/sentry/index.html">Sentry for Next.js</a></li>
+<li><a href="../../developer/storybook/index.html">Storybook</a></li>
+</ul></details>
+<details class="grp"><summary>Active threats</summary><ul>
+<li><a href="../../threats/agentic-attacks/index.html">AI attack frameworks</a></li>
+</ul></details>
+</details></nav>
+<main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>Apache Roller XML-RPC deserialization</span></nav>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>Apache Roller security releases</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Roller 4.0.0 to 6.1.5: unauthenticated deserialization RCE, exploited in the wild, CISA KEV; the admin-UI XML-RPC toggle does not gate it</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-82384</span>, <span class="nw">CVE-2026-123374</span>, <span class="nw">CVE-2026-129448</span></span></dd><dt>Script</dt><dd><div class="scr"><code>apache-roller-xmlrpc-check.sh</code> (<a href="../../man/psf-apache-roller-xmlrpc-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/web-apps/apache-roller/apache-roller-xmlrpc-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>rules</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/web-apps/apache-roller/apache-roller-xmlrpc-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="xmlrpc"></a></p>
+<h2 id="xml-rpc-deserialization-cve-2026-129448--cve-2026-82384-unauthenticated-remote-code-execution">XML-RPC deserialization: <span class="nw">CVE-2026-129448</span> / <span class="nw">CVE-2026-82384</span>, unauthenticated remote code execution</h2>
+<p><span class="nw">CVE-2026-129448</span>, published 17 November 2026 by the Apache Software Foundation, found by n0mi1k and reported by Matt Raible: critical (CVSS 3.1 9.8, CWE-502 Deserialization of Untrusted Data), unauthenticated remote code execution in Apache Roller through the <code>/roller-services/xmlrpc</code> endpoint. It is the same underlying flaw as <span class="nw">CVE-2026-82384</span> (published September 2026), which named only Roller 6.1.5 as affected; the November advisory widens the affected range back to 4.0.0 and reports active exploitation. CISA added it to the Known Exploited Vulnerabilities catalog on 20 November 2026.</p>
+<p>Roller's XML-RPC servlet, which serves the legacy Blogger and MetaWeblog APIs, ships with the underlying XML-RPC library's <code>enabledForExtensions</code> option set to <code>true</code>, so it accepts a non-standard vendor value type carrying a base64-encoded Java-serialized object, and deserializes it before any authentication check runs. A suitable class on the server's classpath turns one unauthenticated <code>POST /roller-services/xmlrpc</code> into code execution. The servlet mapping for that path ships in every affected release regardless of application settings, and critically, Roller's own admin-UI toggle for XML-RPC (<code>webservices.enableXmlRpc</code>) does <strong>not</strong> gate this servlet on an unpatched install: the deserialization happens before that setting is ever read, so an administrator who believed they'd turned XML-RPC off was not protected.</p>
+<p>Fixed in Apache Roller 6.1.6 (11 November 2026), which disables the vendor extension types outright and adds a new servlet filter, <code>XmlRpcEnabledFilter</code>, that finally makes the admin-UI toggle work as expected. Roller 6.1.7, the current release, also fixes <span class="nw">CVE-2026-123374</span> (an unrelated deserialization bug in weblog update ping responses) and 15 further, lower-severity issues this script does not audit for; upgrading past 6.1.6 to 6.1.7 is worth doing for those alone.</p>
+<p><code>check</code> and <code>hunt</code> change nothing and need no privilege. <code>mitigate</code> and <code>rollback</code> change the host and require root (or whatever account owns the deployed webapp directory), stopping with a clear message otherwise. <code>check</code> finds every Tomcat instance this host has, the same discovery this collection's <code>tomcat-oct2026-check.sh</code> uses: explicit <code>CATALINA_HOME</code>/<code>CATALINA_BASE</code>, every running Java process's <code>-Dcatalina.home=</code>/<code>-Dcatalina.base=</code> (which also catches an install at a non-default path, and a <code>CATALINA_BASE</code> whose <code>webapps/</code> does not live under its <code>CATALINA_HOME</code> in a multi-instance setup), then the usual filesystem locations as a fallback for an install that is not currently running. It walks each instance's <code>webapps/*/WEB-INF/web.xml</code> (plus <code>ROLLER_WEBXML</code> for an explicit path) for any <code>web.xml</code> carrying the <code>/roller-services/xmlrpc</code> servlet mapping, and reports, per install: whether <code>enabledForExtensions</code> is on, whether the mapping is still live, and whether the post-fix <code>XmlRpcEnabledFilter</code> is present. That filter's presence is this script's one reliable signal for &quot;patched 6.1.6 or later&quot;: a deployed WAR does not reliably carry its own version number anywhere on disk, so rather than guess at a version string, <code>check</code> treats the fix's own code as the signal. <code>hunt</code> greps readable Tomcat/web-server access logs for <code>POST</code> requests to the endpoint; a match only shows something used the route, not that it carried the malicious payload, since a legitimate Blogger/MetaWeblog client logs the same way.</p>
+<p><code>mitigate</code> applies the first of Apache's own two named workarounds by default: setting <code>enabledForExtensions</code> to <code>false</code> in <code>web.xml</code>. Since this only turns off the dangerous vendor extension type rather than the endpoint itself, it has no real cost to legitimate Blogger/MetaWeblog API use, so it always runs. <code>mitigate --remove-mapping</code> instead comments out the <code>&lt;servlet-mapping&gt;</code> for the endpoint (Apache's other named workaround), which does have a real cost: it takes the legitimate API offline entirely. Because of that cost, <code>--remove-mapping</code> by default only acts when <code>check</code> would report a Roller install here as exposed (not found, or unreadable, counts as not-yet-confirmed-fixed for this purpose, not as clear); when every install found is already confirmed fixed, it changes nothing and says so, unless <code>--force</code> is given to remove the mapping anyway. Both actions back up the file first and verify the result is still well-formed XML (via <code>xmllint</code> or Python's <code>xml.dom.minidom</code>, whichever is available), rolling back automatically if not. <code>mitigate --dry-run</code> prints a unified diff of exactly what would change in every <code>web.xml</code> found and writes nothing, so, unlike a real <code>mitigate</code>, it needs no privilege, and it skips the exposure gate on <code>--remove-mapping</code> so you can preview the change either way. Neither Tomcat nor any other servlet container picks up a <code>web.xml</code> edit by itself for this bug, since the affected servlet and filter instances are built once at context start, and a context reload is not reliably enough; the advisory says to restart Roller. <code>--restart</code> tries <code>systemctl restart</code> against a detected Tomcat unit (<code>tomcat</code>, <code>tomcat9</code>, <code>tomcat10</code>, <code>tomcat11</code>); without it, restart the container yourself once you're satisfied with the result. <code>rollback</code> restores every file <code>mitigate</code> backed up, with the same <code>--restart</code> option; <code>rollback --dry-run</code> prints which file would be restored from which backup and writes nothing, so it needs no privilege.</p>
+<p>How <code>check</code> decides: the post-fix <code>XmlRpcEnabledFilter</code> in <code>web.xml</code> means 6.1.6 or later, fixed, whatever <code>enabledForExtensions</code> says. Without it, <code>enabledForExtensions</code> set to <code>true</code> with the servlet mapping present means exposed. A servlet mapping inside an XML comment is not counted as live. A Roller install at a non-default path is found through a running Java process's <code>-Dcatalina.home=</code> or <code>-Dcatalina.base=</code>, which a search of the usual folders alone would miss. <code>mitigate --dry-run</code> prints the exact change and needs no privilege, <code>--remove-mapping</code> acts only on an exposed install unless <code>--force</code> is given, and <code>rollback</code> restores <code>web.xml</code> byte for byte.</p>
+<h3 id="xml-rpc-quick-start">XML-RPC quick start</h3>
+<pre tabindex="0"><code class="language-sh">curl -O https://codeberg.org/PrivacySafe/security-patches/raw/branch/main/web-apps/apache-roller/apache-roller-xmlrpc-check.sh
+chmod +x apache-roller-xmlrpc-check.sh
+./apache-roller-xmlrpc-check.sh check
+</code></pre>
+<p>If you cannot upgrade to 6.1.7 today, preview and then apply the interim measure, and restart Tomcat:</p>
+<pre tabindex="0"><code class="language-sh">sudo ./apache-roller-xmlrpc-check.sh mitigate --dry-run
+sudo ./apache-roller-xmlrpc-check.sh mitigate --restart
+</code></pre>
+<p>After the upgrade, undo it with <code>sudo ./apache-roller-xmlrpc-check.sh rollback --restart</code>.</p>
+<h3 id="xml-rpc-commands">XML-RPC commands</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Root</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code> (default)</td>
+<td>no</td>
+<td>Finds each Roller <code>web.xml</code> and reports exposed, fixed, interim measure applied, or undetermined. Exit <code>0</code> clear, <code>1</code> exposed, <code>2</code> undetermined or no install found (set <code>ROLLER_WEBXML</code> to point at one)</td>
+</tr>
+<tr>
+<td><code>hunt</code></td>
+<td>no</td>
+<td>Reads Tomcat and httpd access logs for <code>POST /roller-services/xmlrpc</code>. A match is a lead, not proof. Exit <code>0</code> nothing found, <code>1</code> a match, <code>2</code> no log could be read</td>
+</tr>
+<tr>
+<td><code>mitigate [--remove-mapping] [--restart] [--dry-run] [--force]</code></td>
+<td>yes (unless <code>--dry-run</code>)</td>
+<td>Sets <code>enabledForExtensions</code> to <code>false</code> in <code>web.xml</code>, or with <code>--remove-mapping</code> comments out the endpoint's servlet mapping, which takes the Blogger and MetaWeblog API offline. Backs up first and checks the result is well-formed XML. <code>--restart</code> restarts the Tomcat systemd unit</td>
+</tr>
+<tr>
+<td><code>rollback [--restart] [--dry-run]</code></td>
+<td>yes (unless <code>--dry-run</code>)</td>
+<td>Restores every <code>web.xml</code> that <code>mitigate</code> changed</td>
+</tr>
+<tr>
+<td><code>rules</code></td>
+<td>no</td>
+<td>Prints the two workarounds and the upgrade guidance</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>no</td>
+<td>Prints the script version</td>
+</tr>
+</tbody>
+</table></div>
+<p>What this script cannot do: upgrade Roller, or tell you whether a deserialization already happened before you ran it. <code>mitigate</code> only closes the one path named in this advisory; it has no coverage for <span class="nw">CVE-2026-123374</span> or the other issues 6.1.7 fixes.</p>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../../servers/pulsar/index.html">&larr; Apache Pulsar</a><a rel="next" href="../../servers/tomcat/index.html">Apache Tomcat &rarr;</a></nav></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#xml-rpc-deserialization-cve-2026-129448--cve-2026-82384-unauthenticated-remote-code-execution">XML-RPC deserialization: CVE-2026-129448 / CVE-2026-82384, unauthenticated remote code execution</a></li><li class="l3"><a href="#xml-rpc-quick-start">XML-RPC quick start</a></li><li class="l3"><a href="#xml-rpc-commands">XML-RPC commands</a></li></ul></aside></div></div>
+<section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
+<div class="wrap">
+<article class="card has-partner">
+<h2 class="eco-title" id="ecosystem-title">The PrivacySafe Ecosystem</h2>
+<a class="partner-mark" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+<img src="../../assets/img/ivy-logo-horizontal-white.svg" alt="Shop at Ivy Cyber" width="328" height="73" loading="lazy" decoding="async"/>
+</a>
+<p><strong>Ivy Cyber</strong> offers PrivacySafe products and services in the USA and has partnerships with 3NSoft in Canada and Kuip Limited in the European Union. Enterprise services and consulting are available at <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">ivycyber.com</a>
+</p><p><strong>PrivacySafe Foundation</strong> is a 501(c)(3) nonprofit public charity that supports the development of the PrivacySafe applications, along with the components they rely upon: 3NWeb protocols, filesystem, documentation, and reference implementations.</p>
+<div class="pullout">
+<a class="foundation-mark" href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank"><img src="../../assets/img/logo-foundation.svg" alt="PrivacySafe Foundation" width="218" height="47" loading="lazy" decoding="async"/></a>
+<p class="pullout-text">Donations to <a href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank">PrivacySafe Foundation</a> support education, research, documentation, and public code. Purchases from <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber</a> support PrivacySafe products, services, hosting, and technical support. <strong class="pullout-lead">Together, we're building a better web.</strong></p>
+</div>
+<div class="split-actions">
+<a class="btn primary" href="https://www.zeffy.com/en-US/ticketing/cybersecurity-education-and-tech" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-heart" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="currentColor" d="M12 20.6 10.6 19.3C5.7 14.9 2.5 12 2.5 8.4 2.5 5.5 4.8 3.2 7.7 3.2c1.6 0 3.2.8 4.3 2.05C13.1 4 14.7 3.2 16.3 3.2c2.9 0 5.2 2.3 5.2 5.2 0 3.6-3.2 6.5-8.1 10.9L12 20.6Z"/> </svg>
+Donate to PrivacySafe Foundation
+</a>
+<a class="btn ghost" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+Buy PrivacySafe products &amp; services
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost" href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-code" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.6 4.8l-3.2 14.4"/> </svg>
+Browse our Source Code
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+</article>
+</div>
+</section>
+<footer>
+<div class="wrap">
+<div class="footer-community">
+<section aria-labelledby="footer-about-title" class="footer-panel footer-about">
+<h2 class="sr-only" id="footer-about-title">About PrivacySafe</h2>
+<img alt="PrivacySafe" class="footer-logo" height="192" src="../../assets/img/privacysafe-logo.svg" width="1696"/>
+<p>PrivacySafe creates a secure sandbox environment for your organization which you can tie to your domain, your authentication methods, and your access controls.</p>
+<h3>Follow Us</h3>
+<div aria-label="PrivacySafe social links" class="social-links">
+<a aria-label="PrivacySafe on Mastodon" class="social-link" href="https://privacysafe.social/@privacysafe" rel="me noopener noreferrer" target="_blank" title="Mastodon">
+<svg class="ico ico-mastodon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg>
+</a><a aria-label="PrivacySafe on Bluesky" class="social-link" href="https://bsky.app/profile/privacysafe.social" rel="me noopener noreferrer" target="_blank" title="Bluesky">
+<svg class="ico ico-bluesky" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026"/></svg>
+</a><a aria-label="PrivacySafe on Twitter X" class="social-link" href="https://x.com/GetPrivacySafe" rel="nofollow noopener noreferrer" target="_blank" title="Twitter X">
+<svg class="ico ico-x-twitter" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+</a><a aria-label="PrivacySafe on LinkedIn" class="social-link" href="https://www.linkedin.com/company/privacysafe-app" rel="noopener noreferrer" target="_blank" title="LinkedIn">
+<svg class="ico ico-linkedin" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.200 3.600a1.700 1.700 0 1 0 0 3.400 1.700 1.700 0 0 0 0-3.400zM5.600 10.400v7.800h3.200v-7.800H5.600zm4.800 0v7.800h3.200v-4c0-1.100.4-1.700 1.300-1.700s1.300.6 1.300 1.700v4h3.200v-4.400c0-2.300-1.100-3.600-3.200-3.600-1.200 0-2.200.5-2.700 1.300v-1.100h-3.100z"/></svg>
+</a><a aria-label="PrivacySafe on YouTube" class="social-link" href="https://www.youtube.com/@privacysafe" rel="noopener noreferrer" target="_blank" title="YouTube">
+<svg class="ico ico-youtube" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+</a><a aria-label="PrivacySafe on Instagram" class="social-link" href="https://www.instagram.com/getprivacysafe/" rel="noopener noreferrer" target="_blank" title="Instagram">
+<svg class="ico ico-instagram" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>
+</a>
+<!--<a aria-label="Signal @ivycyber.01" class="social-link" href="https://signal.me/#eu/nmRqQrmMcXaq6cyfP8ckVaf-LniNZwhc5VatIEgC3y39lIYFNBBFF5NvpFurg6UA" rel="noopener noreferrer" target="_blank" title="Signal">
+<span aria-hidden="true" class="ico ico-signal"></span>
+</a>-->
+<!--<a aria-label="Ivy Cyber on Facebook" class="social-link" href="https://www.facebook.com/ivycyber" rel="noopener noreferrer" target="_blank" title="Facebook">
+<span aria-hidden="true" class="ico ico-facebook"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on TikTok" class="social-link" href="https://www.tiktok.com/@bitsontape" rel="noopener noreferrer" target="_blank" title="TikTok">
+<span aria-hidden="true" class="ico ico-tiktok"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Telegram" class="social-link" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank" title="Telegram">
+<span aria-hidden="true" class="ico ico-telegram"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Substack" class="social-link" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank" title="Substack">
+<span aria-hidden="true" class="ico ico-substack"></span>
+</a>--></div>
+</section>
+<section aria-labelledby="newsletter-title" class="footer-panel newsletter-panel">
+<div class="card-footnote">
+<a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank"><img class="newsletter-avatar" src="../../assets/img/bitsontape-avatar.png" alt="Bits On Tape logo: two reels of open-reel tape arranged as a heart" width="200" height="200" loading="lazy" decoding="async"/></a>
+<h2 id="newsletter-title">Subscribe to Our Newsletter</h2>
+<p><a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">Bits On Tape</a> is our newsletter: a replay of science and technology stories by cyber experts, covering cybersecurity, privacy, free software, AI, and digital culture. Get the latest updates on our PrivacySafe ecosystem as we continue building and launching.</p>
+<div class="card-footnote-actions">
+<a class="btn primary small" href="https://psafe.ly/WaaEkp" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-envelope" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+Subscribe free
+</a>
+<a class="btn ghost small" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">
+Read past issues
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost small" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-telegram" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M21.6 3.2 18.4 20c-.24 1.18-.88 1.47-1.79.91l-4.88-3.6-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.97 9.05-8.18c.39-.35-.09-.55-.61-.2L6.01 13.74 1.2 12.24c-1.05-.33-1.07-1.05.22-1.55L20.2 3.45c.87-.32 1.63.2 1.4-.25Z"></path></svg>
+Join Telegram group
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+<p class="newsletter-note">We hate spam as much as you do and comply with CAN-SPAM regulation.</p>
+</div>
+</section>
+</div>
+<div class="footer-inner">
+<nav aria-label="Footer links" class="footer-links">
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+<a href="https://ivycyber.com/security-policy/" rel="nofollow noopener noreferrer" target="_blank">Security &amp; Bug Bounty</a>
+<a href="https://ivycyber.com/privacy-policy/" rel="nofollow noopener noreferrer" target="_blank">Privacy Policy</a>
+<a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
+<a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
+</nav>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="../../weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+</div>
+</div>
+</footer>
+<script src="../../assets/site.js" defer></script></body>
+</html>

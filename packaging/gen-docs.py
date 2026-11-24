@@ -42,21 +42,28 @@ LONGDATE = datetime.date.fromisoformat(DATE).strftime("%-d %B %Y")
 URL = "https://codeberg.org/PrivacySafe/security-patches"
 
 NEWEST = [  # (date, script, what happened)
- ("4 November 2026", "wordpress-upgrade/wordpress-upgrade-check.sh", "WordPress core upgrade-window remote code execution (CVE-2026-119977)"),
- ("4 November 2026", "apt/apt-nov2026-check.sh", "APT package downloads swapped after verification (CVE-2026-109518)"),
- ("2 November 2026", "btcpayserver/btcpayserver-nov2026-check.sh", "BTCPay Server hot wallet thefts on 2.4.1 and earlier (no CVE)"),
- ("30 October 2026", "vsftpd/vsftpd-ftps-ticket-check.sh", "vsftpd FTPS data channel hijack (CVE-2026-119568) and a denial of service in Red Hat family packages (CVE-2025-14242)"),
- ("29 October 2026", "claude-code-vsx/claude-code-vsx-oct2026-check.sh", "the tampered Claude Code extension served from Cursor's marketplace (no CVE)"),
- ("25 October 2026", "brotli/brotli-oct2026-check.sh", "Brotli decoder out-of-bounds write (CVE-2026-111497)"),
- ("24 October 2026", "grav/grav-core-check.sh", "Grav core allowlist bypass (CVE-2026-116019)"),
- ("23 October 2026", "basercms/basercms-check.sh", "baserCMS 5 (CVE-2026-114621, CVE-2026-114622, CVE-2026-114624)"),
- ("23 October 2026", "openapi/openapi-codegen-check.sh", "openapi-typescript-codegen code injection (CVE-2026-108551)"),
- ("23 October 2026", "ruby/ruby-regexp-oct2026-check.sh", "Ruby and GitLab regular expression memory corruption"),
- ("22 October 2026", "django/drf-check.sh", "Django REST framework (CVE-2026-114138, CVE-2026-114137)"),
- ("22 October 2026", "expat/expat-check.sh", "libexpat entity amplification (CVE-2026-115506)"),
- ("22 October 2026", "haproxy/haproxy-check.sh", "HAProxy HTTP/2 PING frame (CVE-2026-110353)"),
- ("22 October 2026", "rsyslog/rsyslog-dynafile-audit.sh", "rsyslog dynaFile path traversal (CVE-2026-92709)"),
- ("22 October 2026", "yootheme/yootheme-check.sh", "YOOtheme Pro remote code execution (CVE-2026-102785)"),
+ ("23 November 2026", "web-apps/aspnet/idunno-anticsrf-check.sh", "Idunno.AntiCsrf on Mono and IIS, exploited (CVE-2026-131914)"),
+ ("23 November 2026", "servers/vmware/vcenter-dirsvc-check.sh", "VMware vCenter directory service authentication bypass, exploited (CVE-2026-123890)"),
+ ("23 November 2026", "servers/n-central/ncentral-legacyapi-check.sh", "N-central Legacy API and Apache Axis, exploited (CVE-2026-90436)"),
+ ("23 November 2026", "runtimes/java/java4shell-check.sh", "Java4Shell, OpenJDK Base64 decoder (CVE-2026-114938)"),
+ ("23 November 2026", "system/pam-mysql/pam-mysql-check.sh", "pam-mysql lets accounts with no password in (CVE-2026-124749)"),
+ ("23 November 2026", "threats/agentic-attacks/agentic-attack-check.sh", "AI-driven attack frameworks (ARTEX, CAIRN, PentAGI, HexStrike, CyberStrikeAI and more) on GNU/Linux hosts (no CVE)"),
+ ("23 November 2026", "developer/iterm2/iterm2-kitty-check.sh", "iTerm2 on macOS: a displayed file types commands (no CVE)"),
+ ("23 November 2026", "developer/binary-parser/binary-parser-check.sh", "binary-parser code injection through a parser definition (CVE-2026-134814, CVE-2026-1245)"),
+ ("22 November 2026", "web-apps/apache-roller/apache-roller-xmlrpc-check.sh", "Apache Roller XML-RPC deserialization, exploited (CVE-2026-129448, CVE-2026-82384)"),
+ ("22 November 2026", "system/ghostscript/ghostscript-upload2shell-check.sh", "Ghostscript Upload2Shell sandbox escape (CVE-2026-125396)"),
+ ("20 November 2026", "web-apps/etherpad/etherpad-static-traversal-check.sh", "Etherpad static path traversal (CVE-2026-114516)"),
+ ("20 November 2026", "system/linux-kernel/linux-kernel-kvm-escape-check.sh", "KVM guest-to-host escape on AMD nested virtualization (CVE-2026-99312)"),
+ ("19 November 2026", "servers/apache/apache-mod-http2-check.sh", "Apache HTTP Server mod_http2 remote code execution (CVE-2026-119618)"),
+ ("19 November 2026", "servers/mysql/mysql-client-check.sh", "MySQL client programs (CVE-2026-114952)"),
+ ("19 November 2026", "runtimes/php/php-session-audit.sh", "phpAfterShell, PHP session corruption (CVE-2026-126714)"),
+ ("18 November 2026", "servers/nginx/nginx2root-check.sh", "nginx2root: HTTP/2, HTTP/3, resolver and mail proxy (CVE-2026-123007 and others)"),
+ ("17 November 2026", "developer/optimizely/optimizely-optimjack-check.sh", "Optimizely OPTIMJACK supply-chain compromise (no CVE)"),
+ ("5 November 2026", "system/openssh-musl/openssh-musl-check.sh", "OpenSSH password bypass on musl without PAM (CVE-2026-123158)"),
+ ("4 November 2026", "web-apps/wordpress-upgrade/wordpress-upgrade-check.sh", "WordPress core upgrade-window remote code execution (CVE-2026-119977)"),
+ ("4 November 2026", "system/apt/apt-nov2026-check.sh", "APT package downloads swapped after verification (CVE-2026-109518)"),
+ ("3 November 2026", "system/linux-kernel/linux-kernel-ireq-opt-check.sh", "Linux kernel IPv4 TCP use-after-free (CVE-2026-98432)"),
+ ("2 November 2026", "web-apps/btcpayserver/btcpayserver-nov2026-check.sh", "BTCPay Server hot wallet thefts on 2.4.1 and earlier (no CVE)"),
 ]
 COPYRIGHT = ("CC0 1.0 Universal. To the extent possible under law, Ivy Cyber LLC has waived all copyright and "
              "related or neighboring rights to PrivacySafe Security Patches, including its software and documentation. "
@@ -349,7 +356,7 @@ def overview(pages):
     o.append(".IP 2. 3"); o.append("If you are exposed, install the vendor's update. That is the permanent fix.")
     o.append(".IP 3. 3"); o.append("If you cannot update yet, run \\fBmitigate \\-\\-dry\\-run\\fR to see what the protection would do, then \\fBmitigate\\fR. \\fBrollback\\fR undoes it.")
     o.append(".IP 4. 3"); o.append("If the flaw was being exploited, run \\fBhunt\\fR, then change any password, key or token an attacker could have reached.")
-    o.append(".SH NEWEST: 22 TO 30 OCTOBER 2026")
+    o.append(".SH NEWEST: 2 TO 23 NOVEMBER 2026")
     for date, script, what in NEWEST:
         n = "psf-" + os.path.basename(script)[:-3]
         o.append(".TP"); o.append(esc(date) + ": \\fB" + esc(n) + "\\fR(8)"); o.append(esc(what))

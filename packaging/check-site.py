@@ -39,8 +39,8 @@ ARGS = sys.argv[1:]; WEBROOT = None
 if ARGS[:1] == ["--webroot"]: WEBROOT = os.path.abspath(ARGS[1]); ARGS = ARGS[2:]
 if not WEBROOT and not ARGS: sys.exit("usage: check-site.py SITE_DIR   or   check-site.py --webroot SITE_ROOT\nCheck docs/ for the repository copy, or any other generated site folder.")
 SITE = os.path.join(WEBROOT, "docs") if WEBROOT else os.path.abspath(ARGS[0])
-NO_SCRIPT_OK = {"php/detect/index.html"}                        # detection rules: there is no script to describe
-NESTED_OK = {"php/index.html", "claude-code-vsx/index.html"}      # these pages have sections under Before you run it
+NO_SCRIPT_OK = {"runtimes/php/detect/index.html"}                        # detection rules: there is no script to describe
+NESTED_OK = {"runtimes/php/index.html", "developer/claude-code-vsx/index.html"}      # these pages have sections under Before you run it
 ALLOWED_EXTERNAL = {"https://privacysafe.click/js/script.js"} if WEBROOT else set()
 import json
 VOID = {"meta", "link", "img", "br", "hr", "input", "source", "col", "area", "base", "wbr"}
@@ -50,7 +50,7 @@ class P(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.ids = []; self.links = []; self.res = []; self.h1 = 0; self.title = False; self.title_text = ""
-        self.stack = []; self.errors = []; self.imgs_no_alt = 0; self.inline = []; self.scripts = []; self.ld_open = False; self.ld = []; self.canonical = None
+        self.stack = []; self.errors = []; self.imgs_no_alt = 0; self.inline = []; self.scripts = []; self.ld_open = False; self.ld = []; self.canonical = None; self.refresh = None; self.noindex = False
     def handle_starttag(self, tag, attrs):
         d = dict(attrs)
         if "id" in d: self.ids.append(d["id"])
@@ -63,6 +63,8 @@ class P(HTMLParser):
         if tag == "script" and d.get("type") == "application/ld+json": self.ld_open = True
         if tag == "script" and "src" in d: self.scripts.append((d["src"], d.get("data-domain"), "defer" in d))
         if tag == "link" and d.get("rel") == "canonical": self.canonical = d.get("href")
+        if tag == "meta" and (d.get("http-equiv") or "").lower() == "refresh": self.refresh = (d.get("content") or "").partition("url=")[2]
+        if tag == "meta" and d.get("name") == "robots" and "noindex" in (d.get("content") or ""): self.noindex = True
         if tag == "h1": self.h1 += 1
         if tag == "title": self.title = True
         if tag == "a" and "href" in d: self.links.append(d["href"])
@@ -109,7 +111,19 @@ for name, pr in sorted(pages.items()):
         if len(metrics) != 1 or metrics[0][1] != "privacysafe.app" or not metrics[0][2]: bad(name, "the privacysafe.click metrics script is missing, repeated, or lacks data-domain=privacysafe.app and defer")
         if ("/docs/js/docs.js", None, True) not in pr.scripts: bad(name, "the docs script is missing")
         want = "https://privacysafe.app/" + ("docs/" + (name[:-len("index.html")] if name.endswith("index.html") else name)).replace("//", "/")
-        if pr.canonical != want: bad(name, f"canonical {pr.canonical} should be {want}")
+        if pr.refresh is not None:
+            # a page left at a moved page's old address: it forwards to a page that exists, names that page as
+            # canonical, and asks not to be indexed
+            tgt = pr.refresh
+            if not tgt.startswith("https://privacysafe.app/docs/"): bad(name, f"forwards outside the docs: {tgt}")
+            else:
+                full = os.path.join(WEBROOT, "docs", tgt[len("https://privacysafe.app/docs/"):])
+                if full.endswith("/"): full += "index.html"
+                if not os.path.exists(full): bad(name, f"forwards to {tgt}, which does not exist")
+                if os.path.exists(full) and 'http-equiv="refresh"' in open(full, encoding="utf-8").read(): bad(name, f"forwards to {tgt}, itself a forwarding page")
+            if pr.canonical != tgt: bad(name, f"canonical {pr.canonical} should be the page it forwards to, {tgt}")
+            if not pr.noindex: bad(name, "forwarding page without noindex")
+        elif pr.canonical != want: bad(name, f"canonical {pr.canonical} should be {want}")
     for r in pr.res:
         if r in ALLOWED_EXTERNAL: continue
         if re.match(r"^(https?:)?//", r): bad(name, f"loads an outside resource: {r}")
