@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="security.html">Security policy</a></li>
 <li><a href="about.html">About and support</a></li>
 </ul>
-<details class="grp"><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="web-apps/drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -150,7 +151,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a> / <span>Red Hat advisories</span></nav>
-<article class="doc"><h1>Red Hat advisories</h1><p>Red Hat publishes a security advisory (RHSA) for each fix it ships. This page lists the advisories that name a CVE this collection covers, taken from Red Hat's advisory list for security advisories released 2026-04-01 to 2026-11-23 (8833 advisories for 6641 CVEs). Each tool README that has any carries the same data in its own <strong>Red Hat advisories</strong> section.</p>
+<article class="doc"><h1>Red Hat advisories</h1><p>Red Hat publishes a security advisory (RHSA) for each fix it ships. This page lists the advisories that name a CVE this collection covers, taken from Red Hat's advisory list for security advisories released 2026-04-01 to 2026-11-25 (9059 advisories for 6851 CVEs). Each tool README that has any carries the same data in its own <strong>Red Hat advisories</strong> section.</p>
 <p>How to use it: a Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes. Find your stream and compare the installed release (<code>rpm -q PACKAGE</code>) with the one the advisory names. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The list holds security advisories only, not bug fixes or enhancements. The current state is always on Red Hat's own pages. On a Red Hat family host with the packages installed, <code>/opt/psf-security-patches/rhsa/rhsa.py verify --rpm</code> makes the comparison for every installed package (<code>man psf-rhsa</code>).</p>
 <h2 id="by-tool">By tool</h2>
 <div class="table-wrap" tabindex="0"><table>
@@ -202,9 +203,9 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="runtimes/java/index.html#red-hat-advisories">runtimes/java</a></td>
 <td>1</td>
-<td>16</td>
+<td>27</td>
 <td>2026-11-18</td>
-<td>2026-11-21</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="runtimes/node/index.html#red-hat-advisories">runtimes/node</a></td>
@@ -223,16 +224,16 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="runtimes/ruby/index.html#red-hat-advisories">runtimes/ruby</a></td>
 <td>4</td>
-<td>12</td>
+<td>18</td>
 <td>2026-10-23</td>
-<td>2026-11-09</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="servers/apache/index.html#red-hat-advisories">servers/apache</a></td>
 <td>1</td>
-<td>10</td>
+<td>13</td>
 <td>2026-11-11</td>
-<td>2026-11-20</td>
+<td>2026-11-23</td>
 </tr>
 <tr>
 <td><a href="servers/bind/index.html#red-hat-advisories">servers/bind</a></td>
@@ -251,9 +252,9 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="servers/nginx/index.html#red-hat-advisories">servers/nginx</a></td>
 <td>5</td>
-<td>27</td>
+<td>28</td>
 <td>2026-07-26</td>
-<td>2026-11-20</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="servers/tomcat/index.html#red-hat-advisories">servers/tomcat</a></td>
@@ -272,9 +273,9 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="system/brotli/index.html#red-hat-advisories">system/brotli</a></td>
 <td>1</td>
-<td>100</td>
+<td>102</td>
 <td>2026-04-27</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="system/curl/index.html#red-hat-advisories">system/curl</a></td>
@@ -286,16 +287,23 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="system/expat/index.html#red-hat-advisories">system/expat</a></td>
 <td>3</td>
-<td>8</td>
+<td>9</td>
 <td>2026-10-26</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
+</tr>
+<tr>
+<td><a href="system/ghostscript/index.html#red-hat-advisories">system/ghostscript</a></td>
+<td>1</td>
+<td>3</td>
+<td>2026-11-25</td>
+<td>2026-11-25</td>
 </tr>
 <tr>
 <td><a href="system/linux-kernel/index.html#red-hat-advisories">system/linux-kernel</a></td>
-<td>6</td>
-<td>95</td>
+<td>7</td>
+<td>100</td>
 <td>2026-07-08</td>
-<td>2026-11-20</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="system/openssl/index.html#red-hat-advisories">system/openssl</a></td>
@@ -307,16 +315,16 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="system/pillow/index.html#red-hat-advisories">system/pillow</a></td>
 <td>1</td>
-<td>16</td>
+<td>17</td>
 <td>2026-10-30</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="system/pki/index.html#red-hat-advisories">system/pki</a></td>
 <td>1</td>
-<td>214</td>
+<td>225</td>
 <td>2026-10-20</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 </tbody>
 </table></div>
@@ -440,10 +448,10 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-110264"><span class="nw">CVE-2026-110264</span></a></td>
 <td><a href="runtimes/ruby/index.html#red-hat-advisories">runtimes/ruby</a></td>
-<td>12</td>
+<td>18</td>
 <td>Critical</td>
 <td>2026-10-23</td>
-<td>2026-11-09</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-110353"><span class="nw">CVE-2026-110353</span></a></td>
@@ -456,34 +464,34 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-111497"><span class="nw">CVE-2026-111497</span></a></td>
 <td><a href="system/brotli/index.html#red-hat-advisories">system/brotli</a></td>
-<td>100</td>
+<td>102</td>
 <td>Critical</td>
 <td>2026-04-27</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-111943"><span class="nw">CVE-2026-111943</span></a></td>
 <td><a href="system/pki/index.html#red-hat-advisories">system/pki</a></td>
-<td>214</td>
+<td>225</td>
 <td>Critical</td>
 <td>2026-10-20</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-112900"><span class="nw">CVE-2026-112900</span></a></td>
 <td><a href="system/pillow/index.html#red-hat-advisories">system/pillow</a></td>
-<td>16</td>
+<td>17</td>
 <td>Critical</td>
 <td>2026-10-30</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-113351"><span class="nw">CVE-2026-113351</span></a></td>
 <td><a href="system/expat/index.html#red-hat-advisories">system/expat</a></td>
-<td>6</td>
-<td>Important</td>
+<td>7</td>
+<td>Critical</td>
 <td>2026-10-26</td>
-<td>2026-11-20</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-114112"><span class="nw">CVE-2026-114112</span></a></td>
@@ -544,42 +552,50 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-114938"><span class="nw">CVE-2026-114938</span></a></td>
 <td><a href="runtimes/java/index.html#red-hat-advisories">runtimes/java</a></td>
-<td>16</td>
+<td>27</td>
 <td>Critical</td>
 <td>2026-11-18</td>
-<td>2026-11-21</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-115506"><span class="nw">CVE-2026-115506</span></a></td>
 <td><a href="system/expat/index.html#red-hat-advisories">system/expat</a></td>
-<td>7</td>
-<td>Important</td>
+<td>8</td>
+<td>Critical</td>
 <td>2026-10-26</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-117610"><span class="nw">CVE-2026-117610</span></a></td>
 <td><a href="system/expat/index.html#red-hat-advisories">system/expat</a></td>
-<td>7</td>
-<td>Important</td>
+<td>8</td>
+<td>Critical</td>
 <td>2026-11-02</td>
-<td>2026-11-23</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-119618"><span class="nw">CVE-2026-119618</span></a></td>
 <td><a href="servers/apache/index.html#red-hat-advisories">servers/apache</a></td>
-<td>10</td>
+<td>13</td>
 <td>Critical</td>
 <td>2026-11-11</td>
-<td>2026-11-20</td>
+<td>2026-11-23</td>
+</tr>
+<tr>
+<td><a href="https://access.redhat.com/security/cve/CVE-2026-125396"><span class="nw">CVE-2026-125396</span></a></td>
+<td><a href="system/ghostscript/index.html#red-hat-advisories">system/ghostscript</a></td>
+<td>3</td>
+<td>Important</td>
+<td>2026-11-25</td>
+<td>2026-11-25</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-15176"><span class="nw">CVE-2026-15176</span></a></td>
 <td><a href="servers/nginx/index.html#red-hat-advisories">servers/nginx</a></td>
-<td>17</td>
+<td>18</td>
 <td>Critical</td>
 <td>2026-10-15</td>
-<td>2026-11-20</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-42533"><span class="nw">CVE-2026-42533</span></a></td>
@@ -640,10 +656,10 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-89078"><span class="nw">CVE-2026-89078</span></a></td>
 <td><a href="runtimes/ruby/index.html#red-hat-advisories">runtimes/ruby</a></td>
-<td>10</td>
+<td>14</td>
 <td>Critical</td>
 <td>2026-10-23</td>
-<td>2026-11-09</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-92123"><span class="nw">CVE-2026-92123</span></a></td>
@@ -672,10 +688,10 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-93577"><span class="nw">CVE-2026-93577</span></a></td>
 <td><a href="runtimes/ruby/index.html#red-hat-advisories">runtimes/ruby</a></td>
-<td>12</td>
+<td>18</td>
 <td>Critical</td>
 <td>2026-10-23</td>
-<td>2026-11-09</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-94300"><span class="nw">CVE-2026-94300</span></a></td>
@@ -704,18 +720,18 @@ document.documentElement.className+=" js"
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-97205"><span class="nw">CVE-2026-97205</span></a></td>
 <td><a href="servers/nginx/index.html#red-hat-advisories">servers/nginx</a></td>
-<td>17</td>
+<td>18</td>
 <td>Critical</td>
 <td>2026-10-15</td>
-<td>2026-11-20</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-97229"><span class="nw">CVE-2026-97229</span></a></td>
 <td><a href="runtimes/ruby/index.html#red-hat-advisories">runtimes/ruby</a></td>
-<td>12</td>
+<td>18</td>
 <td>Critical</td>
 <td>2026-10-23</td>
-<td>2026-11-09</td>
+<td>2026-11-24</td>
 </tr>
 <tr>
 <td><a href="https://access.redhat.com/security/cve/CVE-2026-97629"><span class="nw">CVE-2026-97629</span></a></td>
@@ -733,11 +749,19 @@ document.documentElement.className+=" js"
 <td>2026-11-01</td>
 <td>2026-11-20</td>
 </tr>
+<tr>
+<td><a href="https://access.redhat.com/security/cve/CVE-2026-99288"><span class="nw">CVE-2026-99288</span></a></td>
+<td><a href="system/linux-kernel/index.html#red-hat-advisories">system/linux-kernel</a></td>
+<td>5</td>
+<td>Important</td>
+<td>2026-11-23</td>
+<td>2026-11-24</td>
+</tr>
 </tbody>
 </table></div>
 <h2 id="source-and-limits">Source and limits</h2>
 <ul>
-<li>The data is Red Hat's published advisory list, one record per advisory with its CVEs and its packages, released 2026-04-01 to 2026-11-23. Regenerate this page and the README sections from a newer list with <code>packaging/rhsa/rhsa.py</code> (<code>fetch</code>, <code>index</code>, then <code>docs --write</code>; its README says how).</li>
+<li>The data is Red Hat's published advisory list, one record per advisory with its CVEs and its packages, released 2026-04-01 to 2026-11-25. Regenerate this page and the README sections from a newer list with <code>packaging/rhsa/rhsa.py</code> (<code>fetch</code>, <code>index</code>, then <code>docs --write</code>; its README says how).</li>
 <li>Streams are read from the release of each package (<code>el8_10</code> is RHEL 8.10, <code>hum1</code> is a Hummingbird build), so a stream name here is a reading of a package name, not a statement by Red Hat.</li>
 <li>Rebuilds of RHEL (AlmaLinux, Rocky Linux, Oracle Linux) publish their own advisories and kernels; they follow Red Hat's fixes but not on the same day or with the same ids.</li>
 </ul>

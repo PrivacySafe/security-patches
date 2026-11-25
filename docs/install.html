@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="security.html">Security policy</a></li>
 <li><a href="about.html">About and support</a></li>
 </ul>
-<details class="grp"><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="web-apps/drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -151,7 +152,7 @@ document.documentElement.className+=" js"
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a> / <span>Install and update</span></nav>
 <article class="doc"><h1>Install and update</h1><h2 id="install-from-a-package"><svg class="ico ico-inbox-in" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.6 2.6h2.8v5.9h2.7L12 13 7.9 8.5h2.7V2.6zM2.6 13.2h5.2l1.1 2.2c.2.4.6.6 1 .6h4.2c.4 0 .8-.2 1-.6l1.1-2.2h5.2v6.3a2 2 0 0 1-2 2H4.6a2 2 0 0 1-2-2v-6.3z"/></svg> Install from a package</h2>
-<p>Each release ships three files, all named <code>psf-security-patches</code> and versioned by release date, <code>YY.MM.DD-X.Y.Z</code> (for example <code>26.11.23-1.0.0</code>). Download them from the releases page on <a href="https://codeberg.org/PrivacySafe/security-patches/releases">Codeberg</a> or <a href="https://github.com/PrivacySafe/security-patches/releases">GitHub</a>.</p>
+<p>Each release ships three files, all named <code>psf-security-patches</code> and versioned by release date, <code>YY.MM.DD-X.Y.Z</code> (for example <code>26.11.25-1.0.0</code>). Download them from the releases page on <a href="https://codeberg.org/PrivacySafe/security-patches/releases">Codeberg</a> or <a href="https://github.com/PrivacySafe/security-patches/releases">GitHub</a>.</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
 <tr>
@@ -161,36 +162,37 @@ document.documentElement.className+=" js"
 </thead>
 <tbody>
 <tr>
-<td><code>psf-security-patches_26.11.23-1.0.0_all.deb</code></td>
+<td><code>psf-security-patches_26.11.25-1.0.0_all.deb</code></td>
 <td>Debian, Ubuntu, Trisquel and derivatives</td>
 </tr>
 <tr>
-<td><code>psf-security-patches-26.11.23-1.0.0.noarch.rpm</code></td>
+<td><code>psf-security-patches-26.11.25-1.0.0.noarch.rpm</code></td>
 <td>RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives</td>
 </tr>
 <tr>
-<td><code>psf-security-patches-26.11.23-1.0.0.tar.gz</code></td>
+<td><code>psf-security-patches-26.11.25-1.0.0.tar.gz</code></td>
 <td>Any GNU/Linux: the source tree, plus the scripts to rebuild the packages</td>
 </tr>
 </tbody>
 </table></div>
 <p>Check the files against the release's <code>SHA256SUMS-&lt;version&gt;.txt</code> before installing, then:</p>
-<pre tabindex="0"><code class="language-bash">sha256sum -c SHA256SUMS-26.11.23-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.23-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.23-1.0.0.noarch.rpm    # RPM family
+<pre tabindex="0"><code class="language-bash">sha256sum -c SHA256SUMS-26.11.25-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.25-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.25-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/runtimes/php/php2shell-mitigate.sh check             # read only
 </code></pre>
 <p>Each file also has a detached GPG signature, <code>FILE.asc</code>. Import the release key from the release page and confirm its fingerprint reads <code>4BAD A1D9 A399 352C D651 B1D7 4D36 5028 B8E5 6739</code> before you trust a signature.</p>
 <h3 id="where-things-go">Where things go</h3>
 <ul>
 <li><strong><code>/opt/psf-security-patches/</code></strong> holds the whole tree: each tool in its own folder (<code>runtimes/php/</code>, <code>servers/nginx/</code>, <code>system/curl/</code> and so on) with its README, plus the governance documents and a <code>VERSION</code> file. Run the scripts from there.</li>
+<li><strong><code>/usr/bin/psf-run</code></strong> runs the checks every night from cron and keeps their logs and reports as <code>/etc/psf-security-patches/psf.conf</code> says (where they go, how long they stay, which formats; <code>automation/psf.conf.example</code> explains each setting), <strong><code>/usr/bin/psf-status</code></strong> shows what the newest security check logs say, the way <code>systemctl status</code> shows a service, <strong><code>/usr/bin/psf-report</code></strong> turns the logs into plain text, Markdown, HTML or PDF reports, and <strong><code>/usr/bin/psf-logs</code></strong> lists them, keeps them for as long as you choose and clears them; all four are links into <code>/opt/psf-security-patches/automation/</code> (<a href="automation.html">Output for automation</a>).</li>
 <li><strong><code>/opt/psf-security-patches/rhsa/rhsa.py</code></strong> is the Red Hat advisory checker, with its data and its README. On a Red Hat family host, <code>/opt/psf-security-patches/rhsa/rhsa.py verify --rpm</code> checks every installed package against Red Hat's published fixes, and <code>man psf-rhsa</code> documents it. It is a Python 3 program; the index of what it knows is <a href="redhat-advisories.html">REDHAT-ADVISORIES.md</a>.</li>
 <li><strong><code>/usr/lib/systemd/system/php2shell-watch.service</code></strong> is the live watcher's unit, pointed at the <code>/opt</code> path. It is installed but not enabled; see <a href="runtimes/php/index.html#watching-live">Watching live</a>.</li>
 <li><strong>Manual pages and an info manual:</strong> <code>man psf-security-patches</code> is the overview, and every tool has its own page named after its script, such as <code>man psf-haproxy-check</code>. <code>info psf-security-patches</code> has the same material as one manual. The pages are built from each script's own <code>--help</code> text when a release is built, so they always match the tool.</li>
 <li><strong>Documentation website:</strong> it is online at <a href="https://privacysafe.app/docs/security-patches/">privacysafe.app/docs/security-patches</a>, and the packages install an offline copy: open <code>/usr/share/doc/psf-security-patches/html/index.html</code> in a browser (on RPM systems the folder is <code>psf-security-patches-&lt;version&gt;</code>). It starts with the newest vulnerabilities, groups the tools by kind of software, has a CVE index, a page on how the tools work, a glossary, one page per tool and per manual page, and a search that works offline. The offline copy loads nothing from other sites. It is built from the READMEs in this repository, so the READMEs are the documentation.</li>
 <li><strong>License files:</strong> <code>LICENSE</code> and <code>NOTICE</code> come with the package (<code>/usr/share/doc/psf-security-patches/</code> on Debian, <code>/usr/share/licenses/</code> on RPM systems), and the <code>.deb</code> carries a <code>copyright</code> file. Everything is CC0 1.0 Universal.</li>
 </ul>
-<p>Installing runs nothing: there are no install or removal scripts. The only dependencies are bash 4.0 or newer and coreutils. The Red Hat advisory checker also needs Python 3.8 or newer, which the packages recommend and do not require, so every other tool installs and runs without it.</p>
+<p>Installing runs nothing: there are no install or removal scripts. The only dependencies are bash 4.0 or newer and coreutils. The Red Hat advisory checker also needs Python 3.8 or newer, and <code>psf-run</code>, <code>psf-status</code>, <code>psf-report</code> and <code>psf-logs</code> Python 3.7 or newer; the packages recommend Python and do not require it, so every check installs and runs without it.</p>
 <h3 id="upgrading-and-removing">Upgrading and removing</h3>
 <p>Install a newer release the same way and it replaces the old one in place. To remove the tools:</p>
 <pre tabindex="0"><code class="language-bash">sudo apt remove psf-security-patches     # Debian family

@@ -65,8 +65,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "1.0.1"
-DATE = "2026-11-23"
+VERSION = "1.0.2"
+DATE = "2026-11-25"
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The CSAF index of the Security Data API. Red Hat retired the CVRF index (cvrf.json), which now answers 404.
 API = "https://access.redhat.com/hydra/rest/securitydata/csaf.json"
@@ -845,6 +845,12 @@ def cmd_audit(a):
                 and not (plc[p].get("matrix") and ("| " + c.replace("CVE-2026-", "") + " ") in blk)
             ):
                 problems.append("%s: %s has advisories but is not in its block" % (p, c))
+        # a CVE the README names (outside its block) that has advisories, but that its placement leaves out:
+        # without this, a tool added to a README that already has a block gets no Red Hat section unnoticed
+        placed = set(plc[p].get("cves", [])) | set(plc[p].get("summary", [])) | set(plc[p].get("point", {})) | set(plc[p].get("not_placed", []))
+        rest = text[: BEGIN_RE.search(text).start()] + text[text.index(END) :]
+        for c in sorted(set(re.findall(r"CVE-\d{4}-\d{4,7}", rest)) & set(idx["cves"]) - placed):
+            problems.append("%s: names %s, which has advisories, but its placement leaves it out (add it, or list it under not_placed)" % (p, c))
     for rel in readmes(a.repo):
         named = {
             c

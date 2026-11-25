@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 # =============================================================================
 # Optimizely Web Experimentation supply-chain compromise ("OPTIMJACK"): checker  (v1)
-# No CVE at time of writing (disclosed 16-17 Nov 2026 by Scott Helme / Report URI)
+# CVE-2026-132224 (published 18 Nov 2026; disclosed 16-17 Nov 2026 by Scott Helme / Report URI); on CISA's KEV list since 24 Nov 2026
 #
 # If this software is helpful, consider a donation to our 501c3 nonprofit:
 # https://privacysafe.foundation
@@ -75,8 +75,8 @@
 set -uo pipefail
 SELF="$0"
 SCRIPT_NAME="optimizely-optimjack-check.sh"
-SCRIPT_VERSION="1.0.0"
-SCRIPT_DATE="2026-11-17"
+SCRIPT_VERSION="1.0.1"
+SCRIPT_DATE="2026-11-25"
 
 # ---------- common helpers (the same block is used in every check script) ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -361,7 +361,7 @@ main() {
     case "$CMD" in -V|--version|version) echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE})"; exit 0 ;; esac
     case "$CMD" in -h|--help|help) print_help; exit 0 ;; esac
     echo "${SCRIPT_NAME} ${SCRIPT_VERSION} (${SCRIPT_DATE}) - ${CMD} on $(hostname 2>/dev/null || echo '?') at $(date -u +%FT%TZ)"
-    echo "Optimizely Web Experimentation supply-chain compromise, OPTIMJACK (no CVE at time of writing)"
+    echo "Optimizely Web Experimentation supply-chain compromise, OPTIMJACK (CVE-2026-132224)"
     case "$CMD" in
         check) cmd_check "$@" ;;
         hunt) cmd_hunt "$@" ;;

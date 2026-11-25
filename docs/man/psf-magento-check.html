@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="../security.html">Security policy</a></li>
 <li><a href="../about.html">About and support</a></li>
 </ul>
-<details class="grp"><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="../web-apps/drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="../web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -219,7 +220,16 @@ Environment: HUNT_DAYS (30), SCAN_CONTAINERS (1), NGINX_SNIPPET_DIR (/etc/nginx/
 WEB_SERVERS (the servers to judge, &quot;nginx&quot;, &quot;apache&quot; or both; default: the running ones),
 NGINX_DIRS (/etc/nginx /usr/local/nginx/conf /usr/local/etc/nginx /opt/nginx/conf),
 LOG_DIRS (/var/log/nginx /var/log/apache2 /var/log/httpd /var/log/lsws /usr/local/lsws/logs
-/var/www /home), STATE_DIR (/var/lib/psf-security-patches/magento-check), PSF_LOCK_WAIT (30).</pre><p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p></article></main>
+/var/www /home), STATE_DIR (/var/lib/psf-security-patches/magento-check), PSF_LOCK_WAIT (30).
+
+Output and automation (every command):
+  --output jsonl      JSON Lines for programs and language models: a start record,
+                      an event for each finding, a text record for any other line
+                      and a verdict, written when the command ends (format in
+                      automation/README.md; psf-report turns it into Markdown, HTML
+                      or PDF). --output text, the default, is the output above.
+  PSF_READ_ONLY=1     refuse every command that changes the host, before it starts;
+                      nothing is changed. A runner sets it for scheduled checks.</pre><p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p></article></main>
 </div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">

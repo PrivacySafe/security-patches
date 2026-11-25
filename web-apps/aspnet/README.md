@@ -19,7 +19,7 @@ This flaw is in an ASP.NET WebForms module. Most sites that use it run on IIS on
 | Severity | 9.3 Critical (CVSS 4.0, `AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:A`) |
 | Affected | `Idunno.AntiCsrf.dll` 0.9.1.0 / 0.9.1 Beta, which is every release, and any recompiled or customized copy that keeps the same code |
 | Fixed | Nothing. The remedy is to take the module out and use a supported anti-CSRF mechanism |
-| Exploited | Yes. Mandiant observed exploitation during incident response; the details were not published |
+| Exploited | Yes. Mandiant observed exploitation during incident response; the details were not published. CISA added it to its [Known Exploited Vulnerabilities catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) on 24 November 2026 (federal deadline 27 November) and marks it for forensic triage under BOD 26-04 |
 
 **Who is at risk.** Any ASP.NET WebForms application that registers `Idunno.AntiCsrf.AntiCsrfModule` in a `Web.config`. Every anonymously reachable `.aspx` page exposes it, and so does any page that checks the user only inside `Page_Load`, because the module runs earlier. A page does not even need a `<form runat="server">`. Pages that implement `ISuppressCsrfCheck` or carry `[SuppressCsrfCheck]` are skipped by the module and are not exposed.
 

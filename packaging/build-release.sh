@@ -87,7 +87,7 @@ normalize() {
 
 # 1. Stage the tree (no .git, no previous output).
 mkdir -p "$WORK/$TOP"
-tar -C "$ROOT" --exclude='./.git' --exclude='./dist' --exclude='./site' --exclude='./man' --exclude='__pycache__' -cf - . | tar -C "$WORK/$TOP" -xf -
+tar -C "$ROOT" --exclude='./.git' --exclude='./ci' --exclude='./dist' --exclude='./site' --exclude='./man' --exclude='__pycache__' -cf - . | tar -C "$WORK/$TOP" -xf -
 printf '%s %s\nsource: https://codeberg.org/PrivacySafe/security-patches\nmirror: https://github.com/PrivacySafe/security-patches\n' "$PKG" "$FULL" > "$WORK/$TOP/VERSION"
 normalize "$WORK/$TOP"
 
@@ -123,7 +123,15 @@ payload() {
   # the Red Hat advisory checker is the one part of packaging/ that is installed
   install -d "$1/opt/psf-security-patches/rhsa"
   cp -a "$WORK/$TOP/packaging/rhsa/." "$1/opt/psf-security-patches/rhsa/"
-  chmod 0755 "$1/opt/psf-security-patches/rhsa/rhsa.py"
+  chmod 0755 "$1/opt/psf-security-patches/rhsa/rhsa.py" "$1/opt/psf-security-patches/automation/psf-report.py" \
+             "$1/opt/psf-security-patches/automation/psf-status.py" "$1/opt/psf-security-patches/automation/psf-logs.py" \
+             "$1/opt/psf-security-patches/automation/psf-run.py"
+  # psf-run, psf-status, psf-report and psf-logs on PATH: plain links, so installing still runs nothing
+  install -d "$1/usr/bin"
+  ln -s /opt/psf-security-patches/automation/psf-status.py "$1/usr/bin/psf-status"
+  ln -s /opt/psf-security-patches/automation/psf-logs.py "$1/usr/bin/psf-logs"
+  ln -s /opt/psf-security-patches/automation/psf-run.py "$1/usr/bin/psf-run"
+  ln -s /opt/psf-security-patches/automation/psf-report.py "$1/usr/bin/psf-report"
   rm -rf "$1/opt/psf-security-patches/packaging" "$1/opt/psf-security-patches/docs" "$1/opt/psf-security-patches/.gitattributes" "$1/opt/psf-security-patches/.gitignore"
   install -m 0644 "$ROOT/runtimes/php/php2shell-watch.service" "$1/usr/lib/systemd/system/"
   # the unit in the repository runs a copy in /usr/local/sbin; the packaged one runs the installed script
@@ -165,7 +173,9 @@ if command -v dpkg-deb >/dev/null 2>&1; then
     printf ' -- %s  %s\n' "$MAINT" "$RFCDATE"
   } | gzip -9n > "$DOC/changelog.Debian.gz"
   normalize "$D"
-  chmod 0755 "$D/opt/psf-security-patches/rhsa/rhsa.py"      # normalize resets it; the shebang needs it
+  chmod 0755 "$D/opt/psf-security-patches/rhsa/rhsa.py" "$D/opt/psf-security-patches/automation/psf-report.py" \
+             "$D/opt/psf-security-patches/automation/psf-status.py" "$D/opt/psf-security-patches/automation/psf-logs.py" \
+             "$D/opt/psf-security-patches/automation/psf-run.py"   # normalize resets them
   SIZE="$(du -sk --exclude=DEBIAN "$D" | cut -f1)"
   subst "$ROOT/packaging/deb/control.in" > "$D/DEBIAN/control"
   (cd "$D" && find . -type f -not -path './DEBIAN/*' -printf '%P\n' | LC_ALL=C sort | xargs -d '\n' md5sum) > "$D/DEBIAN/md5sums"

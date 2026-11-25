@@ -1,0 +1,44 @@
+# PrivacySafe Security Patches: settings for psf-run, psf-status and psf-logs.
+# SPDX-License-Identifier: CC0-1.0
+#
+# Copy this file to /etc/psf-security-patches/psf.conf (root's, mode 0644 or 0600) and change what you need:
+#   sudo install -D -m 0644 /opt/psf-security-patches/automation/psf.conf.example /etc/psf-security-patches/psf.conf
+# Every setting is optional; a line left out keeps the default shown. The file is read, never run: one
+# NAME = value per line, # starts a comment, and an unknown or repeated name is an error. As root it must be
+# root's and writable by no other account, because it decides what runs as root. `psf-run show-config` shows
+# what is in effect and where each value came from.
+
+# Where the logs go: one folder per day (YYYY-MM-DD), with a .jsonl file per tool and the reports.
+# The folder must be a real folder (not a link) that only root can write. PSF_LOG_DIR overrides it.
+# LOG_DIR = /var/log/psf-security-patches
+
+# How many days of logs to keep: today and the days before it. Older days are removed at the start of every
+# run (psf-logs prune) and each removal is written to syslog. Choose it from your own risk assessment,
+# contracts and the law that applies to you.
+# KEEP_DAYS = 90
+
+# The reports written beside the records each day, from: summary (summary.txt), text (report.txt),
+# md (report.md), html (report.html), pdf (report.pdf). The .jsonl records are always kept, whatever this says.
+# FORMATS = summary text pdf
+
+# The checks to run. auto runs every tool that can write records (more join as they are converted). Or list
+# them, FOLDER/TOOL.sh with an optional :command (check by default), separated by spaces:
+# TOOLS = web-apps/magento/magento-check.sh system/expat/expat-check.sh threats/agentic-attacks/agentic-attack-check.sh:hunt
+# TOOLS = auto
+
+# When to alert: crit (a critical finding or signs of compromise), warn (also a warning or an undecided run),
+# or never. A tool that fails or times out is always reported. The alert is printed, so cron mails it to root.
+# ALERT_ON = crit
+
+# A command that also receives the alert on its standard input, run without a shell. %h is the host name and
+# %s the status. Its program is looked up in /usr/sbin, /usr/bin, /sbin and /bin only, and as root it must be root's.
+# ALERT_COMMAND = mail -s "Security check on %h: %s" root
+# ALERT_COMMAND =
+
+# How long one tool may run, in seconds (10 to 86400). A tool still running then is stopped and reported.
+# TIMEOUT = 900
+
+# Settings for the tools, NAME=value separated by spaces (see each tool's README). PATH, LD_*, HOME, TMPDIR,
+# PSF_READ_ONLY and other settings that would change how a tool runs cannot be set here.
+# ENV = SCAN_CONTAINERS=0 HUNT_DAYS=14
+# ENV =

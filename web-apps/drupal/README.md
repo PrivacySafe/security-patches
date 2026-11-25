@@ -1,4 +1,4 @@
-# Drupal: Webform CVE-2026-96355, core Field UI CVE-2026-108097 and Entity List CVE-2026-108099
+# Drupal: core installer CVE-2026-132165 and CVE-2026-136716, Webform CVE-2026-96355, core Field UI CVE-2026-108097 and Entity List CVE-2026-108099
 
 Part of the [PrivacySafe Security Patches](../../README.md) collection.
 
@@ -181,6 +181,65 @@ If you cannot update today, uninstall Field UI (`drush pm:uninstall field_ui`). 
 
 - [Drupal security advisory SA-CORE-2026-014](https://www.drupal.org/sa-core-2026-014)
 - [Pantheon: Drupal core security update](https://docs.pantheon.io/release-notes/2026/10/drupal-core-security-update)
+
+<a name="drupal-installer-check"></a>
+
+## Drupal core installer: site takeover through install.php (CVE-2026-132165, CVE-2026-136716)
+
+**Script:** [`web-apps/drupal/drupal-installer-check.sh`](drupal-installer-check.sh)
+
+Drupal core ships `core/install.php`, the installer, and it stays on the site after installation. Under conditions Drupal does not publish, an anonymous visitor can use it to reinstall a running site: a site takeover, or code execution. Two advisories cover it, and both are exploited.
+
+| | SA-CORE-2026-017 | SA-CORE-2026-019 |
+|---|---|---|
+| CVE | CVE-2026-132165 ("Fail2Install") | CVE-2026-136716 |
+| Published | 18 November 2026 (updated 21 November) | 25 November 2026 |
+| Drupal's rating | Highly critical, 20/25 (`AC:Complex/A:None/CI:All/II:All/E:Exploit/TD:Uncommon`) | Highly critical, 21/25 (`AC:Basic/A:None/CI:All/II:All/E:Exploit/TD:Uncommon`) |
+| Exploited | On live sites from 2026-11-19 19:00 UTC; on CISA's KEV list since 24 November (federal deadline 27 November) | Yes, Drupal says, in the wild |
+| Fixed in | 10.6.22, 11.3.22, 11.4.13 | The affected range ends before 10.6.23, 11.3.23 and 11.4.14; then run `update.php` |
+
+SA-CORE-2026-019 is the reason to secure the installer even on a patched site: sites "in unusual or incomplete install states" stayed open to takeover after the SA-CORE-2026-017 fix, production sites included, and nothing in the interface shows it. Drupal: "If you have already secured the installer, you are not vulnerable." An update hook repairs sites in that state, so after updating run `update.php` (or `drush updatedb`). Its solution text still names 10.6.22, 11.3.22 and 11.4.13 while the new releases were being packaged; the script judges by the affected range. Drupal 11.2 and below, 10.5 and below, 9 and 8 are end of life and get no fix. Drupal also says that some, but not all, exploit paths are closed when the web server cannot write to or change the permissions of `settings.php`. Drupal Steward protects its subscribers from the known attack vectors.
+
+### Quick start
+
+```bash
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/web-apps/drupal/drupal-installer-check.sh
+less drupal-installer-check.sh
+chmod +x drupal-installer-check.sh
+sudo ./drupal-installer-check.sh check --url https://www.example.org
+```
+
+| Command | What it does |
+|---|---|
+| `check [--url URL ...]` (default) | Finds the Drupal sites (`core/lib/Drupal.php` under `/var/www`, `/srv`, `/home`, `/opt` and `/usr/share/nginx`, or `DRUPAL_ROOTS`) and reports, for each: the core version against both advisories, whether `core/install.php` is there, any rule naming `install.php` in its `.htaccess` or the nginx configuration, and whether the account the web server runs as can change `settings.php`. `--url` asks the live site for `/core/install.php`, `/install.php` and `/core/install.php/x`: the installer counts as blocked only when all three answer 403 or 404. Exit `0` nothing to do, `1` a site is affected or its installer reachable. Read-only |
+| `hunt` | The access logs: requests for `install.php`, of which a POST answered 200 or 302 is the strong lead; for each site, PHP files under `sites/*/files` and `settings.php` changed since 2026-11-18; and how to check user 1, as Drupal asks (the script does not open the database). Exit `0` nothing found, `1` leads, `2` no log could be read. Read-only |
+| `mitigate [--installer-only] [--dry-run]` | **Changes the sites (root).** Moves `core/install.php` into a backup and, unless `--installer-only`, sets `settings.php` to `0444` and its folder to `0555`, as Drupal recommends. Prints the web server rules |
+| `rollback [--dry-run]` | Puts back what `mitigate` moved and the modes it changed |
+
+With `--output jsonl` it writes structured records for [automation](../../automation/README.md), and `psf-run` runs it with the other tools that do.
+
+### Securing the installer, and the backup
+
+Drupal's guidance offers three ways to secure the installer: deny it in the web server configuration, deny it in `.htaccess`, or remove the file and keep it removed. `mitigate` removes it, because that works on every web server and can be checked on disk, but it never deletes a file Drupal ships. It reads `core/install.php` as the account that owns the site's folder, keeps a copy in `/var/lib/psf-security-patches/drupal-installer/backup` (readable by root only) with its path, owner, mode and SHA-256 in a manifest, and removes the original only if it still matches that copy. `rollback` checks the copy's SHA-256 again and puts the file back with its mode, as the same account; it never overwrites a file that has come back meanwhile, and keeps that backup. Every file operation works on a folder opened without following links, and a link where the installer should be is left alone.
+
+A core update brings `core/install.php` back, and a Composer-scaffolded `.htaccess` is overwritten too. So `check` reports a returned installer, and the lasting fix is a web server rule, which `mitigate` prints:
+
+```nginx
+# inside the site's server block: a prefix match, so /core/install.php/x is caught too
+location ^~ /core/install.php { return 404; }
+```
+
+```apache
+# in the virtual host
+<LocationMatch "^/core/install\.php"> Require all denied </LocationMatch>
+```
+
+After adding one, `check --url` should show all three addresses answering 403 or 404, and `update.php` must still work.
+
+### Sources
+
+- Drupal: [SA-CORE-2026-017](https://www.drupal.org/sa-core-2026-017) (18 November, updated 21 November) and [SA-CORE-2026-019](https://www.drupal.org/sa-core-2026-019) (25 November)
+- CISA: [Known Exploited Vulnerabilities catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog), CVE-2026-132165 added 24 November 2026
 
 ## Before you run it
 

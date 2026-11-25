@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="../../security.html">Security policy</a></li>
 <li><a href="../../about.html">About and support</a></li>
 </ul>
-<details class="grp" open><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp" open><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="../../web-apps/drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="../../web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -150,7 +151,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>Optimizely OPTIMJACK supply-chain compromise</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../../tools.html#developer-platforms-tools-and-supply-chain">Developer platforms, tools and supply chain</a></p><h1>Optimizely Web Experimentation supply-chain compromise (&quot;OPTIMJACK&quot;)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Optimizely Web Experimentation snippets (16 November 2026), on any site; sites that already use Optimizely, checked from GNU/Linux</div></dd><dt>The fix</dt><dd>Optimizely says it has &quot;fixed the vulnerability and removed the injected code from affected projects.&quot; There is nothing for a site operator to patch; what is left is site-side: confirm what happened to your own project, and rotate anything that may have been exposed</dd><dt>Covers</dt><dd>No CVE number (see the description below)</dd><dt>Script</dt><dd><div class="scr"><code>optimizely-optimjack-check.sh</code> (<a href="../../man/psf-optimizely-optimjack-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/developer/optimizely/optimizely-optimjack-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>csp</code>, <code>rules</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/developer/optimizely/optimizely-optimjack-check.sh check</code></pre></div></dd></dl></aside><p><a id="optimizely-optimjack"></a></p>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#developer-platforms-tools-and-supply-chain">Developer platforms, tools and supply chain</a></p><h1>Optimizely Web Experimentation supply-chain compromise (&quot;OPTIMJACK&quot;)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Optimizely Web Experimentation snippets (16 November 2026), on any site; sites that already use Optimizely, checked from GNU/Linux</div></dd><dt>The fix</dt><dd>Optimizely says it has &quot;fixed the vulnerability and removed the injected code from affected projects.&quot; There is nothing for a site operator to patch; what is left is site-side: confirm what happened to your own project, and rotate anything that may have been exposed</dd><dt>Exploited</dt><dd>Yes. CISA added <span class="nw">CVE-2026-132224</span> to its <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog">Known Exploited Vulnerabilities catalog</a> on 24 November 2026 (federal deadline 27 November). Feature Experimentation, the SDKs and legacy Full Stack were not affected, Optimizely says</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-132224</span></span></dd><dt>Script</dt><dd><div class="scr"><code>optimizely-optimjack-check.sh</code> (<a href="../../man/psf-optimizely-optimjack-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/developer/optimizely/optimizely-optimjack-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>csp</code>, <code>rules</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/developer/optimizely/optimizely-optimjack-check.sh check</code></pre></div></dd></dl></aside><p><a id="optimizely-optimjack"></a></p>
 <h2 id="optimizely-web-experimentation-supply-chain-compromise-optimjack">Optimizely Web Experimentation supply-chain compromise (&quot;OPTIMJACK&quot;)</h2>
 <p>On 16 November 2026 an attacker got write access to many unrelated customer projects on Optimizely's Web Experimentation platform and injected a loader into each project's &quot;Project JavaScript&quot; field, the one piece of custom code that runs on every page of every experiment in a project. The file was still served from <code>cdn.optimizely.com</code> with Optimizely's own certificate, so nothing about where it came from looked wrong. <a href="https://blog.report-uri.com/">Report URI</a> found 188 infected snippets across 178 organizations, including Zoom, the BBC, CNN, Salesforce, GitLab, IKEA and HSBC.</p>
 <div class="table-wrap" tabindex="0"><table>
@@ -158,7 +159,11 @@ document.documentElement.className+=" js"
 <tbody>
 <tr>
 <td>CVE</td>
-<td>None at time of writing (Optimizely describes it as an unauthorized party exploiting a vulnerability in its Experimentation platform; researchers have named it OPTIMJACK)</td>
+<td><span class="nw">CVE-2026-132224</span> (CWE-642), published 18 November 2026: Web Experimentation before 2026-11-17 &quot;mishandles the account signup flow&quot;, which let the attacker impersonate users on customer accounts and change their Project JavaScript. Optimizely says it closed the flaw within three hours of detection, and that this was not a credentials breach. Researchers named the incident OPTIMJACK</td>
+</tr>
+<tr>
+<td>Exploited</td>
+<td>Yes. CISA added <span class="nw">CVE-2026-132224</span> to its <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog">Known Exploited Vulnerabilities catalog</a> on 24 November 2026 (federal deadline 27 November). Feature Experimentation, the SDKs and legacy Full Stack were not affected, Optimizely says</td>
 </tr>
 <tr>
 <td>Affected</td>

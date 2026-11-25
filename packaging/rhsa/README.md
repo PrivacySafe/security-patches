@@ -103,8 +103,8 @@ Streams and packages are read from package names, because Red Hat's list has no 
 ## The index in numbers
 
 ```
-list: 8833 advisories for 6641 CVEs, 2026-04-01 to 2026-11-23 (Red Hat security advisories (RHSA), redhat_rhsa_2026-04-01_to_2026-11-23.json)
-index: 663 advisories for 78 CVEs; severity {'important': 502, 'critical': 149, 'moderate': 12}
+list: 9059 advisories for 6851 CVEs, 2026-04-01 to 2026-11-25 (Red Hat security advisories (RHSA), redhat_rhsa_2026-04-01_to_2026-11-25.json)
+index: 726 advisories for 80 CVEs; severity {'important': 523, 'critical': 190, 'moderate': 13}
 ```
 
 ---

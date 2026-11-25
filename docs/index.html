@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="security.html">Security policy</a></li>
 <li><a href="about.html">About and support</a></li>
 </ul>
-<details class="grp" open><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp" open><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="web-apps/drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -151,10 +152,10 @@ document.documentElement.className+=" js"
 </details></nav>
 <main id="top">
 <article class="doc"><h1>Security Patches</h1><div class="lead"><p>This collection contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. PrivacySafe publishes these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.</p>
-<p><strong>84 scripts addressing 212 CVEs across 85 software projects and 11 programming languages, plus 9 other global security incidents.</strong></p>
+<p><strong>86 scripts addressing 217 CVEs across 85 software projects and 11 programming languages, plus 9 other global security incidents.</strong></p>
 </div><div class="cards">
 <a class="card" href="tools.html"><strong>Find your software</strong><span>69 tool pages in four groups: servers, system and runtimes, web applications, developer tools.</span></a>
-<a class="card" href="cves.html"><strong>Find a CVE</strong><span>212 CVE numbers, each linked to the tool that covers it.</span></a>
+<a class="card" href="cves.html"><strong>Find a CVE</strong><span>217 CVE numbers, each linked to the tool that covers it.</span></a>
 <a class="card" href="how-it-works.html"><strong>How the tools work</strong><span>The few commands every tool shares, and what a change does to your machine.</span></a>
 <a class="card" href="install.html"><strong>Install and update</strong><span>Packages for Debian and RPM systems, with checksums.</span></a></div><h2 id="start-here">Start here</h2><ol>
 <li>Run the tool's <code>check</code>. It changes nothing.</li>
@@ -163,7 +164,7 @@ document.documentElement.className+=" js"
 <li>If the flaw was being exploited, run <code>hunt</code>, then change any password, key or token an attacker could have reached.</li>
 </ol>
 <p>Each tool has its own page with the exact commands.</p>
-<h2 id="newest">Newest: 2 to 23 November 2026</h2><p>The vulnerabilities from November, newest first.</p>
+<h2 id="newest">Newest: 2 to 25 November 2026</h2><p>The vulnerabilities from November, newest first.</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
 <tr>
@@ -174,6 +175,12 @@ document.documentElement.className+=" js"
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>25 November</td>
+<td><a href="web-apps/drupal/index.html#drupal-installer-check">Drupal core installer</a>: anyone can reinstall a Drupal site through <code>core/install.php</code>, a takeover; exploited, and still open after the 18 November fix for sites in an incomplete install state (<span class="nw">CVE-2026-132165</span>, <span class="nw">CVE-2026-136716</span>)</td>
+<td>Drupal 10 and 11 sites, and end-of-life branches</td>
+<td>Check, hunt, mitigation that moves the installer into a verified backup, rollback</td>
+</tr>
 <tr>
 <td>23 November</td>
 <td><a href="servers/vmware/index.html#vcenter-dirsvc">VMware vCenter</a>: anyone who can reach port 2012 gets an administrator session, exploited since September (<span class="nw">CVE-2026-123890</span>)</td>
@@ -275,6 +282,12 @@ document.documentElement.className+=" js"
 <td><a href="developer/optimizely/index.html#optimizely-optimjack">Optimizely OPTIMJACK</a>: hijacked snippets served a card skimmer to visitors (no CVE)</td>
 <td>Sites that load Optimizely Web Experimentation</td>
 <td>Check, hunt and CSP review</td>
+</tr>
+<tr>
+<td>15 November</td>
+<td><a href="system/linux-kernel/index.html#linux-kernel-noisytcp-check">NoisyTCP</a>: anyone who can reach a TCP port can crash a Linux server whose packets are spread across CPUs, no login needed; a sibling flaw keeps it open on Arm and POWER kernels fixed for the first (<span class="nw">CVE-2026-99288</span>, <span class="nw">CVE-2026-99676</span>)</td>
+<td>The Linux kernel from 4.4 on every distribution</td>
+<td>Check, hunt, stopgaps and rollback</td>
 </tr>
 <tr>
 <td>5 November</td>

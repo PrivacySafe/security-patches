@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="../../security.html">Security policy</a></li>
 <li><a href="../../about.html">About and support</a></li>
 </ul>
-<details class="grp"><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="../drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="../aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -369,8 +370,10 @@ RewriteRule ^ - [F]
 <li>A Mage-OS pre-release is not the release: <code>3.6.0-rc1</code> is reported with a warning.</li>
 <li>It also checks running docker and podman containers, unless you name a directory or set <code>SCAN_CONTAINERS=0</code>. It copies only the files it reads into a private temporary directory, never runs anything in a container beyond <code>find</code> and a file copy, and never keeps a staged link.</li>
 </ul>
+<h2 id="output-for-automation">Output for automation</h2>
+<p><code>--output jsonl</code> (or <code>PSF_OUTPUT=jsonl</code>) makes <code>check</code>, <code>hunt</code>, <code>mitigate</code> and <code>rollback</code> write JSON Lines for monitoring and language models. Each finding of <code>check</code> carries a <code>kind</code> (<code>vulnerability</code>, <code>exposure</code> or <code>compromise</code>), a stable <code>code</code> such as <code>MAGENTO_UPLOAD_PHP</code> and the install's <code>path</code>; a host with no install says so (<code>applicable: false</code>). <code>psf-report</code> turns the records into a summary, Markdown, HTML or PDF. <code>PSF_READ_ONLY=1</code> refuses <code>mitigate</code> and <code>rollback</code> before they start, so a scheduled run can only read. The format and the reports: <a href="../../automation.html">Output for automation</a>.</p>
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../../developer/litellm/index.html">&larr; LiteLLM</a><a rel="next" href="../../servers/mysql/index.html">MySQL client programs &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#magento-exploited-flaws-check-hunt-and-upload-folder-guard">Magento exploited-flaws check, hunt and upload-folder guard</a></li><li class="l2"><a href="#what-a-version-number-can-and-cannot-show">What a version number can and cannot show</a></li><li class="l2"><a href="#the-upload-folder">The upload folder</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#hunt">Hunt</a></li><li class="l2"><a href="#mitigate">Mitigate</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#magento-exploited-flaws-check-hunt-and-upload-folder-guard">Magento exploited-flaws check, hunt and upload-folder guard</a></li><li class="l2"><a href="#what-a-version-number-can-and-cannot-show">What a version number can and cannot show</a></li><li class="l2"><a href="#the-upload-folder">The upload folder</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#hunt">Hunt</a></li><li class="l2"><a href="#mitigate">Mitigate</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#output-for-automation">Output for automation</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

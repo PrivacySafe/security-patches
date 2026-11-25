@@ -42,6 +42,7 @@ LONGDATE = datetime.date.fromisoformat(DATE).strftime("%-d %B %Y")
 URL = "https://codeberg.org/PrivacySafe/security-patches"
 
 NEWEST = [  # (date, script, what happened)
+ ("25 November 2026", "web-apps/drupal/drupal-installer-check.sh", "Drupal core installer site takeover, exploited (CVE-2026-132165, CVE-2026-136716)"),
  ("23 November 2026", "web-apps/aspnet/idunno-anticsrf-check.sh", "Idunno.AntiCsrf on Mono and IIS, exploited (CVE-2026-131914)"),
  ("23 November 2026", "servers/vmware/vcenter-dirsvc-check.sh", "VMware vCenter directory service authentication bypass, exploited (CVE-2026-123890)"),
  ("23 November 2026", "servers/n-central/ncentral-legacyapi-check.sh", "N-central Legacy API and Apache Axis, exploited (CVE-2026-90436)"),
@@ -59,6 +60,7 @@ NEWEST = [  # (date, script, what happened)
  ("19 November 2026", "runtimes/php/php-session-audit.sh", "phpAfterShell, PHP session corruption (CVE-2026-126714)"),
  ("18 November 2026", "servers/nginx/nginx2root-check.sh", "nginx2root: HTTP/2, HTTP/3, resolver and mail proxy (CVE-2026-123007 and others)"),
  ("17 November 2026", "developer/optimizely/optimizely-optimjack-check.sh", "Optimizely OPTIMJACK supply-chain compromise (no CVE)"),
+ ("15 November 2026", "system/linux-kernel/linux-kernel-noisytcp-check.sh", "NoisyTCP: Linux kernel TCP pre-auth remote crash (CVE-2026-99288, CVE-2026-99676)"),
  ("5 November 2026", "system/openssh-musl/openssh-musl-check.sh", "OpenSSH password bypass on musl without PAM (CVE-2026-123158)"),
  ("4 November 2026", "web-apps/wordpress-upgrade/wordpress-upgrade-check.sh", "WordPress core upgrade-window remote code execution (CVE-2026-119977)"),
  ("4 November 2026", "system/apt/apt-nov2026-check.sh", "APT package downloads swapped after verification (CVE-2026-109518)"),
@@ -74,7 +76,7 @@ def find_scripts():
     out = []
     for dp, dn, fn in os.walk(ROOT):
         rel = os.path.relpath(dp, ROOT)
-        if rel.startswith(("packaging", ".git", "man", "dist")): continue
+        if rel.startswith(("packaging", ".git", "man", "dist")) or rel == "ci" or rel.startswith("ci/"): continue
         for f in fn:
             if f.endswith(".sh"): out.append(os.path.join(rel, f) if rel != "." else f)
     return sorted(out)

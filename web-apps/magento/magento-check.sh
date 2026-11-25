@@ -71,6 +71,15 @@
 # NGINX_DIRS (/etc/nginx /usr/local/nginx/conf /usr/local/etc/nginx /opt/nginx/conf),
 # LOG_DIRS (/var/log/nginx /var/log/apache2 /var/log/httpd /var/log/lsws /usr/local/lsws/logs
 # /var/www /home), STATE_DIR (/var/lib/psf-security-patches/magento-check), PSF_LOCK_WAIT (30).
+#
+# Output and automation (every command):
+#   --output jsonl      JSON Lines for programs and language models: a start record,
+#                       an event for each finding, a text record for any other line
+#                       and a verdict, written when the command ends (format in
+#                       automation/README.md; psf-report turns it into Markdown, HTML
+#                       or PDF). --output text, the default, is the output above.
+#   PSF_READ_ONLY=1     refuse every command that changes the host, before it starts;
+#                       nothing is changed. A runner sets it for scheduled checks.
 # =============================================================================
 
 # Commands run as "cmd_${CMD}", which shellcheck cannot follow
@@ -78,8 +87,8 @@
 set -uo pipefail
 
 SCRIPT_NAME="magento-check.sh"
-SCRIPT_VERSION="4.0.0"
-SCRIPT_DATE="2026-11-23"
+SCRIPT_VERSION="4.1.0"
+SCRIPT_DATE="2026-11-25"
 SELF="$0"
 STATE_DIR="${STATE_DIR:-/var/lib/psf-security-patches/magento-check}"
 HUNT_DAYS="${HUNT_DAYS:-30}"
@@ -98,6 +107,163 @@ ok()      { echo -e "  ${GREEN}check${NC} $*"; }
 bad()     { echo -e "  ${RED}CRIT${NC}  $*"; }
 caution() { echo -e "  ${YELLOW}WARN${NC}  $*"; }
 inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
+
+# ---------- structured output and read-only mode (the same block in every script) ----------
+# Generated from automation/output-block.bash by automation/psf-output.py; edit it there.
+# --output jsonl (or PSF_OUTPUT=jsonl) writes JSON Lines, one record per line, when the script ends:
+# a start record, an event for each finding, a text record for any other line, and a verdict.
+# The format is described in automation/README.md. --output text, the default, changes nothing.
+# PSF_READ_ONLY=1 refuses every command that changes the host, before it starts.
+_PSF_FMT="${PSF_OUTPUT:-text}"; _psf_a=()
+while (($#)); do
+    case "$1" in
+        --output) [[ $# -ge 2 ]] || { echo "--output needs a format: text or jsonl" >&2; exit 2; }; _PSF_FMT="$2"; shift 2 ;;
+        --output=*) _PSF_FMT="${1#--output=}"; shift ;;
+        *) _psf_a+=("$1"); shift ;;
+    esac
+done
+set -- "${_psf_a[@]+"${_psf_a[@]}"}"; unset _psf_a
+case "$_PSF_FMT" in text|jsonl) ;; *) echo "--output: unknown format '$_PSF_FMT' (text or jsonl; psf-report renders Markdown, HTML and PDF)" >&2; exit 2 ;; esac
+_PSF_CMD=""; for _psf_x in "$@"; do [[ "$_psf_x" == -* ]] || { _PSF_CMD="$_psf_x"; break; }; done; unset _psf_x
+
+# A command that changes the host is refused in read-only mode, whatever else it is asked to do.
+psf_refuse_change() {
+    [[ "${PSF_READ_ONLY:-0}" == 1 ]] || return 0
+    local m="read-only mode (PSF_READ_ONLY=1): ${1:-this change} refused; nothing was changed"
+    if [[ "$_PSF_FMT" == jsonl ]]; then PSF_KIND="" _psf_ev error "$m"; else echo "$m" >&2; fi
+    exit 2
+}
+
+# A check that found nothing to examine says so; only the jsonl verdict records it.
+psf_not_applicable() { [[ "$_PSF_FMT" == jsonl ]] && _psf_rec applicable "" "$*"; return 0; }
+
+if [[ "$_PSF_FMT" == jsonl ]]; then
+    for _psf_v in RED GREEN YELLOW CYAN NC BLUE BLU YEL RST GRN BOLD DIM; do [[ -n "${!_psf_v+x}" ]] && printf -v "$_psf_v" '%s' ''; done; unset _psf_v   # the colors this script set
+    _PSF_SELF="${BASH_SOURCE[0]}"; _PSF_TOOL="${SCRIPT_NAME:-${_PSF_SELF##*/}}"; _PSF_TOOL="${_PSF_TOOL%.sh}"
+    _PSF_HOST="$(cat /proc/sys/kernel/hostname 2>/dev/null || uname -n 2>/dev/null || echo unknown)"
+    _PSF_MAIN_PID="$BASHPID"; _PSF_T0="${EPOCHREALTIME:-$(date +%s)}"; _PSF_EXIT_CMD=""
+    _PSF_RUN="${_PSF_HOST}-${_PSF_TOOL}-$(date -u +%Y%m%dT%H%M%SZ 2>/dev/null)-$$"
+    _psf_d="$(cd "$(dirname "$_PSF_SELF")" 2>/dev/null && pwd)"; _psf_c="${_psf_d%/*}"; _psf_c="${_psf_c##*/}"
+    case "$_psf_c" in
+        servers|system|runtimes|web-apps|developer|threats) _PSF_FIX="https://privacysafe.app/docs/security-patches/${_psf_c}/${_psf_d##*/}/" ;;
+        *) _PSF_FIX="https://privacysafe.app/docs/security-patches/" ;;
+    esac; unset _psf_d _psf_c
+
+    _psf_s() {   # a JSON string: escapes, newlines kept, color codes and other control characters dropped
+        local s="$1"
+        while [[ "$s" =~ $'\e'\[[0-9\;]*[A-Za-z] ]]; do s="${s/"${BASH_REMATCH[0]}"/}"; done
+        s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//$'\n'/\\n}"; s="${s//$'\r'/}"; s="${s//$'\t'/\\t}"
+        s="${s//[$'\001'-$'\037']/}"
+        printf '"%s"' "$s"
+    }
+    # A record this block writes carries a secret marker, made fresh for each run and kept in this shell only.
+    # At exit only marked lines are records; any other line, even one that looks like a record (a file name
+    # with a newline in it, a log line the script prints), stays text, so output cannot forge a record.
+    _PSF_MARK=""; read -r _PSF_MARK </proc/sys/kernel/random/uuid 2>/dev/null || _PSF_MARK="${RANDOM}${RANDOM}${RANDOM}${RANDOM}$$"
+    _PSF_MARK=$'\036'"psf-${_PSF_MARK}"$'\036'
+    _psf_rec() {   # type level message [more JSON fields]: one marked record on stdout
+        local type="$1" level="$2" msg="$3" ts cves="" rest extra="${4:-}" c
+        TZ=UTC printf -v ts '%(%Y-%m-%dT%H:%M:%SZ)T' -1
+        rest="$msg"
+        while [[ "$rest" =~ (CVE-[0-9]{4}-[0-9]{4,}) ]]; do
+            c="${BASH_REMATCH[1]}"; [[ ",$cves," == *",\"$c\","* ]] || cves="${cves:+$cves,}\"$c\""; rest="${rest#*"$c"}"
+        done
+        local kind="${PSF_KIND:-}"
+        [[ -z "$kind" && "$_PSF_CMD" == hunt && "$level" =~ ^(crit|warn)$ ]] && kind=indicator
+        [[ -n "$kind" && "$level" =~ ^(crit|warn)$ ]] && extra+=",\"kind\":$(_psf_s "$kind")"
+        [[ -n "${PSF_CODE:-}" ]] && extra+=",\"code\":$(_psf_s "$PSF_CODE")"
+        [[ -n "${PSF_PATH:-}" ]] && extra+=",\"path\":$(_psf_s "$PSF_PATH")"
+        [[ "$level" =~ ^(crit|warn)$ ]] && extra+=",\"fix\":$(_psf_s "${PSF_FIX:-$_PSF_FIX}")"
+        printf '%s{"schema":1,"type":"%s","run":%s,"tool":%s,"version":%s,"host":%s,"command":%s,"ts":"%s"%s,"msg":%s,"cve":[%s]%s}\n' \
+            "$_PSF_MARK" "$type" "$(_psf_s "$_PSF_RUN")" "$(_psf_s "$_PSF_TOOL")" "$(_psf_s "${SCRIPT_VERSION:-}")" "$(_psf_s "$_PSF_HOST")" \
+            "$(_psf_s "$_PSF_CMD")" "$ts" "${level:+,\"level\":\"$level\"}" "$(_psf_s "$msg")" "$cves" "$extra"
+    }
+    _psf_ev() { local level="$1" m; shift; printf -v m '%b' "$*"; m="${m#"${m%%[![:space:]]*}"}"; m="${m%"${m##*[![:space:]]}"}"; _psf_rec event "$level" "$m"; }
+
+    # the helpers this script defined above now write records
+    declare -F ok      >/dev/null && ok()      { _psf_ev ok "$*"; }
+    declare -F pass    >/dev/null && pass()    { _psf_ev ok "$*"; }
+    declare -F info    >/dev/null && info()    { _psf_ev info "$*"; }
+    declare -F inf     >/dev/null && inf()     { _psf_ev info "$*"; }
+    declare -F inf_hunt >/dev/null && inf_hunt() { _psf_ev info "$*"; }
+    declare -F note    >/dev/null && note()    { _psf_ev info "$*"; }
+    declare -F tip     >/dev/null && tip()     { _psf_ev info "$*"; }
+    declare -F warn    >/dev/null && warn()    { _psf_ev warn "$*"; }
+    declare -F caution >/dev/null && caution() { _psf_ev warn "$*"; }
+    declare -F bad     >/dev/null && bad()     { _psf_ev crit "$*"; }
+    declare -F fail    >/dev/null && fail()    { _psf_ev crit "$*"; }
+    declare -F step    >/dev/null && step()    { local m; printf -v m '%b' "$*"; m="${m//$'\n'/}"; _psf_rec section "" "${m#"${m%%[![:space:]]*}"}"; }
+    declare -F section >/dev/null && section() { local m; printf -v m '%b' "$*"; m="${m//$'\n'/}"; _psf_rec section "" "${m#"${m%%[![:space:]]*}"}"; }
+    die() { _psf_ev error "$*"; exit 2; }
+
+    # Everything the script prints goes to a private file; at exit it becomes records, and a verdict closes the run.
+    # As root it is always /tmp (root's, sticky): a TMPDIR another account can write would let it swap the file.
+    _PSF_TMPD="${TMPDIR:-/tmp}"; [[ $EUID -eq 0 ]] && _PSF_TMPD=/tmp
+    _PSF_TMP="$(mktemp "$_PSF_TMPD/psf-output.XXXXXXXXXX")" || { echo "--output jsonl: cannot make a temporary file" >&2; exit 2; }
+    exec {_PSF_OUT}>&1 {_PSF_ERR}>&2
+    exec {_PSF_RD}<"$_PSF_TMP"        # read back at exit through this handle
+    exec >>"$_PSF_TMP" 2>&1
+    rm -f "$_PSF_TMP"                 # nameless from here on: nothing is left in /tmp, even when the run is killed
+    _psf_rec start "" "$_PSF_TOOL ${SCRIPT_VERSION:-} ${_PSF_CMD:-(no command)}" \
+        ",\"script_date\":$(_psf_s "${SCRIPT_DATE:-}"),\"euid\":${EUID},\"read_only\":$([[ "${PSF_READ_ONLY:-0}" == 1 ]] && echo true || echo false)"
+    _psf_finish() {
+        local rc="$1" line crit=0 warn=0 ok=0 info=0 err=0 text=0 app=null result t1 dur seq=0
+        exec 1>&"$_PSF_OUT" 2>&"$_PSF_ERR"
+        _psf_out() { local r="${1#"$_PSF_MARK"}"; seq=$((seq + 1)); printf '{"schema":1,"seq":%d,%s\n' "$seq" "${r#\{\"schema\":1,}"; }   # numbered in output order
+        local fd="$_PSF_RD"
+        while IFS= read -r line <&"$fd" || [[ -n "$line" ]]; do
+            if [[ "$line" == "$_PSF_MARK"'{"schema":1,'* ]]; then
+                case "$line" in
+                    *'"type":"applicable"'*) app=false ;;
+                    *'"level":"crit"'*) crit=$((crit + 1)) ;;
+                    *'"level":"warn"'*) warn=$((warn + 1)) ;;
+                    *'"level":"ok"'*) ok=$((ok + 1)) ;;
+                    *'"level":"info"'*) info=$((info + 1)) ;;
+                    *'"level":"error"'*) err=$((err + 1)) ;;
+                esac
+                _psf_out "$line"
+            else
+                line="${line//$'\036'/}"
+                while [[ "$line" =~ $'\e'\[[0-9\;]*[A-Za-z] ]]; do line="${line/"${BASH_REMATCH[0]}"/}"; done
+                line="${line#"${line%%[![:space:]]*}"}"; line="${line%"${line##*[![:space:]]}"}"
+                [[ -n "$line" ]] || continue
+                text=$((text + 1)); _psf_out "$(_psf_rec text "" "$line")"
+            fi
+        done
+        exec {fd}<&-
+        case "$rc" in 0) result=clean ;; 1) result=findings ;; *) result=undecided ;; esac
+        [[ "$app" == null && $((crit + warn + ok)) -gt 0 ]] && app=true
+        t1="${EPOCHREALTIME:-$(date +%s)}"; dur="$(awk -v a="$_PSF_T0" -v b="$t1" 'BEGIN { printf "%.2f", b - a }' 2>/dev/null || echo 0)"
+        _psf_out "$(_psf_rec verdict "" "$result" ",\"result\":\"$result\",\"exit\":$rc,\"applicable\":$app,\"duration_s\":$dur,\"counts\":{\"crit\":$crit,\"warn\":$warn,\"ok\":$ok,\"info\":$info,\"error\":$err,\"text\":$text}")"
+    }
+    _psf_on_exit() {
+        local rc=$?
+        if [[ -n "$_PSF_EXIT_CMD" ]]; then eval "$_PSF_EXIT_CMD"; fi
+        [[ "$BASHPID" == "$_PSF_MAIN_PID" ]] && _psf_finish "$rc"
+        exit "$rc"
+    }
+    # the script's own EXIT traps still run, before the verdict is written
+    trap() {
+        local action has_exit=0 s rest=()
+        # shellcheck disable=SC2064   # the script's own trap arguments, passed on unchanged
+        case "${1:-}" in ""|-p|-l) builtin trap "$@"; return ;; esac
+        action="$1"; shift
+        for s in "$@"; do if [[ "$s" == EXIT || "$s" == 0 ]]; then has_exit=1; else rest+=("$s"); fi; done
+        if ((has_exit)); then
+            if [[ "$action" == - ]]; then _PSF_EXIT_CMD=""; else _PSF_EXIT_CMD="$action"; fi
+            builtin trap _psf_on_exit EXIT
+        fi
+        # shellcheck disable=SC2064   # the action string the script wrote, passed on as it was given
+        ((${#rest[@]})) && builtin trap "$action" "${rest[@]}"
+        return 0
+    }
+    builtin trap _psf_on_exit EXIT
+fi
+case "$_PSF_CMD" in
+    mitigate|rollback|harden|fix|apply|restore|remove|uninstall|install|enable|disable|quarantine|purge|revert|undo)
+        psf_refuse_change "$_PSF_CMD" ;;
+esac
+# ---------- end of structured output and read-only mode ----------
 have()    { command -v "$1" >/dev/null 2>&1; }
 
 # Version helpers: strip a leading v and any -prerelease or +build suffix, then compare with
@@ -374,13 +540,13 @@ cmd_check() {
     local rc=0 found=0 root id ed ver mo servers ev gd ht nf nx s
     step "Looking for Magento, Adobe Commerce or Mage-OS"
     local -a roots=(); while IFS= read -r root; do [[ -n "$root" ]] && roots+=("$root"); done < <(find_installs "$@")
-    if [[ ${#roots[@]} -eq 0 ]]; then info "No install found (looked for bin/magento under ${*:-/var/www /srv /home /opt})"; return 0; fi
+    if [[ ${#roots[@]} -eq 0 ]]; then info "No install found (looked for bin/magento under ${*:-/var/www /srv /home /opt})"; psf_not_applicable "no Magento, Adobe Commerce or Mage-OS install found$([[ "${SCAN_CONTAINERS:-1}" == 1 ]] && echo " on the host or in running containers" || echo " on the host (containers not read)")"; return 0; fi
     servers="$(running_servers | sort -u | tr '\n' ' ')"
     for root in "${roots[@]}"; do
         found=$((found + 1))
         id="$(magento_identity "$root")"; ed="${id%%|*}"; ver="${id#*|}"
         step "${ed} ${ver:-unknown} at ${root}"
-        if [[ -z "$ver" ]]; then caution "could not read the version (looked in composer.lock and composer.json): judge it by hand against APSB26-73, APSB26-92, APSB26-146 and APSB26-153"; rc=1; continue; fi
+        if [[ -z "$ver" ]]; then PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_VERSION_UNREADABLE caution "could not read the version (looked in composer.lock and composer.json): judge it by hand against APSB26-73, APSB26-92, APSB26-146 and APSB26-153"; rc=1; continue; fi
         mo="$(dated_month "$ver")"
         local poly="" ato="" ss="" bs=""
         if [[ "$ed" == mageos ]]; then
@@ -396,7 +562,7 @@ cmd_check() {
             poly=confirm; ato=confirm; ss=hotfix; bs=confirm
         fi
         if [[ "$poly" == old ]]; then
-            bad "${ver} is out of Adobe's support (below 2.4.4): Adobe published no fix for any of these four flaws on this line. Upgrade; community backports of the StyleSmuggler fix exist for 2.2.0 to 2.4.3-p3 (Scandiweb), unreviewed here"
+            PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_OUT_OF_SUPPORT bad "${ver} is out of Adobe's support (below 2.4.4): Adobe published no fix for any of these four flaws on this line. Upgrade; community backports of the StyleSmuggler fix exist for 2.2.0 to 2.4.3-p3 (Scandiweb), unreviewed here"
             rc=1
         fi
 
@@ -404,8 +570,8 @@ cmd_check() {
         echo "  -- CVE-2026-48356 (PolyShell, upload through the guest cart, CISA KEV)"
         case "$poly" in
             fixed) ok "${ver} carries the PolyShell fix" ;;
-            affected) bad "${ver}: built before the July 2026 fix (APSB26-73)"; rc=1 ;;
-            confirm) caution "${ver}: confirm the July 2026 fix (APSB26-73): an isolated patch does not change the version string. Adobe lists plain 2.4.9 as affected and 2.4.9-2026-jul as fixed"; rc=1 ;;
+            affected) PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_POLYSHELL_UNFIXED bad "${ver}: built before the July 2026 fix (APSB26-73)"; rc=1 ;;
+            confirm) PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_POLYSHELL_UNCONFIRMED caution "${ver}: confirm the July 2026 fix (APSB26-73): an isolated patch does not change the version string. Adobe lists plain 2.4.9 as affected and 2.4.9-2026-jul as fixed"; rc=1 ;;
             prerelease) caution "Mage-OS ${ver} is a pre-release: it may not carry the fix"; rc=1 ;;
             old) : ;;
             *) caution "cannot compare version '${ver}'"; rc=1 ;;
@@ -417,30 +583,30 @@ cmd_check() {
                 judge_nginx
                 case "$NGX_STATE" in
                     closed) ok "nginx closes the upload folder: ${NGX_WHERE}" ;;
-                    weak) if [[ "$poly" == fixed ]]; then caution "nginx does not close the upload folder (defense in depth): ${NGX_WHERE}"; else bad "nginx does not close the upload folder: ${NGX_WHERE}"; rc=1; fi ;;
-                    *) if [[ "$poly" == fixed ]]; then caution "no nginx location closes /media/custom_options/ (defense in depth: run mitigate for the snippet)"; else bad "no nginx location closes /media/custom_options/: an uploaded .php can run when the PHP location serves it (run mitigate for the snippet)"; rc=1; fi ;;
+                    weak) if [[ "$poly" == fixed ]]; then PSF_KIND=exposure PSF_PATH="$root" PSF_CODE=MAGENTO_UPLOAD_FOLDER_OPEN caution "nginx does not close the upload folder (defense in depth): ${NGX_WHERE}"; else PSF_KIND=exposure PSF_PATH="$root" PSF_CODE=MAGENTO_UPLOAD_FOLDER_OPEN bad "nginx does not close the upload folder: ${NGX_WHERE}"; rc=1; fi ;;
+                    *) if [[ "$poly" == fixed ]]; then PSF_KIND=exposure PSF_PATH="$root" PSF_CODE=MAGENTO_UPLOAD_FOLDER_OPEN caution "no nginx location closes /media/custom_options/ (defense in depth: run mitigate for the snippet)"; else PSF_KIND=exposure PSF_PATH="$root" PSF_CODE=MAGENTO_UPLOAD_FOLDER_OPEN bad "no nginx location closes /media/custom_options/: an uploaded .php can run when the PHP location serves it (run mitigate for the snippet)"; rc=1; fi ;;
                 esac
             fi
             ht="$(htaccess_state "$root")"
             if [[ "$servers" == *apache* || -z "$servers" ]]; then
                 case "$ht" in
                     closed) ok "pub/media/custom_options/.htaccess denies all access (read by Apache and LiteSpeed when AllowOverride permits it)" ;;
-                    link) bad "pub/media/custom_options/.htaccess is a symbolic link: not read; replace it with a regular file"; rc=1 ;;
-                    *) if [[ "$poly" == fixed ]]; then caution "pub/media/custom_options/.htaccess is ${ht} or does not deny (defense in depth: run mitigate)"; else bad "pub/media/custom_options/.htaccess is ${ht} or does not deny, and Apache or LiteSpeed serves this host (run mitigate)"; rc=1; fi ;;
+                    link) PSF_KIND=exposure PSF_PATH="$root" PSF_CODE=MAGENTO_HTACCESS_LINK bad "pub/media/custom_options/.htaccess is a symbolic link: not read; replace it with a regular file"; rc=1 ;;
+                    *) if [[ "$poly" == fixed ]]; then PSF_KIND=exposure PSF_PATH="$root" PSF_CODE=MAGENTO_UPLOAD_FOLDER_OPEN caution "pub/media/custom_options/.htaccess is ${ht} or does not deny (defense in depth: run mitigate)"; else PSF_KIND=exposure PSF_PATH="$root" PSF_CODE=MAGENTO_UPLOAD_FOLDER_OPEN bad "pub/media/custom_options/.htaccess is ${ht} or does not deny, and Apache or LiteSpeed serves this host (run mitigate)"; rc=1; fi ;;
                 esac
             fi
             [[ -n "$servers" ]] || inf "no nginx, Apache or LiteSpeed process seen: the folder guard was judged from the .htaccess alone"
         fi
         read -r nf nx <<<"$(upload_files "$root")"
-        if [[ "${nx:-0}" -gt 0 ]]; then bad "${nx} file(s) in pub/media/custom_options/ are PHP or carry PHP code: treat the store as compromised and run hunt"; rc=1
+        if [[ "${nx:-0}" -gt 0 ]]; then PSF_KIND=compromise PSF_PATH="$root" PSF_CODE=MAGENTO_UPLOAD_PHP bad "${nx} file(s) in pub/media/custom_options/ are PHP or carry PHP code: treat the store as compromised and run hunt"; rc=1
         elif [[ "${nf:-0}" -gt 0 ]]; then inf "${nf} file(s) in pub/media/custom_options/ (customer uploads look like this too); hunt reads them"; fi
 
         # CVE-2026-71362
         echo "  -- CVE-2026-71362 (customer account takeover, CISA KEV)"
         case "$ato" in
             fixed) ok "${ver} carries the August 2026 fix (APSB26-92)" ;;
-            affected) bad "${ver}: built before the August 2026 fix (APSB26-92)"; rc=1 ;;
-            confirm) caution "${ver}: confirm the August 2026 fix (APSB26-92; Adobe's isolated patch 249-2026-08-001-CE on 2.4.9)"; rc=1 ;;
+            affected) PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_CVE_2026_71362_UNFIXED bad "${ver}: built before the August 2026 fix (APSB26-92)"; rc=1 ;;
+            confirm) PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_CVE_2026_71362_UNCONFIRMED caution "${ver}: confirm the August 2026 fix (APSB26-92; Adobe's isolated patch 249-2026-08-001-CE on 2.4.9)"; rc=1 ;;
             prerelease) caution "Mage-OS ${ver} is a pre-release: it may not carry the fix"; rc=1 ;;
             old) : ;;
             *) caution "cannot compare version '${ver}'"; rc=1 ;;
@@ -450,14 +616,14 @@ cmd_check() {
         echo "  -- CVE-2026-75650 (StyleSmuggler, unauthenticated RCE, CISA KEV)"
         case "$ss" in
             fixed) ok "Mage-OS ${ver} carries the StyleSmuggler fix (3.5.0 or later)" ;;
-            affected) bad "Mage-OS ${ver} is below 3.5.0: exposed to StyleSmuggler"; rc=1 ;;
+            affected) PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_STYLESMUGGLER_UNFIXED bad "Mage-OS ${ver} is below 3.5.0: exposed to StyleSmuggler"; rc=1 ;;
             prerelease) caution "Mage-OS ${ver} is a pre-release: it may not carry the fix"; rc=1 ;;
             hotfix)
                 ev="$(hotfix_evidence "$root")"; gd="$(guard_evidence "$root")"
                 if [[ -n "$ev" ]]; then
                     ok "the hotfix is referenced: ${ev}. Confirm it applied: vendor/bin/magento-patches -n status | grep 39341"
                 else
-                    caution "no sign of hotfix VULN-39341 (looked in composer.json, composer.lock, .magento.env.yaml, m2-hotfixes/ and patches/). No release carries it, the October 2026 one included: exposed unless it was applied another way. Confirm: vendor/bin/magento-patches -n status | grep 39341"
+                    PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_STYLESMUGGLER_NO_HOTFIX caution "no sign of hotfix VULN-39341 (looked in composer.json, composer.lock, .magento.env.yaml, m2-hotfixes/ and patches/). No release carries it, the October 2026 one included: exposed unless it was applied another way. Confirm: vendor/bin/magento-patches -n status | grep 39341"
                     rc=1
                 fi
                 [[ -n "$gd" ]] && inf "community mitigation present (not the fix): ${gd}"
@@ -470,8 +636,8 @@ cmd_check() {
         echo "  -- CVE-2026-103849 (BlockStrap, bypass of the StyleSmuggler fix)"
         case "$bs" in
             fixed) ok "${ver} carries the October 2026 fix (APSB26-153)" ;;
-            affected) bad "${ver}: built before the October 2026 fix (APSB26-153)"; rc=1 ;;
-            confirm) caution "${ver}: confirm the October 2026 fix (APSB26-153): an isolated patch does not change the version string"; rc=1 ;;
+            affected) PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_BLOCKSTRAP_UNFIXED bad "${ver}: built before the October 2026 fix (APSB26-153)"; rc=1 ;;
+            confirm) PSF_KIND=vulnerability PSF_PATH="$root" PSF_CODE=MAGENTO_BLOCKSTRAP_UNCONFIRMED caution "${ver}: confirm the October 2026 fix (APSB26-153): an isolated patch does not change the version string"; rc=1 ;;
             prerelease) caution "Mage-OS ${ver} is a pre-release: it may not carry the fix"; rc=1 ;;
             old) : ;;
             *) caution "cannot compare version '${ver}'"; rc=1 ;;
@@ -976,6 +1142,7 @@ lock_for_change() {
         [[ "$lk_cmds" == *" $lk_arg "* ]] && lk_hit=1
     done
     [[ $lk_hit -eq 1 ]] || return 0
+    psf_refuse_change "lock_for_change"
     have flock || return 0
     lk_dir="$STATE_DIR"
     { mkdir -p "$lk_dir" && [[ -w "$lk_dir" ]]; } 2>/dev/null || return 0

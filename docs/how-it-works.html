@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="security.html">Security policy</a></li>
 <li><a href="about.html">About and support</a></li>
 </ul>
-<details class="grp"><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="web-apps/drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -218,6 +219,8 @@ document.documentElement.className+=" js"
 </tbody>
 </table></div>
 <p>A hunt match tells you where to look. A clean hunt means none of the published indicators were found.</p>
+<h2 id="output-for-automation">Output for automation</h2>
+<p>Magento, the nginx October 2026 check, Expat, the agentic attack check and NoisyTCP can write JSON Lines instead of text: <code>--output jsonl</code>. Each run gives a start record, an event for each finding, and a verdict with the exit code, the counts and whether the tool found anything on the host to check. <code>PSF_READ_ONLY=1</code> refuses every change, so a scheduled run can only read. <code>automation/psf-report.py</code> turns the records of many runs and hosts into a short summary, a full plain-text report, Markdown, an HTML page or a PDF, with Python 3 alone. The records follow, closely rather than exactly, the joint guide <em>Best Practices for Event Logging and Threat Detection</em> (2024), the NIST SP 800-53 Rev. 5 Audit and Accountability controls and OMB Memorandum M-26-14: <a href="automation.html">Output for automation</a> has the format, how it lines up with them and where it stops short. The other tools follow.</p>
 <h2 id="settings">Settings</h2>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
@@ -253,7 +256,7 @@ document.documentElement.className+=" js"
 </ul>
 <p>Terms such as CVE, CVSS, backport and indicator are explained in the <a href="glossary.html">glossary</a>.</p>
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#what-every-tool-has-in-common">What every tool has in common</a></li><li class="l2"><a href="#root-and-sudo">Root and sudo</a></li><li class="l2"><a href="#what-mitigate-does-before-it-changes-anything">What mitigate does before it changes anything</a></li><li class="l2"><a href="#results-and-exit-codes">Results and exit codes</a></li><li class="l2"><a href="#settings">Settings</a></li><li class="l2"><a href="#where-things-are">Where things are</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#what-every-tool-has-in-common">What every tool has in common</a></li><li class="l2"><a href="#root-and-sudo">Root and sudo</a></li><li class="l2"><a href="#what-mitigate-does-before-it-changes-anything">What mitigate does before it changes anything</a></li><li class="l2"><a href="#results-and-exit-codes">Results and exit codes</a></li><li class="l2"><a href="#output-for-automation">Output for automation</a></li><li class="l2"><a href="#settings">Settings</a></li><li class="l2"><a href="#where-things-are">Where things are</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

@@ -166,6 +166,10 @@ RewriteRule ^ - [F]
 - A Mage-OS pre-release is not the release: `3.6.0-rc1` is reported with a warning.
 - It also checks running docker and podman containers, unless you name a directory or set `SCAN_CONTAINERS=0`. It copies only the files it reads into a private temporary directory, never runs anything in a container beyond `find` and a file copy, and never keeps a staged link.
 
+## Output for automation
+
+`--output jsonl` (or `PSF_OUTPUT=jsonl`) makes `check`, `hunt`, `mitigate` and `rollback` write JSON Lines for monitoring and language models. Each finding of `check` carries a `kind` (`vulnerability`, `exposure` or `compromise`), a stable `code` such as `MAGENTO_UPLOAD_PHP` and the install's `path`; a host with no install says so (`applicable: false`). `psf-report` turns the records into a summary, Markdown, HTML or PDF. `PSF_READ_ONLY=1` refuses `mitigate` and `rollback` before they start, so a scheduled run can only read. The format and the reports: [Output for automation](../../automation/README.md).
+
 ---
 
 ## ⚠️ Important notice

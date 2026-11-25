@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en" data-root="">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
+<title>Output for automation | PrivacySafe Security Patches</title><meta name="description" content="JSON Lines output for monitoring and language models, read-only mode, and psf-report for Markdown, HTML and PDF reports.">
+<link rel="jslicense" href="weblabels.html"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/ps-base.css"><link rel="stylesheet" href="assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
+document.documentElement.className+=" js"
+// @license-end</script></head>
+<body class="docs">
+<a class="skip-link" href="#top">Skip to main content</a>
+<header class="topbar">
+<div aria-label="Site navigation" class="wrap nav">
+<a aria-label="PrivacySafe home" class="brand header-brand" href="https://privacysafe.app/">
+<img alt="PrivacySafe" class="brand-logo" height="192" src="assets/img/privacysafe-logo.svg" width="1696"/>
+</a>
+<nav aria-label="Primary" class="navlinks">
+<a href="https://privacysafe.app/#download">Download</a>
+<a href="https://privacysafe.app/#apps">Apps</a>
+<a href="https://privacysafe.app/#identity">Identity</a>
+<a href="https://privacysafe.app/#trust">Trust</a>
+<a href="https://privacysafe.app/docs/" rel="noopener noreferrer" target="_blank">Docs</a>
+<a href="https://privacysafe.social" rel="noopener noreferrer" target="_blank">Social</a>
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+</nav>
+<div class="nav-actions">
+<a class="btn soft" href="https://privacysafe.app/#apps">Learn More</a>
+<a class="btn primary" href="https://privacysafe.app/#download">Get PrivacySafe</a>
+<a aria-label="Download" class="btn hamb" href="https://privacysafe.app/#download">
+<svg class="ico ico-download" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M10.900 2.800h2.200v9.100l3.300-3.300 1.600 1.600L12 16.100 6 10.200l1.600-1.600 3.300 3.300V2.800zM4 18.400h16v2.200H4v-2.200z"/></svg>
+</a>
+</div>
+</div>
+</header>
+<nav aria-label="Documentation sections" class="docs-subnav"><div class="wrap"><ul><li><a href="index.html">Home</a></li><li><a href="tools.html">Tools</a></li><li><a href="cves.html">CVEs</a></li><li><a href="how-it-works.html">How it works</a></li><li><a href="install.html">Install</a></li><li><a href="man/index.html">Manual pages</a></li><li><a href="https://privacysafe.app/docs/security-patches/" rel="noopener noreferrer" target="_blank">Read online <svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg></a></li></ul></div></nav>
+<div class="doc-page"><div class="wrap doc-layout"><nav class="docs-side" aria-label="Security Patches"><div class="side-search js-only"><label class="sr" for="site-search">Search Security Patches</label><input id="site-search" type="search" placeholder="Search tools, CVEs, commands" title="Press / to search" aria-keyshortcuts="/" autocomplete="off" aria-controls="search-results"><div id="search-results" role="listbox" hidden></div></div><details class="side-box" open><summary>Menu</summary><ul class="start">
+<li><a href="index.html">Home</a></li>
+<li><a href="how-it-works.html">How the tools work</a></li>
+<li><a href="glossary.html">Glossary</a></li>
+<li><a href="install.html">Install and update</a></li>
+<li><a href="tools.html">All tools</a></li>
+<li><a href="cves.html">Find a CVE</a></li>
+<li><a href="man/index.html">Manual pages</a></li>
+<li><a href="changelog.html">Changelog</a></li>
+<li><a href="security.html">Security policy</a></li>
+<li><a href="about.html">About and support</a></li>
+</ul>
+<details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="web-apps/drupal/index.html">25 Oct: Drupal</a></li>
+<li><a href="servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
+<li><a href="servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
+<li><a href="web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
+<li><a href="system/pam-mysql/index.html">23 Oct: pam-mysql</a></li>
+<li><a href="threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
+<li><a href="developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
+<li><a href="developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
+<li><a href="web-apps/apache-roller/index.html">22 Oct: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="system/ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="web-apps/etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
+<li><a href="system/linux-kernel/index.html">20 Oct: Linux kernel</a></li>
+<li><a href="servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
+<li><a href="servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
+<li><a href="runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
+<li><a href="servers/nginx/index.html">18 Oct: nginx</a></li>
+<li><a href="developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="system/openssh-musl/index.html">5 Oct: OpenSSH musl password bypass</a></li>
+<li><a href="web-apps/wordpress-upgrade/index.html">4 Oct: WordPress upgrade window</a></li>
+<li><a href="system/apt/index.html">4 Oct: APT</a></li>
+<li><a href="system/pki/index.html">2 Oct: eMudhra CA compromise</a></li>
+<li><a href="web-apps/btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+</ul></details>
+<details class="grp"><summary>Servers, proxies and network services</summary><ul>
+<li><a href="servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
+<li><a href="servers/pulsar/index.html">Apache Pulsar</a></li>
+<li><a href="servers/tomcat/index.html">Apache Tomcat</a></li>
+<li><a href="servers/trafficserver/index.html">Apache Traffic Server</a></li>
+<li><a href="servers/bind/index.html">BIND 9</a></li>
+<li><a href="servers/couchdb/index.html">CouchDB</a></li>
+<li><a href="servers/haproxy/index.html">HAProxy</a></li>
+<li><a href="servers/incus/index.html">Incus</a></li>
+<li><a href="servers/mysql/index.html">MySQL client programs</a></li>
+<li><a href="servers/n-central/index.html">N-central and Apache Axis</a></li>
+<li><a href="servers/nginx/index.html">nginx</a></li>
+<li><a href="servers/nginx-ui/index.html">nginx-ui</a></li>
+<li><a href="servers/rsyslog/index.html">rsyslog</a></li>
+<li><a href="servers/vmware/index.html">VMware vCenter</a></li>
+<li><a href="servers/vsftpd/index.html">vsftpd</a></li>
+</ul></details>
+<details class="grp"><summary>Operating system and libraries</summary><ul>
+<li><a href="system/apt/index.html">APT</a></li>
+<li><a href="system/brotli/index.html">Brotli</a></li>
+<li><a href="system/curl/index.html">curl</a></li>
+<li><a href="system/pki/index.html">eMudhra CA compromise</a></li>
+<li><a href="system/ghostscript/index.html">Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="system/expat/index.html">libexpat</a></li>
+<li><a href="system/heif/index.html">libheif</a></li>
+<li><a href="system/linux-kernel/index.html">Linux kernel</a></li>
+<li><a href="system/openssh-musl/index.html">OpenSSH musl password bypass</a></li>
+<li><a href="system/openssl/index.html">OpenSSL</a></li>
+<li><a href="system/pam-mysql/index.html">pam-mysql</a></li>
+<li><a href="system/pillow/index.html">Pillow</a></li>
+</ul></details>
+<details class="grp"><summary>Language runtimes</summary><ul>
+<li><a href="runtimes/java/index.html">Java4Shell (OpenJDK)</a></li>
+<li><a href="runtimes/node/index.html">Node.js</a></li>
+<li><a href="runtimes/php/index.html">PHP2Shell</a></li>
+<li><a href="runtimes/php/detect/index.html">PHP2Shell detection rules</a></li>
+<li><a href="runtimes/php/edge/index.html">PHP2Shell edge guards</a></li>
+<li><a href="runtimes/ruby/index.html">Ruby and GitLab regexp</a></li>
+</ul></details>
+<details class="grp"><summary>Content management and web applications</summary><ul>
+<li><a href="web-apps/apache-roller/index.html">Apache Roller XML-RPC deserialization</a></li>
+<li><a href="web-apps/basercms/index.html">baserCMS</a></li>
+<li><a href="web-apps/btcpayserver/index.html">BTCPay Server</a></li>
+<li><a href="web-apps/craft/index.html">Craft CMS</a></li>
+<li><a href="web-apps/drupal/index.html">Drupal</a></li>
+<li><a href="web-apps/etherpad/index.html">Etherpad static path traversal</a></li>
+<li><a href="web-apps/grav/index.html">Grav</a></li>
+<li><a href="web-apps/aspnet/index.html">Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="web-apps/joomla/index.html">Joomla</a></li>
+<li><a href="web-apps/magento/index.html">Magento and Adobe Commerce</a></li>
+<li><a href="web-apps/nextcloud/index.html">Nextcloud Collabora</a></li>
+<li><a href="web-apps/plex/index.html">Plex Media Server</a></li>
+<li><a href="web-apps/roundcube/index.html">Roundcube</a></li>
+<li><a href="web-apps/wordpress/index.html">WordPress core and plugins</a></li>
+<li><a href="web-apps/wordpress-pt/index.html">WordPress path traversal</a></li>
+<li><a href="web-apps/wordpress-upgrade/index.html">WordPress upgrade window</a></li>
+<li><a href="web-apps/yootheme/index.html">YOOtheme Pro</a></li>
+<li><a href="web-apps/zammad/index.html">Zammad</a></li>
+</ul></details>
+<details class="grp"><summary>Developer platforms, tools and supply chain</summary><ul>
+<li><a href="developer/binary-parser/index.html">binary-parser</a></li>
+<li><a href="developer/claude-code-vsx/index.html">Claude Code extension backdoor</a></li>
+<li><a href="developer/django/index.html">Django REST framework</a></li>
+<li><a href="developer/ghostaction/index.html">GhostAction</a></li>
+<li><a href="developer/gitea/index.html">Gitea</a></li>
+<li><a href="developer/gitlab/index.html">GitLab</a></li>
+<li><a href="developer/iterm2/index.html">iTerm2 (macOS)</a></li>
+<li><a href="developer/jenkins/index.html">Jenkins plugins</a></li>
+<li><a href="developer/jupyter/index.html">Jupyter and nbconvert</a></li>
+<li><a href="developer/laravel/index.html">Laravel TokenGuard</a></li>
+<li><a href="developer/litellm/index.html">LiteLLM</a></li>
+<li><a href="developer/nextjs/index.html">Next.js Server Actions</a></li>
+<li><a href="developer/openapi/index.html">openapi-typescript-codegen</a></li>
+<li><a href="developer/optimizely/index.html">Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="developer/sagemaker/index.html">SageMaker SDK</a></li>
+<li><a href="developer/sentry/index.html">Sentry for Next.js</a></li>
+<li><a href="developer/storybook/index.html">Storybook</a></li>
+</ul></details>
+<details class="grp"><summary>Active threats</summary><ul>
+<li><a href="threats/agentic-attacks/index.html">AI attack frameworks</a></li>
+</ul></details>
+</details></nav>
+<main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a> / <span>Output for automation</span></nav>
+<article class="doc"><h1>Output for automation</h1><p>The scripts in this collection print a report for a person. For monitoring, a watchdog, a ticket system or a language model, they can also write <strong>JSON Lines</strong>: one record per line, every record self-describing. <code>psf-report.py</code> turns those records, from one run or hundreds, from one host or many, into a summary, a Markdown report, an HTML page or a PDF.</p>
+<p><strong>Status:</strong> a preview. Six scripts have it in this release: <a href="web-apps/magento/index.html">magento-check.sh</a>, <a href="servers/nginx/index.html">nginx-oct2026-check.sh</a>, <a href="system/expat/index.html">expat-check.sh</a>, <a href="threats/agentic-attacks/index.html">agentic-attack-check.sh</a>, <a href="system/linux-kernel/index.html#linux-kernel-noisytcp-check">linux-kernel-noisytcp-check.sh</a> and <a href="web-apps/drupal/index.html#drupal-installer-check">drupal-installer-check.sh</a>. The rest follow; a script without it rejects <code>--output</code> as an unknown option, so nothing breaks silently. The format is versioned (<code>&quot;schema&quot;: 1</code>): a later change that could break a reader gets a new number.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>output-block.bash</code></td>
+<td>The block each script carries: <code>--output</code>, the records, read-only mode</td>
+</tr>
+<tr>
+<td><code>psf-output.py</code></td>
+<td>Keeps that block identical in every script (<code>--check</code>, <code>--write</code>)</td>
+</tr>
+<tr>
+<td><code>psf-report.py</code></td>
+<td>Renders records as a summary, plain text, Markdown, HTML or PDF; needs only Python 3</td>
+</tr>
+<tr>
+<td><code>psf-status.py</code></td>
+<td>Shows, at a terminal, what the newest records say, like <code>systemctl status</code></td>
+</tr>
+<tr>
+<td><code>psf-logs.py</code></td>
+<td>Lists the log folder, removes days past their retention, and clears it</td>
+</tr>
+<tr>
+<td><code>psf-run.py</code></td>
+<td>Runs the configured checks every night: records, reports, retention and alerts</td>
+</tr>
+<tr>
+<td><code>psf.conf.example</code></td>
+<td>The settings, explained: copy it to <code>/etc/psf-security-patches/psf.conf</code></td>
+</tr>
+<tr>
+<td><code>examples/</code></td>
+<td><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/automation/examples/README.md">Example reports</a> in every format, made from real runs on a test machine</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="quick-start">Quick start</h2>
+<pre tabindex="0"><code class="language-bash">sudo web-apps/magento/magento-check.sh check --output jsonl &gt; magento.jsonl
+sudo system/expat/expat-check.sh check --output jsonl &gt; expat.jsonl
+python3 automation/psf-report.py magento.jsonl expat.jsonl                     # a short plain-text summary
+python3 automation/psf-report.py --format text --out report.txt *.jsonl        # the whole report as plain text
+python3 automation/psf-report.py --format md   --out report.md   *.jsonl        # Markdown
+python3 automation/psf-report.py --format html --out report.html *.jsonl        # one self-contained web page
+python3 automation/psf-report.py --format pdf  --out report.pdf  .              # a PDF of every *.jsonl here
+python3 automation/psf-report.py --fail-on crit *.jsonl                          # exit 1 on a critical finding
+</code></pre>
+<p><code>PSF_OUTPUT=jsonl</code> in the environment does the same as <code>--output jsonl</code>. Without either, a script prints exactly what it always printed.</p>
+<h2 id="the-records">The records</h2>
+<p>Every record carries <code>schema</code> (1), <code>seq</code> (1, 2, 3 and on, in output order), <code>type</code>, <code>run</code> (the same for every record of one run), <code>tool</code>, <code>version</code>, <code>host</code>, <code>command</code>, <code>ts</code> (UTC, ISO 8601) and <code>msg</code>. <code>run</code> and <code>seq</code> together identify a record, for correlation and for dropping duplicates. Records are written when the command ends, in the order the script produced them.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th><code>type</code></th>
+<th>What it is</th>
+<th>Fields of its own</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>start</code></td>
+<td>The first record of a run</td>
+<td><code>script_date</code>, <code>euid</code>, <code>read_only</code></td>
+</tr>
+<tr>
+<td><code>section</code></td>
+<td>A heading in the script's report</td>
+<td></td>
+</tr>
+<tr>
+<td><code>event</code></td>
+<td>Something the script judged</td>
+<td><code>level</code>, <code>cve</code>, and on a warning or a critical finding <code>kind</code>, <code>code</code>, <code>path</code>, <code>fix</code></td>
+</tr>
+<tr>
+<td><code>applicable</code></td>
+<td>The script found nothing on this host to check</td>
+<td></td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>Any other line the script printed (banners, tables, advice)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>verdict</code></td>
+<td>The last record of a run</td>
+<td><code>result</code>, <code>exit</code>, <code>applicable</code>, <code>duration_s</code>, <code>counts</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>level</code> is <code>crit</code>, <code>warn</code>, <code>ok</code>, <code>info</code> or <code>error</code> (the script could not do what it was asked). <code>cve</code> lists the CVE IDs named in the message. <code>kind</code> says what a finding is: <code>vulnerability</code> (a flawed version), <code>exposure</code> (a setting or a missing guard that lets a flaw be reached), <code>compromise</code> (signs that someone already got in), <code>indicator</code> (a lead from <code>hunt</code> that needs a person to look) or <code>config</code>; a script that has not tagged a finding leaves it out. <code>code</code> is a stable name for the finding (<code>MAGENTO_UPLOAD_PHP</code>) that stays the same while the wording of <code>msg</code> improves. <code>path</code> is the file or install it is about. <code>fix</code> is the page that says what to do.</p>
+<p><code>result</code> in the verdict is <code>clean</code> (exit 0), <code>findings</code> (exit 1) or <code>undecided</code> (exit 2: something could not be read or decided, or the command was refused). <code>applicable</code> is <code>false</code> when the script found nothing on the host to check, <code>true</code> when it judged something, and <code>null</code> when it cannot tell. <code>counts</code> holds the number of events at each level and of text lines.</p>
+<pre tabindex="0"><code class="language-json">{&quot;schema&quot;:1,&quot;seq&quot;:7,&quot;type&quot;:&quot;event&quot;,&quot;run&quot;:&quot;web1-magento-check-20261124T221701Z-4711&quot;,&quot;tool&quot;:&quot;magento-check&quot;,&quot;version&quot;:&quot;4.1.0&quot;,&quot;host&quot;:&quot;web1&quot;,&quot;command&quot;:&quot;check&quot;,&quot;ts&quot;:&quot;2026-11-24T22:17:01Z&quot;,&quot;level&quot;:&quot;crit&quot;,&quot;msg&quot;:&quot;1 file(s) in pub/media/custom_options/ are PHP or carry PHP code: treat the store as compromised and run hunt&quot;,&quot;cve&quot;:[],&quot;kind&quot;:&quot;compromise&quot;,&quot;code&quot;:&quot;MAGENTO_UPLOAD_PHP&quot;,&quot;path&quot;:&quot;/var/www/shop&quot;,&quot;fix&quot;:&quot;https://privacysafe.app/docs/security-patches/web-apps/magento/&quot;}
+{&quot;schema&quot;:1,&quot;seq&quot;:22,&quot;type&quot;:&quot;verdict&quot;,&quot;run&quot;:&quot;web1-magento-check-20261124T221701Z-4711&quot;,&quot;tool&quot;:&quot;magento-check&quot;,&quot;version&quot;:&quot;4.1.0&quot;,&quot;host&quot;:&quot;web1&quot;,&quot;command&quot;:&quot;check&quot;,&quot;ts&quot;:&quot;2026-11-24T22:17:01Z&quot;,&quot;msg&quot;:&quot;findings&quot;,&quot;cve&quot;:[],&quot;result&quot;:&quot;findings&quot;,&quot;exit&quot;:1,&quot;applicable&quot;:true,&quot;duration_s&quot;:0.16,&quot;counts&quot;:{&quot;crit&quot;:2,&quot;warn&quot;:5,&quot;ok&quot;:0,&quot;info&quot;:4,&quot;error&quot;:0,&quot;text&quot;:6}}
+</code></pre>
+<p>A reader should ignore fields it does not know and treat a missing <code>kind</code>, <code>code</code> or <code>path</code> as unknown.</p>
+<h2 id="logging-practice">Logging practice</h2>
+<p>The records are meant to sit well in a security logging program. They follow, closely rather than exactly, three references:</p>
+<ul>
+<li>the joint guide <em>Best Practices for Event Logging and Threat Detection</em> (ASD's ACSC with CISA, the FBI, the NSA and international partners, August 2024);</li>
+<li>the Audit and Accountability (AU) family of NIST SP 800-53 Rev. 5;</li>
+<li>OMB Memorandum M-26-14 (22 May 2026), which rescinded M-21-31 and asks US federal agencies for risk-based, prioritized logging, with CISA's Logging Reference Architecture (20 August 2026) as its implementation guide.</li>
+</ul>
+<p>&quot;Closely&quot; means the record format takes on what these ask of an event record; &quot;not exactly&quot; means a check script is a source of security events, not a logging platform, and some of what they ask is the operator's to do.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>What the guidance asks</th>
+<th>What the records do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A structured, consistent format</td>
+<td>One JSON object per line, the same fields from every tool, a versioned schema</td>
+</tr>
+<tr>
+<td>Each record says what happened, when, where, who and with what outcome (AU-3)</td>
+<td><code>type</code>, <code>level</code>, <code>msg</code>, <code>code</code> and <code>kind</code>: what; <code>ts</code>: when; <code>host</code>, <code>tool</code>, <code>path</code>: where; <code>euid</code> in the start record: who ran it; <code>result</code>, <code>exit</code> and <code>counts</code> in the verdict: the outcome</td>
+</tr>
+<tr>
+<td>Time stamps in UTC from a synchronized clock (AU-8)</td>
+<td><code>ts</code> is UTC in ISO 8601. The clock is the host's: keep NTP or chrony running</td>
+</tr>
+<tr>
+<td>A unique identifier per event, for correlation and deduplication</td>
+<td><code>run</code> and <code>seq</code></td>
+</tr>
+<tr>
+<td>Logging that does not itself weaken the host</td>
+<td>Records go to standard output; nothing is written outside a private temporary file that is removed before output. <code>PSF_READ_ONLY=1</code> keeps scheduled runs to reading</td>
+</tr>
+<tr>
+<td>No secrets in logs (AU-3(3) and privacy)</td>
+<td>The tools are written not to print credentials or the contents of files they read, beyond the evidence a finding needs. Records can still hold paths, account names, addresses and quoted log lines: restrict who reads them</td>
+</tr>
+</tbody>
+</table></div>
+<p>What stays yours, as the operator of the logging platform: collecting the records centrally and in time (AU-6), protecting them from change and deletion (AU-9), keeping them long enough (AU-11; M-26-14 sets retention baselines for US federal agencies, so check its current text if they apply to you), and reviewing them.</p>
+<p>Where the records stop short, on purpose or for now:</p>
+<ul>
+<li><code>ts</code> is to the second, not the millisecond the joint guide prefers where a source supports it.</li>
+<li>Records are written when a command ends, not streamed as it runs.</li>
+<li>Records carry no signature or hash chain; integrity is the job of the pipeline that stores them.</li>
+<li>The field names are this format's own, not Elastic Common Schema or OCSF. A suggested mapping to ECS: <code>ts</code> to <code>@timestamp</code>, <code>host</code> to <code>host.name</code>, <code>tool</code> to <code>event.provider</code>, <code>command</code> to <code>event.action</code>, <code>code</code> to <code>event.code</code>, <code>seq</code> to <code>event.sequence</code>, <code>level</code> to <code>log.level</code>, <code>msg</code> to <code>message</code>, <code>cve</code> to <code>vulnerability.id</code>, <code>path</code> to <code>file.path</code>.</li>
+</ul>
+<h2 id="read-only-mode">Read-only mode</h2>
+<p><code>PSF_READ_ONLY=1</code> refuses every command that changes the host (<code>mitigate</code>, <code>rollback</code>, <code>harden</code> and the like), with or without <code>--dry-run</code>, before it starts: exit 2, nothing changed, and with <code>--output jsonl</code> an <code>error</code> event and a verdict say so. Commands that only read (<code>check</code>, <code>hunt</code>, <code>list</code>, <code>version</code>, help) run as usual. It holds in two places. The block refuses those change commands by name, and <code>lock_for_change</code>, the function that takes the change lock, refuses at the moment it would take the lock, so a command the script itself treats as a change is stopped even when the block does not know its name. Set it for anything scheduled.</p>
+<h2 id="psf-report">psf-report</h2>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Format</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>summary</code> (default)</td>
+<td>A terminal, a mail, a chat message: the status, one line per run, every finding that needs attention</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>The whole report as plain text, wrapped at 100 columns: for a log folder, <code>less</code>, <code>grep</code> or a mail body</td>
+</tr>
+<tr>
+<td><code>md</code></td>
+<td>A ticket, a wiki, or the context for a language model: status, the run table, findings with their CVE, code, path and link, a CVE index and, unless <code>--no-details</code>, every event</td>
+</tr>
+<tr>
+<td><code>html</code></td>
+<td>One self-contained page, light and dark, that prints cleanly</td>
+</tr>
+<tr>
+<td><code>pdf</code></td>
+<td>A printable report (<code>--paper letter</code> or <code>a4</code>) made with Python alone: no fonts, libraries or programs are needed on the host</td>
+</tr>
+</tbody>
+</table></div>
+<p><a href="assets/img-automation-examples-screenshots-html-report-light.png"><img src="assets/img-automation-examples-screenshots-html-report-light.png" alt="The HTML report: the PrivacySafe logo on a dark band, a red Status: Signs of compromise label, the run table and the first findings" /></a></p>
+<p><a href="assets/img-automation-examples-screenshots-pdf-report-page-1.png"><img src="assets/img-automation-examples-screenshots-pdf-report-page-1.png" alt="The first page of the PDF report: the PrivacySafe logo, the status, the run table and the findings with colored bars and links" /></a></p>
+<p><a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/automation/examples/README.md">Example reports</a> has every format, the records they were made from, and more screenshots (the dark HTML page, the PDF's last page, the summary in a terminal).</p>
+<p>The HTML page and the PDF carry the PrivacySafe logo and colors, links to <a href="https://privacysafe.app">privacysafe.app</a> (the logo is one), the logging note above, and both contacts as mail links, as in <a href="security.html">SECURITY.md</a>: questions and other issues to <code>help@privacysafe.net</code> (GPG <code>7702 BD22 435B 5F3E B00C 1E78 21FB 9DF4 D742 422D</code>), security issues in these tools to <code>security@privacysafe.net</code> (GPG <code>7E3E C7D6 D965 CF1D 8C76 8F80 74AB DBE3 E3FB C689</code>). The PDF's metadata names the report, its status and hosts, the tools and CVEs, and PrivacySafe Security Patches with privacysafe.app as author and producer.</p>
+<p>Records come from hosts that may be compromised, so psf-report treats every field as hostile text. Every format escapes it, and only addresses psf-report writes itself become links (a tool's page on privacysafe.app and the two mail addresses); a <code>javascript:</code> or <code>data:</code> address in a record never does. The HTML page runs no script and loads nothing: its content security policy allows inline styles and nothing else, it sends no referrer, and its links open with <code>noopener</code>. In Markdown, any address in record text (a URL, <code>www.</code>, an email address, or a word that passes for a domain such as <code>magento-check.sh</code>) is set as code, so no renderer turns it into a link. A line over 1 MB is skipped, and a message over 4,000 characters is shortened in reports; the <code>jsonl</code> format passes records on whole. The logo is the one in <code>packaging/site/img/privacysafe-logo.svg</code>, built into psf-report by <code>packaging/report-logo.py</code>, so the report needs no file beside it.
+| <code>jsonl</code> | The records again, merged and checked, for passing on |</p>
+<p>The status at the top is the most serious thing any run found: <strong>Signs of compromise</strong>, <strong>Action needed</strong> (a critical finding), <strong>Review</strong> (a warning), <strong>Incomplete</strong> (a run could not decide) or <strong>Clean</strong>. Findings are listed most serious first: signs of compromise, then critical, error and warning, each by kind.</p>
+<p><code>--fail-on crit</code> (or <code>warn</code>) makes psf-report exit 1 when any run found something at that level, so a cron job or a CI step can act on it. A line that is not a record is counted and skipped. psf-report reads no network and runs no program.</p>
+<h2 id="for-system-administrators">For system administrators</h2>
+<h3 id="which-output-for-what">Which output for what</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Output</th>
+<th>Made by</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plain text (the default)</td>
+<td>Each tool</td>
+<td>Reading at a terminal; <code>&gt; tool.txt</code> keeps one tool's full report as a text file</td>
+</tr>
+<tr>
+<td>JSON Lines</td>
+<td>Each tool, <code>--output jsonl</code></td>
+<td>The record of a run: keep it, query it with <code>jq</code>, ship it to a log platform or SIEM, give it to a language model, render it with psf-report</td>
+</tr>
+<tr>
+<td>Short plain text</td>
+<td><code>psf-report.py</code> (<code>summary</code>)</td>
+<td>Cron mail, a chat alert, a ticket title: the status and what needs attention</td>
+</tr>
+<tr>
+<td>Full plain text</td>
+<td><code>psf-report.py --format text</code></td>
+<td>A log folder, <code>less</code>, <code>grep</code>, a mail body: everything, without markup</td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td><code>psf-report.py --format md</code></td>
+<td>A ticket, a wiki page, the context for a language model</td>
+</tr>
+<tr>
+<td>HTML</td>
+<td><code>psf-report.py --format html</code></td>
+<td>One file to open in a browser or attach to a mail</td>
+</tr>
+<tr>
+<td>PDF</td>
+<td><code>psf-report.py --format pdf</code></td>
+<td>Printing, an archive, an auditor or a customer</td>
+</tr>
+<tr>
+<td>Status at a glance</td>
+<td><code>psf-status</code></td>
+<td>Logging in to a host: what the newest checks found, how long ago, and whether they still run</td>
+</tr>
+<tr>
+<td>The log folder itself</td>
+<td><code>psf-logs</code></td>
+<td>How much is kept, for how long, and clearing it</td>
+</tr>
+<tr>
+<td>The nightly run</td>
+<td><code>psf-run</code></td>
+<td>The checks, records, reports, retention and alerts, from one settings file</td>
+</tr>
+</tbody>
+</table></div>
+<p>From the packages, the tools are under <code>/opt/psf-security-patches/</code>, and <code>psf-status</code> and <code>psf-report</code> are on the <code>PATH</code> (links in <code>/usr/bin</code> to <code>/opt/psf-security-patches/automation/</code>); from a checkout, the paths are the same relative to the repository. Calling psf-report through <code>python3</code>, as the examples here do, also works where <code>/opt</code> is mounted <code>noexec</code>. Run the tools as root (<code>sudo</code>) so they can read everything they check.</p>
+<h3 id="querying-the-json">Querying the JSON</h3>
+<p>Each line is one JSON object, so line tools work on it. With <code>jq</code>:</p>
+<pre tabindex="0"><code class="language-bash">jq -c 'select(.level == &quot;crit&quot;) | {host, tool, msg}' *.jsonl                      # every critical finding
+jq -r 'select(.type == &quot;verdict&quot;) | [.host, .tool, .result, .exit] | @tsv' *.jsonl   # one line per run
+jq -s '.' run.jsonl &gt; run.json        # one JSON array, for a program that cannot read JSON Lines
+</code></pre>
+<p>Without <code>jq</code>, <code>grep '&quot;level&quot;:&quot;crit&quot;' *.jsonl</code> finds the same lines.</p>
+<h3 id="a-daily-check-psf-run">A daily check: psf-run</h3>
+<p><code>psf-run</code> runs the checks, keeps their records and the reports you choose, removes logs past their retention, and alerts when something needs attention. Run it every night from <code>/etc/cron.d/psf-security-patches</code>:</p>
+<pre tabindex="0"><code>15 3 * * * root /usr/bin/psf-run --quiet
+</code></pre>
+<p>With no configuration it runs every tool that writes records, keeps 90 days in <code>/var/log/psf-security-patches</code>, writes <code>summary.txt</code>, <code>report.txt</code> and <code>report.pdf</code> beside the records, and prints an alert (which cron mails to root) when a check finds something critical or a tool fails. On an ordinary night <code>--quiet</code> prints nothing. Each day gets its own folder; a second run the same day adds new records files, and the reports, <code>psf-status</code> and <code>psf-logs</code> count only the newest run of each tool on each host.</p>
+<p><a href="assets/img-automation-examples-screenshots-psf-run.png"><img src="assets/img-automation-examples-screenshots-psf-run.png" alt="psf-run in a terminal: psf-run show-config lists every setting with the file and line it came from and the six tools a run would use, and sudo psf-run --dry-run shows the retention, the new day folder, each tool with --output jsonl, the reports and the alert command" /></a></p>
+<pre tabindex="0"><code class="language-bash">sudo psf-run --dry-run          # what a run would do, changing nothing
+sudo psf-run                    # a run now, saying what each tool found
+psf-run show-config             # every setting, where its value came from, the tools a run would use
+</code></pre>
+<h3 id="settings-where-logs-go-how-long-they-stay-which-reports">Settings: where logs go, how long they stay, which reports</h3>
+<p>The settings live in <code>/etc/psf-security-patches/psf.conf</code>, which <code>psf-run</code>, <code>psf-status</code> and <code>psf-logs</code> all read. Start from the example, which explains each one:</p>
+<pre tabindex="0"><code class="language-bash">sudo install -D -m 0644 /opt/psf-security-patches/automation/psf.conf.example /etc/psf-security-patches/psf.conf
+</code></pre>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LOG_DIR</code></td>
+<td><code>/var/log/psf-security-patches</code></td>
+<td>Where the logs go: a real folder (not a link) that only root can write</td>
+</tr>
+<tr>
+<td><code>KEEP_DAYS</code></td>
+<td><code>90</code></td>
+<td>Days of logs to keep; older days are removed at the start of each run</td>
+</tr>
+<tr>
+<td><code>FORMATS</code></td>
+<td><code>summary text pdf</code></td>
+<td>Reports beside the records: <code>summary</code>, <code>text</code>, <code>md</code>, <code>html</code>, <code>pdf</code>; the <code>.jsonl</code> records are always kept</td>
+</tr>
+<tr>
+<td><code>TOOLS</code></td>
+<td><code>auto</code></td>
+<td>The checks: every tool that writes records, or a list such as <code>web-apps/magento/magento-check.sh threats/agentic-attacks/agentic-attack-check.sh:hunt</code></td>
+</tr>
+<tr>
+<td><code>ALERT_ON</code></td>
+<td><code>crit</code></td>
+<td><code>crit</code>, <code>warn</code> or <code>never</code>; a tool that fails is always reported</td>
+</tr>
+<tr>
+<td><code>ALERT_COMMAND</code></td>
+<td>none</td>
+<td>A command that also gets the alert on its input, run without a shell: <code>mail -s &quot;Security check on %h: %s&quot; root</code> (<code>%h</code> host, <code>%s</code> status)</td>
+</tr>
+<tr>
+<td><code>TIMEOUT</code></td>
+<td><code>900</code></td>
+<td>Seconds one tool may run before it is stopped and reported</td>
+</tr>
+<tr>
+<td><code>ENV</code></td>
+<td>none</td>
+<td>Settings for the tools, such as <code>SCAN_CONTAINERS=0 HUNT_DAYS=14</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The file is read, never run: one <code>NAME = value</code> per line, and a misspelled or repeated name is an error rather than a setting quietly ignored. <code>PSF_LOG_DIR</code> overrides <code>LOG_DIR</code> for one command, and <code>PSF_CONFIG</code> (or <code>psf-run --config FILE</code>) points at another file. To write the logs somewhere else, set <code>LOG_DIR</code> once and every command follows.</p>
+<p>To run the tools yourself instead, run each with <code>--output jsonl</code> into a folder per day and render it with <code>psf-report</code>; <code>psf-status</code> and <code>psf-logs</code> read any folder in that layout.</p>
+<h3 id="running-as-root">Running as root</h3>
+<p>The checks need root to read everything they look at, and the logs are root's, so <code>psf-run</code>, <code>psf-status</code> and <code>psf-logs</code> are normally run as root, and <code>psf-report</code> sometimes. Each one, run as root at a terminal, says why it needs root and what it does with it, and says so again when you are logged in as the root account itself rather than through <code>sudo</code>, which records who made a change. <code>PSF_NO_ROOT_NOTE=1</code> hides the notes; they never appear in cron or in a pipe. What keeps a run as root safe:</p>
+<ul>
+<li><strong>Only root's code runs as root.</strong> Each of these programs, the <code>psf-report.py</code> it loads, every tool <code>psf-run</code> starts and the program <code>ALERT_COMMAND</code> names must be root's, with every folder above it root's and writable by no other account (a sticky folder such as <code>/tmp</code> excepted). Otherwise it refuses, naming the file, because whoever can change that file would control the run. Install the package, whose files are root's, or run a copy as the account that owns it.</li>
+<li><strong>The settings file is treated like code.</strong> As root it must be root's and writable by no other account. <code>ENV</code> cannot set <code>PATH</code>, <code>LD_*</code>, <code>HOME</code>, <code>TMPDIR</code>, <code>PSF_READ_ONLY</code> or similar; <code>TOOLS</code> can name only tools inside the collection.</li>
+<li><strong>The checks only read.</strong> <code>psf-run</code> starts every tool with <code>PSF_READ_ONLY=1</code>, a fixed <code>PATH</code>, no input and its own time limit; a tool that runs too long is stopped with everything it started.</li>
+<li><strong>Nothing is written through a link.</strong> The log folder must be a real folder that only its owner can write; each day's records go into a new private folder and each records file is created new. A report written with <code>psf-report --out</code> goes through a new file of an unguessable name, readable by its owner only, renamed into place.</li>
+<li><strong>Records cannot be forged through a tool's output.</strong> Each run marks its own records with a secret made for that run, so a line a tool prints (a file name or a log line an intruder chose) stays text, however much it looks like a record.</li>
+<li><strong>Untrusted files cannot stall a reader.</strong> In a log folder only regular files are read (not links, devices or pipes), and a file over 256 MB is skipped.</li>
+</ul>
+<h3 id="at-a-glance-psf-status">At a glance: psf-status</h3>
+<p><code>sudo psf-status</code> reads the newest day in <code>/var/log/psf-security-patches</code> and shows what it found, the way <code>systemctl status</code> shows a service: one line of status, when the checks last ran, one line per tool, the findings most serious first, and how the earlier days went.</p>
+<p><a href="assets/img-automation-examples-screenshots-psf-status.png"><img src="assets/img-automation-examples-screenshots-psf-status.png" alt="psf-status in a terminal: a red dot and the status Signs of compromise, when the checks last ran, one line per tool with colored dots, the critical findings in red and the warnings in yellow, and the earlier days" /></a></p>
+<p>When all is well it is short and green:</p>
+<p><a href="assets/img-automation-examples-screenshots-psf-status-clean.png"><img src="assets/img-automation-examples-screenshots-psf-status-clean.png" alt="psf-status in a terminal when everything is clean: a green dot, the status Clean, the runs, and earlier clean days" /></a></p>
+<p>Without colors, as in a mail or a file, the same screen reads:</p>
+<pre tabindex="0"><code>● Security checks on 2 hosts: Signs of compromise
+      Logs: /var/log/psf-security-patches/2026-11-25 (4 runs), newest of 3 days
+  Last run: Wed 2026-11-25 06:00:07 UTC; 2h 9min ago
+     Hosts: db1.example, web1.example
+   Summary: 5 critical findings, 6 warnings in 2 of 4 runs; 1 found nothing to check here
+
+    TOOL                        COMMAND  RESULT     CRIT  WARN  WHEN      HOST
+  ● expat-check 1.2.0           check    findings      3     1  06:00:05  db1.example
+  ● magento-check 4.1.0         check    findings      2     5  06:00:00  web1.example
+  ● agentic-attack-check 2.1.0  hunt     clean         0     0  06:00:07  db1.example
+  ○ nginx-oct2026-check 1.1.0   check    clean         0     0  06:00:03  web1.example  nothing to check here
+
+Needs attention, most serious first (3 of 11):
+  CRIT  (compromise) web1.example magento-check: 1 file(s) in pub/media/custom_options/ are PHP ...
+  CRIT  (exposure) web1.example magento-check: pub/media/custom_options/.htaccess is missing ...
+  CRIT  db1.example expat-check: /usr/lib/x86_64-linux-gnu/libexpat.so.1.9.1: expat 2.6.1 is ...
+
+Earlier: 2026-11-24 Clean · 2026-11-23 Signs of compromise (5 crit, 6 warn)
+
+Full report: psf-report --format text /var/log/psf-security-patches/2026-11-25
+</code></pre>
+<p>On a terminal the dots and the status are colored (red, yellow, magenta, green; grey for a tool that found nothing to check) and long lines are cut to its width; <code>-l</code> shows them whole, and <code>NO_COLOR</code> or <code>--color never</code> turns color off. When the newest run is older than 36 hours (<code>--stale HOURS</code>), it says the logs are stale and asks whether the daily check still runs.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-n N</code></td>
+<td>List N findings (default 10; 0 for none)</td>
+</tr>
+<tr>
+<td><code>--days N</code></td>
+<td>Earlier days on the history line (default 7)</td>
+</tr>
+<tr>
+<td><code>--tool NAME</code>, <code>--host NAME</code></td>
+<td>Only those runs (repeatable)</td>
+</tr>
+<tr>
+<td><code>FOLDER</code> or <code>FILE ...</code></td>
+<td>Another log folder, or <code>.jsonl</code> files, instead of <code>/var/log/psf-security-patches</code></td>
+</tr>
+<tr>
+<td><code>PSF_LOG_DIR=FOLDER</code></td>
+<td>Where to look when no folder is given (default <code>/var/log/psf-security-patches</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>It exits 0 when the newest runs are clean and recent, 1 when something needs attention (a finding, an error, an undecided run or stale logs), 2 on a usage or read error, and 3 when there are no records (as on a host where the daily check has not run yet), so <code>psf-status -n 0 &gt;/dev/null || ...</code> works in a script or a login message. The logs are readable by root only, so run it with <code>sudo</code>; it says so when it cannot read them. The example in <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/automation/examples/README.md">examples/</a> is <code>example-status.txt</code>.</p>
+<h3 id="keeping-and-clearing-logs">Keeping and clearing logs</h3>
+<p><code>psf-logs</code> looks after the log folder: how much there is, how long it stays, and clearing it.</p>
+<pre tabindex="0"><code class="language-bash">sudo psf-logs list                                 # every day: its status, runs, files and size, and the total
+sudo psf-logs prune --keep-days 90 --dry-run       # what would go
+sudo psf-logs prune --keep-days 90                 # remove the days older than 90 (the default)
+sudo psf-logs clear --dry-run                      # what clearing would remove
+sudo psf-logs clear --yes                          # remove every day of logs
+</code></pre>
+<p><code>--keep-days N</code> keeps today and the N-1 days before it. Choose N from your own risk assessment, contracts and the law that applies to you, not from this default: logs that would show how an intruder got in are worth keeping longer than the time an intrusion can go unnoticed, and records schedules or privacy law can require a longer or a shorter period. For US federal agencies, OMB M-26-14 sets retention baselines; check its current text. <code>psf-run</code> prunes at the start of every run, so retention is one setting (<code>KEEP_DAYS</code> in <code>psf.conf</code>).</p>
+<p>It removes only what <code>psf-run</code> writes: day folders named <code>YYYY-MM-DD</code> that hold plain files. Anything else in the folder, a day folder that holds another folder, and every symbolic link are reported and left alone; a link inside a day folder is removed as a link, and what it points to is never touched. It refuses a log folder that is itself a link, that accounts other than its owner can write to, or, run as root, that root does not own. Every removal is written to syslog (facility <code>authpriv</code>) as well as to its output, because removing logs is itself a security event. <code>PSF_READ_ONLY=1</code> refuses <code>prune</code> and <code>clear</code>, and <code>clear</code> needs <code>--yes</code>. It exits 0 when done, 1 when something was left in place, and 2 on a usage error or a refusal. <code>--quiet</code> prints only what needs a person (a folder left in place, an error), so a cron mail stays empty on an ordinary night; removals still go to syslog. <code>--dir FOLDER</code> or <code>PSF_LOG_DIR</code> points it at another log folder.</p>
+<p><a href="assets/img-automation-examples-screenshots-psf-logs.png"><img src="assets/img-automation-examples-screenshots-psf-logs.png" alt="psf-logs in a terminal: psf-logs list shows each day's status, runs, findings, files and size and the total, and psf-logs prune --keep-days 90 --dry-run shows which old day would be removed" /></a></p>
+<h3 id="several-hosts">Several hosts</h3>
+<p>Each host keeps its own folder. Copy them to one machine and render one report over all of them:</p>
+<pre tabindex="0"><code class="language-bash">rsync -a web1:/var/log/psf-security-patches/ /srv/psf/web1/
+rsync -a db1:/var/log/psf-security-patches/  /srv/psf/db1/
+python3 automation/psf-report.py --format html --out fleet.html /srv/psf/*/2026-11-25
+</code></pre>
+<h3 id="a-log-platform-or-siem">A log platform or SIEM</h3>
+<p>Point the log shipper the host already runs at <code>/var/log/psf-security-patches/*/*.jsonl</code> as a JSON-lines input. <code>run</code> and <code>seq</code> identify each record; <a href="#logging-practice">Logging practice</a> maps the fields to the Elastic Common Schema.</p>
+<h3 id="what-it-needs">What it needs</h3>
+<ul>
+<li><strong>JSON Lines from the tools:</strong> Bash and seven basic commands the block calls (<code>cat</code>, <code>date</code>, <code>dirname</code>, <code>mktemp</code>, <code>awk</code>, <code>rm</code>, <code>uname</code>), besides what each tool needs for its own checks.</li>
+<li><strong>Every report, <code>psf-run</code>, <code>psf-status</code> and <code>psf-logs</code>:</strong> Python 3.7 or newer and its standard library, nothing else: no packages to install, no network access, no other program.</li>
+<li><strong>HTML:</strong> one file with its styles and the logo inside it. It loads nothing from anywhere and runs no script: its content security policy forbids both.</li>
+<li><strong>PDF:</strong> one file. It uses Helvetica and Courier, two of the standard fonts every PDF viewer supplies, so the fonts are not embedded; a viewer may draw them with an equivalent font of the same widths. Archiving as PDF/A would need embedded fonts, which this report does not do. The PDF holds no script, form, attachment or remote content; its only links are to privacysafe.app and the two mail addresses.</li>
+<li><strong>Plain text, Markdown and the summary:</strong> UTF-8 text with every control character removed, so a record from a compromised host cannot send commands to the terminal that shows it.</li>
+</ul>
+<h2 id="how-a-script-writes-them">How a script writes them</h2>
+<p>The block sits right after the script's own output helpers and redefines them in jsonl mode: <code>ok</code> and <code>pass</code> become <code>ok</code> events, <code>info</code>, <code>inf</code>, <code>note</code> and <code>tip</code> <code>info</code>, <code>warn</code> and <code>caution</code> <code>warn</code>, <code>bad</code> and <code>fail</code> <code>crit</code>, <code>die</code> an <code>error</code>, <code>step</code> and <code>section</code> a section. A finding can carry more by setting variables on the call, which the text output ignores:</p>
+<pre tabindex="0"><code class="language-bash">PSF_KIND=compromise PSF_CODE=MAGENTO_UPLOAD_PHP PSF_PATH=&quot;$root&quot; bad &quot;1 file(s) in pub/media/custom_options/ are PHP&quot;
+psf_not_applicable &quot;no Magento install found on the host or in running containers&quot;
+</code></pre>
+<p>In jsonl mode the script's output goes to a private temporary file (made with <code>mktemp</code>, mode 0600) that is opened and removed before the records are written, so nothing is left behind even if the reader stops early. The script's own <code>EXIT</code> traps still run. Nothing is executed again and no other program is started.</p>
+<p>To add the block to a script, or refresh it after <code>output-block.bash</code> changes:</p>
+<pre tabindex="0"><code class="language-bash">python3 automation/psf-output.py --write web-apps/drupal/drupal-core-check.sh
+python3 automation/psf-output.py --check          # every script that has the block carries the current one
+</code></pre>
+<h2 id="before-you-run-it">Before you run it</h2>
+<p>The records say what a script read on the host, exactly as its text report does: a finding is a reason to look, not proof. Keep the JSON Lines files private where they name paths or accounts you would not publish.</p>
+<hr />
+<h2 id="important-notice"><svg class="ico ico-triangle-exclamation" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M12 2.4c.7 0 1.4.4 1.8 1l8.5 14.9c.8 1.4-.2 3.2-1.8 3.2H3.5c-1.6 0-2.6-1.8-1.8-3.2L10.2 3.4c.4-.6 1.1-1 1.8-1zm0 6.1a1.1 1.1 0 0 0-1.1 1.1v4.4a1.1 1.1 0 0 0 2.2 0V9.6A1.1 1.1 0 0 0 12 8.5zm0 7.5a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z"/></svg> Important notice</h2>
+<p>These scripts are used on our production systems and undergo testing, but they may require adaptation for other environments. Review the source code before running any script, test changes in a non-production environment where possible, and maintain current backups. This software is provided without warranty.</p>
+<h2 id="support-privacysafe-foundation"><svg class="ico ico-landmark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M11.2 1.8a1.7 1.7 0 0 1 1.6 0l8.4 4.2c.9.4.6 1.8-.4 1.8H3.2c-1 0-1.300-1.400-.4-1.800l8.4-4.2zM4.4 9.6h2.8v7.2H4.4V9.6zm6.2 0h2.8v7.2h-2.8V9.6zm6.2 0h2.8v7.2h-2.8V9.6zM3 18.4h18a1 1 0 0 1 1 1V21a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-1.6a1 1 0 0 1 1-1z"/></svg> Support PrivacySafe Foundation</h2>
+<p><a href="https://privacysafe.foundation">PrivacySafe Foundation</a> is a 501(c)(3) nonprofit public charity supporting Free/Libre and Open Source Software (FLOSS), cybersecurity education, decentralized technology, documentation, standards work, and public-interest privacy and security research.</p>
+<p>Security work doesn't stop when a disclosure drops at midnight. If this repository helped you protect your users, please help us keep doing it:</p>
+<ul>
+<li><strong><a href="https://privacysafe.foundation">Donate directly to the Foundation</a></strong></li>
+<li><a href="https://opencollective.com/privacysafe">Open Collective</a></li>
+<li><a href="https://ko-fi.com/R6R1194HN7">Ko-fi</a></li>
+<li><a href="https://liberapay.com/PrivacySafe/donate">Liberapay</a></li>
+</ul>
+<p>The Foundation website provides options for card donations, PayPal/Venmo, cryptocurrency, checks, and other forms of support. Donations are often tax-deductible in the USA. Federal EIN: 41-5237617.</p>
+<h2 id="contributing"><svg class="ico ico-users" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M12 3.700a3.400 3.400 0 1 0 0 6.800 3.400 3.400 0 0 0 0-6.800z"/><path fill="currentColor" fill-rule="evenodd" d="M12 12c-2.900 0-5 2-5 4.600v2.100c0 .700.600 1.300 1.300 1.300h7.400c.700 0 1.300-.600 1.300-1.300v-2.100c0-2.600-2.100-4.600-5-4.600z"/><path fill="currentColor" fill-rule="evenodd" d="M4.400 6.600a2.300 2.300 0 1 0 0 4.600 2.300 2.300 0 0 0 0-4.600zM4.400 12.500C2.500 12.500 1 13.900 1 15.700v1.600c0 .700.500 1.200 1.200 1.200h2.600c-.2-.4-.3-.8-.3-1.200v-1.800c0-1.200.4-2.300 1.100-3.200-.4-.1-.8-.2-1.200-.2z"/><path fill="currentColor" fill-rule="evenodd" d="M19.600 6.600a2.300 2.300 0 1 0 0 4.600 2.300 2.300 0 0 0 0-4.600zM19.600 12.500c1.900 0 3.400 1.400 3.400 3.200v1.600c0 .700-.5 1.200-1.200 1.200h-2.600c.2-.4.300-.8.300-1.200v-1.800c0-1.200-.4-2.300-1.100-3.200.4-.1.8-.2 1.200-.2z"/></svg> Contributing</h2>
+<p>Found a bug in a script, or have a mitigation that belongs here? Please fork and submit a focused pull request.</p>
+<p><svg class="ico ico-triangle-exclamation" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M12 2.4c.7 0 1.4.4 1.8 1l8.5 14.9c.8 1.4-.2 3.2-1.8 3.2H3.5c-1.6 0-2.6-1.8-1.8-3.2L10.2 3.4c.4-.6 1.1-1 1.8-1zm0 6.1a1.1 1.1 0 0 0-1.1 1.1v4.4a1.1 1.1 0 0 0 2.2 0V9.6A1.1 1.1 0 0 0 12 8.5zm0 7.5a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z"/></svg> <strong>Do not report unpatched vulnerabilities in a public issue.</strong> Follow our <a href="security.html">security policy</a> instead. Never send sensitive information through ordinary direct messages or unencrypted email.</p>
+<ul>
+<li><strong>Contribution terms:</strong> <a href="contributing.html"><code>CONTRIBUTING.md</code></a></li>
+<li><strong>Code of Conduct:</strong> <a href="code-of-conduct.html"><code>CODE_OF_CONDUCT.md</code></a></li>
+<li><strong>AI Contribution Policy:</strong> <a href="ai-policy.html"><code>AI_POLICY.md</code></a></li>
+<li><strong>Security and vulnerability reporting:</strong> <a href="security.html"><code>SECURITY.md</code></a></li>
+</ul>
+<h2 id="more-from-privacysafe"><svg class="ico ico-lock" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7 10V7a5 5 0 0 1 10 0v3h.5a2.5 2.5 0 0 1 2.5 2.5v7a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 19.5v-7A2.5 2.5 0 0 1 6.5 10H7zm2.2 0h5.6V7a2.8 2.8 0 0 0-5.6 0v3zM12 13.6a1.7 1.7 0 0 0-.9 3.1v1.6a.9.9 0 0 0 1.8 0v-1.6a1.7 1.7 0 0 0-.9-3.1z"/></svg> More from PrivacySafe</h2>
+<ul>
+<li><strong><a href="https://privacysafe.app">PrivacySafe</a>:</strong> Privacy-by-design software for home, teams, and organizations. Sign up free, no phone number required.</li>
+<li><strong><a href="https://bitsontape.com">Bits On Tape</a>:</strong> Our newsletter covering cybersecurity, privacy, FLOSS, AI, and digital culture.</li>
+<li><strong><a href="https://ivycyber.com">Ivy Cyber</a>:</strong> Hosting, enterprise deployment, training, and technical support, including help hardening your own infrastructure.</li>
+</ul>
+<h2 id="license"><svg class="ico ico-scale-balanced" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M12 1.8a2.2 2.2 0 0 1 .9 4.2v1.2h8a1 1 0 1 1 0 2h-.5l2.5 5.6a1 1 0 0 1-.2 1.1 5 5 0 0 1-7.1 0 1 1 0 0 1-.2-1.1l2.5-5.6h-3.5v10.9h4a1 1 0 1 1 0 2H7.1a1 1 0 1 1 0-2h4V9.2H7.6l2.5 5.6a1 1 0 0 1-.2 1.1 5 5 0 0 1-7.1 0 1 1 0 0 1-.2-1.1l2.5-5.6h-.5a1 1 0 1 1 0-2h8V6A2.2 2.2 0 0 1 12 1.8zm-6.4 8.6L3.2 15.8a3 3 0 0 0 4.8 0l-2.4-5.4zm12.8 0-2.4 5.4a3 3 0 0 0 4.8 0l-2.4-5.4z"/></svg> License</h2>
+
+<p>Security patches belong to everyone. To the extent possible under law, <a href="https://ivycyber.com" rel="nofollow">Ivy Cyber LLC</a> has waived all copyright and related or neighboring rights to this repository, including its scripts and documentation, under the <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="nofollow">Creative Commons CC0 1.0 Universal Public Domain Dedication</a> (<code>CC0-1.0</code>). Feel free to copy, remix, and share. If you'd like to give back, please <a href="https://privacysafe.foundation">donate to PrivacySafe Foundation</a> 501c3 nonprofit.</p>
+<p>See <a href="license.html"><code>NOTICE</code></a> and <a href="license.html"><code>LICENSE</code></a>. Third-party components retain their original copyrights and licenses.</p>
+<p>CC0 does not waive trademark or patent rights. PrivacySafe® and 3NWeb® are registered trademarks. PrivacySafe Foundation™ and Ivy Cyber™ are pending trademarks. This dedication does not grant permission to use these marks in a manner that suggests sponsorship, endorsement, affiliation, or origin.</p>
+<p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p></article></main>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#the-records">The records</a></li><li class="l2"><a href="#logging-practice">Logging practice</a></li><li class="l2"><a href="#read-only-mode">Read-only mode</a></li><li class="l2"><a href="#psf-report">psf-report</a></li><li class="l2"><a href="#for-system-administrators">For system administrators</a></li><li class="l3"><a href="#which-output-for-what">Which output for what</a></li><li class="l3"><a href="#querying-the-json">Querying the JSON</a></li><li class="l3"><a href="#a-daily-check-psf-run">A daily check: psf-run</a></li><li class="l3"><a href="#settings-where-logs-go-how-long-they-stay-which-reports">Settings: where logs go, how long they stay, which reports</a></li><li class="l3"><a href="#running-as-root">Running as root</a></li><li class="l3"><a href="#at-a-glance-psf-status">At a glance: psf-status</a></li><li class="l3"><a href="#keeping-and-clearing-logs">Keeping and clearing logs</a></li><li class="l3"><a href="#several-hosts">Several hosts</a></li><li class="l3"><a href="#a-log-platform-or-siem">A log platform or SIEM</a></li><li class="l3"><a href="#what-it-needs">What it needs</a></li><li class="l2"><a href="#how-a-script-writes-them">How a script writes them</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#important-notice">Important notice</a></li><li class="l2"><a href="#support-privacysafe-foundation">Support PrivacySafe Foundation</a></li><li class="l2"><a href="#contributing">Contributing</a></li><li class="l2"><a href="#more-from-privacysafe">More from PrivacySafe</a></li><li class="l2"><a href="#license">License</a></li></ul></aside></div></div>
+<section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
+<div class="wrap">
+<article class="card has-partner">
+<h2 class="eco-title" id="ecosystem-title">The PrivacySafe Ecosystem</h2>
+<a class="partner-mark" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+<img src="assets/img/ivy-logo-horizontal-white.svg" alt="Shop at Ivy Cyber" width="328" height="73" loading="lazy" decoding="async"/>
+</a>
+<p><strong>Ivy Cyber</strong> offers PrivacySafe products and services in the USA and has partnerships with 3NSoft in Canada and Kuip Limited in the European Union. Enterprise services and consulting are available at <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">ivycyber.com</a>
+</p><p><strong>PrivacySafe Foundation</strong> is a 501(c)(3) nonprofit public charity that supports the development of the PrivacySafe applications, along with the components they rely upon: 3NWeb protocols, filesystem, documentation, and reference implementations.</p>
+<div class="pullout">
+<a class="foundation-mark" href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank"><img src="assets/img/logo-foundation.svg" alt="PrivacySafe Foundation" width="218" height="47" loading="lazy" decoding="async"/></a>
+<p class="pullout-text">Donations to <a href="https://privacysafe.foundation" rel="noopener noreferrer" target="_blank">PrivacySafe Foundation</a> support education, research, documentation, and public code. Purchases from <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber</a> support PrivacySafe products, services, hosting, and technical support. <strong class="pullout-lead">Together, we're building a better web.</strong></p>
+</div>
+<div class="split-actions">
+<a class="btn primary" href="https://www.zeffy.com/en-US/ticketing/cybersecurity-education-and-tech" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-heart" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="currentColor" d="M12 20.6 10.6 19.3C5.7 14.9 2.5 12 2.5 8.4 2.5 5.5 4.8 3.2 7.7 3.2c1.6 0 3.2.8 4.3 2.05C13.1 4 14.7 3.2 16.3 3.2c2.9 0 5.2 2.3 5.2 5.2 0 3.6-3.2 6.5-8.1 10.9L12 20.6Z"/> </svg>
+Donate to PrivacySafe Foundation
+</a>
+<a class="btn ghost" href="https://ivycyber.com/shop" rel="noopener noreferrer" target="_blank">
+Buy PrivacySafe products &amp; services
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost" href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-code" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.6 4.8l-3.2 14.4"/> </svg>
+Browse our Source Code
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+</article>
+</div>
+</section>
+<footer>
+<div class="wrap">
+<div class="footer-community">
+<section aria-labelledby="footer-about-title" class="footer-panel footer-about">
+<h2 class="sr-only" id="footer-about-title">About PrivacySafe</h2>
+<img alt="PrivacySafe" class="footer-logo" height="192" src="assets/img/privacysafe-logo.svg" width="1696"/>
+<p>PrivacySafe creates a secure sandbox environment for your organization which you can tie to your domain, your authentication methods, and your access controls.</p>
+<h3>Follow Us</h3>
+<div aria-label="PrivacySafe social links" class="social-links">
+<a aria-label="PrivacySafe on Mastodon" class="social-link" href="https://privacysafe.social/@privacysafe" rel="me noopener noreferrer" target="_blank" title="Mastodon">
+<svg class="ico ico-mastodon" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.268 5.313c-.35-2.578-2.617-4.61-5.304-5.004C17.51.242 15.792 0 11.813 0h-.03c-3.98 0-4.835.242-5.288.309C3.882.692 1.496 2.518.917 5.127.64 6.412.61 7.837.661 9.143c.074 1.874.088 3.745.26 5.611.118 1.24.325 2.47.62 3.68.55 2.237 2.777 4.098 4.96 4.857 2.336.792 4.849.923 7.256.38.265-.061.527-.132.786-.213.585-.184 1.27-.39 1.774-.753a.057.057 0 0 0 .023-.043v-1.809a.052.052 0 0 0-.02-.041.053.053 0 0 0-.046-.01 20.282 20.282 0 0 1-4.709.545c-2.73 0-3.463-1.284-3.674-1.818a5.593 5.593 0 0 1-.319-1.433.053.053 0 0 1 .066-.054c1.517.363 3.072.546 4.632.546.376 0 .75 0 1.125-.01 1.57-.044 3.224-.124 4.768-.422.038-.008.077-.015.11-.024 2.435-.464 4.753-1.92 4.989-5.604.008-.145.03-1.52.03-1.67.002-.512.167-3.63-.024-5.545zm-3.748 9.195h-2.561V8.29c0-1.309-.55-1.976-1.67-1.976-1.23 0-1.846.79-1.846 2.35v3.403h-2.546V8.663c0-1.56-.617-2.35-1.848-2.35-1.112 0-1.668.668-1.67 1.977v6.218H4.822V8.102c0-1.31.337-2.35 1.011-3.12.696-.77 1.608-1.164 2.74-1.164 1.311 0 2.302.5 2.962 1.498l.638 1.06.638-1.06c.66-.999 1.65-1.498 2.96-1.498 1.13 0 2.043.395 2.74 1.164.675.77 1.012 1.81 1.012 3.12z"/></svg>
+</a><a aria-label="PrivacySafe on Bluesky" class="social-link" href="https://bsky.app/profile/privacysafe.social" rel="me noopener noreferrer" target="_blank" title="Bluesky">
+<svg class="ico ico-bluesky" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026"/></svg>
+</a><a aria-label="PrivacySafe on Twitter X" class="social-link" href="https://x.com/GetPrivacySafe" rel="nofollow noopener noreferrer" target="_blank" title="Twitter X">
+<svg class="ico ico-x-twitter" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+</a><a aria-label="PrivacySafe on LinkedIn" class="social-link" href="https://www.linkedin.com/company/privacysafe-app" rel="noopener noreferrer" target="_blank" title="LinkedIn">
+<svg class="ico ico-linkedin" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.200 3.600a1.700 1.700 0 1 0 0 3.400 1.700 1.700 0 0 0 0-3.400zM5.600 10.400v7.800h3.200v-7.800H5.600zm4.800 0v7.800h3.200v-4c0-1.100.4-1.700 1.300-1.700s1.300.6 1.300 1.700v4h3.200v-4.400c0-2.300-1.100-3.600-3.200-3.600-1.200 0-2.200.5-2.700 1.300v-1.100h-3.100z"/></svg>
+</a><a aria-label="PrivacySafe on YouTube" class="social-link" href="https://www.youtube.com/@privacysafe" rel="noopener noreferrer" target="_blank" title="YouTube">
+<svg class="ico ico-youtube" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+</a><a aria-label="PrivacySafe on Instagram" class="social-link" href="https://www.instagram.com/getprivacysafe/" rel="noopener noreferrer" target="_blank" title="Instagram">
+<svg class="ico ico-instagram" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" fill-rule="evenodd" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>
+</a>
+<!--<a aria-label="Signal @ivycyber.01" class="social-link" href="https://signal.me/#eu/nmRqQrmMcXaq6cyfP8ckVaf-LniNZwhc5VatIEgC3y39lIYFNBBFF5NvpFurg6UA" rel="noopener noreferrer" target="_blank" title="Signal">
+<span aria-hidden="true" class="ico ico-signal"></span>
+</a>-->
+<!--<a aria-label="Ivy Cyber on Facebook" class="social-link" href="https://www.facebook.com/ivycyber" rel="noopener noreferrer" target="_blank" title="Facebook">
+<span aria-hidden="true" class="ico ico-facebook"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on TikTok" class="social-link" href="https://www.tiktok.com/@bitsontape" rel="noopener noreferrer" target="_blank" title="TikTok">
+<span aria-hidden="true" class="ico ico-tiktok"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Telegram" class="social-link" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank" title="Telegram">
+<span aria-hidden="true" class="ico ico-telegram"></span>
+</a>-->
+<!--<a aria-label="Bits On Tape on Substack" class="social-link" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank" title="Substack">
+<span aria-hidden="true" class="ico ico-substack"></span>
+</a>--></div>
+</section>
+<section aria-labelledby="newsletter-title" class="footer-panel newsletter-panel">
+<div class="card-footnote">
+<a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank"><img class="newsletter-avatar" src="assets/img/bitsontape-avatar.png" alt="Bits On Tape logo: two reels of open-reel tape arranged as a heart" width="200" height="200" loading="lazy" decoding="async"/></a>
+<h2 id="newsletter-title">Subscribe to Our Newsletter</h2>
+<p><a href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">Bits On Tape</a> is our newsletter: a replay of science and technology stories by cyber experts, covering cybersecurity, privacy, free software, AI, and digital culture. Get the latest updates on our PrivacySafe ecosystem as we continue building and launching.</p>
+<div class="card-footnote-actions">
+<a class="btn primary small" href="https://psafe.ly/WaaEkp" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-envelope" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Zm0 .5 8 6 8-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+Subscribe free
+</a>
+<a class="btn ghost small" href="https://bitsontape.com" rel="noopener noreferrer" target="_blank">
+Read past issues
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+<a class="btn ghost small" href="https://t.me/bitsontape" rel="noopener noreferrer" target="_blank">
+<svg class="ico ico-telegram" aria-hidden="true" focusable="false" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M21.6 3.2 18.4 20c-.24 1.18-.88 1.47-1.79.91l-4.88-3.6-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.97 9.05-8.18c.39-.35-.09-.55-.61-.2L6.01 13.74 1.2 12.24c-1.05-.33-1.07-1.05.22-1.55L20.2 3.45c.87-.32 1.63.2 1.4-.25Z"></path></svg>
+Join Telegram group
+<svg class="ico ico-external" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"> <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M14 4.6h5.4V10M19.4 4.6 11 13M17.4 14v4.6a.8.8 0 0 1-.8.8H5.4a.8.8 0 0 1-.8-.8V7.4a.8.8 0 0 1 .8-.8H10"/> </svg>
+</a>
+</div>
+<p class="newsletter-note">We hate spam as much as you do and comply with CAN-SPAM regulation.</p>
+</div>
+</section>
+</div>
+<div class="footer-inner">
+<nav aria-label="Footer links" class="footer-links">
+<a href="https://privacysafe.foundation/donate" rel="noopener noreferrer" target="_blank">Donate</a>
+<a href="https://ivycyber.com/security-policy/" rel="nofollow noopener noreferrer" target="_blank">Security &amp; Bug Bounty</a>
+<a href="https://ivycyber.com/privacy-policy/" rel="nofollow noopener noreferrer" target="_blank">Privacy Policy</a>
+<a href="https://ivycyber.com/terms/" rel="nofollow noopener noreferrer" target="_blank">Terms of Service</a>
+<a href="https://github.com/PrivacySafe" rel="noopener noreferrer" target="_blank">Source Code</a>
+</nav>
+<p class="fine">&copy; 2026 <a href="https://ivycyber.com" rel="noopener noreferrer" target="_blank">Ivy Cyber LLC</a>. This project is dedicated to ethical <a class="orange" href="https://fsf.org/" rel="noopener noreferrer" target="_blank">Free/Libre and Open Source Software (FLOSS)</a>. PrivacySafe&reg; and 3NWeb&reg; are registered trademarks. PrivacySafe Foundation&trade; and Ivy Cyber&trade; are pending trademarks. Site content, unless otherwise noted, is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">Creative Commons BY-SA 4.0 International</a>. <a href="https://github.com/PrivacySafe/privacysafe-app-site" rel="noopener noreferrer" target="_blank">Website Source</a> is free software licensed <a href="https://www.gnu.org/licenses/agpl-3.0.html" rel="noopener noreferrer" target="_blank">GNU AGPL version 3 or later</a>. See <a href="weblabels.html" rel="jslicense">GNU LibreJS Weblabels</a> for JavaScript info. <!--For branding and press resources visit <a href="https://privacysafe.app/press">privacysafe.app/press</a>--></p>
+</div>
+</div>
+</footer>
+<script src="assets/site.js" defer></script></body>
+</html>

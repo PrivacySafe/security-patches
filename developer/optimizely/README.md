@@ -12,7 +12,8 @@ On 16 November 2026 an attacker got write access to many unrelated customer proj
 
 | | |
 |---|---|
-| CVE | None at time of writing (Optimizely describes it as an unauthorized party exploiting a vulnerability in its Experimentation platform; researchers have named it OPTIMJACK) |
+| CVE | CVE-2026-132224 (CWE-642), published 18 November 2026: Web Experimentation before 2026-11-17 "mishandles the account signup flow", which let the attacker impersonate users on customer accounts and change their Project JavaScript. Optimizely says it closed the flaw within three hours of detection, and that this was not a credentials breach. Researchers named the incident OPTIMJACK |
+| Exploited | Yes. CISA added CVE-2026-132224 to its [Known Exploited Vulnerabilities catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) on 24 November 2026 (federal deadline 27 November). Feature Experimentation, the SDKs and legacy Full Stack were not affected, Optimizely says |
 | Affected | A project's live Optimizely Web Experimentation snippet, if its Project JavaScript carried the injected loader at any point on 16 November 2026 |
 | Not affected | Custom code or variation-level code, which the report does not describe as touched; projects whose snippet Report URI or you confirm was never infected |
 | Fixed | Optimizely says it has "fixed the vulnerability and removed the injected code from affected projects." There is nothing for a site operator to patch; what is left is site-side: confirm what happened to your own project, and rotate anything that may have been exposed |

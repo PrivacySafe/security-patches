@@ -1,5 +1,5 @@
 {
-  "_comment": "Which Red Hat advisories go into which README. cves: shown in full, or summarized when a CVE has more than 20 advisories and the README has no focus; summary: shown as counts only; point: a CVE whose advisories are listed in another README; focus: a package pattern listed first, and the only ones listed for a CVE with many advisories; matrix: the kernel layout; note: one sentence about what the advisories are for; label: how other READMEs name this one.",
+  "_comment": "Which Red Hat advisories go into which README. cves: shown in full, or summarized when a CVE has more than 20 advisories and the README has no focus; summary: shown as counts only; point: a CVE whose advisories are listed in another README; focus: a package pattern listed first, and the only ones listed for a CVE with many advisories; matrix: the kernel layout; note: one sentence about what the advisories are for; label: how other READMEs name this one. not_placed: CVEs the README names that have advisories but are deliberately not shown (see _not_placed_why).",
   "_excluded": [
     "README.md",
     "developer/gitlab/README.md"
@@ -11,6 +11,7 @@
     "RHSA-2026:0608"
   ],
   "_known_outside_window_why": "January advisories the vsftpd README names, before the Red Hat list starts.",
+  "_not_placed_why": "not_placed lists CVEs a README names, that have Red Hat advisories, but that its block does not show. rhsa.py audit reports any such CVE that is in neither the placement nor this list. The entries here were named before that check existed (25 November 2026) and await review: some the folder's script judges (nginx, Pillow, PHP, Next.js, Expat, Ruby), which likely belong in the block; others are mentioned only in passing.",
   "servers/bind/README.md": {
     "cves": [
       "CVE-2026-94300"
@@ -37,7 +38,10 @@
   "system/ghostscript/README.md": {
     "point": {
       "CVE-2026-112900": "../pillow/README.md#red-hat-advisories"
-    }
+    },
+    "cves": [
+      "CVE-2026-125396"
+    ]
   },
   "servers/haproxy/README.md": {
     "cves": [
@@ -59,9 +63,13 @@
       "CVE-2026-74469",
       "CVE-2026-80844",
       "CVE-2026-81000",
-      "CVE-2026-98432"
+      "CVE-2026-98432",
+      "CVE-2026-99288"
     ],
-    "matrix": true
+    "matrix": true,
+    "not_placed": [
+      "CVE-2026-64564"
+    ]
   },
   "servers/nginx/README.md": {
     "cves": [
@@ -70,6 +78,19 @@
       "CVE-2026-95101",
       "CVE-2026-97205",
       "CVE-2026-97629"
+    ],
+    "not_placed": [
+      "CVE-2026-64564",
+      "CVE-2026-113425",
+      "CVE-2026-118899",
+      "CVE-2026-120967",
+      "CVE-2026-120993",
+      "CVE-2026-121810",
+      "CVE-2026-123007",
+      "CVE-2026-123633",
+      "CVE-2026-123634",
+      "CVE-2026-123640",
+      "CVE-2026-125283"
     ]
   },
   "runtimes/node/README.md": {
@@ -93,14 +114,27 @@
       "CVE-2026-84782"
     ],
     "focus": "openssl",
-    "note": "Other packages that bundle OpenSSL carry the same CVE; they are counted, not listed."
+    "note": "Other packages that bundle OpenSSL carry the same CVE; they are counted, not listed.",
+    "not_placed": [
+      "CVE-2026-121481"
+    ]
   },
   "runtimes/php/README.md": {
     "cves": [
       "CVE-2026-109618",
       "CVE-2026-109619"
     ],
-    "label": "PHP"
+    "label": "PHP",
+    "not_placed": [
+      "CVE-2026-115560",
+      "CVE-2026-126714",
+      "CVE-2026-129182",
+      "CVE-2026-129289",
+      "CVE-2026-129291",
+      "CVE-2026-129474",
+      "CVE-2026-129481",
+      "CVE-2026-129496"
+    ]
   },
   "runtimes/php/edge/README.md": {
     "point": {
@@ -111,6 +145,13 @@
   "system/pillow/README.md": {
     "cves": [
       "CVE-2026-112900"
+    ],
+    "not_placed": [
+      "CVE-2026-96639",
+      "CVE-2026-112393",
+      "CVE-2026-112398",
+      "CVE-2026-112402",
+      "CVE-2026-112403"
     ]
   },
   "system/pki/README.md": {
@@ -125,6 +166,9 @@
       "CVE-2026-97229",
       "CVE-2026-89078",
       "CVE-2026-93577"
+    ],
+    "not_placed": [
+      "CVE-2026-132825"
     ]
   },
   "developer/storybook/README.md": {
@@ -145,7 +189,10 @@
       "CVE-2026-114112",
       "CVE-2026-114113"
     ],
-    "note": "The only advisory is for a Trusted Artifact Signer container image that bundles the affected code, not for a Next.js or sharp package; `check` reads the project's own lockfiles."
+    "note": "The only advisory is for a Trusted Artifact Signer container image that bundles the affected code, not for a Next.js or sharp package; `check` reads the project's own lockfiles.",
+    "not_placed": [
+      "CVE-2026-96889"
+    ]
   },
   "developer/django/README.md": {
     "cves": [
@@ -172,6 +219,9 @@
       "CVE-2026-113351",
       "CVE-2026-115506",
       "CVE-2026-117610"
+    ],
+    "not_placed": [
+      "CVE-2026-118370"
     ]
   },
   "system/apt/README.md": {

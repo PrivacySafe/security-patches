@@ -184,7 +184,7 @@ NEWEST = next((t for t, _ in home_secs if t.startswith("Newest")), "Newest")
 tool_dirs = []
 for dp, dn, fn in os.walk(ROOT):
     rel = os.path.relpath(dp, ROOT)
-    if rel == "." or rel.startswith(("packaging", ".git", "site", "man", "dist")): continue
+    if rel == "." or rel.startswith(("packaging", ".git", "site", "man", "dist")) or rel in ("ci", "automation") or rel.startswith(("ci/", "automation/")): continue
     if "README.md" in fn: tool_dirs.append(rel)
 tool_dirs.sort()
 categorised = [d for _, _, ds in CATEGORIES for d in ds]
@@ -198,6 +198,7 @@ DOCS = {
     "CONTRIBUTOR_GUIDELINES.md": ("contributor-guidelines.html", "Contributor guidelines"), "CONTRIBUTORS.md": ("contributors.html", "Contributors"),
     "VALUES.md": ("values.html", "Values"), "AI_POLICY.md": ("ai-policy.html", "AI policy"),
     "REDHAT-ADVISORIES.md": ("redhat-advisories.html", "Red Hat advisories"),
+    "automation/README.md": ("automation.html", "Output for automation"),
 }
 DOCS = {k: v for k, v in DOCS.items() if exists(k)}
 
@@ -236,7 +237,7 @@ for line in rs.get(NEWEST, "").split("\n"):
 scripts = []; ps_scripts = []     # bash scripts, and the PowerShell companions a few tools have for Windows
 for dp, dn, fn in os.walk(ROOT):
     rel = os.path.relpath(dp, ROOT)
-    if rel.startswith(("packaging", ".git", "site", "man", "dist")): continue
+    if rel.startswith(("packaging", ".git", "site", "man", "dist")) or rel in ("ci", "automation") or rel.startswith(("ci/", "automation/")): continue
     for f in fn:
         if f.endswith(".sh"): scripts.append(posixpath.join(rel, f) if rel != "." else f)
         if f.endswith(".ps1"): ps_scripts.append(posixpath.join(rel, f) if rel != "." else f)
@@ -323,6 +324,12 @@ def rewriter(src_rel, page_out):
         if target.endswith("/README.md") and posixpath.dirname(target) in tool_dirs:
             return f'{attr}="{rel_to(tool_out(posixpath.dirname(target)), anchor)}"'
         if target in tool_dirs: return f'{attr}="{rel_to(tool_out(target), anchor)}"'
+        if target.lower().endswith((".png", ".jpg", ".jpeg", ".webp")) and exists(target):
+            # an image a page shows (a screenshot): copied into the site's assets, so the site needs nothing from elsewhere
+            name = "img-" + target.replace("/", "-")
+            if not os.path.exists(os.path.join(OUT, "assets", name)):
+                shutil.copyfile(os.path.join(ROOT, target), os.path.join(OUT, "assets", name))
+            return f'{attr}="{rel_to("assets/" + name)}"'
         if target.endswith(".svg") and exists(target): return f'{attr}="{rel_to("assets/" + posixpath.basename(target))}"'
         if exists(target): return f'{attr}="{SRC}{target}"'
         return m.group(0)
@@ -614,6 +621,10 @@ Most tools use the same exit codes, so you can use them in scripts and monitorin
 
 A hunt match tells you where to look. A clean hunt means none of the published indicators were found.
 
+## Output for automation
+
+Magento, the nginx October 2026 check, Expat, the agentic attack check and NoisyTCP can write JSON Lines instead of text: `--output jsonl`. Each run gives a start record, an event for each finding, and a verdict with the exit code, the counts and whether the tool found anything on the host to check. `PSF_READ_ONLY=1` refuses every change, so a scheduled run can only read. `automation/psf-report.py` turns the records of many runs and hosts into a short summary, a full plain-text report, Markdown, an HTML page or a PDF, with Python 3 alone. The records follow, closely rather than exactly, the joint guide *Best Practices for Event Logging and Threat Detection* (2024), the NIST SP 800-53 Rev. 5 Audit and Accountability controls and OMB Memorandum M-26-14: [Output for automation](automation/README.md) has the format, how it lines up with them and where it stops short. The other tools follow.
+
 ## Settings
 
 | Setting | Effect |
@@ -722,6 +733,7 @@ DOC_DESC = {  # one description for each policy page, so no two pages share one
     "values.html": "The principles that guide how PrivacySafe Security Patches is written and shared.",
     "ai-policy.html": "How AI tools may be used when you contribute to PrivacySafe Security Patches.",
     "redhat-advisories.html": "The Red Hat security advisories for the CVEs the PrivacySafe Security Patches tools cover, by tool and by CVE.",
+    "automation.html": "JSON Lines output for monitoring and language models, read-only mode, and psf-report for Markdown, HTML and PDF reports.",
 }
 for src, (out, title) in DOCS.items():
     h, toc = render_md(re.sub(r"^# .+\n", "", read(src), count=1))

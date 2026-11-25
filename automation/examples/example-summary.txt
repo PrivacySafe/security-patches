@@ -1,0 +1,19 @@
+Example security check report: Signs of compromise
+4 run(s) on 2 host(s) (db1.example, web1.example); generated 2026-11-25 06:01 UTC
+  web1.example magento-check 4.1.0        check  findings   crit 2  warn 5
+  web1.example nginx-oct2026-check 1.1.0  check  clean      crit 0  warn 0  (nothing to check here)
+  db1.example  expat-check 1.2.0          check  findings   crit 3  warn 1
+  db1.example  agentic-attack-check 2.1.0 hunt   clean      crit 0  warn 0
+Needs attention:
+  CRIT [compromise] web1.example/magento-check: 1 file(s) in pub/media/custom_options/ are PHP or carry PHP code: treat the store as compromised and run hunt
+  CRIT [exposure] web1.example/magento-check: pub/media/custom_options/.htaccess is missing or does not deny, and Apache or LiteSpeed serves this host (run mitigate)
+  CRIT db1.example/expat-check: /usr/lib/x86_64-linux-gnu/libexpat.so.1.9.1: expat 2.6.1 is affected; package libexpat1 does not mention the CVE yet
+  CRIT db1.example/expat-check: /usr/lib/x86_64-linux-gnu/libexpatw.so.1.9.1: expat 2.6.1 is affected; package libexpat1 does not mention the CVE yet
+  CRIT db1.example/expat-check: /usr/bin/python3.12 (pyexpat): expat 2.6.1 is affected; package python3.12-minimal does not mention the CVE yet
+  WARN [vulnerability] web1.example/magento-check: 2.4.8-p5: confirm the July 2026 fix (APSB26-73): an isolated patch does not change the version string. Adobe lists plain 2.4.9 as affected and 2.4.9-2026-jul as fixed
+  WARN [vulnerability] web1.example/magento-check: 2.4.8-p5: confirm the August 2026 fix (APSB26-92; Adobe's isolated patch 249-2026-08-001-CE on 2.4.9)
+  WARN [vulnerability] web1.example/magento-check: no sign of hotfix VULN-39341 (looked in composer.json, composer.lock, .magento.env.yaml, m2-hotfixes/ and patches/). No release carries it, the October 2026 one included: exposed unless it was applied another way. Confirm: vendor/bin/magento-patches -n status | grep 39341
+  WARN [vulnerability] web1.example/magento-check: 2.4.8-p5: confirm the October 2026 fix (APSB26-153): an isolated patch does not change the version string
+  WARN db1.example/expat-check: 3 affected copy(ies) of 3 checked. Expat 2.10.0 (2 November 2026) fixes this and three more flaws.
+  WARN web1.example/magento-check: Exposed or unconfirmed install found.
+PrivacySafe Security Patches | https://privacysafe.app/docs/security-patches/ | help: help@privacysafe.net | security issues: security@privacysafe.net

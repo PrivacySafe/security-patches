@@ -15,7 +15,7 @@ Security mitigations and auditing tools shared for the public good.
 
 This repository contains security mitigations, system-hardening scripts, and auditing tools developed for PrivacySafe and Ivy Cyber infrastructure. PrivacySafe publishes these tools so that others can study, adapt, and use them to protect their own systems, including when upstream security fixes are not yet available.
 
-**84 scripts addressing 212 CVEs across 85 software projects and 11 programming languages, plus 9 other global security incidents.**
+**86 scripts addressing 217 CVEs across 85 software projects and 11 programming languages, plus 9 other global security incidents.**
 
 **Documentation:** open [`docs/index.html`](docs/index.html) in a browser for the offline site (every tool, a CVE index, a glossary and the manual pages in HTML), or read it online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/). The packages also install a manual page for every tool (`man psf-<tool>`) and an info manual.
 
@@ -69,6 +69,7 @@ In [`system/`](system/).
 | [Linux kernel ebtables SNAT](system/linux-kernel/README.md#linux-kernel-check) | The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild | CVE-2026-53266 | Read-only check |
 | [Linux kernel local root quartet](system/linux-kernel/README.md#linux-kernel-lpe-check) | The Linux kernel on every distribution: four local privilege escalations with public exploits (IPsec AH6, TUN/TAP, PPPoE, SCTP), each fixed at a different release per branch | CVE-2026-80844, CVE-2026-81000, CVE-2026-68121, CVE-2026-74469 | Check, opt-in protective measures (`mitigate`) and rollback |
 | [Linux kernel IPv4 TCP use-after-free](system/linux-kernel/README.md#linux-kernel-ireq-opt-check) | The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener | CVE-2026-98432 | Check, hunt and reversible reductions |
+| [NoisyTCP](system/linux-kernel/README.md#linux-kernel-noisytcp-check) | The Linux kernel from 4.4 on every distribution: a race in the lockless TCP lookup that lets anyone who can reach a TCP port crash the host, no login needed, when packets are spread across CPUs; the sibling flaw keeps it open on weakly ordered processors | CVE-2026-99288, CVE-2026-99676 | Check, hunt, stopgaps (`mitigate`) and rollback |
 | [Linux kernel module blocker](system/linux-kernel/README.md#linux-kernel-module-block) | The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback | CVE-2026-80844, CVE-2026-81000, CVE-2026-68121, CVE-2026-74469, CVE-2026-53266, CVE-2026-98432 | List, check and reversible blocks |
 | [APT package downloads](system/apt/README.md#apt-nov2026-check) | Debian, Ubuntu and their derivatives: APT before the fixed release of its line (3.0.4, 2.6.2, 2.8.4 and others), when it follows redirects and retries downloads | CVE-2026-109518 | Check, hunt, stopgap (`mitigate`) and rollback |
 | [OpenSSH musl password bypass](system/openssh-musl/README.md#openssh-musl-password-bypass) | sshd linked against musl (Alpine, OpenWrt, buildroot, Yocto) without PAM in effect: a password over 256 bytes matches any account with no password set | CVE-2026-123158 | Check, hunt, stopgap (`mitigate`) and rollback |
@@ -106,6 +107,7 @@ In [`web-apps/`](web-apps/).
 | [Roundcube Webmail October and November 2026](web-apps/roundcube/README.md#roundcube-webmail-october-2026-check) | Roundcube on GNU/Linux, including copies bundled by hosting panels; a second, unnumbered round of 17 fixes followed the first within a month | CVE-2026-114716 | Read-only check and hunt |
 | [Craft CMS](web-apps/craft/README.md#craft-cms-check) | Craft CMS 4.x and 5.x projects on GNU/Linux | CVE-2026-112777 | Read-only check |
 | [Drupal core Field UI and Entity List](web-apps/drupal/README.md#drupal-core-check) | Drupal 8.9 to 12 sites on GNU/Linux (end-of-life branches move to a supported branch) and the contributed Entity List module | CVE-2026-108097, CVE-2026-108099 | Check, Drupal's Field UI workaround (`mitigate`) and rollback |
+| [Drupal core installer](web-apps/drupal/README.md#drupal-installer-check) | Drupal 10 and 11 sites, and end-of-life branches, on GNU/Linux: anyone can use `core/install.php` to reinstall a site under conditions Drupal does not publish; exploited, and still open after the first fix for sites in an incomplete install state | CVE-2026-132165, CVE-2026-136716 | Check (`--url` tests the live installer), hunt, mitigation that moves the installer into a verified backup, rollback |
 | [YOOtheme Pro](web-apps/yootheme/README.md#yootheme-check) | YOOtheme Pro 5 on WordPress and Joomla (CVSS 10.0) | CVE-2026-102785 | Check, hunt, web server rule (`mitigate`) and rollback |
 | [Grav Login plugin](web-apps/grav/README.md#grav-login-check) | Grav CMS sites with Login 3.6.0 to 3.9.12 | CVE-2026-114658 | Read-only check and hunt |
 | [Grav core allowlist bypass](web-apps/grav/README.md#grav-core-check) | Grav 2.0.15 to 2.2.12: a page editor can run arbitrary public static methods | CVE-2026-116019 | Read-only check and hunt |
@@ -158,20 +160,20 @@ Where Red Hat has published an advisory for a CVE a tool covers, the tool's READ
 
 ## 📥 Install from a package
 
-Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.23-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
+Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.25-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
 
 | File | For |
 |---|---|
-| `psf-security-patches_26.11.23-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
-| `psf-security-patches-26.11.23-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
-| `psf-security-patches-26.11.23-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
+| `psf-security-patches_26.11.25-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
+| `psf-security-patches-26.11.25-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
+| `psf-security-patches-26.11.25-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
 
 Check the files against the release's `SHA256SUMS-<version>.txt` before installing, then:
 
 ```bash
-sha256sum -c SHA256SUMS-26.11.23-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.23-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.23-1.0.0.noarch.rpm    # RPM family
+sha256sum -c SHA256SUMS-26.11.25-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.25-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.25-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/runtimes/php/php2shell-mitigate.sh check             # read only
 ```
 
@@ -180,13 +182,14 @@ Each file also has a detached GPG signature, `FILE.asc`. Import the release key 
 ### Where things go
 
 - **`/opt/psf-security-patches/`** holds the whole tree: each tool in its own folder (`runtimes/php/`, `servers/nginx/`, `system/curl/` and so on) with its README, plus the governance documents and a `VERSION` file. Run the scripts from there.
+- **`/usr/bin/psf-run`** runs the checks every night from cron and keeps their logs and reports as `/etc/psf-security-patches/psf.conf` says (where they go, how long they stay, which formats; `automation/psf.conf.example` explains each setting), **`/usr/bin/psf-status`** shows what the newest security check logs say, the way `systemctl status` shows a service, **`/usr/bin/psf-report`** turns the logs into plain text, Markdown, HTML or PDF reports, and **`/usr/bin/psf-logs`** lists them, keeps them for as long as you choose and clears them; all four are links into `/opt/psf-security-patches/automation/` ([Output for automation](automation/README.md)).
 - **`/opt/psf-security-patches/rhsa/rhsa.py`** is the Red Hat advisory checker, with its data and its README. On a Red Hat family host, `/opt/psf-security-patches/rhsa/rhsa.py verify --rpm` checks every installed package against Red Hat's published fixes, and `man psf-rhsa` documents it. It is a Python 3 program; the index of what it knows is [REDHAT-ADVISORIES.md](REDHAT-ADVISORIES.md).
 - **`/usr/lib/systemd/system/php2shell-watch.service`** is the live watcher's unit, pointed at the `/opt` path. It is installed but not enabled; see [Watching live](runtimes/php/README.md#watching-live).
 - **Manual pages and an info manual:** `man psf-security-patches` is the overview, and every tool has its own page named after its script, such as `man psf-haproxy-check`. `info psf-security-patches` has the same material as one manual. The pages are built from each script's own `--help` text when a release is built, so they always match the tool.
 - **Documentation website:** it is online at [privacysafe.app/docs/security-patches](https://privacysafe.app/docs/security-patches/), and the packages install an offline copy: open `/usr/share/doc/psf-security-patches/html/index.html` in a browser (on RPM systems the folder is `psf-security-patches-<version>`). It starts with the newest vulnerabilities, groups the tools by kind of software, has a CVE index, a page on how the tools work, a glossary, one page per tool and per manual page, and a search that works offline. The offline copy loads nothing from other sites. It is built from the READMEs in this repository, so the READMEs are the documentation.
 - **License files:** `LICENSE` and `NOTICE` come with the package (`/usr/share/doc/psf-security-patches/` on Debian, `/usr/share/licenses/` on RPM systems), and the `.deb` carries a `copyright` file. Everything is CC0 1.0 Universal.
 
-Installing runs nothing: there are no install or removal scripts. The only dependencies are bash 4.0 or newer and coreutils. The Red Hat advisory checker also needs Python 3.8 or newer, which the packages recommend and do not require, so every other tool installs and runs without it.
+Installing runs nothing: there are no install or removal scripts. The only dependencies are bash 4.0 or newer and coreutils. The Red Hat advisory checker also needs Python 3.8 or newer, and `psf-run`, `psf-status`, `psf-report` and `psf-logs` Python 3.7 or newer; the packages recommend Python and do not require it, so every check installs and runs without it.
 
 ### Upgrading and removing
 
@@ -210,6 +213,14 @@ See the [changelog](CHANGELOG.md) for new tools and changes, newest first.
 ## 🔒 One change at a time
 
 A tool that changes the host (`mitigate`, `rollback`, `harden`, `block`, `apply` and the like) takes a lock first, so two runs started together, from a script or from two terminals, cannot overwrite each other's backups and manifests. The second run waits `PSF_LOCK_WAIT` seconds (default 30) and then stops with exit 2 and says why. The lock file is `STATE_DIR/.lock`, or `/var/lib/psf-security-patches/<tool>/.lock`. A dry run, `--help` and `version` never wait. The lock is held by a waiting `flock` process, not by the tool, so a service the tool starts does not keep it. Where `flock` is missing (macOS) nothing is locked. A tool whose default command changes the host (`php2shell-mitigate.sh`, `emudhra-mitigate.sh`) locks when it is run with no command, too. The two PHP2Shell tools and `emudhra-mitigate.sh` exit 1 instead of 2, as they do for every fatal error.
+
+## 📊 Output for automation
+
+Six tools can write JSON Lines for monitoring, a SIEM or a language model (`--output jsonl`), refuse every change when they run on a schedule (`PSF_READ_ONLY=1`), and feed `automation/psf-report.py`, which turns the records of many runs and hosts into a short summary, a full plain-text report, Markdown, an HTML page or a PDF carrying PrivacySafe's name and security contact, with Python 3 alone and nothing loaded from the network. The records follow, closely rather than exactly, the joint guide *Best Practices for Event Logging and Threat Detection* (ASD's ACSC, CISA and international partners, 2024), the NIST SP 800-53 Rev. 5 Audit and Accountability (AU) controls and OMB Memorandum M-26-14; [Output for automation](automation/README.md) says how they line up, where they stop short, and what stays your job. The other tools follow.
+
+[![psf-status in a terminal: a red dot and the status Signs of compromise, when the checks last ran, one line per tool with colored dots, and the findings most serious first](automation/examples/screenshots/psf-status.png)](automation/examples/screenshots/psf-status.png)
+
+`psf-run` runs the checks every night from one settings file, and `sudo psf-status` shows what the newest checks found, the way `systemctl status` shows a service; [the example reports](automation/examples/README.md) show every format, with screenshots, before you install anything.
 
 ---
 

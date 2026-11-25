@@ -43,7 +43,8 @@ document.documentElement.className+=" js"
 <li><a href="../../security.html">Security policy</a></li>
 <li><a href="../../about.html">About and support</a></li>
 </ul>
-<details class="grp" open><summary>Newest: 2 to 23 November 2026</summary><ul>
+<details class="grp" open><summary>Newest: 2 to 25 November 2026</summary><ul>
+<li><a href="../../web-apps/drupal/index.html">25 Oct: Drupal</a></li>
 <li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
 <li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
 <li><a href="../../web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
@@ -150,7 +151,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>Linux kernel</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../../tools.html#operating-system-and-libraries">Operating system and libraries</a></p><h1>Linux kernel: ebtables SNAT (<span class="nw">CVE-2026-53266</span>) and the local root quartet</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff"><strong>Linux kernel ebtables SNAT:</strong> The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild</div><div class="aff"><strong>Linux kernel local root quartet:</strong> The Linux kernel on every distribution: four local privilege escalations with public exploits (IPsec AH6, TUN/TAP, PPPoE, SCTP), each fixed at a different release per branch</div><div class="aff"><strong>Linux kernel IPv4 TCP use-after-free:</strong> The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener</div><div class="aff"><strong>Linux kernel module blocker:</strong> The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-53266</span>, <span class="nw">CVE-2026-64564</span>, <span class="nw">CVE-2026-68121</span>, <span class="nw">CVE-2026-74469</span>, <span class="nw">CVE-2026-80844</span>, <span class="nw">CVE-2026-81000</span></span> <details class="more"><summary>and 2 more</summary><span class="nw">CVE-2026-98432</span>, <span class="nw">CVE-2026-99312</span></details></dd><dt>Scripts</dt><dd><div class="scr"><code>linux-kernel-check.sh</code> (<a href="../../man/psf-linux-kernel-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-ireq-opt-check.sh</code> (<a href="../../man/psf-linux-kernel-ireq-opt-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-ireq-opt-check.sh">source</a>)<br>reads only: <code>check</code>, <code>verify</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-ireq-opt-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-kvm-escape-check.sh</code> (<a href="../../man/psf-linux-kernel-kvm-escape-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-kvm-escape-check.sh">source</a>)<br>reads only: <code>check</code>, <code>rules</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-kvm-escape-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-lpe-check.sh</code> (<a href="../../man/psf-linux-kernel-lpe-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-lpe-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-lpe-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-module-block.sh</code> (<a href="../../man/psf-linux-kernel-module-block.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-module-block.sh">source</a>)<br>reads only: <code>list</code>, <code>check</code>, <code>status</code>, <code>version</code>; can change the system: <code>block</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-module-block.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="linux-kernel-check"></a></p>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#operating-system-and-libraries">Operating system and libraries</a></p><h1>Linux kernel: ebtables SNAT (<span class="nw">CVE-2026-53266</span>) and the local root quartet</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff"><strong>Linux kernel ebtables SNAT:</strong> The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild</div><div class="aff"><strong>Linux kernel local root quartet:</strong> The Linux kernel on every distribution: four local privilege escalations with public exploits (IPsec AH6, TUN/TAP, PPPoE, SCTP), each fixed at a different release per branch</div><div class="aff"><strong>Linux kernel IPv4 TCP use-after-free:</strong> The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener</div><div class="aff"><strong>NoisyTCP:</strong> The Linux kernel from 4.4 on every distribution: a race in the lockless TCP lookup that lets anyone who can reach a TCP port crash the host, no login needed, when packets are spread across CPUs; the sibling flaw keeps it open on weakly ordered processors</div><div class="aff"><strong>Linux kernel module blocker:</strong> The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-53266</span>, <span class="nw">CVE-2026-64564</span>, <span class="nw">CVE-2026-68121</span>, <span class="nw">CVE-2026-74469</span>, <span class="nw">CVE-2026-80844</span>, <span class="nw">CVE-2026-81000</span></span> <details class="more"><summary>and 4 more</summary><span class="nw">CVE-2026-98432</span>, <span class="nw">CVE-2026-99288</span>, <span class="nw">CVE-2026-99312</span>, <span class="nw">CVE-2026-99676</span></details></dd><dt>Scripts</dt><dd><div class="scr"><code>linux-kernel-check.sh</code> (<a href="../../man/psf-linux-kernel-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-ireq-opt-check.sh</code> (<a href="../../man/psf-linux-kernel-ireq-opt-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-ireq-opt-check.sh">source</a>)<br>reads only: <code>check</code>, <code>verify</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-ireq-opt-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-kvm-escape-check.sh</code> (<a href="../../man/psf-linux-kernel-kvm-escape-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-kvm-escape-check.sh">source</a>)<br>reads only: <code>check</code>, <code>rules</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-kvm-escape-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-lpe-check.sh</code> (<a href="../../man/psf-linux-kernel-lpe-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-lpe-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-lpe-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-module-block.sh</code> (<a href="../../man/psf-linux-kernel-module-block.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-module-block.sh">source</a>)<br>reads only: <code>list</code>, <code>check</code>, <code>status</code>, <code>version</code>; can change the system: <code>block</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-module-block.sh check</code></pre></div><div class="scr"><code>linux-kernel-noisytcp-check.sh</code> (<a href="../../man/psf-linux-kernel-noisytcp-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-noisytcp-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-noisytcp-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="linux-kernel-check"></a></p>
 <h2 id="linux-kernel-ebtables-snat-check">Linux kernel ebtables SNAT check</h2>
 <p><span class="nw">CVE-2026-53266</span> is an out-of-bounds write in the bridge netfilter ebtables SNAT target. CISA added it to its Known Exploited Vulnerabilities catalog on 18 September 2026 with a three-day federal deadline, and Red Hat confirmed exploitation.</p>
 <div class="table-wrap" tabindex="0"><table>
@@ -537,13 +538,213 @@ chmod +x linux-kernel-ireq-opt-check.sh
 <li><a href="https://git.kernel.org/pub/scm/linux/security/vulns.git/plain/cve/published/2026/CVE-2026-98432.mbox">The kernel CVE record</a></li>
 <li>Debian: <a href="https://lists.debian.org/debian-security-announce/2026/msg00482.html">DSA-6568-1</a>, <a href="https://lists.debian.org/debian-lts-announce/2026/10/msg00035.html">DLA-4841-1</a>, <a href="https://lists.debian.org/debian-lts-announce/2026/10/msg00044.html">DLA-4850-1</a></li>
 </ul>
+<p><a id="linux-kernel-noisytcp-check"></a></p>
+<h2 id="noisytcp-linux-kernel-tcp-pre-auth-remote-crash-cve-2026-99288-and-cve-2026-99676">NoisyTCP: Linux kernel TCP pre-auth remote crash (<span class="nw">CVE-2026-99288</span>, and <span class="nw">CVE-2026-99676</span>)</h2>
+<p><strong>Script:</strong> <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-noisytcp-check.sh"><code>system/linux-kernel/linux-kernel-noisytcp-check.sh</code></a></p>
+<p>A race in the lockless lookup TCP uses to find an established connection, named NoisyTCP by Hyunwoo Kim, who reported and fixed it. The memory of the socket a lookup found can be freed and reused for a new socket with the same addresses and ports before the lookup takes its reference. The lookup then returns a request socket that a SYN cookie has just rebuilt, with no listener attached, and the receive path dereferences the missing listener: a kernel panic. Anyone who can send TCP packets to a listening port can do it, without an account. Kim crashed Nginx, Apache and SSH in their default setup on virtual machines in 5 seconds to 2 minutes; a quiet physical server with 8 receive queues took about 14 hours. A crash takes down the whole host, containers included.</p>
+<p>The race needs packets for the same connection handled at the same time on different CPUs: two or more receive queues on the interface the attacker's packets arrive on, or RPS spreading them across CPUs. Kim also describes a second, much harder path to a use after free; kernel maintainer Eric Dumazet disputed it when the fix was posted, and Red Hat states that the flaw does not allow data alteration or code execution. The researcher's own exploit is not public; an exploit tracker lists third-party proof of concept code, which this project has not examined. No attacks had been reported, and it was not on CISA's list of exploited vulnerabilities, as of 24 November.</p>
+<div class="table-wrap" tabindex="0"><table>
+
+<tbody>
+<tr>
+<td>Affected</td>
+<td>Every kernel from 4.4 (commit <code>079096f103fa</code>, October 2015) up to the fixed releases below</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>A reachable TCP listener, SYN cookies on (the usual default), and packets spread across CPUs (two or more receive queues, or RPS)</td>
+</tr>
+<tr>
+<td>Fixed upstream in</td>
+<td>5.10.275, 5.15.226, 6.1.193, 6.6.163, 6.12.117, 6.18.63 and 7.3.4; mainline <code>4e2b3ef19e0e</code> (7.4-rc2)</td>
+</tr>
+<tr>
+<td>Ratings</td>
+<td>CVE record 7.5 (kernel CVE team) and 5.9 (CISA, in the same record); Red Hat Important; Ubuntu High</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-sibling-flaw-cve-2026-99676">The sibling flaw (<span class="nw">CVE-2026-99676</span>)</h3>
+<p>The same patch series restores the memory ordering of those lockless lookups. A 2019 change (<code>fb041bb7c0a9</code>, in 5.5, and a backport of it in 5.4.208) removed that ordering on weakly ordered processors. x86 keeps it in hardware, so the sibling does not apply there; on Arm, POWER, RISC-V and other weakly ordered processors, a kernel fixed for NoisyTCP may still not be fixed for this. A review bot asked for both patches to be backported together for that reason; no maintainer has confirmed that the crash is still reachable without it. It is fixed in 6.12.118, 6.18.64 and 7.3.5 (mainline <code>5b5d8f351dd9</code>, 7.4-rc2), and the 5.4, 5.10, 5.15, 6.1 and 6.6 branches have no upstream fix yet. Debian 13 has it in 6.12.118-1 (DSA-6652-1). NVD scores it 9.8, a score that does not reflect that it needs a weakly ordered processor.</p>
+<h3 id="fixed-versions-1">Fixed versions</h3>
+<p>The first stable release of each branch that carries the NoisyTCP fix. Every other branch from 4.4 on has no upstream fix, 6.19 to 7.2 included (7.2 ended at 7.2.15, two days before the fix). Vendors that maintain such a branch backport it.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Branch</th>
+<th>NoisyTCP (<span class="nw">CVE-2026-99288</span>)</th>
+<th>Sibling (<span class="nw">CVE-2026-99676</span>), weakly ordered processors only</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5.4</td>
+<td>no fix</td>
+<td>no fix (affected from 5.4.208)</td>
+</tr>
+<tr>
+<td>5.10</td>
+<td>5.10.275</td>
+<td>no fix yet</td>
+</tr>
+<tr>
+<td>5.15</td>
+<td>5.15.226</td>
+<td>no fix yet</td>
+</tr>
+<tr>
+<td>6.1</td>
+<td>6.1.193</td>
+<td>no fix yet</td>
+</tr>
+<tr>
+<td>6.6</td>
+<td>6.6.163</td>
+<td>no fix yet</td>
+</tr>
+<tr>
+<td>6.12</td>
+<td>6.12.117</td>
+<td>6.12.118</td>
+</tr>
+<tr>
+<td>6.18</td>
+<td>6.18.63</td>
+<td>6.18.64</td>
+</tr>
+<tr>
+<td>7.3</td>
+<td>7.3.4</td>
+<td>7.3.5</td>
+</tr>
+<tr>
+<td>7.4</td>
+<td>7.4-rc2 and later</td>
+<td>7.4-rc2 and later</td>
+</tr>
+</tbody>
+</table></div>
+<p>Vendors, as their trackers and advisories stood on 24 November (Red Hat: its list of 25 November). These states change daily, so open your vendor's page before you act on this list.</p>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Vendor</th>
+<th>State</th>
+<th>Kernel and advisory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Debian</td>
+<td>Fixed</td>
+<td>12 bookworm <code>linux</code> 6.1.192-1 (DLA-4906-1; Debian carried it before upstream 6.1.193) and <code>linux-6.12</code> 6.12.117-1~deb12u1; 13 trixie <code>linux</code> 6.12.117-1 (DSA-6628-1), and 6.12.118-1 for the sibling (DSA-6652-1)</td>
+</tr>
+<tr>
+<td>Red Hat</td>
+<td>Fixed for RHEL 8.10, 9.9 and 10.3 on 23 November and RHEL 8.8 on 24 November, rated Important. Other update streams (9.8, 10.2 and so on) had no fixed kernel in Red Hat's list of 25 November. RHEL 6 and 7 are not affected</td>
+<td>8.8 <code>4.18.0-477.181.1.el8_8</code> (RHSA-2026:102709), 8.10 <code>4.18.0-553.189.1.el8_10</code> (RHSA-2026:102218; kernel-rt RHSA-2026:102219), 9.9 <code>5.14.0-741.26.1.el9_9</code> (RHSA-2026:102167), 10.3 <code>6.12.0-264.19.1.el10_3</code> (RHSA-2026:102168)</td>
+</tr>
+<tr>
+<td>Ubuntu</td>
+<td>Not fixed: every release from 16.04 to 26.10 is listed as vulnerable. Fixes are in progress for the main <code>linux</code> package; its other kernels (cloud, HWE, Raspberry Pi and more) have none in progress</td>
+<td>In progress: 24.04 <code>6.8.0-152.152</code>, 22.04 <code>5.15.0-205.215</code>, 26.04 <code>7.0.0-45.45</code>, 26.10 <code>7.3.0-12.13</code>, 20.04 <code>5.4.0-248.268</code>, 18.04 <code>4.15.0-264.276</code>, 16.04 <code>4.4.0-294.328</code></td>
+</tr>
+<tr>
+<td>AlmaLinux, Oracle Linux, CIQ</td>
+<td>Fixed for at least some releases</td>
+<td>AlmaLinux follows Red Hat's advisories (ALSA-2026:102167 and the others); Oracle Linux UEK ELSA-2026-500630 to 500632</td>
+</tr>
+</tbody>
+</table></div>
+<p>A summary that circulated on 24 November listed RHEL 9 <code>5.14.0-687.67.1.el9_8</code>, RHEL 10.2 and Ubuntu 24.04 <code>6.8.0-151.151</code> among &quot;latest safe versions&quot;. None of them carries this fix: the 9.8 and 10.2 streams have no fixed kernel, and Ubuntu's fix is in 152. The script judges those kernels affected.</p>
+<h3 id="how-the-script-judges-the-kernel-1">How the script judges the kernel</h3>
+<p>As the other kernel checks in this folder do, it reads the kernel's origin first. A kernel that follows the stable series is compared with the table above, and Debian's patch level is read from <code>uname -v</code>, with Debian's own 6.1.192-1 fix taken into account. RHEL itself (an <code>ID=rhel</code> system) is compared with the fixed build of its update stream (8.8, 8.10, 9.9 and 10.3), and a stream without a fixed kernel is reported as such. Ubuntu's main kernel is compared with the build Ubuntu named for its fix: below it is affected; at or past it, while Ubuntu still lists the fix as in progress, the script asks you to confirm rather than call it fixed. Every other vendor kernel (the RHEL rebuilds, RHEL's kernel-rt, Ubuntu's cloud kernels, SUSE, Amazon Linux) is judged by its changelog: when it names the CVE, the kernel carries a backport. The sibling is judged only on a weakly ordered processor. A stable release candidate is judged as the release before it, and a 7.4 release candidate by its number (the fixes came in rc2).</p>
+<h3 id="quick-start-2">Quick start</h3>
+<pre tabindex="0"><code class="language-bash">curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/system/linux-kernel/linux-kernel-noisytcp-check.sh
+less linux-kernel-noisytcp-check.sh
+chmod +x linux-kernel-noisytcp-check.sh
+./linux-kernel-noisytcp-check.sh check
+</code></pre>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code> (default)</td>
+<td>Judges the running kernel for NoisyTCP and, on a weakly ordered processor, the sibling. Exit <code>0</code> fixed, <code>1</code> affected or a fix could not be confirmed. Read-only</td>
+</tr>
+<tr>
+<td><code>hunt</code></td>
+<td>Reads the kernel logs (<code>dmesg</code>, the journal's kernel messages, the rotated <code>kern.log</code>, <code>syslog</code> and <code>messages</code> files) for a NULL pointer dereference or panic whose trace runs through <code>tcp_v4_rcv</code>, <code>tcp_v6_rcv</code>, the established lookups or the SYN cookie code, and notes crash dumps in <code>/var/crash</code> and <code>/sys/fs/pstore</code>. A hit is a lead, not proof of an attack; a clean result is not clearance, because a crashed host reboots and loses its ring buffer. Exit <code>0</code> nothing found, <code>1</code> hits, <code>2</code> no log could be read. Read-only</td>
+</tr>
+<tr>
+<td><code>mitigate [--syncookies] [--single-queue IFACE[,IFACE]] [--force] [--dry-run]</code></td>
+<td><strong>Changes the host (root).</strong> Stopgaps, not a fix; see below</td>
+</tr>
+<tr>
+<td><code>rollback [--dry-run]</code></td>
+<td>Restores the saved values and removes the file <code>mitigate</code> wrote</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Prints the script version</td>
+</tr>
+</tbody>
+</table></div>
+<p>With <code>--output jsonl</code> it writes structured records for <a href="../../automation.html">automation</a>, and <code>psf-run</code> runs it with the other tools that do. Env: <code>KERNEL_CHANGELOG</code> (a vendor changelog file to read, plain or <code>.gz</code>), <code>KERNEL_RELEASE</code>, <code>KERNEL_VERSION_STRING</code> and <code>KERNEL_ARCH</code> (override <code>uname -r</code>, <code>-v</code> and <code>-m</code>), <code>KERNEL_PROC_SYS</code> and <code>KERNEL_SYS_NET</code> (instead of <code>/proc/sys</code> and <code>/sys/class/net</code>), <code>KERNEL_LOG_FILES</code> and <code>KERNEL_CRASH_DIRS</code> (for <code>hunt</code>), <code>KERNEL_INSTALLED_RELEASES</code>, <code>OS_RELEASE_FILE</code>, and <code>STATE_DIR</code> and <code>SYSCTL_D</code> for <code>mitigate</code> and <code>rollback</code>.</p>
+<p>A container shows the host's kernel, so run the script on the host.</p>
+<h3 id="exposure-information-2">Exposure information</h3>
+<p>After the verdict, <code>check</code> reports what decides whether the race can be reached here: <code>net.ipv4.tcp_syncookies</code>, the receive queues of each interface and whether RPS or RFS spreads packets across CPUs, the TCP listeners that are not on loopback, the processor, and how many other network namespaces exist. That is information to weigh, not a verdict: a kernel below its fixed release is affected whatever it shows. Which interface faces the attacker, and which CPUs its queues are bound to, the script cannot know. Each network namespace has its own <code>tcp_syncookies</code>, so a container's value can differ from the host's, and a crash in any container takes the whole host down.</p>
+<h3 id="mitigation-mitigate-1">Mitigation: <code>mitigate</code></h3>
+<p>Both stopgaps come from the researcher's advisory and Red Hat. They act only when <code>check</code> finds the kernel affected (<code>--force</code> overrides), <code>--dry-run</code> shows everything first, and <code>rollback</code> puts the saved values back.</p>
+<ul>
+<li><strong><code>--syncookies</code></strong> sets <code>net.ipv4.tcp_syncookies=0</code> now and writes <code>/etc/sysctl.d/99-psf-kernel-noisytcp.conf</code> so it stays after a reboot; if another file read later sets the value, it says which. It closes the SYN cookie path the crash uses, and it weakens protection against SYN floods. It acts in the host's network namespace only: start each container that has its own namespace with <code>--sysctl net.ipv4.tcp_syncookies=0</code> (Docker, Podman), set it under <code>securityContext.sysctls</code> in Kubernetes, or set it from inside with <code>nsenter -t PID -n sysctl -w net.ipv4.tcp_syncookies=0</code>.</li>
+<li><strong><code>--single-queue IFACE</code></strong> cuts the named interfaces (the ones that face the attacker) to one receive channel with <code>ethtool -L</code>, and turns RPS and RFS off. Network throughput drops, the link may reset for a moment (an SSH session over that interface can drop), and none of it survives a reboot or a driver reset. Without <code>ethtool</code>, the queue count stays and only RPS and RFS change.</li>
+</ul>
+<p>Run as root, it writes no file through a link, and it runs <code>ethtool</code> only when root owns the program and every folder above it.</p>
+<h3 id="update-2">Update</h3>
+<div class="table-wrap" tabindex="0"><table>
+<thead>
+<tr>
+<th>Distribution</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Debian</td>
+<td><code>sudo apt update &amp;&amp; sudo apt full-upgrade</code>, then reboot</td>
+</tr>
+<tr>
+<td>RHEL 8.8, 8.10, 9.9, 10.3 and rebuilds</td>
+<td><code>sudo dnf update kernel &amp;&amp; sudo reboot</code>; <code>sudo dnf updateinfo list --cve <span class="nw">CVE-2026-99288</span></code> shows whether the repositories have the advisory</td>
+</tr>
+<tr>
+<td>Ubuntu</td>
+<td>Wait for the fix on <a href="https://ubuntu.com/security/CVE-2026-99288">Ubuntu's page</a>, then <code>sudo apt update &amp;&amp; sudo apt full-upgrade</code> and reboot; use a stopgap until then</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sources-2">Sources</h3>
+<ul>
+<li>oss-security: <a href="https://www.openwall.com/lists/oss-security/2026/11/15/2">Hyunwoo Kim's NoisyTCP advisory</a>, 15 November; <a href="https://www.openwall.com/lists/oss-security/2026/11/20/3">the 5.15 backport</a>, 20 November</li>
+<li><a href="https://lists.openwall.net/linux-cve-announce/2026/11/10/4">The kernel CVE team's announcement of <span class="nw">CVE-2026-99288</span></a>, 10 November</li>
+<li>OSV, generated from the CVE records: <a href="https://osv.dev/vulnerability/CVE-2026-99288"><span class="nw">CVE-2026-99288</span></a> (all seven fixed releases) and <a href="https://osv.dev/vulnerability/CVE-2026-99676"><span class="nw">CVE-2026-99676</span></a></li>
+<li><a href="https://access.redhat.com/security/cve/cve-2026-99288">Red Hat: <span class="nw">CVE-2026-99288</span></a>, and its advisories <a href="https://access.redhat.com/errata/RHSA-2026:102167">RHSA-2026:102167</a>, <a href="https://access.redhat.com/errata/RHSA-2026:102168">RHSA-2026:102168</a>, <a href="https://access.redhat.com/errata/RHSA-2026:102218">RHSA-2026:102218</a> and <a href="https://access.redhat.com/errata/RHSA-2026:102219">RHSA-2026:102219</a></li>
+<li><a href="https://ubuntu.com/security/CVE-2026-99288">Ubuntu: <span class="nw">CVE-2026-99288</span></a></li>
+<li><a href="https://security-tracker.debian.org/tracker/CVE-2026-99288">Debian security tracker: <span class="nw">CVE-2026-99288</span></a></li>
+</ul>
 <p><a id="linux-kernel-module-block"></a></p>
 <h2 id="linux-kernel-module-blocker">Linux kernel module blocker</h2>
 <p><strong>Script:</strong> <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-module-block.sh"><code>system/linux-kernel/linux-kernel-module-block.sh</code></a></p>
 <p>Many kernel flaws sit in a module that almost nobody needs and that loads by itself the moment an unprivileged process opens the right socket, or a device appears. Stopping that module from loading removes the attack surface until a patched kernel is running. This script does it the way the kernel documents, for a curated list of modules behind recent flaws or for any name you give it, with a manifest and a rollback, and it tells you when a block cannot work. It is generic: the tools above carry their own copies of this logic for their own modules and keep working when copied on their own.</p>
 <p>A block is a file of its own, <code>/etc/modprobe.d/psf-block-NAME.conf</code>, with <code>blacklist NAME</code>, which stops the alias based autoload, and <code>install NAME /bin/false</code>, which also stops an explicit <code>modprobe NAME</code>. A hyphen and an underscore are the same thing to the kernel, and the script treats them so.</p>
 <p>A bare <code>blacklist</code> line, which is what many distributions ship (Ubuntu's own <code>/etc/modprobe.d/blacklist-*.conf</code> files, for one), stops only the automatic load by alias. An explicit <code>modprobe NAME</code> still loads the module, and so does another module that depends on it. <code>list</code> and <code>check</code> call that <code>blacklist</code>, not blocked, and <code>block</code> adds the install rule on top. Rules that already exist anywhere under <code>modprobe.d</code> count, wherever they came from.</p>
-<h3 id="quick-start-2">Quick start</h3>
+<h3 id="quick-start-3">Quick start</h3>
 <pre tabindex="0"><code class="language-bash">curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/system/linux-kernel/linux-kernel-module-block.sh
 less linux-kernel-module-block.sh
 chmod +x linux-kernel-module-block.sh
@@ -667,7 +868,7 @@ sudo ./linux-kernel-module-block.sh block sctp
 <p>The official record (the kernel's own CNA entry, mirrored by NVD and Red Hat) describes the underlying bug as an unconditional MMU-context reset missing when KVM emulates an INIT while a nested guest's paging is off, and scores it as a local denial-of-service: the CVSS vector ends <code>C:N/I:N/A:H</code>, no confidentiality or integrity impact, only availability. Terra's own research, independently corroborated, found the same bug chains with a use-after-free in KVM's nested SVM handling (a stale <code>nCR3</code> pointer left referencing a recycled page-table page) and an Accessed-bit timing oracle, into the full guest-to-host read and write demonstrated above. Treat the official score as a description of the kernel's own accounting of the bug class, not of what was actually shown against it.</p>
 <p>This is a fix landing on top of an older one. In 2022, a different, already-fixed KVM reset flaw was fixed by switching a reset back to the control block of the VM that runs the nested one before anything is freed. <span class="nw">CVE-2026-99312</span> is a flaw that fix itself opened. It is unrelated to three other 2026 KVM guest-to-host escapes found by a different researcher under the names ITScape (arm64), Januscape and Zapscape (x86, both reaching Intel and AMD); this script covers only <span class="nw">CVE-2026-99312</span>, and its one AMD-only mitigation should not be confused with those.</p>
 <p><strong>Affected:</strong> nested virtualization on AMD (<code>kvm_amd</code>), on any kernel from 6.1 up to, but not including, the fixed releases below. INIT is an unconditional intercept on Intel VMX, so Intel nested virtualization (<code>kvm_intel</code>) cannot reach this specific bug. First fixed stable release of each currently maintained branch: <code>6.12.118</code>, <code>6.18.64</code>, <code>7.3.5</code>; first mainline release with the fix: <code>7.4-rc2</code> (9 November 2026). The precondition for this flaw came from a November 2022 commit that was itself widely backported at the time, confirmed at least as far back as the (now unsupported) stable branches 5.15.81 and 6.0.11. Nothing confirms that <em>other</em> branches below 6.1 that were also receiving backports in November 2022 (5.10 and 5.4, for instance) escaped it; <code>check</code> reports those as unknown rather than clear, and says to check that branch's own changelog, rather than assume its age puts it out of scope.</p>
-<h3 id="quick-start-3">Quick start</h3>
+<h3 id="quick-start-4">Quick start</h3>
 <pre tabindex="0"><code class="language-bash">curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/system/linux-kernel/linux-kernel-kvm-escape-check.sh
 less linux-kernel-kvm-escape-check.sh
 chmod +x linux-kernel-kvm-escape-check.sh
@@ -709,7 +910,7 @@ chmod +x linux-kernel-kvm-escape-check.sh
 </table></div>
 <p>The <code>nested</code> module parameter is read only when <code>kvm_amd</code> loads, so there is no way to flip it on a host where the module is already loaded without unloading it (every VM must already be stopped; <code>modprobe -r</code> refuses otherwise) or rebooting. <code>mitigate --force</code> writes the file and tells you it only takes effect on the next load, which on most hosts means the next reboot or maintenance window.</p>
 <p><code>linux-kernel-module-block.sh</code> also lists <code>kvm_amd</code> (<code>check kvm_amd</code>, <code>list --group exploited</code>), but <strong>blocking it entirely is the wrong tool here</strong>: it would stop all AMD virtualization, nested or not, which is far more than this flaw needs. That tool's own <code>check</code> output says so; use <code>mitigate</code> above for the targeted fix.</p>
-<h3 id="sources-2">Sources</h3>
+<h3 id="sources-3">Sources</h3>
 <ul>
 <li><a href="https://www.terra.security/blog/kvm-guest-to-host-escape">Terra Security, &quot;<span class="nw">CVE-2026-99312</span>: KVM Guest-to-Host Escape&quot;, 18 November 2026</a>: the disclosure, the DigitalOcean demonstration, the fixed releases and the <code>kvm_amd nested=0</code> mitigation.</li>
 <li>The kernel's own CNA record for <span class="nw">CVE-2026-99312</span> (mirrored by NVD and Red Hat): the official description and CVSS vector.</li>
@@ -771,7 +972,7 @@ chmod +x linux-kernel-kvm-escape-check.sh
 </table></div>
 <p>Two of them can be turned into a remote crash under narrow conditions: DirtyAH6 if the host routes IPv6 and adds an Authentication Header in transport mode, and DiagSpill only with non-default SCTP options (ASCONF with SCTP-AUTH, or <code>net.sctp.addip_noauth_enable=1</code>). The researcher showed remote root for DirtyAH6 only in a lab with on-target memory grooming, and sees no path to remote root for DiagSpill.</p>
 <p>CVSS scores were not in the sources used for this document, so none is given here. The CVE numbers follow the researcher's own disclosure. A few news write-ups swap the numbers of TUNderflow and PPPoEject.</p>
-<h3 id="fixed-versions-1">Fixed versions</h3>
+<h3 id="fixed-versions-2">Fixed versions</h3>
 <p>The first stable release of each branch that carries each fix. A branch not in the table (5.11 to 5.14, 5.16 to 6.0, 6.2 to 6.5, 6.7 to 6.11, 6.13 to 6.17, 6.19 to 7.0, and older ones such as 5.4) is affected. The fix there is a vendor kernel or a move to a listed branch.</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
@@ -843,10 +1044,10 @@ chmod +x linux-kernel-kvm-escape-check.sh
 </tbody>
 </table></div>
 <p>The first stable releases with <strong>all four</strong> fixes are 5.10.270, 5.15.221, 6.1.188, 6.6.157, 6.12.109, 6.18.50 and 7.2.4. Releases of 7.3 and later carry every fix. The table is why a single &quot;newer than X&quot; rule is wrong here: on 6.12, release 6.12.105 has the PPPoEject and DiagSpill fixes but still lacks the other two.</p>
-<h3 id="how-the-script-judges-the-kernel-1">How the script judges the kernel</h3>
+<h3 id="how-the-script-judges-the-kernel-2">How the script judges the kernel</h3>
 <p>It reads the kernel's origin first, exactly as the ebtables check above does. A kernel that follows the stable series (vanilla, Arch, Alpine, most custom builds) is judged on the upstream version in <code>uname -r</code>. Debian's upstream version is read from <code>uname -v</code>. A stable release candidate such as <code>6.12.109-rc1</code> is judged as the release before it. Ubuntu, RHEL and its derivatives, SUSE and Amazon Linux backport fixes under release strings that do not show which fixes they carry, so a number from them cannot be compared with the table. For those the script looks in the vendor changelog for each CVE, and points you to the vendor's tracker when a CVE is absent. A kernel that is below a fixed release but whose changelog names the CVE is reported as carrying a backport.</p>
 <p>Each of the four is judged separately, and the verdict names the ones still open.</p>
-<h3 id="quick-start-4">Quick start</h3>
+<h3 id="quick-start-5">Quick start</h3>
 <pre tabindex="0"><code class="language-bash">curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/system/linux-kernel/linux-kernel-lpe-check.sh
 less linux-kernel-lpe-check.sh
 chmod +x linux-kernel-lpe-check.sh
@@ -872,9 +1073,9 @@ chmod +x linux-kernel-lpe-check.sh
 </table></div>
 <p>Env: <code>KERNEL_CHANGELOG</code> (a vendor changelog file to read, plain or <code>.gz</code>), <code>KERNEL_RELEASE</code> and <code>KERNEL_VERSION_STRING</code> (override <code>uname -r</code> and <code>uname -v</code>), <code>KERNEL_MODULES_FILE</code>, <code>KERNEL_PROC_SYS</code> and <code>KERNEL_BUILTIN_FILE</code> (override <code>/proc/modules</code>, <code>/proc/sys</code> and the module list of the release).</p>
 <p>A container shows the host's kernel, so run the script on the host.</p>
-<h3 id="exposure-information-2">Exposure information</h3>
+<h3 id="exposure-information-3">Exposure information</h3>
 <p>For the flaws still open, the script reports whether the module each one needs is loaded, built in or loadable, and whether unprivileged user namespaces are allowed (<code>user.max_user_namespaces</code>, <code>kernel.unprivileged_userns_clone</code> and <code>kernel.apparmor_restrict_unprivileged_userns</code> are read). That is information for you to weigh, not a verdict: a kernel below its fixed release is affected whatever these show, and a process with the right capabilities, such as a container, does not need a user namespace for the first three. That reading is the project's. AppArmor and SELinux did not block the exploits in the researcher's testing, except for Ubuntu's block on unprivileged user namespaces themselves.</p>
-<h3 id="mitigation-mitigate-1">Mitigation: <code>mitigate</code></h3>
+<h3 id="mitigation-mitigate-2">Mitigation: <code>mitigate</code></h3>
 <p><code>./linux-kernel-lpe-check.sh mitigate --dry-run</code> shows, and <code>mitigate</code> applies, the researcher's protective measures. It acts only when <code>check</code> finds the kernel affected (<code>--force</code> overrides) and you must choose what to apply, because each measure can break software:</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
@@ -900,9 +1101,9 @@ chmod +x linux-kernel-lpe-check.sh
 <p><code>rollback</code> restores the saved sysctl values and removes the files. <code>STATE_DIR</code>, <code>SYSCTL_D</code> and <code>MODPROBE_D</code> can be overridden. To block modules that are not listed here, or several at once, see the <a href="#linux-kernel-module-block">kernel module blocker</a>. These are the researcher's measures, applied by PrivacySafe. A patched kernel and a reboot are the permanent fix. The script has been run against simulated <code>/proc/sys</code> and module files and in dry-run mode on a kernel.</p>
 <h3 id="there-is-no-hunt">There is no hunt</h3>
 <p>Proof-of-concept code is public for all four, and no indicators of exploitation were published, so the script has no hunt.</p>
-<h3 id="update-2">Update</h3>
+<h3 id="update-3">Update</h3>
 <p>Move to your vendor's kernel that names these CVEs, or to a stable release from the table, and reboot. Until then, the researcher suggests in the disclosure (PrivacySafe applies this): disable unprivileged user namespaces, which removes the ordinary-user path to the first three but can break rootless containers and some sandboxes, and disable AH6, TUN, PPPoE and SCTP with <code>sctp_diag</code> where they are not used. A process with the right capabilities, and DiagSpill, are not stopped by the namespace setting.</p>
-<h3 id="sources-3">Sources</h3>
+<h3 id="sources-4">Sources</h3>
 <ul>
 <li><a href="https://www.openwall.com/lists/oss-security/2026/09/18/3">oss-security: A quartet of Linux local root vulns (18 September 2026)</a></li>
 <li><a href="https://heyitsas.im/posts/lpe-quartet/">The researcher's write-up</a></li>
@@ -911,7 +1112,7 @@ chmod +x linux-kernel-lpe-check.sh
 </ul>
 <!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->
 <h2 id="red-hat-advisories">Red Hat advisories</h2>
-<p>Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-23) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on <a href="https://access.redhat.com/security/security-updates/#/cve">Red Hat's CVE database</a>.</p>
+<p>Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-25) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on <a href="https://access.redhat.com/security/security-updates/#/cve">Red Hat's CVE database</a>.</p>
 <p>The columns are CVE-2026-NNNNN. The table shows, for each stream, the advisories that name each CVE (the number is the part of RHSA-2026:NNNNN after the colon; <code>rt</code> is <code>kernel-rt</code>, <code>kp</code> is a <code>kpatch-patch</code> live patch). A blank cell means no advisory in the list, not that the stream is unaffected. Each advisory is at <code>https://access.redhat.com/errata/RHSA-2026:NNNNN</code>.</p>
 <div class="table-wrap" tabindex="0"><table>
 <thead>
@@ -923,6 +1124,7 @@ chmod +x linux-kernel-lpe-check.sh
 <th>80844</th>
 <th>81000</th>
 <th>98432</th>
+<th>99288</th>
 </tr>
 </thead>
 <tbody>
@@ -934,6 +1136,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71649</td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 7</td>
@@ -942,6 +1145,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71657 rt, 71687</td>
 <td>71657 rt, 71687</td>
 <td>71657 rt, 71687</td>
+<td></td>
 <td></td>
 </tr>
 <tr>
@@ -952,6 +1156,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td></td>
 <td></td>
 <td>95754</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 8.4</td>
@@ -961,6 +1166,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71565</td>
 <td>71565</td>
 <td>94623</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 8.6</td>
@@ -970,6 +1176,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71592</td>
 <td>71592</td>
 <td>94996</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 8.8</td>
@@ -979,6 +1186,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71594, 92063 kp</td>
 <td>71594, 95601 kp</td>
 <td>100524 kp, 94303</td>
+<td>102709</td>
 </tr>
 <tr>
 <td>RHEL 8.10</td>
@@ -988,6 +1196,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71016 rt, 71213, 92062 kp</td>
 <td>71016 rt, 71213, 95587 kp</td>
 <td>100525 kp, 93414, 93415 rt</td>
+<td>102218, 102219 rt</td>
 </tr>
 <tr>
 <td>RHEL 9</td>
@@ -997,6 +1206,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td></td>
 <td></td>
 <td>95754</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 9.2</td>
@@ -1006,6 +1216,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71601, 71606 rt, 92629 kp</td>
 <td>71601, 71606 rt, 95600 kp</td>
 <td>100521 kp, 94477, 94558 rt</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 9.4</td>
@@ -1015,6 +1226,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71569, 91639 kp</td>
 <td>71569, 96090 kp</td>
 <td>100523 kp, 94109</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 9.6</td>
@@ -1024,6 +1236,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71631, 91638 kp</td>
 <td>71631, 96091 kp</td>
 <td>100693 kp, 94438</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 9.8</td>
@@ -1033,6 +1246,17 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71232, 91650 kp</td>
 <td>71232, 96093 kp</td>
 <td>100522 kp, 93412</td>
+<td></td>
+</tr>
+<tr>
+<td>RHEL 9.9</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>102167</td>
 </tr>
 <tr>
 <td>RHEL 10.0</td>
@@ -1042,6 +1266,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71599</td>
 <td>71599</td>
 <td>94508</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 10.2</td>
@@ -1051,6 +1276,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>71233, 92061 kp</td>
 <td>71233, 99722 kp</td>
 <td>100694 kp, 93413</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 10.3</td>
@@ -1060,6 +1286,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td></td>
 <td>98608</td>
 <td>98608</td>
+<td>102168</td>
 </tr>
 <tr>
 <td>OpenShift (RHCOS)</td>
@@ -1069,6 +1296,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>12 advisories</td>
 <td>11 advisories</td>
 <td>12 advisories</td>
+<td></td>
 </tr>
 <tr>
 <td>RHEL 10 (el10nv)</td>
@@ -1078,6 +1306,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td>74974</td>
 <td>73788</td>
 <td>93775</td>
+<td></td>
 </tr>
 </tbody>
 </table></div>
@@ -1181,7 +1410,7 @@ chmod +x linux-kernel-lpe-check.sh
 </table></div>
 <!-- rhsa:end -->
 <p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p><nav class="pn" aria-label="Previous and next tool"><a rel="prev" href="../heif/index.html">&larr; libheif</a><a rel="next" href="../../developer/litellm/index.html">LiteLLM &rarr;</a></nav></article></main>
-<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#linux-kernel-ebtables-snat-check">Linux kernel ebtables SNAT check</a></li><li class="l2"><a href="#how-the-flaw-works">How the flaw works</a></li><li class="l2"><a href="#why-the-script-reads-the-kernels-origin-first">Why the script reads the kernel&#x27;s origin first</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#exposure-information">Exposure information</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#linux-kernel-ipv4-tcp-use-after-free-cve-2026-98432">Linux kernel IPv4 TCP use-after-free (CVE-2026-98432)</a></li><li class="l3"><a href="#fixed-versions">Fixed versions</a></li><li class="l3"><a href="#how-the-script-judges-the-kernel">How the script judges the kernel</a></li><li class="l3"><a href="#three-kinds-of-evidence-strongest-first">Three kinds of evidence, strongest first</a></li><li class="l3"><a href="#getting-the-kernels-debug-image-for-verify">Getting the kernel&#x27;s debug image, for verify</a></li><li class="l3"><a href="#quick-start-1">Quick start</a></li><li class="l3"><a href="#exposure-information-1">Exposure information</a></li><li class="l3"><a href="#mitigation-mitigate">Mitigation: mitigate</a></li><li class="l3"><a href="#hunt">Hunt</a></li><li class="l3"><a href="#update-1">Update</a></li><li class="l3"><a href="#sources-1">Sources</a></li><li class="l2"><a href="#linux-kernel-module-blocker">Linux kernel module blocker</a></li><li class="l3"><a href="#quick-start-2">Quick start</a></li><li class="l3"><a href="#the-list">The list</a></li><li class="l3"><a href="#what-a-block-cannot-do">What a block cannot do</a></li><li class="l3"><a href="#why-a-block-helps">Why a block helps</a></li><li class="l2"><a href="#kvm-guest-to-host-escape-on-amd-nested-virtualization-cve-2026-99312">KVM guest-to-host escape on AMD nested virtualization (CVE-2026-99312)</a></li><li class="l3"><a href="#quick-start-3">Quick start</a></li><li class="l3"><a href="#commands-1">Commands</a></li><li class="l3"><a href="#sources-2">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#linux-kernel-local-root-quartet-check">Linux kernel local root quartet check</a></li><li class="l3"><a href="#fixed-versions-1">Fixed versions</a></li><li class="l3"><a href="#how-the-script-judges-the-kernel-1">How the script judges the kernel</a></li><li class="l3"><a href="#quick-start-4">Quick start</a></li><li class="l3"><a href="#exposure-information-2">Exposure information</a></li><li class="l3"><a href="#mitigation-mitigate-1">Mitigation: mitigate</a></li><li class="l3"><a href="#there-is-no-hunt">There is no hunt</a></li><li class="l3"><a href="#update-2">Update</a></li><li class="l3"><a href="#sources-3">Sources</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
+<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul><li class="l2"><a href="#linux-kernel-ebtables-snat-check">Linux kernel ebtables SNAT check</a></li><li class="l2"><a href="#how-the-flaw-works">How the flaw works</a></li><li class="l2"><a href="#why-the-script-reads-the-kernels-origin-first">Why the script reads the kernel&#x27;s origin first</a></li><li class="l2"><a href="#quick-start">Quick start</a></li><li class="l2"><a href="#commands">Commands</a></li><li class="l2"><a href="#exposure-information">Exposure information</a></li><li class="l2"><a href="#update">Update</a></li><li class="l2"><a href="#sources">Sources</a></li><li class="l2"><a href="#linux-kernel-ipv4-tcp-use-after-free-cve-2026-98432">Linux kernel IPv4 TCP use-after-free (CVE-2026-98432)</a></li><li class="l3"><a href="#fixed-versions">Fixed versions</a></li><li class="l3"><a href="#how-the-script-judges-the-kernel">How the script judges the kernel</a></li><li class="l3"><a href="#three-kinds-of-evidence-strongest-first">Three kinds of evidence, strongest first</a></li><li class="l3"><a href="#getting-the-kernels-debug-image-for-verify">Getting the kernel&#x27;s debug image, for verify</a></li><li class="l3"><a href="#quick-start-1">Quick start</a></li><li class="l3"><a href="#exposure-information-1">Exposure information</a></li><li class="l3"><a href="#mitigation-mitigate">Mitigation: mitigate</a></li><li class="l3"><a href="#hunt">Hunt</a></li><li class="l3"><a href="#update-1">Update</a></li><li class="l3"><a href="#sources-1">Sources</a></li><li class="l2"><a href="#noisytcp-linux-kernel-tcp-pre-auth-remote-crash-cve-2026-99288-and-cve-2026-99676">NoisyTCP: Linux kernel TCP pre-auth remote crash (CVE-2026-99288, and CVE-2026-99676)</a></li><li class="l3"><a href="#the-sibling-flaw-cve-2026-99676">The sibling flaw (CVE-2026-99676)</a></li><li class="l3"><a href="#fixed-versions-1">Fixed versions</a></li><li class="l3"><a href="#how-the-script-judges-the-kernel-1">How the script judges the kernel</a></li><li class="l3"><a href="#quick-start-2">Quick start</a></li><li class="l3"><a href="#exposure-information-2">Exposure information</a></li><li class="l3"><a href="#mitigation-mitigate-1">Mitigation: mitigate</a></li><li class="l3"><a href="#update-2">Update</a></li><li class="l3"><a href="#sources-2">Sources</a></li><li class="l2"><a href="#linux-kernel-module-blocker">Linux kernel module blocker</a></li><li class="l3"><a href="#quick-start-3">Quick start</a></li><li class="l3"><a href="#the-list">The list</a></li><li class="l3"><a href="#what-a-block-cannot-do">What a block cannot do</a></li><li class="l3"><a href="#why-a-block-helps">Why a block helps</a></li><li class="l2"><a href="#kvm-guest-to-host-escape-on-amd-nested-virtualization-cve-2026-99312">KVM guest-to-host escape on AMD nested virtualization (CVE-2026-99312)</a></li><li class="l3"><a href="#quick-start-4">Quick start</a></li><li class="l3"><a href="#commands-1">Commands</a></li><li class="l3"><a href="#sources-3">Sources</a></li><li class="l2"><a href="#before-you-run-it">Before you run it</a></li><li class="l2"><a href="#linux-kernel-local-root-quartet-check">Linux kernel local root quartet check</a></li><li class="l3"><a href="#fixed-versions-2">Fixed versions</a></li><li class="l3"><a href="#how-the-script-judges-the-kernel-2">How the script judges the kernel</a></li><li class="l3"><a href="#quick-start-5">Quick start</a></li><li class="l3"><a href="#exposure-information-3">Exposure information</a></li><li class="l3"><a href="#mitigation-mitigate-2">Mitigation: mitigate</a></li><li class="l3"><a href="#there-is-no-hunt">There is no hunt</a></li><li class="l3"><a href="#update-3">Update</a></li><li class="l3"><a href="#sources-4">Sources</a></li><li class="l2"><a href="#red-hat-advisories">Red Hat advisories</a></li></ul></aside></div></div>
 <section aria-labelledby="ecosystem-title" class="section" id="ecosystem">
 <div class="wrap">
 <article class="card has-partner">

@@ -1,0 +1,25 @@
+● Security checks on 2 hosts: Signs of compromise
+      Logs: automation/examples/example-records.jsonl (4 runs)
+  Last run: Wed 2026-11-25 06:00:07 UTC; 1min ago
+     Hosts: db1.example, web1.example
+   Summary: 5 critical findings, 6 warnings in 2 of 4 runs; 1 found nothing to check here
+
+    TOOL                        COMMAND  RESULT     CRIT  WARN  WHEN      HOST
+  ● expat-check 1.2.0           check    findings      3     1  06:00:05  db1.example
+  ● magento-check 4.1.0         check    findings      2     5  06:00:00  web1.example
+  ● agentic-attack-check 2.1.0  hunt     clean         0     0  06:00:07  db1.example
+  ○ nginx-oct2026-check 1.1.0   check    clean         0     0  06:00:03  web1.example  nothing to check here
+
+Needs attention, most serious first (10 of 11):
+  CRIT  (compromise) web1.example magento-check: 1 file(s) in pub/media/custom_options/ are PHP or carry PHP code: treat the store as compromised and run hunt
+  CRIT  (exposure) web1.example magento-check: pub/media/custom_options/.htaccess is missing or does not deny, and Apache or LiteSpeed serves this host (run mitigate)
+  CRIT  db1.example expat-check: /usr/lib/x86_64-linux-gnu/libexpat.so.1.9.1: expat 2.6.1 is affected; package libexpat1 does not mention the CVE yet
+  CRIT  db1.example expat-check: /usr/lib/x86_64-linux-gnu/libexpatw.so.1.9.1: expat 2.6.1 is affected; package libexpat1 does not mention the CVE yet
+  CRIT  db1.example expat-check: /usr/bin/python3.12 (pyexpat): expat 2.6.1 is affected; package python3.12-minimal does not mention the CVE yet
+  WARN  (vulnerability) web1.example magento-check: 2.4.8-p5: confirm the July 2026 fix (APSB26-73): an isolated patch does not change the version string. Adobe lists plain 2.4.9 as affected and 2.4.9-2026-jul as fixed
+  WARN  (vulnerability) web1.example magento-check: 2.4.8-p5: confirm the August 2026 fix (APSB26-92; Adobe's isolated patch 249-2026-08-001-CE on 2.4.9)
+  WARN  (vulnerability) web1.example magento-check: no sign of hotfix VULN-39341 (looked in composer.json, composer.lock, .magento.env.yaml, m2-hotfixes/ and patches/). No release carries it, the October 2026 one included: exposed unless it was applied another way. Confirm: vendor/bin/magento-patches -n status | grep 39341
+  WARN  (vulnerability) web1.example magento-check: 2.4.8-p5: confirm the October 2026 fix (APSB26-153): an isolated patch does not change the version string
+  WARN  db1.example expat-check: 3 affected copy(ies) of 3 checked. Expat 2.10.0 (2 November 2026) fixes this and three more flaws.
+
+Full report: automation/psf-report.py --format text automation/examples/example-records.jsonl

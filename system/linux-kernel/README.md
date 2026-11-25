@@ -231,6 +231,109 @@ If you cannot update yet: switch MPTCP off (`mitigate --mptcp`), drop TCP packet
 - [The kernel CVE record](https://git.kernel.org/pub/scm/linux/security/vulns.git/plain/cve/published/2026/CVE-2026-98432.mbox)
 - Debian: [DSA-6568-1](https://lists.debian.org/debian-security-announce/2026/msg00482.html), [DLA-4841-1](https://lists.debian.org/debian-lts-announce/2026/10/msg00035.html), [DLA-4850-1](https://lists.debian.org/debian-lts-announce/2026/10/msg00044.html)
 
+<a name="linux-kernel-noisytcp-check"></a>
+
+## NoisyTCP: Linux kernel TCP pre-auth remote crash (CVE-2026-99288, and CVE-2026-99676)
+
+**Script:** [`system/linux-kernel/linux-kernel-noisytcp-check.sh`](linux-kernel-noisytcp-check.sh)
+
+A race in the lockless lookup TCP uses to find an established connection, named NoisyTCP by Hyunwoo Kim, who reported and fixed it. The memory of the socket a lookup found can be freed and reused for a new socket with the same addresses and ports before the lookup takes its reference. The lookup then returns a request socket that a SYN cookie has just rebuilt, with no listener attached, and the receive path dereferences the missing listener: a kernel panic. Anyone who can send TCP packets to a listening port can do it, without an account. Kim crashed Nginx, Apache and SSH in their default setup on virtual machines in 5 seconds to 2 minutes; a quiet physical server with 8 receive queues took about 14 hours. A crash takes down the whole host, containers included.
+
+The race needs packets for the same connection handled at the same time on different CPUs: two or more receive queues on the interface the attacker's packets arrive on, or RPS spreading them across CPUs. Kim also describes a second, much harder path to a use after free; kernel maintainer Eric Dumazet disputed it when the fix was posted, and Red Hat states that the flaw does not allow data alteration or code execution. The researcher's own exploit is not public; an exploit tracker lists third-party proof of concept code, which this project has not examined. No attacks had been reported, and it was not on CISA's list of exploited vulnerabilities, as of 24 November.
+
+| | |
+|---|---|
+| Affected | Every kernel from 4.4 (commit `079096f103fa`, October 2015) up to the fixed releases below |
+| Needs | A reachable TCP listener, SYN cookies on (the usual default), and packets spread across CPUs (two or more receive queues, or RPS) |
+| Fixed upstream in | 5.10.275, 5.15.226, 6.1.193, 6.6.163, 6.12.117, 6.18.63 and 7.3.4; mainline `4e2b3ef19e0e` (7.4-rc2) |
+| Ratings | CVE record 7.5 (kernel CVE team) and 5.9 (CISA, in the same record); Red Hat Important; Ubuntu High |
+
+### The sibling flaw (CVE-2026-99676)
+
+The same patch series restores the memory ordering of those lockless lookups. A 2019 change (`fb041bb7c0a9`, in 5.5, and a backport of it in 5.4.208) removed that ordering on weakly ordered processors. x86 keeps it in hardware, so the sibling does not apply there; on Arm, POWER, RISC-V and other weakly ordered processors, a kernel fixed for NoisyTCP may still not be fixed for this. A review bot asked for both patches to be backported together for that reason; no maintainer has confirmed that the crash is still reachable without it. It is fixed in 6.12.118, 6.18.64 and 7.3.5 (mainline `5b5d8f351dd9`, 7.4-rc2), and the 5.4, 5.10, 5.15, 6.1 and 6.6 branches have no upstream fix yet. Debian 13 has it in 6.12.118-1 (DSA-6652-1). NVD scores it 9.8, a score that does not reflect that it needs a weakly ordered processor.
+
+### Fixed versions
+
+The first stable release of each branch that carries the NoisyTCP fix. Every other branch from 4.4 on has no upstream fix, 6.19 to 7.2 included (7.2 ended at 7.2.15, two days before the fix). Vendors that maintain such a branch backport it.
+
+| Branch | NoisyTCP (CVE-2026-99288) | Sibling (CVE-2026-99676), weakly ordered processors only |
+|---|---|---|
+| 5.4 | no fix | no fix (affected from 5.4.208) |
+| 5.10 | 5.10.275 | no fix yet |
+| 5.15 | 5.15.226 | no fix yet |
+| 6.1 | 6.1.193 | no fix yet |
+| 6.6 | 6.6.163 | no fix yet |
+| 6.12 | 6.12.117 | 6.12.118 |
+| 6.18 | 6.18.63 | 6.18.64 |
+| 7.3 | 7.3.4 | 7.3.5 |
+| 7.4 | 7.4-rc2 and later | 7.4-rc2 and later |
+
+Vendors, as their trackers and advisories stood on 24 November (Red Hat: its list of 25 November). These states change daily, so open your vendor's page before you act on this list.
+
+| Vendor | State | Kernel and advisory |
+|---|---|---|
+| Debian | Fixed | 12 bookworm `linux` 6.1.192-1 (DLA-4906-1; Debian carried it before upstream 6.1.193) and `linux-6.12` 6.12.117-1~deb12u1; 13 trixie `linux` 6.12.117-1 (DSA-6628-1), and 6.12.118-1 for the sibling (DSA-6652-1) |
+| Red Hat | Fixed for RHEL 8.10, 9.9 and 10.3 on 23 November and RHEL 8.8 on 24 November, rated Important. Other update streams (9.8, 10.2 and so on) had no fixed kernel in Red Hat's list of 25 November. RHEL 6 and 7 are not affected | 8.8 `4.18.0-477.181.1.el8_8` (RHSA-2026:102709), 8.10 `4.18.0-553.189.1.el8_10` (RHSA-2026:102218; kernel-rt RHSA-2026:102219), 9.9 `5.14.0-741.26.1.el9_9` (RHSA-2026:102167), 10.3 `6.12.0-264.19.1.el10_3` (RHSA-2026:102168) |
+| Ubuntu | Not fixed: every release from 16.04 to 26.10 is listed as vulnerable. Fixes are in progress for the main `linux` package; its other kernels (cloud, HWE, Raspberry Pi and more) have none in progress | In progress: 24.04 `6.8.0-152.152`, 22.04 `5.15.0-205.215`, 26.04 `7.0.0-45.45`, 26.10 `7.3.0-12.13`, 20.04 `5.4.0-248.268`, 18.04 `4.15.0-264.276`, 16.04 `4.4.0-294.328` |
+| AlmaLinux, Oracle Linux, CIQ | Fixed for at least some releases | AlmaLinux follows Red Hat's advisories (ALSA-2026:102167 and the others); Oracle Linux UEK ELSA-2026-500630 to 500632 |
+
+A summary that circulated on 24 November listed RHEL 9 `5.14.0-687.67.1.el9_8`, RHEL 10.2 and Ubuntu 24.04 `6.8.0-151.151` among "latest safe versions". None of them carries this fix: the 9.8 and 10.2 streams have no fixed kernel, and Ubuntu's fix is in 152. The script judges those kernels affected.
+
+### How the script judges the kernel
+
+As the other kernel checks in this folder do, it reads the kernel's origin first. A kernel that follows the stable series is compared with the table above, and Debian's patch level is read from `uname -v`, with Debian's own 6.1.192-1 fix taken into account. RHEL itself (an `ID=rhel` system) is compared with the fixed build of its update stream (8.8, 8.10, 9.9 and 10.3), and a stream without a fixed kernel is reported as such. Ubuntu's main kernel is compared with the build Ubuntu named for its fix: below it is affected; at or past it, while Ubuntu still lists the fix as in progress, the script asks you to confirm rather than call it fixed. Every other vendor kernel (the RHEL rebuilds, RHEL's kernel-rt, Ubuntu's cloud kernels, SUSE, Amazon Linux) is judged by its changelog: when it names the CVE, the kernel carries a backport. The sibling is judged only on a weakly ordered processor. A stable release candidate is judged as the release before it, and a 7.4 release candidate by its number (the fixes came in rc2).
+
+### Quick start
+
+```bash
+curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/system/linux-kernel/linux-kernel-noisytcp-check.sh
+less linux-kernel-noisytcp-check.sh
+chmod +x linux-kernel-noisytcp-check.sh
+./linux-kernel-noisytcp-check.sh check
+```
+
+| Command | What it does |
+|---|---|
+| `check` (default) | Judges the running kernel for NoisyTCP and, on a weakly ordered processor, the sibling. Exit `0` fixed, `1` affected or a fix could not be confirmed. Read-only |
+| `hunt` | Reads the kernel logs (`dmesg`, the journal's kernel messages, the rotated `kern.log`, `syslog` and `messages` files) for a NULL pointer dereference or panic whose trace runs through `tcp_v4_rcv`, `tcp_v6_rcv`, the established lookups or the SYN cookie code, and notes crash dumps in `/var/crash` and `/sys/fs/pstore`. A hit is a lead, not proof of an attack; a clean result is not clearance, because a crashed host reboots and loses its ring buffer. Exit `0` nothing found, `1` hits, `2` no log could be read. Read-only |
+| `mitigate [--syncookies] [--single-queue IFACE[,IFACE]] [--force] [--dry-run]` | **Changes the host (root).** Stopgaps, not a fix; see below |
+| `rollback [--dry-run]` | Restores the saved values and removes the file `mitigate` wrote |
+| `version` | Prints the script version |
+
+With `--output jsonl` it writes structured records for [automation](../../automation/README.md), and `psf-run` runs it with the other tools that do. Env: `KERNEL_CHANGELOG` (a vendor changelog file to read, plain or `.gz`), `KERNEL_RELEASE`, `KERNEL_VERSION_STRING` and `KERNEL_ARCH` (override `uname -r`, `-v` and `-m`), `KERNEL_PROC_SYS` and `KERNEL_SYS_NET` (instead of `/proc/sys` and `/sys/class/net`), `KERNEL_LOG_FILES` and `KERNEL_CRASH_DIRS` (for `hunt`), `KERNEL_INSTALLED_RELEASES`, `OS_RELEASE_FILE`, and `STATE_DIR` and `SYSCTL_D` for `mitigate` and `rollback`.
+
+A container shows the host's kernel, so run the script on the host.
+
+### Exposure information
+
+After the verdict, `check` reports what decides whether the race can be reached here: `net.ipv4.tcp_syncookies`, the receive queues of each interface and whether RPS or RFS spreads packets across CPUs, the TCP listeners that are not on loopback, the processor, and how many other network namespaces exist. That is information to weigh, not a verdict: a kernel below its fixed release is affected whatever it shows. Which interface faces the attacker, and which CPUs its queues are bound to, the script cannot know. Each network namespace has its own `tcp_syncookies`, so a container's value can differ from the host's, and a crash in any container takes the whole host down.
+
+### Mitigation: `mitigate`
+
+Both stopgaps come from the researcher's advisory and Red Hat. They act only when `check` finds the kernel affected (`--force` overrides), `--dry-run` shows everything first, and `rollback` puts the saved values back.
+
+- **`--syncookies`** sets `net.ipv4.tcp_syncookies=0` now and writes `/etc/sysctl.d/99-psf-kernel-noisytcp.conf` so it stays after a reboot; if another file read later sets the value, it says which. It closes the SYN cookie path the crash uses, and it weakens protection against SYN floods. It acts in the host's network namespace only: start each container that has its own namespace with `--sysctl net.ipv4.tcp_syncookies=0` (Docker, Podman), set it under `securityContext.sysctls` in Kubernetes, or set it from inside with `nsenter -t PID -n sysctl -w net.ipv4.tcp_syncookies=0`.
+- **`--single-queue IFACE`** cuts the named interfaces (the ones that face the attacker) to one receive channel with `ethtool -L`, and turns RPS and RFS off. Network throughput drops, the link may reset for a moment (an SSH session over that interface can drop), and none of it survives a reboot or a driver reset. Without `ethtool`, the queue count stays and only RPS and RFS change.
+
+Run as root, it writes no file through a link, and it runs `ethtool` only when root owns the program and every folder above it.
+
+### Update
+
+| Distribution | Command |
+|---|---|
+| Debian | `sudo apt update && sudo apt full-upgrade`, then reboot |
+| RHEL 8.8, 8.10, 9.9, 10.3 and rebuilds | `sudo dnf update kernel && sudo reboot`; `sudo dnf updateinfo list --cve CVE-2026-99288` shows whether the repositories have the advisory |
+| Ubuntu | Wait for the fix on [Ubuntu's page](https://ubuntu.com/security/CVE-2026-99288), then `sudo apt update && sudo apt full-upgrade` and reboot; use a stopgap until then |
+
+### Sources
+
+- oss-security: [Hyunwoo Kim's NoisyTCP advisory](https://www.openwall.com/lists/oss-security/2026/11/15/2), 15 November; [the 5.15 backport](https://www.openwall.com/lists/oss-security/2026/11/20/3), 20 November
+- [The kernel CVE team's announcement of CVE-2026-99288](https://lists.openwall.net/linux-cve-announce/2026/11/10/4), 10 November
+- OSV, generated from the CVE records: [CVE-2026-99288](https://osv.dev/vulnerability/CVE-2026-99288) (all seven fixed releases) and [CVE-2026-99676](https://osv.dev/vulnerability/CVE-2026-99676)
+- [Red Hat: CVE-2026-99288](https://access.redhat.com/security/cve/cve-2026-99288), and its advisories [RHSA-2026:102167](https://access.redhat.com/errata/RHSA-2026:102167), [RHSA-2026:102168](https://access.redhat.com/errata/RHSA-2026:102168), [RHSA-2026:102218](https://access.redhat.com/errata/RHSA-2026:102218) and [RHSA-2026:102219](https://access.redhat.com/errata/RHSA-2026:102219)
+- [Ubuntu: CVE-2026-99288](https://ubuntu.com/security/CVE-2026-99288)
+- [Debian security tracker: CVE-2026-99288](https://security-tracker.debian.org/tracker/CVE-2026-99288)
+
 <a name="linux-kernel-module-block"></a>
 
 ## Linux kernel module blocker
@@ -458,29 +561,30 @@ Move to your vendor's kernel that names these CVEs, or to a stable release from 
 <!-- rhsa:begin (generated by packaging/rhsa/rhsa.py from Red Hat's advisory list: edit placement.json or the data, not this block) -->
 ## Red Hat advisories
 
-Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-23) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on [Red Hat's CVE database](https://access.redhat.com/security/security-updates/#/cve).
+Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-25) names the CVEs below. A Red Hat build is judged by its RPM release, not by the upstream version number, because Red Hat backports fixes: the advisory names the release that fixes it. A CVE with no advisory in the list has none for that period, which is not the same as not affected. The current state is on [Red Hat's CVE database](https://access.redhat.com/security/security-updates/#/cve).
 
 The columns are CVE-2026-NNNNN. The table shows, for each stream, the advisories that name each CVE (the number is the part of RHSA-2026:NNNNN after the colon; `rt` is `kernel-rt`, `kp` is a `kpatch-patch` live patch). A blank cell means no advisory in the list, not that the stream is unaffected. Each advisory is at `https://access.redhat.com/errata/RHSA-2026:NNNNN`.
 
-| Stream | 53266 | 68121 | 74469 | 80844 | 81000 | 98432 |
-|---|---|---|---|---|---|---|
-| RHEL 6 | 73732 | 71649 |  | 71649 |  |  |
-| RHEL 7 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 |  |
-| RHEL 8 |  |  |  |  |  | 95754 |
-| RHEL 8.4 | 71565 | 71565 | 71565 | 71565 | 71565 | 94623 |
-| RHEL 8.6 | 70797 | 71592 | 71592 | 71592 | 71592 | 94996 |
-| RHEL 8.8 | 71325, 92063 kp | 71594, 92063 kp | 71594 | 71594, 92063 kp | 71594, 95601 kp | 100524 kp, 94303 |
-| RHEL 8.10 | 39082 rt, 39083, 92062 kp | 71329, 71330 rt, 92062 kp | 71213 | 71016 rt, 71213, 92062 kp | 71016 rt, 71213, 95587 kp | 100525 kp, 93414, 93415 rt |
-| RHEL 9 |  |  |  |  |  | 95754 |
-| RHEL 9.2 | 71601, 71606 rt, 92629 kp | 71601, 71606 rt, 92629 kp | 71601, 71606 rt | 71601, 71606 rt, 92629 kp | 71601, 71606 rt, 95600 kp | 100521 kp, 94477, 94558 rt |
-| RHEL 9.4 | 71569, 91639 kp | 71569, 91639 kp | 71569 | 71569, 91639 kp | 71569, 96090 kp | 100523 kp, 94109 |
-| RHEL 9.6 | 71327, 91638 kp | 71631, 91638 kp | 71631 | 71631, 91638 kp | 71631, 96091 kp | 100693 kp, 94438 |
-| RHEL 9.8 | 36645, 91650 kp | 71700, 91650 kp | 71232 | 71232, 91650 kp | 71232, 96093 kp | 100522 kp, 93412 |
-| RHEL 10.0 | 71326 | 71599 | 71599 | 71599 | 71599 | 94508 |
-| RHEL 10.2 | 71233, 92061 kp | 71602, 92061 kp | 71233 | 71233, 92061 kp | 71233, 99722 kp | 100694 kp, 93413 |
-| RHEL 10.3 |  |  |  |  | 98608 | 98608 |
-| OpenShift (RHCOS) |  | 11 advisories | 10 advisories | 12 advisories | 11 advisories | 12 advisories |
-| RHEL 10 (el10nv) | 72059 | 73788 | 73788 | 74974 | 73788 | 93775 |
+| Stream | 53266 | 68121 | 74469 | 80844 | 81000 | 98432 | 99288 |
+|---|---|---|---|---|---|---|---|
+| RHEL 6 | 73732 | 71649 |  | 71649 |  |  |  |
+| RHEL 7 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 |  |  |
+| RHEL 8 |  |  |  |  |  | 95754 |  |
+| RHEL 8.4 | 71565 | 71565 | 71565 | 71565 | 71565 | 94623 |  |
+| RHEL 8.6 | 70797 | 71592 | 71592 | 71592 | 71592 | 94996 |  |
+| RHEL 8.8 | 71325, 92063 kp | 71594, 92063 kp | 71594 | 71594, 92063 kp | 71594, 95601 kp | 100524 kp, 94303 | 102709 |
+| RHEL 8.10 | 39082 rt, 39083, 92062 kp | 71329, 71330 rt, 92062 kp | 71213 | 71016 rt, 71213, 92062 kp | 71016 rt, 71213, 95587 kp | 100525 kp, 93414, 93415 rt | 102218, 102219 rt |
+| RHEL 9 |  |  |  |  |  | 95754 |  |
+| RHEL 9.2 | 71601, 71606 rt, 92629 kp | 71601, 71606 rt, 92629 kp | 71601, 71606 rt | 71601, 71606 rt, 92629 kp | 71601, 71606 rt, 95600 kp | 100521 kp, 94477, 94558 rt |  |
+| RHEL 9.4 | 71569, 91639 kp | 71569, 91639 kp | 71569 | 71569, 91639 kp | 71569, 96090 kp | 100523 kp, 94109 |  |
+| RHEL 9.6 | 71327, 91638 kp | 71631, 91638 kp | 71631 | 71631, 91638 kp | 71631, 96091 kp | 100693 kp, 94438 |  |
+| RHEL 9.8 | 36645, 91650 kp | 71700, 91650 kp | 71232 | 71232, 91650 kp | 71232, 96093 kp | 100522 kp, 93412 |  |
+| RHEL 9.9 |  |  |  |  |  |  | 102167 |
+| RHEL 10.0 | 71326 | 71599 | 71599 | 71599 | 71599 | 94508 |  |
+| RHEL 10.2 | 71233, 92061 kp | 71602, 92061 kp | 71233 | 71233, 92061 kp | 71233, 99722 kp | 100694 kp, 93413 |  |
+| RHEL 10.3 |  |  |  |  | 98608 | 98608 | 102168 |
+| OpenShift (RHCOS) |  | 11 advisories | 10 advisories | 12 advisories | 11 advisories | 12 advisories |  |
+| RHEL 10 (el10nv) | 72059 | 73788 | 73788 | 74974 | 73788 | 93775 |  |
 
 The fixed kernels for CVE-2026-98432 (IPv4 TCP use-after-free), newest first. A kernel is fixed if its release is this one or a later one in the same stream:
 

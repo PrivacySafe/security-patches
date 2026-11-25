@@ -14,12 +14,13 @@
 
 Each tool has its own page with the exact commands.
 
-## Newest: 2 to 23 November 2026
+## Newest: 2 to 25 November 2026
 
 The vulnerabilities from November, newest first.
 
 | Date | What happened | Who is affected | What you get |
 |---|---|---|---|
+| 25 November | [Drupal core installer](../../web-apps/drupal/README.md#drupal-installer-check): anyone can reinstall a Drupal site through `core/install.php`, a takeover; exploited, and still open after the 18 November fix for sites in an incomplete install state (CVE-2026-132165, CVE-2026-136716) | Drupal 10 and 11 sites, and end-of-life branches | Check, hunt, mitigation that moves the installer into a verified backup, rollback |
 | 23 November | [VMware vCenter](../../servers/vmware/README.md#vcenter-dirsvc): anyone who can reach port 2012 gets an administrator session, exploited since September (CVE-2026-123890) | vCenter before 9.1.1.0200, 9.0.2.0200 and 8.0 U3m, and 7.0 | Remote check, hunt, port allowlist and rollback |
 | 23 November | [N-central and Apache Axis](../../servers/n-central/README.md#ncentral-legacyapi): the Legacy API gives root with no login, exploited (CVE-2026-90436) | N-central before 2026.4 HF3; Apache Axis 1.x | Remote check, Axis inventory, hunt |
 | 23 November | [Idunno.AntiCsrf](../../web-apps/aspnet/README.md#idunno-anticsrf): one anonymous POST to an ASP.NET WebForms page runs code, exploited, and the 2008 module will never be fixed (CVE-2026-131914) | Sites that register the module, on Mono or IIS | Check, hunt, `web.config` mitigation and rollback, in bash and PowerShell |
@@ -37,6 +38,7 @@ The vulnerabilities from November, newest first.
 | 19 November | [phpAfterShell](../../runtimes/php/README.md#php2shell-mitigation): a session file torn mid-update is read back as trusted state (CVE-2026-126714) | Every current PHP branch | Mitigation keeps upload progress off |
 | 18 November | [nginx2root](../../servers/nginx/README.md#nginx2root): HTTP/2 code execution with a public proof of concept, plus HTTP/3, resolver and mail proxy flaws (CVE-2026-123007 and others) | nginx before 1.30.7 and 1.31.9 | Check, audit, hunt, workarounds and rollback |
 | 17 November | [Optimizely OPTIMJACK](../../developer/optimizely/README.md#optimizely-optimjack): hijacked snippets served a card skimmer to visitors (no CVE) | Sites that load Optimizely Web Experimentation | Check, hunt and CSP review |
+| 15 November | [NoisyTCP](../../system/linux-kernel/README.md#linux-kernel-noisytcp-check): anyone who can reach a TCP port can crash a Linux server whose packets are spread across CPUs, no login needed; a sibling flaw keeps it open on Arm and POWER kernels fixed for the first (CVE-2026-99288, CVE-2026-99676) | The Linux kernel from 4.4 on every distribution | Check, hunt, stopgaps and rollback |
 | 5 November | [OpenSSH on musl](../../system/openssh-musl/README.md#openssh-musl-password-bypass): a long password matches an account with no password set (CVE-2026-123158) | sshd on Alpine, OpenWrt and other musl systems without PAM | Check, hunt, stopgap and rollback |
 | 4 November | [WordPress upgrade window](../../web-apps/wordpress-upgrade/README.md#wordpress-upgrade-check): unauthenticated code execution while a core update runs, exploited (CVE-2026-119977) | WordPress core 4.7.0 to 7.1.3 | Check, hunt and a web server rule |
 | 4 November | [APT](../../system/apt/README.md#apt-nov2026-check): a package download can be swapped after it was verified (CVE-2026-109518) | Debian, Ubuntu and derivatives | Check, hunt, stopgap and rollback |

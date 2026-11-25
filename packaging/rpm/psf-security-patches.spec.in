@@ -65,7 +65,14 @@ rm -rf %{buildroot}/opt/psf-security-patches/packaging \
 find %{buildroot}/opt/psf-security-patches -type d -exec chmod 0755 {} +
 find %{buildroot}/opt/psf-security-patches -type f -exec chmod 0644 {} +
 find %{buildroot}/opt/psf-security-patches -type f -name '*.sh' -exec chmod 0755 {} +
-chmod 0755 %{buildroot}/opt/psf-security-patches/rhsa/rhsa.py
+chmod 0755 %{buildroot}/opt/psf-security-patches/rhsa/rhsa.py %{buildroot}/opt/psf-security-patches/automation/psf-report.py \
+           %{buildroot}/opt/psf-security-patches/automation/psf-status.py %{buildroot}/opt/psf-security-patches/automation/psf-logs.py \
+           %{buildroot}/opt/psf-security-patches/automation/psf-run.py
+install -d %{buildroot}/usr/bin
+ln -s /opt/psf-security-patches/automation/psf-status.py %{buildroot}/usr/bin/psf-status
+ln -s /opt/psf-security-patches/automation/psf-logs.py %{buildroot}/usr/bin/psf-logs
+ln -s /opt/psf-security-patches/automation/psf-run.py %{buildroot}/usr/bin/psf-run
+ln -s /opt/psf-security-patches/automation/psf-report.py %{buildroot}/usr/bin/psf-report
 install -D -m 0644 runtimes/php/php2shell-watch.service \
     %{buildroot}/usr/lib/systemd/system/php2shell-watch.service
 sed -i 's#^ExecStart=/usr/local/sbin/php2shell-watch.sh#ExecStart=/opt/psf-security-patches/runtimes/php/php2shell-watch.sh#' \
@@ -108,6 +115,10 @@ find %{buildroot} -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
 %doc %{_docdir}/%{name}-%{version}/CHANGELOG.md
 /opt/psf-security-patches
 /usr/lib/systemd/system/php2shell-watch.service
+/usr/bin/psf-status
+/usr/bin/psf-report
+/usr/bin/psf-logs
+/usr/bin/psf-run
 %{_mandir}/man7/psf-security-patches.7*
 %{_mandir}/man8/psf-*.8*
 %{_infodir}/psf-security-patches.info*

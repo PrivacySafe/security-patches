@@ -91,6 +91,10 @@ The tool reads files under `SEARCH_ROOTS`, `WEB_ROOTS` and home folders as root,
 
 Sources: the FBI's [FLASH-20261113-001](https://www.ic3.gov/) on ARTEX; Google Threat Intelligence Group, *ARTEX and Friends: Enter Agentic Offensive Frameworks* and the *GTIG AI Threat Tracker*; Wiz, *Agentic Attacks in the Wild*; ThreatDefence's [ARTEX advisory](https://threatdefence.com/article/artex-agentic-attack-framework-detection-hunting) and [indicator list](https://github.com/ThreatDefence/agentic-attack-detections); and the public surveys of exposed ARTEX, CAIRN and PentAGI consoles. Status current on 23 November 2026.
 
+## Output for automation
+
+`--output jsonl` (or `PSF_OUTPUT=jsonl`) makes `check`, `hunt` and `list` write JSON Lines for monitoring and language models; `psf-report` turns them into a summary, Markdown, HTML or PDF. The tool never changes the host, so `PSF_READ_ONLY=1` has nothing to refuse. The format and the reports: [Output for automation](../../automation/README.md).
+
 ---
 
 ## ⚠️ Important notice
