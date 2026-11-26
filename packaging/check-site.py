@@ -212,6 +212,35 @@ if not WEBROOT:
             if not r[1].startswith("https://creativecommons.org/publicdomain/zero/1.0/"): bad("weblabels.html", f"{r[0]}: the license link {r[1]} is not the CC0 text this copy's scripts carry")
 for f in (("css/docs.css", "js/docs.js") if WEBROOT else ("assets/ps-base.css", "assets/docs.css", "assets/site.js")):
     if os.path.exists(os.path.join(SITE, f)) and any(ch in open(os.path.join(SITE, f), encoding="utf-8").read() for ch in DASHES): bad(f, "contains a dash character")
+# the changelog feed: RSS 2.0, an item for every dated section of the changelog page, each pointing at its section
+import email.utils, xml.etree.ElementTree as ET
+_fx = os.path.join(SITE, "changelog.xml")
+_ch = os.path.join(SITE, "changelog.html")
+if os.path.exists(_ch):
+    if not os.path.exists(_fx):
+        bad("changelog.xml", "missing: the build writes the changelog feed beside changelog.html")
+    else:
+        _raw = open(_fx, encoding="utf-8").read()
+        if any(ch in _raw for ch in DASHES): bad("changelog.xml", "contains a dash character")
+        try:
+            _root = ET.fromstring(_raw)
+        except ET.ParseError as _e:
+            bad("changelog.xml", f"not well-formed XML: {_e}"); _root = None
+        if _root is not None:
+            _chan = _root.find("channel")
+            if _root.tag != "rss" or _root.get("version") != "2.0" or _chan is None: bad("changelog.xml", "not an RSS 2.0 feed with a channel")
+            else:
+                _ids = set(re.findall(r'id="(\d{4}-\d{2}-\d{2})"', open(_ch, encoding="utf-8").read()))
+                _seen = set()
+                for _it in _chan.findall("item"):
+                    for _k in ("title", "link", "guid", "pubDate", "description"):
+                        if not (_it.findtext(_k) or "").strip(): bad("changelog.xml", f"an item has no {_k}")
+                    _a = (_it.findtext("link") or "").rpartition("#")[2]
+                    if _a not in _ids: bad("changelog.xml", f"an item links to #{_a}, which changelog.html does not have")
+                    _seen.add(_a)
+                    try: email.utils.parsedate_to_datetime(_it.findtext("pubDate"))
+                    except (TypeError, ValueError): bad("changelog.xml", f"pubDate {_it.findtext('pubDate')!r} is not RFC 822")
+                if _ids - _seen: bad("changelog.xml", "no item for " + ", ".join(sorted(_ids - _seen)))
 print(f"checked {len(pages)} pages in {SITE}")
 if problems:
     print(f"{len(problems)} problems:"); [print("  " + p) for p in problems[:40]]; sys.exit(1)

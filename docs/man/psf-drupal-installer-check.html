@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-root="../">
+<html lang="en" data-root="../" data-scheme="dark">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>psf-drupal-installer-check(8) | PrivacySafe Security Patches</title><meta name="description" content="Drupal core installer: site takeover through install.php">
 <link rel="jslicense" href="../weblabels.html"><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/ps-base.css"><link rel="stylesheet" href="../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
@@ -44,29 +44,29 @@ document.documentElement.className+=" js"
 <li><a href="../about.html">About and support</a></li>
 </ul>
 <details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
-<li><a href="../web-apps/drupal/index.html">25 Oct: Drupal</a></li>
-<li><a href="../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
-<li><a href="../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
-<li><a href="../web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
-<li><a href="../runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
-<li><a href="../system/pam-mysql/index.html">23 Oct: pam-mysql</a></li>
-<li><a href="../threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
-<li><a href="../developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
-<li><a href="../developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
-<li><a href="../web-apps/apache-roller/index.html">22 Oct: Apache Roller XML-RPC deserialization</a></li>
-<li><a href="../system/ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
-<li><a href="../web-apps/etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
-<li><a href="../system/linux-kernel/index.html">20 Oct: Linux kernel</a></li>
-<li><a href="../servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
-<li><a href="../servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
-<li><a href="../runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
-<li><a href="../servers/nginx/index.html">18 Oct: nginx</a></li>
-<li><a href="../developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
-<li><a href="../system/openssh-musl/index.html">5 Oct: OpenSSH musl password bypass</a></li>
-<li><a href="../web-apps/wordpress-upgrade/index.html">4 Oct: WordPress upgrade window</a></li>
-<li><a href="../system/apt/index.html">4 Oct: APT</a></li>
-<li><a href="../system/pki/index.html">2 Oct: eMudhra CA compromise</a></li>
-<li><a href="../web-apps/btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../web-apps/drupal/index.html">25 Nov: Drupal</a></li>
+<li><a href="../servers/vmware/index.html">23 Nov: VMware vCenter</a></li>
+<li><a href="../servers/n-central/index.html">23 Nov: N-central and Apache Axis</a></li>
+<li><a href="../web-apps/aspnet/index.html">23 Nov: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../runtimes/java/index.html">23 Nov: Java4Shell (OpenJDK)</a></li>
+<li><a href="../system/pam-mysql/index.html">23 Nov: pam-mysql</a></li>
+<li><a href="../threats/agentic-attacks/index.html">23 Nov: AI attack frameworks</a></li>
+<li><a href="../developer/iterm2/index.html">23 Nov: iTerm2 (macOS)</a></li>
+<li><a href="../developer/binary-parser/index.html">23 Nov: binary-parser</a></li>
+<li><a href="../web-apps/apache-roller/index.html">22 Nov: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../system/ghostscript/index.html">22 Nov: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../web-apps/etherpad/index.html">20 Nov: Etherpad static path traversal</a></li>
+<li><a href="../system/linux-kernel/index.html">20 Nov: Linux kernel</a></li>
+<li><a href="../servers/apache/index.html">19 Nov: Apache HTTP Server mod_http2</a></li>
+<li><a href="../servers/mysql/index.html">19 Nov: MySQL client programs</a></li>
+<li><a href="../runtimes/php/index.html">19 Nov: PHP2Shell</a></li>
+<li><a href="../servers/nginx/index.html">18 Nov: nginx</a></li>
+<li><a href="../developer/optimizely/index.html">17 Nov: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../system/openssh-musl/index.html">5 Nov: OpenSSH musl password bypass</a></li>
+<li><a href="../web-apps/wordpress-upgrade/index.html">4 Nov: WordPress upgrade window</a></li>
+<li><a href="../system/apt/index.html">4 Nov: APT</a></li>
+<li><a href="../system/pki/index.html">2 Nov: eMudhra CA compromise</a></li>
+<li><a href="../web-apps/btcpayserver/index.html">2 Nov: BTCPay Server</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
 <li><a href="../servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
@@ -177,10 +177,10 @@ site: a site takeover, or code execution.
 
 Securing the installer protects against both, patched or not. Drupal&#x27;s guidance offers three
 ways: deny it in the web server configuration, deny it in .htaccess, or remove the file and keep
-it removed. mitigate removes it, because that works on every web server and can be checked on
-disk; it never deletes a file Drupal ships: it moves it into a backup (SHA-256 checked) that
-rollback puts back. A core update brings core/install.php back, so check reports it, and the
-web server rule this script prints is the lasting fix.
+it removed. mitigate denies it in the web server (403), because that lasts: a core update or a
+composer install puts a removed core/install.php back, and overwrites a scaffolded .htaccess.
+--remove also takes the file away, moving it into a backup (SHA-256 checked) that rollback puts
+back; a file Drupal ships is never deleted.
 
 Usage:
   ./drupal-installer-check.sh [check] [--url URL ...]
@@ -197,20 +197,26 @@ Usage:
                    changed since 2026-11-18. Says how to check user 1, which Drupal asks you to do
                    (this script does not open the database). Exit 0 = nothing found, 1 = leads,
                    2 = nothing could be read. Read-only.
-  mitigate [--installer-only] [--dry-run]   (root)
-                   For each site: moves core/install.php into the backup, and (unless
-                   --installer-only) sets settings.php to 0444 and its folder to 0555, as Drupal
-                   recommends. Every file operation runs as the account that owns the folder,
-                   on a folder opened without following links. Prints the nginx and Apache rules
-                   that keep the installer closed across core updates.
-  rollback [--dry-run]   (root) puts back what mitigate moved and the modes it changed. A file
-                   that has come back meanwhile (after a core update) is left in place, and its
-                   backup kept.
+  mitigate [--remove] [--installer-only] [--dry-run]   (root)
+                   Blocks the installer in the web server, which lasts across core updates:
+                   Apache gets one configuration file for every site (conf-available, enabled,
+                   or conf.d), nginx a snippet (location ^~ /core/install.php { return 403; })
+                   and an include in each server block whose root is a Drupal site. Each file it
+                   edits is backed up first; the change is tested (apachectl -t, nginx -t) and
+                   taken back if the test fails, and only then is the server reloaded. --remove
+                   also moves core/install.php into a backup (SHA-256 checked; a file Drupal ships
+                   is never deleted); a core update or composer install brings it back. Unless
+                   --installer-only, sets settings.php to 0444 and its folder to 0555, as Drupal
+                   recommends. File operations in a site run as the account that owns its folder.
+  rollback [--dry-run]   (root) takes the web server changes back (a file changed since is left
+                   alone), puts back what --remove moved, and restores the modes. An installer
+                   that has come back meanwhile is left in place, and its backup kept.
   version          print the script version.
 
 Env: DRUPAL_ROOTS (folders to search, space separated; default /var/www /srv /home /opt
      /usr/share/nginx), ACCESS_LOGS (log files for hunt, instead of the usual nginx, Apache and
-     LiteSpeed access logs), NGINX_CONF (default /etc/nginx), STATE_DIR (default
+     LiteSpeed access logs), NGINX_CONF (default /etc/nginx), APACHE_CONF (default /etc/apache2,
+     else /etc/httpd), NGINX_BIN and APACHECTL (the programs that test and reload), STATE_DIR (default
      /var/lib/psf-security-patches/drupal-installer), PSF_LOCK_WAIT (seconds a change waits for
      another, default 30; the lock is STATE_DIR/.lock)</pre><p class="page-license">The Security Patches software and this documentation are dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="noopener noreferrer" target="_blank">CC0 1.0 Universal</a>. Other pages on privacysafe.app/docs are CC BY-SA 4.0 unless the page says otherwise.</p></article></main>
 </div></div>

@@ -11,25 +11,25 @@ How to use it: a Red Hat build is judged by its RPM release, not by the upstream
 | [developer/django](developer/django/README.md#red-hat-advisories) | 2 | 6 | 2026-11-04 | 2026-11-20 |
 | [developer/jenkins](developer/jenkins/README.md#red-hat-advisories) | 2 | 11 | 2026-10-22 | 2026-10-22 |
 | [developer/jupyter](developer/jupyter/README.md#red-hat-advisories) | 2 | 2 | 2026-11-06 | 2026-11-19 |
-| [developer/nextjs](developer/nextjs/README.md#red-hat-advisories) | 3 | 1 | 2026-11-11 | 2026-11-11 |
+| [developer/nextjs](developer/nextjs/README.md#red-hat-advisories) | 4 | 40 | 2026-10-21 | 2026-11-11 |
 | [developer/storybook](developer/storybook/README.md#red-hat-advisories) | 1 | 3 | 2026-10-23 | 2026-10-23 |
 | [runtimes/java](runtimes/java/README.md#red-hat-advisories) | 1 | 27 | 2026-11-18 | 2026-11-24 |
 | [runtimes/node](runtimes/node/README.md#red-hat-advisories) | 8 | 12 | 2026-10-22 | 2026-11-23 |
-| [runtimes/php](runtimes/php/README.md#red-hat-advisories) | 2 | 22 | 2026-10-21 | 2026-11-11 |
-| [runtimes/ruby](runtimes/ruby/README.md#red-hat-advisories) | 4 | 18 | 2026-10-23 | 2026-11-24 |
+| [runtimes/php](runtimes/php/README.md#red-hat-advisories) | 6 | 48 | 2026-10-21 | 2026-11-25 |
+| [runtimes/ruby](runtimes/ruby/README.md#red-hat-advisories) | 5 | 24 | 2026-10-23 | 2026-11-25 |
 | [servers/apache](servers/apache/README.md#red-hat-advisories) | 1 | 13 | 2026-11-11 | 2026-11-23 |
 | [servers/bind](servers/bind/README.md#red-hat-advisories) | 1 | 22 | 2026-10-21 | 2026-11-11 |
 | [servers/haproxy](servers/haproxy/README.md#red-hat-advisories) | 1 | 1 | 2026-10-16 | 2026-10-16 |
-| [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 5 | 28 | 2026-07-26 | 2026-11-24 |
+| [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 15 | 38 | 2026-07-26 | 2026-11-24 |
 | [servers/tomcat](servers/tomcat/README.md#red-hat-advisories) | 2 | 2 | 2026-10-12 | 2026-10-20 |
 | [system/apt](system/apt/README.md#red-hat-advisories) | 1 | 1 | 2026-11-07 | 2026-11-07 |
 | [system/brotli](system/brotli/README.md#red-hat-advisories) | 1 | 102 | 2026-04-27 | 2026-11-24 |
 | [system/curl](system/curl/README.md#red-hat-advisories) | 1 | 4 | 2026-10-11 | 2026-11-20 |
-| [system/expat](system/expat/README.md#red-hat-advisories) | 3 | 9 | 2026-10-26 | 2026-11-24 |
+| [system/expat](system/expat/README.md#red-hat-advisories) | 4 | 9 | 2026-10-26 | 2026-11-24 |
 | [system/ghostscript](system/ghostscript/README.md#red-hat-advisories) | 1 | 3 | 2026-11-25 | 2026-11-25 |
-| [system/linux-kernel](system/linux-kernel/README.md#red-hat-advisories) | 7 | 100 | 2026-07-08 | 2026-11-24 |
+| [system/linux-kernel](system/linux-kernel/README.md#red-hat-advisories) | 8 | 115 | 2026-07-08 | 2026-11-24 |
 | [system/openssl](system/openssl/README.md#red-hat-advisories) | 1 | 44 | 2026-08-17 | 2026-11-20 |
-| [system/pillow](system/pillow/README.md#red-hat-advisories) | 1 | 17 | 2026-10-30 | 2026-11-24 |
+| [system/pillow](system/pillow/README.md#red-hat-advisories) | 5 | 24 | 2026-10-29 | 2026-11-24 |
 | [system/pki](system/pki/README.md#red-hat-advisories) | 1 | 225 | 2026-10-20 | 2026-11-24 |
 
 ## By CVE
@@ -53,8 +53,12 @@ How to use it: a Red Hat build is judged by its RPM release, not by the upstream
 | [CVE-2026-110353](https://access.redhat.com/security/cve/CVE-2026-110353) | [servers/haproxy](servers/haproxy/README.md#red-hat-advisories) | 1 | Important | 2026-10-16 | 2026-10-16 |
 | [CVE-2026-111497](https://access.redhat.com/security/cve/CVE-2026-111497) | [system/brotli](system/brotli/README.md#red-hat-advisories) | 102 | Critical | 2026-04-27 | 2026-11-24 |
 | [CVE-2026-111943](https://access.redhat.com/security/cve/CVE-2026-111943) | [system/pki](system/pki/README.md#red-hat-advisories) | 225 | Critical | 2026-10-20 | 2026-11-24 |
+| [CVE-2026-112393](https://access.redhat.com/security/cve/CVE-2026-112393) | [system/pillow](system/pillow/README.md#red-hat-advisories) | 23 | Critical | 2026-10-29 | 2026-11-23 |
+| [CVE-2026-112398](https://access.redhat.com/security/cve/CVE-2026-112398) | [system/pillow](system/pillow/README.md#red-hat-advisories) | 23 | Critical | 2026-10-29 | 2026-11-23 |
+| [CVE-2026-112403](https://access.redhat.com/security/cve/CVE-2026-112403) | [system/pillow](system/pillow/README.md#red-hat-advisories) | 19 | Critical | 2026-10-29 | 2026-11-23 |
 | [CVE-2026-112900](https://access.redhat.com/security/cve/CVE-2026-112900) | [system/pillow](system/pillow/README.md#red-hat-advisories) | 17 | Critical | 2026-10-30 | 2026-11-24 |
 | [CVE-2026-113351](https://access.redhat.com/security/cve/CVE-2026-113351) | [system/expat](system/expat/README.md#red-hat-advisories) | 7 | Critical | 2026-10-26 | 2026-11-24 |
+| [CVE-2026-113425](https://access.redhat.com/security/cve/CVE-2026-113425) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 18 | Critical | 2026-11-20 | 2026-11-24 |
 | [CVE-2026-114112](https://access.redhat.com/security/cve/CVE-2026-114112) | [developer/nextjs](developer/nextjs/README.md#red-hat-advisories) | 1 | Important | 2026-11-11 | 2026-11-11 |
 | [CVE-2026-114113](https://access.redhat.com/security/cve/CVE-2026-114113) | [developer/nextjs](developer/nextjs/README.md#red-hat-advisories) | 1 | Important | 2026-11-11 | 2026-11-11 |
 | [CVE-2026-114126](https://access.redhat.com/security/cve/CVE-2026-114126) | [developer/storybook](developer/storybook/README.md#red-hat-advisories) | 3 | Important | 2026-10-23 | 2026-10-23 |
@@ -64,12 +68,28 @@ How to use it: a Red Hat build is judged by its RPM release, not by the upstream
 | [CVE-2026-114140](https://access.redhat.com/security/cve/CVE-2026-114140) | [developer/jupyter](developer/jupyter/README.md#red-hat-advisories) | 2 | Critical | 2026-11-06 | 2026-11-19 |
 | [CVE-2026-114938](https://access.redhat.com/security/cve/CVE-2026-114938) | [runtimes/java](runtimes/java/README.md#red-hat-advisories) | 27 | Critical | 2026-11-18 | 2026-11-24 |
 | [CVE-2026-115506](https://access.redhat.com/security/cve/CVE-2026-115506) | [system/expat](system/expat/README.md#red-hat-advisories) | 8 | Critical | 2026-10-26 | 2026-11-24 |
+| [CVE-2026-115560](https://access.redhat.com/security/cve/CVE-2026-115560) | [runtimes/php](runtimes/php/README.md#red-hat-advisories) | 15 | Critical | 2026-11-20 | 2026-11-24 |
 | [CVE-2026-117610](https://access.redhat.com/security/cve/CVE-2026-117610) | [system/expat](system/expat/README.md#red-hat-advisories) | 8 | Critical | 2026-11-02 | 2026-11-24 |
+| [CVE-2026-118370](https://access.redhat.com/security/cve/CVE-2026-118370) | [system/expat](system/expat/README.md#red-hat-advisories) | 8 | Critical | 2026-11-02 | 2026-11-24 |
+| [CVE-2026-118899](https://access.redhat.com/security/cve/CVE-2026-118899) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 18 | Critical | 2026-11-20 | 2026-11-24 |
 | [CVE-2026-119618](https://access.redhat.com/security/cve/CVE-2026-119618) | [servers/apache](servers/apache/README.md#red-hat-advisories) | 13 | Critical | 2026-11-11 | 2026-11-23 |
+| [CVE-2026-120967](https://access.redhat.com/security/cve/CVE-2026-120967) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 1 | Critical | 2026-11-21 | 2026-11-21 |
+| [CVE-2026-120993](https://access.redhat.com/security/cve/CVE-2026-120993) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 1 | Important | 2026-10-15 | 2026-10-15 |
+| [CVE-2026-121810](https://access.redhat.com/security/cve/CVE-2026-121810) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 8 | Critical | 2026-11-20 | 2026-11-24 |
+| [CVE-2026-123007](https://access.redhat.com/security/cve/CVE-2026-123007) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 18 | Critical | 2026-11-20 | 2026-11-24 |
+| [CVE-2026-123633](https://access.redhat.com/security/cve/CVE-2026-123633) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 18 | Critical | 2026-11-20 | 2026-11-24 |
+| [CVE-2026-123634](https://access.redhat.com/security/cve/CVE-2026-123634) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 18 | Critical | 2026-11-20 | 2026-11-24 |
+| [CVE-2026-123640](https://access.redhat.com/security/cve/CVE-2026-123640) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 1 | Critical | 2026-11-21 | 2026-11-21 |
+| [CVE-2026-125283](https://access.redhat.com/security/cve/CVE-2026-125283) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 1 | Critical | 2026-11-21 | 2026-11-21 |
 | [CVE-2026-125396](https://access.redhat.com/security/cve/CVE-2026-125396) | [system/ghostscript](system/ghostscript/README.md#red-hat-advisories) | 3 | Important | 2026-11-25 | 2026-11-25 |
+| [CVE-2026-126714](https://access.redhat.com/security/cve/CVE-2026-126714) | [runtimes/php](runtimes/php/README.md#red-hat-advisories) | 25 | Critical | 2026-11-20 | 2026-11-25 |
+| [CVE-2026-129289](https://access.redhat.com/security/cve/CVE-2026-129289) | [runtimes/php](runtimes/php/README.md#red-hat-advisories) | 25 | Critical | 2026-11-20 | 2026-11-25 |
+| [CVE-2026-129291](https://access.redhat.com/security/cve/CVE-2026-129291) | [runtimes/php](runtimes/php/README.md#red-hat-advisories) | 25 | Critical | 2026-11-20 | 2026-11-25 |
+| [CVE-2026-132825](https://access.redhat.com/security/cve/CVE-2026-132825) | [runtimes/ruby](runtimes/ruby/README.md#red-hat-advisories) | 11 | Critical | 2026-11-21 | 2026-11-25 |
 | [CVE-2026-15176](https://access.redhat.com/security/cve/CVE-2026-15176) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 18 | Critical | 2026-10-15 | 2026-11-24 |
 | [CVE-2026-42533](https://access.redhat.com/security/cve/CVE-2026-42533) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 14 | Critical | 2026-07-26 | 2026-11-20 |
 | [CVE-2026-53266](https://access.redhat.com/security/cve/CVE-2026-53266) | [system/linux-kernel](system/linux-kernel/README.md#red-hat-advisories) | 23 | Critical | 2026-07-08 | 2026-10-29 |
+| [CVE-2026-64564](https://access.redhat.com/security/cve/CVE-2026-64564) | [system/linux-kernel](system/linux-kernel/README.md#red-hat-advisories) | 25 | Critical | 2026-09-21 | 2026-11-11 |
 | [CVE-2026-68121](https://access.redhat.com/security/cve/CVE-2026-68121) | [system/linux-kernel](system/linux-kernel/README.md#red-hat-advisories) | 34 | Critical | 2026-09-24 | 2026-11-11 |
 | [CVE-2026-74469](https://access.redhat.com/security/cve/CVE-2026-74469) | [system/linux-kernel](system/linux-kernel/README.md#red-hat-advisories) | 24 | Important | 2026-09-24 | 2026-10-22 |
 | [CVE-2026-80844](https://access.redhat.com/security/cve/CVE-2026-80844) | [system/linux-kernel](system/linux-kernel/README.md#red-hat-advisories) | 35 | Important | 2026-09-23 | 2026-10-29 |
@@ -83,6 +103,8 @@ How to use it: a Red Hat build is judged by its RPM release, not by the upstream
 | [CVE-2026-94300](https://access.redhat.com/security/cve/CVE-2026-94300) | [servers/bind](servers/bind/README.md#red-hat-advisories) | 22 | Critical | 2026-10-21 | 2026-11-11 |
 | [CVE-2026-94482](https://access.redhat.com/security/cve/CVE-2026-94482) | [developer/nextjs](developer/nextjs/README.md#red-hat-advisories) | 1 | Important | 2026-11-11 | 2026-11-11 |
 | [CVE-2026-95101](https://access.redhat.com/security/cve/CVE-2026-95101) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 1 | Important | 2026-10-15 | 2026-10-15 |
+| [CVE-2026-96639](https://access.redhat.com/security/cve/CVE-2026-96639) | [system/pillow](system/pillow/README.md#red-hat-advisories) | 13 | Critical | 2026-11-03 | 2026-11-23 |
+| [CVE-2026-96889](https://access.redhat.com/security/cve/CVE-2026-96889) | [developer/nextjs](developer/nextjs/README.md#red-hat-advisories) | 39 | Critical | 2026-10-21 | 2026-11-11 |
 | [CVE-2026-97205](https://access.redhat.com/security/cve/CVE-2026-97205) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 18 | Critical | 2026-10-15 | 2026-11-24 |
 | [CVE-2026-97229](https://access.redhat.com/security/cve/CVE-2026-97229) | [runtimes/ruby](runtimes/ruby/README.md#red-hat-advisories) | 18 | Critical | 2026-10-23 | 2026-11-24 |
 | [CVE-2026-97629](https://access.redhat.com/security/cve/CVE-2026-97629) | [servers/nginx](servers/nginx/README.md#red-hat-advisories) | 1 | Important | 2026-10-15 | 2026-10-15 |

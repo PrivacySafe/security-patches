@@ -27,10 +27,10 @@
 #
 # Securing the installer protects against both, patched or not. Drupal's guidance offers three
 # ways: deny it in the web server configuration, deny it in .htaccess, or remove the file and keep
-# it removed. mitigate removes it, because that works on every web server and can be checked on
-# disk; it never deletes a file Drupal ships: it moves it into a backup (SHA-256 checked) that
-# rollback puts back. A core update brings core/install.php back, so check reports it, and the
-# web server rule this script prints is the lasting fix.
+# it removed. mitigate denies it in the web server (403), because that lasts: a core update or a
+# composer install puts a removed core/install.php back, and overwrites a scaffolded .htaccess.
+# --remove also takes the file away, moving it into a backup (SHA-256 checked) that rollback puts
+# back; a file Drupal ships is never deleted.
 #
 # Usage:
 #   ./drupal-installer-check.sh [check] [--url URL ...]
@@ -47,20 +47,26 @@
 #                    changed since 2026-11-18. Says how to check user 1, which Drupal asks you to do
 #                    (this script does not open the database). Exit 0 = nothing found, 1 = leads,
 #                    2 = nothing could be read. Read-only.
-#   mitigate [--installer-only] [--dry-run]   (root)
-#                    For each site: moves core/install.php into the backup, and (unless
-#                    --installer-only) sets settings.php to 0444 and its folder to 0555, as Drupal
-#                    recommends. Every file operation runs as the account that owns the folder,
-#                    on a folder opened without following links. Prints the nginx and Apache rules
-#                    that keep the installer closed across core updates.
-#   rollback [--dry-run]   (root) puts back what mitigate moved and the modes it changed. A file
-#                    that has come back meanwhile (after a core update) is left in place, and its
-#                    backup kept.
+#   mitigate [--remove] [--installer-only] [--dry-run]   (root)
+#                    Blocks the installer in the web server, which lasts across core updates:
+#                    Apache gets one configuration file for every site (conf-available, enabled,
+#                    or conf.d), nginx a snippet (location ^~ /core/install.php { return 403; })
+#                    and an include in each server block whose root is a Drupal site. Each file it
+#                    edits is backed up first; the change is tested (apachectl -t, nginx -t) and
+#                    taken back if the test fails, and only then is the server reloaded. --remove
+#                    also moves core/install.php into a backup (SHA-256 checked; a file Drupal ships
+#                    is never deleted); a core update or composer install brings it back. Unless
+#                    --installer-only, sets settings.php to 0444 and its folder to 0555, as Drupal
+#                    recommends. File operations in a site run as the account that owns its folder.
+#   rollback [--dry-run]   (root) takes the web server changes back (a file changed since is left
+#                    alone), puts back what --remove moved, and restores the modes. An installer
+#                    that has come back meanwhile is left in place, and its backup kept.
 #   version          print the script version.
 #
 # Env: DRUPAL_ROOTS (folders to search, space separated; default /var/www /srv /home /opt
 #      /usr/share/nginx), ACCESS_LOGS (log files for hunt, instead of the usual nginx, Apache and
-#      LiteSpeed access logs), NGINX_CONF (default /etc/nginx), STATE_DIR (default
+#      LiteSpeed access logs), NGINX_CONF (default /etc/nginx), APACHE_CONF (default /etc/apache2,
+#      else /etc/httpd), NGINX_BIN and APACHECTL (the programs that test and reload), STATE_DIR (default
 #      /var/lib/psf-security-patches/drupal-installer), PSF_LOCK_WAIT (seconds a change waits for
 #      another, default 30; the lock is STATE_DIR/.lock)
 # =============================================================================
@@ -92,6 +98,10 @@ inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 # --output jsonl (or PSF_OUTPUT=jsonl) writes JSON Lines, one record per line, when the script ends:
 # a start record, an event for each finding, a text record for any other line, and a verdict.
 # The format is described in automation/README.md. --output text, the default, changes nothing.
+# NO_COLOR (https://no-color.org): set to anything, no color codes in the text output, for screen readers and logs.
+if [[ -n "${NO_COLOR:-}" ]]; then
+    for _psf_v in RED GREEN YELLOW CYAN NC BLUE BLU YEL RST GRN BOLD DIM; do [[ -n "${!_psf_v+x}" ]] && printf -v "$_psf_v" '%s' ''; done; unset _psf_v
+fi
 # PSF_READ_ONLY=1 refuses every command that changes the host, before it starts.
 _PSF_FMT="${PSF_OUTPUT:-text}"; _psf_a=()
 while (($#)); do
@@ -141,8 +151,18 @@ if [[ "$_PSF_FMT" == jsonl ]]; then
     _PSF_MARK=""; read -r _PSF_MARK </proc/sys/kernel/random/uuid 2>/dev/null || _PSF_MARK="${RANDOM}${RANDOM}${RANDOM}${RANDOM}$$"
     _PSF_MARK=$'\036'"psf-${_PSF_MARK}"$'\036'
     _psf_rec() {   # type level message [more JSON fields]: one marked record on stdout
-        local type="$1" level="$2" msg="$3" ts cves="" rest extra="${4:-}" c
-        TZ=UTC printf -v ts '%(%Y-%m-%dT%H:%M:%SZ)T' -1
+        local type="$1" level="$2" msg="$3" ts tsms ems cves="" rest extra="${4:-}" c er="${EPOCHREALTIME:-}"
+        # one reading of the clock, written three ways: ts to the second (as records always had it), ts_ms to the
+        # millisecond (as the joint event logging guide prefers), both RFC 3339 in UTC, and ts_epoch_ms, the same
+        # instant as whole milliseconds since 1970 for tools that want a number. EPOCHREALTIME (bash 5) can use a
+        # decimal comma; without it the time is whole seconds and the milliseconds are 000.
+        if [[ "$er" =~ ^([0-9]+)[.,]([0-9]{3}) ]]; then
+            TZ=UTC printf -v ts '%(%Y-%m-%dT%H:%M:%S)TZ' "${BASH_REMATCH[1]}"; tsms="${ts%Z}.${BASH_REMATCH[2]}Z"
+            ems="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        else
+            TZ=UTC printf -v ts '%(%Y-%m-%dT%H:%M:%S)TZ' -1; tsms="${ts%Z}.000Z"
+            printf -v ems '%(%s)T' -1; ems="${ems}000"
+        fi
         rest="$msg"
         while [[ "$rest" =~ (CVE-[0-9]{4}-[0-9]{4,}) ]]; do
             c="${BASH_REMATCH[1]}"; [[ ",$cves," == *",\"$c\","* ]] || cves="${cves:+$cves,}\"$c\""; rest="${rest#*"$c"}"
@@ -153,9 +173,9 @@ if [[ "$_PSF_FMT" == jsonl ]]; then
         [[ -n "${PSF_CODE:-}" ]] && extra+=",\"code\":$(_psf_s "$PSF_CODE")"
         [[ -n "${PSF_PATH:-}" ]] && extra+=",\"path\":$(_psf_s "$PSF_PATH")"
         [[ "$level" =~ ^(crit|warn)$ ]] && extra+=",\"fix\":$(_psf_s "${PSF_FIX:-$_PSF_FIX}")"
-        printf '%s{"schema":1,"type":"%s","run":%s,"tool":%s,"version":%s,"host":%s,"command":%s,"ts":"%s"%s,"msg":%s,"cve":[%s]%s}\n' \
+        printf '%s{"schema":1,"type":"%s","run":%s,"tool":%s,"version":%s,"host":%s,"command":%s,"ts":"%s","ts_ms":"%s","ts_epoch_ms":%s%s,"msg":%s,"cve":[%s]%s}\n' \
             "$_PSF_MARK" "$type" "$(_psf_s "$_PSF_RUN")" "$(_psf_s "$_PSF_TOOL")" "$(_psf_s "${SCRIPT_VERSION:-}")" "$(_psf_s "$_PSF_HOST")" \
-            "$(_psf_s "$_PSF_CMD")" "$ts" "${level:+,\"level\":\"$level\"}" "$(_psf_s "$msg")" "$cves" "$extra"
+            "$(_psf_s "$_PSF_CMD")" "$ts" "$tsms" "$ems" "${level:+,\"level\":\"$level\"}" "$(_psf_s "$msg")" "$cves" "$extra"
     }
     _psf_ev() { local level="$1" m; shift; printf -v m '%b' "$*"; m="${m#"${m%%[![:space:]]*}"}"; m="${m%"${m##*[![:space:]]}"}"; _psf_rec event "$level" "$m"; }
 
@@ -361,7 +381,7 @@ writable_by() {   # <user> <path>
 installer_rules() {   # <docroot>
     local f
     [[ -f "$1/.htaccess" ]] && grep -n -i 'install\.php' "$1/.htaccess" 2>/dev/null | head -n 3 | sed "s|^|$1/.htaccess:|"
-    for f in $(grep -rl -i 'install\.php' "${NGINX_CONF:-/etc/nginx}" 2>/dev/null | head -n 5); do
+    for f in $(grep -rl -i 'install\.php' "${NGINX_CONF:-/etc/nginx}" ${APACHE_CONF:-/etc/apache2 /etc/httpd} 2>/dev/null | head -n 5); do
         grep -n -i 'install\.php' "$f" | head -n 2 | sed "s|^|$f:|"
     done
 }
@@ -433,7 +453,7 @@ cmd_check() {
     fi
     if [[ $rc -eq 0 ]]; then info "${n} site(s): nothing to do."
     else
-        warn "Update core to 10.6.23, 11.3.23 or 11.4.14 (at least 10.6.22, 11.3.22 or 11.4.13 if those are not out yet), run update.php, and secure the installer: mitigate removes it (with a backup) and prints the web server rule."
+        warn "Update core to 10.6.23, 11.3.23 or 11.4.14 (at least 10.6.22, 11.3.22 or 11.4.13 if those are not out yet), run update.php, and secure the installer: mitigate blocks it in Apache and nginx (403), which lasts across core updates."
         inf "Then run hunt: SA-CORE-2026-019 is exploited, and Drupal asks every site that left its installer open to check user 1."
     fi
     return "$rc"
@@ -550,29 +570,146 @@ as_owner() {
 
 rules_text() {
 cat <<'RULES'
-  To keep the installer closed across core updates, add one of these and reload the web server:
+  The rules, to add by hand where mitigate cannot (another web server, or a server block it could not change):
     nginx (inside the site's server block; a prefix match, so /core/install.php/x is caught too):
-      location ^~ /core/install.php { return 404; }
-    Apache (in the virtual host; an .htaccess that Composer scaffolds is overwritten on updates):
+      location ^~ /core/install.php { return 403; }
+    Apache (server or virtual host configuration):
       <LocationMatch "^/core/install\.php"> Require all denied </LocationMatch>
-  Then test that /core/install.php, /install.php and /core/install.php/x answer 403 or 404 (check --url URL),
-  and that update.php still works.
+  Then check --url URL should show /core/install.php, /install.php and /core/install.php/x answering 403 or 404,
+  and update.php must still work.
 RULES
 }
 
+# ---------- blocking the installer in the web server ------------------------
+SNIP_NAME="psf-drupal-installer.conf"
+MARK="# PrivacySafe Security Patches: drupal-installer-check.sh mitigate (CVE-2026-132165, CVE-2026-136716)"
+apache_dir() { local d; for d in ${APACHE_CONF:-/etc/apache2 /etc/httpd}; do [[ -d "$d" ]] && { echo "$d"; return 0; }; done; return 1; }
+apachectl_bin() { local b; for b in ${APACHECTL:-apachectl apache2ctl}; do b="$(root_safe_bin "$b")" && { echo "$b"; return 0; }; done; return 1; }
+nginx_bin() { root_safe_bin "${NGINX_BIN:-nginx}"; }
+sha_of() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
+note_change() { printf '%s\n' "$1" >>"$STATE_DIR/manifest.tsv"; }
+
+# write a whole file as root: never through a link, into a folder only root can change, via a new file renamed over it
+safe_put() {   # <path> <content>
+    local p="$1" d tmp st
+    d="$(dirname "$p")"
+    [[ -L "$p" || -L "$d" ]] && { echo "link"; return 1; }
+    st="$(stat -c '%u %a' "$d" 2>/dev/null)" || { echo "nodir"; return 1; }
+    if is_root && { [[ "${st%% *}" != 0 ]] || (( (8#${st##* } & 8#022) != 0 )); }; then echo "unsafe"; return 1; fi
+    tmp="$(mktemp "$d/.psf-drupal.XXXXXXXX")" || { echo "tmp"; return 1; }
+    if printf '%s' "$2" >"$tmp" && chmod 0644 "$tmp" && mv -f "$tmp" "$p"; then return 0; fi
+    rm -f "$tmp"; echo "write"; return 1
+}
+
+block_apache() {   # <dry>: prints what it did; returns 1 on a problem
+    local dry="$1" ad ac file link out
+    ad="$(apache_dir)" || return 0
+    if [[ -d "$ad/conf-available" && -d "$ad/conf-enabled" ]]; then file="$ad/conf-available/$SNIP_NAME"; link="$ad/conf-enabled/$SNIP_NAME"
+    elif [[ -d "$ad/conf.d" ]]; then file="$ad/conf.d/$SNIP_NAME"; link=""
+    else caution "${ad}: no conf-available or conf.d folder: add the Apache rule yourself (see below)"; return 1; fi
+    if grep -qF "$MARK" "$file" 2>/dev/null; then ok "Apache: ${file} is already in place"; return 0; fi
+    if [[ -e "$file" || -L "$file" ]]; then caution "Apache: ${file} exists and is not this script's: left alone"; return 1; fi
+    ac="$(apachectl_bin)" || { caution "Apache: apachectl is not installed, or as root it is not root's with every folder above it, so a change could not be tested: Apache left alone (add the rule yourself)"; return 1; }
+    if [[ "$dry" -eq 1 ]]; then echo "  would write ${file}${link:+ and link it from ${link}} (403 for /core/install.php on every site), test it with ${ac} -t, and reload Apache"; return 0; fi
+    out="$(safe_put "$file" "$MARK"$'\n''<LocationMatch "^/core/install\.php">'$'\n''    Require all denied'$'\n''</LocationMatch>'$'\n')" || { bad "Apache: could not write ${file} (${out})"; return 1; }
+    note_change "created	$file	$(sha_of "$file")"
+    if [[ -n "$link" ]]; then ln -s "../conf-available/$SNIP_NAME" "$link" && note_change "link	$link	../conf-available/$SNIP_NAME"; fi
+    if ! "$ac" -t >/dev/null 2>&1; then
+        rm -f "$file"; [[ -n "$link" ]] && rm -f "$link"
+        sed -i "\#	${file}	#d; \#	${link:-/nonexistent}	#d" "$STATE_DIR/manifest.tsv"
+        bad "Apache: the configuration did not pass ${ac} -t with the rule: the rule was taken out again and Apache was not reloaded"; return 1
+    fi
+    if "$ac" -k graceful >/dev/null 2>&1; then ok "Apache: ${file} blocks /core/install.php (403) on every site; tested and reloaded"
+    else caution "Apache: ${file} is in place and passed ${ac} -t, but the reload failed: reload Apache yourself"; return 1; fi
+    return 0
+}
+
+block_nginx() {   # <dry> <docroots...>
+    local dry="$1"; shift
+    local nd nb snip d f rf files=() edited=() id rc=0 esc
+    nd="${NGINX_CONF:-/etc/nginx}"; [[ -d "$nd" ]] || return 0
+    nb="$(nginx_bin)" || { caution "nginx: nginx is not installed, or as root it is not root's with every folder above it, so a change could not be tested: nginx left alone (add the rule yourself)"; return 1; }
+    snip="$nd/snippets/$SNIP_NAME"
+    for d in "$@"; do
+        esc="$(printf '%s' "$d" | sed 's/[][\.*^$/]/\\&/g')"
+        while IFS= read -r f; do
+            rf="$(readlink -f "$f")"
+            [[ " ${files[*]-} " == *" $rf "* ]] || files+=("$rf")
+        done < <(grep -RlE "^[[:space:]]*root[[:space:]]+${esc}/?;" "$nd" 2>/dev/null)
+        if ! grep -RqE "^[[:space:]]*root[[:space:]]+${esc}/?;" "$nd" 2>/dev/null; then caution "nginx: no server block with root ${d} found: add the nginx rule to that site's server block yourself"; rc=1; fi
+    done
+    [[ ${#files[@]} -gt 0 ]] || return "$rc"
+    if [[ "$dry" -eq 1 ]]; then
+        echo "  would write ${snip} (location ^~ /core/install.php { return 403; }), add 'include ${snip};' after the root line of the Drupal server blocks in: ${files[*]}; test with ${nb} -t; reload nginx"; return "$rc"
+    fi
+    if ! grep -qF "$MARK" "$snip" 2>/dev/null; then
+        if [[ -e "$snip" || -L "$snip" ]]; then caution "nginx: ${snip} exists and is not this script's: left alone"; return 1; fi
+        mkdir -p "$nd/snippets" || { bad "nginx: cannot create ${nd}/snippets"; return 1; }
+        safe_put "$snip" "$MARK"$'\n''location ^~ /core/install.php { return 403; }'$'\n' >/dev/null || { bad "nginx: could not write ${snip}"; return 1; }
+        note_change "created	$snip	$(sha_of "$snip")"
+    fi
+    mkdir -p "$STATE_DIR/nginx" && chmod 0700 "$STATE_DIR/nginx"
+    for rf in "${files[@]}"; do
+        if grep -qF "include $snip;" "$rf"; then ok "nginx: ${rf} already includes ${snip}"; continue; fi
+        id="$STATE_DIR/nginx/$(date -u +%Y%m%dT%H%M%SZ)-$(printf '%s' "$rf" | sha256sum | cut -c1-12)-$(basename "$rf")"
+        cp -p "$rf" "$id" && chmod 0600 "$id" || { bad "nginx: could not back up ${rf}: left alone"; rc=1; continue; }
+        out="$(awk -v inc="include $snip;" -v roots="$*" '
+            BEGIN { n = split(roots, r, " ") }
+            { print }
+            /^[[:space:]]*root[[:space:]]+/ { v = $2; sub(/;$/, "", v); sub(/\/$/, "", v)
+              for (i = 1; i <= n; i++) if (v == r[i]) { match($0, /^[[:space:]]*/); printf "%s%s  # PrivacySafe Security Patches: the Drupal installer\n", substr($0, 1, RLENGTH), inc; break } }' "$rf")"
+        if safe_put "$rf" "$out"$'\n' >/dev/null; then note_change "edited	$rf	$id	$(sha_of "$rf")"; edited+=("$rf")
+        else bad "nginx: could not write ${rf}: left alone"; rc=1; fi
+    done
+    if [[ ${#edited[@]} -gt 0 ]] && ! "$nb" -t >/dev/null 2>&1; then
+        bad "nginx: the configuration did not pass ${nb} -t with the include (is that root line inside a location block?): every file is put back and nginx was not reloaded"
+        undo_changes nginx; return 1
+    fi
+    if [[ ${#edited[@]} -gt 0 ]]; then
+        if "$nb" -s reload >/dev/null 2>&1; then ok "nginx: /core/install.php answers 403 in the server blocks of ${edited[*]}; tested and reloaded"
+        else caution "nginx: the change passed ${nb} -t but the reload failed: reload nginx yourself"; rc=1; fi
+    fi
+    return "$rc"
+}
+
+# undo the web server entries of the manifest (all of them, or one server's), newest first; files changed since are left
+undo_changes() {   # [nginx|apache]
+    local only="${1:-}" kind p a b c rc=0 keep
+    keep="$(mktemp)" || return 1
+    while IFS=$'\t' read -r kind p a b c; do
+        case "$kind" in created|link|edited) ;; *) printf '%s\t%s\t%s\t%s\t%s\n' "$kind" "$p" "$a" "$b" "$c" >>"$keep"; continue ;; esac
+        if [[ -n "$only" ]] && { [[ "$only" == nginx && "$p" != "${NGINX_CONF:-/etc/nginx}"/* && "$kind" != edited ]] || [[ "$only" == apache && "$p" == "${NGINX_CONF:-/etc/nginx}"/* ]]; }; then printf '%s\t%s\t%s\t%s\t%s\n' "$kind" "$p" "$a" "$b" "$c" >>"$keep"; continue; fi
+        case "$kind" in
+            created) if [[ "$(sha_of "$p")" == "$a" ]]; then rm -f "$p" && ok "removed ${p}"; else caution "${p} was changed since: left in place"; rc=1; fi ;;
+            link)    if [[ -L "$p" && "$(readlink "$p")" == "$a" ]]; then rm -f "$p" && ok "removed ${p}"; else caution "${p} is no longer this script's link: left in place"; rc=1; fi ;;
+            edited)  if [[ "$(sha_of "$p")" == "$b" && -f "$a" ]]; then cp -p "$a" "$p" && ok "put back ${p} as it was"; else caution "${p} was changed since: left as it is (its backup is ${a})"; rc=1; fi ;;
+        esac
+    done < <(tac "$STATE_DIR/manifest.tsv")
+    tac "$keep" >"$STATE_DIR/manifest.tsv"; rm -f "$keep"
+    return "$rc"
+}
+
 cmd_mitigate() {
-    local dry=0 inst_only=0 rc=0 did=0 d out sha mode uid gid b64 id sf sd old
+    local dry=0 inst_only=0 remove=0 rc=0 did=0 d out sha mode uid gid b64 id sf sd old
+    local -a roots=()
     while [[ $# -gt 0 ]]; do
-        case "$1" in --dry-run) dry=1 ;; --installer-only) inst_only=1 ;; *) die "Unknown mitigate option: $1 (--installer-only --dry-run)" ;; esac
+        case "$1" in --dry-run) dry=1 ;; --installer-only) inst_only=1 ;; --remove) remove=1 ;; *) die "Unknown mitigate option: $1 (--remove --installer-only --dry-run)" ;; esac
         shift
     done
-    [[ $dry -eq 1 ]] || need_root "mitigate changes the sites"
-    if [[ $dry -eq 0 ]]; then mkdir -p "$STATE_DIR/backup" && chmod 0700 "$STATE_DIR" "$STATE_DIR/backup" || die "cannot create ${STATE_DIR}"; fi
+    [[ $dry -eq 1 ]] || need_root "mitigate changes the web server and the sites"
+    if [[ $dry -eq 0 ]]; then mkdir -p "$STATE_DIR/backup" && chmod 0700 "$STATE_DIR" "$STATE_DIR/backup" && touch "$STATE_DIR/manifest.tsv" || die "cannot create ${STATE_DIR}"; fi
     [[ $dry -eq 1 ]] && step "Dry run: nothing will be changed"
-    while IFS=$'\t' read -r d _; do
-        [[ -n "$d" ]] || continue
+    while IFS=$'\t' read -r d _; do [[ -n "$d" ]] && roots+=("$d"); done < <(find_sites)
+    [[ ${#roots[@]} -gt 0 ]] || { info "No Drupal site found: nothing to do"; return 0; }
+    step "Blocking the installer in the web server (403; lasts across core updates)"
+    if ! apache_dir >/dev/null && [[ ! -d "${NGINX_CONF:-/etc/nginx}" ]]; then caution "neither Apache nor nginx configuration found: add the rule to your web server yourself, or use --remove"; rc=1; fi
+    block_apache "$dry" || rc=1
+    block_nginx "$dry" "${roots[@]}" || rc=1
+    for d in "${roots[@]}"; do
         step "Site ${d}"
-        if [[ -L "$d/core" || -L "$d/core/install.php" ]]; then caution "core or core/install.php is a symbolic link: left alone"; rc=1
+        if [[ $remove -eq 0 ]]; then
+            [[ -e "$d/core/install.php" ]] && inf "core/install.php stays on disk, blocked by the web server (--remove also moves it into a backup)"
+        elif [[ -L "$d/core" || -L "$d/core/install.php" ]]; then caution "core or core/install.php is a symbolic link: left alone"; rc=1
         elif [[ ! -e "$d/core/install.php" ]]; then ok "core/install.php is not there: nothing to move"
         elif [[ $dry -eq 1 ]]; then echo "  would move ${d}/core/install.php into ${STATE_DIR}/backup (SHA-256 checked; rollback puts it back)"
         else
@@ -587,7 +724,7 @@ cmd_mitigate() {
                     bad "the backup of core/install.php did not verify: left in place"; rm -f "$STATE_DIR/backup/${id}-install.php"; rc=1
                 else
                     chmod 0600 "$STATE_DIR/backup/${id}-install.php"
-                    printf 'move\t%s\tinstall.php\t%s\t%s\t%s\t%s\t%s\n' "$d/core" "$STATE_DIR/backup/${id}-install.php" "$sha" "$mode" "$uid" "$gid" >>"$STATE_DIR/manifest.tsv"
+                    note_change "move	$d/core	install.php	$STATE_DIR/backup/${id}-install.php	$sha	$mode	$uid	$gid"
                     out="$(as_owner "$d/core" remove_if "$d/core" install.php "$sha")"
                     if [[ "$out" == ok ]]; then ok "moved core/install.php into ${STATE_DIR}/backup/${id}-install.php (SHA-256 ${sha:0:16}...)"; did=1
                     else bad "core/install.php was not removed (${out}): it changed after it was read, or could not be removed; the backup is kept"; rc=1; fi
@@ -600,16 +737,17 @@ cmd_mitigate() {
             sd="$(dirname "$sf")"
             if [[ $dry -eq 1 ]]; then echo "  would set ${sf#"$d"/} to 0444 (now $(stat -c %a "$sf")) and ${sd#"$d"/} to 0555 (now $(stat -c %a "$sd"))"; continue; fi
             out="$(as_owner "$sd" chmod "$sd" settings.php 444)"
-            if [[ "$out" == ok\ * ]]; then old="${out#ok }"; printf 'chmod\t%s\tsettings.php\t%s\t0o444\n' "$sd" "$old" >>"$STATE_DIR/manifest.tsv"; ok "${sf#"$d"/}: ${old#0o} -> 444"; did=1
+            if [[ "$out" == ok\ * ]]; then old="${out#ok }"; note_change "chmod	$sd	settings.php	$old	0o444"; ok "${sf#"$d"/}: ${old#0o} -> 444"; did=1
             else bad "${sf#"$d"/}: could not change its mode (${out})"; rc=1; fi
             out="$(as_owner "$(dirname "$sd")" chmod "$(dirname "$sd")" "$(basename "$sd")" 555)"
-            if [[ "$out" == ok\ * ]]; then old="${out#ok }"; printf 'chmod\t%s\t%s\t%s\t0o555\n' "$(dirname "$sd")" "$(basename "$sd")" "$old" >>"$STATE_DIR/manifest.tsv"; ok "${sd#"$d"/}: ${old#0o} -> 555"; did=1
+            if [[ "$out" == ok\ * ]]; then old="${out#ok }"; note_change "chmod	$(dirname "$sd")	$(basename "$sd")	$old	0o555"; ok "${sd#"$d"/}: ${old#0o} -> 555"; did=1
             else bad "${sd#"$d"/}: could not change its mode (${out})"; rc=1; fi
         done
-    done < <(find_sites)
+    done
     step "Result"
-    rules_text
-    inf "a core update puts core/install.php back: run check after every update, and mitigate again if it is there"
+    [[ $rc -eq 0 ]] || rules_text
+    inf "test the block from outside: $0 check --url https://your.site"
+    [[ $dry -eq 0 ]] && grep -qE '^(created|link|edited)	' "$STATE_DIR/manifest.tsv" 2>/dev/null && did=1
     if [[ $dry -eq 1 ]]; then info "Dry run finished: nothing was changed"
     elif [[ $did -eq 1 ]]; then info "Done. Backups and manifest: ${STATE_DIR}. Undo with: $0 rollback"
     else info "Nothing was changed"; fi
@@ -617,19 +755,28 @@ cmd_mitigate() {
 }
 
 cmd_rollback() {
-    local dry=0 rc=0 kind dir name a b c e f out
+    local dry=0 rc=0 kind dir name a b c e f out web=0 ac nb
     while [[ $# -gt 0 ]]; do
         case "$1" in --dry-run) dry=1 ;; *) die "Unknown rollback option: $1 (--dry-run)" ;; esac
         shift
     done
     [[ -s "$STATE_DIR/manifest.tsv" ]] || { info "Nothing to roll back (no manifest in ${STATE_DIR})"; return 0; }
-    [[ $dry -eq 1 ]] || need_root "rollback changes the sites"
+    [[ $dry -eq 1 ]] || need_root "rollback changes the web server and the sites"
     step "Rolling back"
+    if [[ $dry -eq 1 ]]; then
+        while IFS=$'\t' read -r kind dir name _; do case "$kind" in created|link) echo "  would remove ${dir}" ;; edited) echo "  would put back ${dir} from ${name}" ;; move) echo "  would put ${dir}/${name} back" ;; chmod) echo "  would set ${dir}/${name} back" ;; esac; done < <(tac "$STATE_DIR/manifest.tsv")
+        info "Dry run finished: nothing was changed"; return 0
+    fi
+    grep -qE '^(created|link|edited)	' "$STATE_DIR/manifest.tsv" && web=1
+    undo_changes || rc=1
+    if [[ $web -eq 1 ]]; then
+        if ac="$(apachectl_bin)" && apache_dir >/dev/null; then if "$ac" -t >/dev/null 2>&1 && "$ac" -k graceful >/dev/null 2>&1; then ok "Apache tested and reloaded"; else caution "Apache: test or reload failed: check it with ${ac} -t"; rc=1; fi; fi
+        if nb="$(nginx_bin)" && [[ -d "${NGINX_CONF:-/etc/nginx}" ]]; then if "$nb" -t >/dev/null 2>&1 && "$nb" -s reload >/dev/null 2>&1; then ok "nginx tested and reloaded"; else caution "nginx: test or reload failed: check it with ${nb} -t"; rc=1; fi; fi
+    fi
     # newest first, so a folder's mode comes back after the file inside it
     while IFS=$'\t' read -r kind dir name a b c e f _; do
         case "$kind" in
             move)   # a=backup b=sha c=mode e=uid f=gid
-                if [[ $dry -eq 1 ]]; then echo "  would put ${dir}/${name} back from ${a}"; continue; fi
                 if [[ ! -f "$a" || "$(sha256sum "$a" | cut -d' ' -f1)" != "$b" ]]; then bad "${a}: the backup is missing or does not match its SHA-256: ${dir}/${name} not restored"; rc=1; continue; fi
                 out="$(base64 -w0 "$a" | as_owner "$dir" create "$dir" "$name" "${c#0o}" "$b")"
                 case "$out" in
@@ -639,7 +786,6 @@ cmd_rollback() {
                     *) bad "${dir}/${name} could not be put back (${out}); the backup is kept in ${a}"; rc=1 ;;
                 esac ;;
             chmod)  # a=old mode b=mode set
-                if [[ $dry -eq 1 ]]; then echo "  would set ${dir}/${name} back to ${a#0o}"; continue; fi
                 out="$(as_owner "$dir" chmod "$dir" "$name" "${a#0o}" "${b#0o}")"
                 case "$out" in
                     ok\ *) ok "${dir}/${name}: back to ${a#0o}" ;;
@@ -648,7 +794,7 @@ cmd_rollback() {
                 esac ;;
         esac
     done < <(tac "$STATE_DIR/manifest.tsv")
-    if [[ $dry -eq 0 && $rc -eq 0 ]]; then mv "$STATE_DIR/manifest.tsv" "$STATE_DIR/manifest.tsv.rolled-back-$(date +%s)"; info "Rolled back. The backups stay in ${STATE_DIR}/backup until you remove them."; fi
+    if [[ $rc -eq 0 ]]; then mv "$STATE_DIR/manifest.tsv" "$STATE_DIR/manifest.tsv.rolled-back-$(date +%s)"; info "Rolled back. The backups stay in ${STATE_DIR} until you remove them."; fi
     return "$rc"
 }
 

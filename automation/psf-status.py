@@ -142,10 +142,8 @@ def find_sets(paths):
 
 
 def parse_ts(s):
-    try:
-        return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
-    except (TypeError, ValueError):
-        return None
+    """A time, read as leniently as psf-report reads it (RFC 3339 or ISO 8601, any offset or fraction, or epoch)."""
+    return R.parse_time(s)
 
 
 def ago(delta):
@@ -178,10 +176,16 @@ def main(argv):
     global DEFAULT_DIR
     load_report()
     try:
-        DEFAULT_DIR = R.load_config()[0]["LOG_DIR"]
+        _conf = R.load_config()[0]
+        DEFAULT_DIR = _conf["LOG_DIR"]
     except (R.ConfigError, OSError) as e:
         print("configuration: %s" % e, file=sys.stderr)
         return 2
+    if _conf["ACCEPT_FILE"]:
+        try:
+            R.load_accepted(_conf["ACCEPT_FILE"])
+        except R.ConfigError as e:
+            print("ACCEPT_FILE: %s; every finding is shown as found" % e, file=sys.stderr)
     lines_n, days_n, tools, hosts, stale_h, full, color, now, paths = 10, 7, [], [], 36.0, False, "auto", None, []
     i = 1
     try:
@@ -272,7 +276,7 @@ def main(argv):
 
     st = R.overall(runs)
     hosts_seen = sorted({r["host"] for r in runs})
-    times = [t for t in (parse_ts(r["started"]) for r in runs) if t]
+    times = [t for t in (r.get("started_dt") or parse_ts(r["started"]) for r in runs) if t]
     newest = max(times) if times else None
     stale = newest is not None and (now - newest).total_seconds() > stale_h * 3600
     shown = "stale" if stale and st == "clean" else st
@@ -296,6 +300,9 @@ def main(argv):
             parts.append("%d %s" % (tot[k], one if tot[k] == 1 else many))
     nruns = "%d run%s" % (len(runs), "" if len(runs) == 1 else "s")
     summary = (", ".join(parts) + " in %d of %s" % (flagged, nruns)) if parts else "nothing found in %s" % nruns
+    acc = sum(r["counts"].get("accepted", 0) for r in runs)
+    if acc:
+        summary += "; %d accepted (%s)" % (acc, R.ACCEPT["source"])
     if na:
         summary += "; %d found nothing to check here" % na
     if skipped:
@@ -317,7 +324,7 @@ def main(argv):
             mark = c("grey", ring)
         else:
             mark = c("green", dot)
-        t = parse_ts(r["started"])
+        t = r.get("started_dt") or parse_ts(r["started"])
         line = "  %s %-*s  %-7s  %-9s  %4d  %4d  %-8s  %s" % (
             mark, tw, R.clip(r["tool"] + " " + r["version"])[:tw], R.clip(r["command"])[:7], R.clip(r["result"])[:9],
             r["counts"]["crit"], r["counts"]["warn"], t.strftime("%H:%M:%S") if t else "?", R.clip(r["host"])[:hw])

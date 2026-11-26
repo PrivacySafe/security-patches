@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-root="../../">
+<html lang="en" data-root="../../" data-scheme="dark">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>WordPress core upgrade-window remote code execution (CVE-2026-119977) | PrivacySafe Security Patches</title><meta name="description" content="WordPress core 4.7.0 to 7.1.3: unauthenticated code execution while a core update runs, exploited in the wild">
 <link rel="jslicense" href="../../weblabels.html"><link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
@@ -44,29 +44,29 @@ document.documentElement.className+=" js"
 <li><a href="../../about.html">About and support</a></li>
 </ul>
 <details class="grp" open><summary>Newest: 2 to 25 November 2026</summary><ul>
-<li><a href="../drupal/index.html">25 Oct: Drupal</a></li>
-<li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
-<li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
-<li><a href="../aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
-<li><a href="../../runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
-<li><a href="../../system/pam-mysql/index.html">23 Oct: pam-mysql</a></li>
-<li><a href="../../threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
-<li><a href="../../developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
-<li><a href="../../developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
-<li><a href="../apache-roller/index.html">22 Oct: Apache Roller XML-RPC deserialization</a></li>
-<li><a href="../../system/ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
-<li><a href="../etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
-<li><a href="../../system/linux-kernel/index.html">20 Oct: Linux kernel</a></li>
-<li><a href="../../servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
-<li><a href="../../servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
-<li><a href="../../runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
-<li><a href="../../servers/nginx/index.html">18 Oct: nginx</a></li>
-<li><a href="../../developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
-<li><a href="../../system/openssh-musl/index.html">5 Oct: OpenSSH musl password bypass</a></li>
-<li><a href="index.html" aria-current="page">4 Oct: WordPress upgrade window</a></li>
-<li><a href="../../system/apt/index.html">4 Oct: APT</a></li>
-<li><a href="../../system/pki/index.html">2 Oct: eMudhra CA compromise</a></li>
-<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../drupal/index.html">25 Nov: Drupal</a></li>
+<li><a href="../../servers/vmware/index.html">23 Nov: VMware vCenter</a></li>
+<li><a href="../../servers/n-central/index.html">23 Nov: N-central and Apache Axis</a></li>
+<li><a href="../aspnet/index.html">23 Nov: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../../runtimes/java/index.html">23 Nov: Java4Shell (OpenJDK)</a></li>
+<li><a href="../../system/pam-mysql/index.html">23 Nov: pam-mysql</a></li>
+<li><a href="../../threats/agentic-attacks/index.html">23 Nov: AI attack frameworks</a></li>
+<li><a href="../../developer/iterm2/index.html">23 Nov: iTerm2 (macOS)</a></li>
+<li><a href="../../developer/binary-parser/index.html">23 Nov: binary-parser</a></li>
+<li><a href="../apache-roller/index.html">22 Nov: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../../system/ghostscript/index.html">22 Nov: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../etherpad/index.html">20 Nov: Etherpad static path traversal</a></li>
+<li><a href="../../system/linux-kernel/index.html">20 Nov: Linux kernel</a></li>
+<li><a href="../../servers/apache/index.html">19 Nov: Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/mysql/index.html">19 Nov: MySQL client programs</a></li>
+<li><a href="../../runtimes/php/index.html">19 Nov: PHP2Shell</a></li>
+<li><a href="../../servers/nginx/index.html">18 Nov: nginx</a></li>
+<li><a href="../../developer/optimizely/index.html">17 Nov: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../../system/openssh-musl/index.html">5 Nov: OpenSSH musl password bypass</a></li>
+<li><a href="index.html" aria-current="page">4 Nov: WordPress upgrade window</a></li>
+<li><a href="../../system/apt/index.html">4 Nov: APT</a></li>
+<li><a href="../../system/pki/index.html">2 Nov: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Nov: BTCPay Server</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
 <li><a href="../../servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
@@ -151,7 +151,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>WordPress upgrade window</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>WordPress core upgrade-window remote code execution (<span class="nw">CVE-2026-119977</span>)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">WordPress core 4.7.0 to 7.1.3: unauthenticated code execution while a core update runs, exploited in the wild</div></dd><dt>The fix</dt><dd>7.1.4 and the matching branch releases, listed below, all dated 28 October 2026</dd><dt>Severity</dt><dd>8.1 High (CVSS 3.1, the CVE Numbering Authority, Wordfence). The WordPress project rates it low</dd><dt>Exploited</dt><dd>Yes (CISA KEV, 3 November 2026). Wordfence recorded more than 18,500 requests for staged installer paths in the first 21 hours</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-119977</span></span></dd><dt>Script</dt><dd><div class="scr"><code>wordpress-upgrade-check.sh</code> (<a href="../../man/psf-wordpress-upgrade-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/web-apps/wordpress-upgrade/wordpress-upgrade-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>rules</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/web-apps/wordpress-upgrade/wordpress-upgrade-check.sh check</code></pre></div></dd><dt>Related</dt><dd><a href="../wordpress/index.html">WordPress core and plugins</a>, <a href="../wordpress-pt/index.html">WordPress path traversal</a></dd></dl></aside><p><a id="wordpress-upgrade-check"></a></p>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>WordPress upgrade window</h1><p class="lead">WordPress core upgrade-window remote code execution (<span class="nw">CVE-2026-119977</span>)</p><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">WordPress core 4.7.0 to 7.1.3: unauthenticated code execution while a core update runs, exploited in the wild</div></dd><dt>The fix</dt><dd>7.1.4 and the matching branch releases, listed below, all dated 28 October 2026</dd><dt>Severity</dt><dd>8.1 High (CVSS 3.1, the CVE Numbering Authority, Wordfence). The WordPress project rates it low</dd><dt>Exploited</dt><dd>Yes (CISA KEV, 3 November 2026). Wordfence recorded more than 18,500 requests for staged installer paths in the first 21 hours</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-119977</span></span></dd><dt>Script</dt><dd><div class="scr"><code>wordpress-upgrade-check.sh</code> (<a href="../../man/psf-wordpress-upgrade-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/web-apps/wordpress-upgrade/wordpress-upgrade-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>rules</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/web-apps/wordpress-upgrade/wordpress-upgrade-check.sh check</code></pre></div></dd><dt>Related</dt><dd><a href="../wordpress/index.html">WordPress core and plugins</a>, <a href="../wordpress-pt/index.html">WordPress path traversal</a></dd></dl></aside><p><a id="wordpress-upgrade-check"></a></p>
 <h2 id="wordpress-upgrade-window-check">WordPress upgrade-window check</h2>
 <p><span class="nw">CVE-2026-119977</span> is a race condition in the way WordPress applies a core update (CWE-367). While a full-package update runs, the new release is unpacked into a folder under <code>wp-content/upgrade/</code>, and on most servers that folder can be reached over HTTP. The unpacked copy is a second WordPress with its own <code>setup-config.php</code> installer. It cannot see the live <code>wp-config.php</code>, so it offers to set itself up, and anyone on the network can finish that setup during the update. The updater then copies the <code>wp-config.php</code> that was just written over the live one. The site now connects to the attacker's database, the attacker creates the first administrator, and uploading a plugin runs PHP as the web server user. WordPress 7.1.4 fixed it on 28 October 2026, and CISA added it to its Known Exploited Vulnerabilities catalog on 3 November 2026.</p>
 <div class="table-wrap" tabindex="0"><table>

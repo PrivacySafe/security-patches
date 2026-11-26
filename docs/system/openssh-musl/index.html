@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-root="../../">
+<html lang="en" data-root="../../" data-scheme="dark">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>OpenSSH: password authentication bypass on musl Linux without PAM | PrivacySafe Security Patches</title><meta name="description" content="sshd linked against musl (Alpine, OpenWrt, buildroot, Yocto) without PAM in effect: a password over 256 bytes matches any account with no password set">
 <link rel="jslicense" href="../../weblabels.html"><link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
@@ -44,29 +44,29 @@ document.documentElement.className+=" js"
 <li><a href="../../about.html">About and support</a></li>
 </ul>
 <details class="grp" open><summary>Newest: 2 to 25 November 2026</summary><ul>
-<li><a href="../../web-apps/drupal/index.html">25 Oct: Drupal</a></li>
-<li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
-<li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
-<li><a href="../../web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
-<li><a href="../../runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
-<li><a href="../pam-mysql/index.html">23 Oct: pam-mysql</a></li>
-<li><a href="../../threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
-<li><a href="../../developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
-<li><a href="../../developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
-<li><a href="../../web-apps/apache-roller/index.html">22 Oct: Apache Roller XML-RPC deserialization</a></li>
-<li><a href="../ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
-<li><a href="../../web-apps/etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
-<li><a href="../linux-kernel/index.html">20 Oct: Linux kernel</a></li>
-<li><a href="../../servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
-<li><a href="../../servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
-<li><a href="../../runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
-<li><a href="../../servers/nginx/index.html">18 Oct: nginx</a></li>
-<li><a href="../../developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
-<li><a href="index.html" aria-current="page">5 Oct: OpenSSH musl password bypass</a></li>
-<li><a href="../../web-apps/wordpress-upgrade/index.html">4 Oct: WordPress upgrade window</a></li>
-<li><a href="../apt/index.html">4 Oct: APT</a></li>
-<li><a href="../pki/index.html">2 Oct: eMudhra CA compromise</a></li>
-<li><a href="../../web-apps/btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../../web-apps/drupal/index.html">25 Nov: Drupal</a></li>
+<li><a href="../../servers/vmware/index.html">23 Nov: VMware vCenter</a></li>
+<li><a href="../../servers/n-central/index.html">23 Nov: N-central and Apache Axis</a></li>
+<li><a href="../../web-apps/aspnet/index.html">23 Nov: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../../runtimes/java/index.html">23 Nov: Java4Shell (OpenJDK)</a></li>
+<li><a href="../pam-mysql/index.html">23 Nov: pam-mysql</a></li>
+<li><a href="../../threats/agentic-attacks/index.html">23 Nov: AI attack frameworks</a></li>
+<li><a href="../../developer/iterm2/index.html">23 Nov: iTerm2 (macOS)</a></li>
+<li><a href="../../developer/binary-parser/index.html">23 Nov: binary-parser</a></li>
+<li><a href="../../web-apps/apache-roller/index.html">22 Nov: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../ghostscript/index.html">22 Nov: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../../web-apps/etherpad/index.html">20 Nov: Etherpad static path traversal</a></li>
+<li><a href="../linux-kernel/index.html">20 Nov: Linux kernel</a></li>
+<li><a href="../../servers/apache/index.html">19 Nov: Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/mysql/index.html">19 Nov: MySQL client programs</a></li>
+<li><a href="../../runtimes/php/index.html">19 Nov: PHP2Shell</a></li>
+<li><a href="../../servers/nginx/index.html">18 Nov: nginx</a></li>
+<li><a href="../../developer/optimizely/index.html">17 Nov: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="index.html" aria-current="page">5 Nov: OpenSSH musl password bypass</a></li>
+<li><a href="../../web-apps/wordpress-upgrade/index.html">4 Nov: WordPress upgrade window</a></li>
+<li><a href="../apt/index.html">4 Nov: APT</a></li>
+<li><a href="../pki/index.html">2 Nov: eMudhra CA compromise</a></li>
+<li><a href="../../web-apps/btcpayserver/index.html">2 Nov: BTCPay Server</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
 <li><a href="../../servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
@@ -151,7 +151,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>OpenSSH musl password bypass</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../../tools.html#operating-system-and-libraries">Operating system and libraries</a></p><h1>OpenSSH: password authentication bypass on musl Linux without PAM</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">sshd linked against musl (Alpine, OpenWrt, buildroot, Yocto) without PAM in effect: a password over 256 bytes matches any account with no password set</div></dd><dt>The fix</dt><dd>OpenSSH 10.6p2 (5 November 2026); Alpine has backported it to every release still receiving updates and several that no longer do (table below)</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-123158</span></span></dd><dt>Script</dt><dd><div class="scr"><code>openssh-musl-check.sh</code> (<a href="../../man/psf-openssh-musl-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/openssh-musl/openssh-musl-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/openssh-musl/openssh-musl-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="openssh-musl-password-bypass"></a></p>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#operating-system-and-libraries">Operating system and libraries</a></p><h1>OpenSSH musl password bypass</h1><p class="lead">OpenSSH: password authentication bypass on musl Linux without PAM</p><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">sshd linked against musl (Alpine, OpenWrt, buildroot, Yocto) without PAM in effect: a password over 256 bytes matches any account with no password set</div></dd><dt>The fix</dt><dd>OpenSSH 10.6p2 (5 November 2026); Alpine has backported it to every release still receiving updates and several that no longer do (table below)</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-123158</span></span></dd><dt>Script</dt><dd><div class="scr"><code>openssh-musl-check.sh</code> (<a href="../../man/psf-openssh-musl-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/openssh-musl/openssh-musl-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/openssh-musl/openssh-musl-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="openssh-musl-password-bypass"></a></p>
 <h2 id="openssh-password-authentication-bypass-on-musl-linux-without-pam">OpenSSH password authentication bypass on musl Linux without PAM</h2>
 <p>On 5 November 2026, OpenSSH released 10.6p2 with an emergency fix for sshd on Linux systems that use musl libc (Alpine Linux, OpenWrt, buildroot, Yocto, and many container base images) without PAM. When sshd checks a password itself, it hashes the attempt with <code>crypt()</code> and compares the result to the account's stored field in <code>/etc/shadow</code>. musl's <code>crypt()</code> returns the literal string <code>*</code> as its error indicator for a password over 256 bytes, and <code>*</code> is also the stored field of every account that has no password set. A password between 257 and 1024 bytes therefore matches, and the login succeeds, for any account whose shadow field is <code>*</code>, as long as some other local account has a real password hash for sshd to borrow a salt from (sshd borrows a real salt so that an unknown user takes as long to reject as a known one, a long-standing defense against username probing by timing). The 256/257 byte boundary and the exact <code>*</code> return hold on a real musl build for this release, with both <code>$5$</code> and <code>$6$</code> salts.</p>
 <p>This is <strong><span class="nw">CVE-2026-123158</span></strong>, nicknamed &quot;sshole&quot; by its finder; CVSS 3.1 8.1 (High). CISA added it to the Known Exploited Vulnerabilities catalog on 9 November 2026, with multiple independent reports describing exploitation attempts within hours of disclosure, including one claim of a successful root compromise on an Alpine honeypot by chasing the passwordless <code>doas</code> path described below. This script was written the same week the bug was reported and before the CVE number was assigned; the detection and mitigation logic is unchanged by that, since it was always built around the underlying mechanism rather than a version string tied to the CVE.</p>

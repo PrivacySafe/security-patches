@@ -2,7 +2,7 @@
 
 The scripts in this collection print a report for a person. For monitoring, a watchdog, a ticket system or a language model, they can also write **JSON Lines**: one record per line, every record self-describing. `psf-report.py` turns those records, from one run or hundreds, from one host or many, into a summary, a Markdown report, an HTML page or a PDF.
 
-**Status:** a preview. Six scripts have it in this release: [magento-check.sh](../web-apps/magento/README.md), [nginx-oct2026-check.sh](../servers/nginx/README.md), [expat-check.sh](../system/expat/README.md), [agentic-attack-check.sh](../threats/agentic-attacks/README.md), [linux-kernel-noisytcp-check.sh](../system/linux-kernel/README.md#linux-kernel-noisytcp-check) and [drupal-installer-check.sh](../web-apps/drupal/README.md#drupal-installer-check). The rest follow; a script without it rejects `--output` as an unknown option, so nothing breaks silently. The format is versioned (`"schema": 1`): a later change that could break a reader gets a new number.
+**Status:** every check writes records. All 83 bash tools carry the block: `psf-run` runs 77 of them on its own, and the other 6 need something a nightly run cannot give (a site's address, the names of servers or modules, or macOS), so `psf-run show-config` lists them, with the reason, to run by hand. Two scripts are outside it: `php2shell-watch.sh` follows logs live and never ends in a verdict, and the two PowerShell tools for Windows do not write records yet.
 
 | File | What it is |
 |---|---|
@@ -17,7 +17,10 @@ The scripts in this collection print a report for a person. For monitoring, a wa
 
 ## Quick start
 
+An example, with two of the tools that write records (Magento and Expat) run from a checkout of the repository. The file names `magento.jsonl`, `expat.jsonl` and `report.*` are only examples: choose your own, and run the tools that fit your host.
+
 ```bash
+# example: run two checks, keeping their records
 sudo web-apps/magento/magento-check.sh check --output jsonl > magento.jsonl
 sudo system/expat/expat-check.sh check --output jsonl > expat.jsonl
 python3 automation/psf-report.py magento.jsonl expat.jsonl                     # a short plain-text summary
@@ -26,6 +29,7 @@ python3 automation/psf-report.py --format md   --out report.md   *.jsonl        
 python3 automation/psf-report.py --format html --out report.html *.jsonl        # one self-contained web page
 python3 automation/psf-report.py --format pdf  --out report.pdf  .              # a PDF of every *.jsonl here
 python3 automation/psf-report.py --fail-on crit *.jsonl                          # exit 1 on a critical finding
+python3 automation/psf-report.py --format ecs --out records.ecs.ndjson *.jsonl  # Elastic Common Schema, for a log platform
 ```
 
 `PSF_OUTPUT=jsonl` in the environment does the same as `--output jsonl`. Without either, a script prints exactly what it always printed.
@@ -48,8 +52,8 @@ Every record carries `schema` (1), `seq` (1, 2, 3 and on, in output order), `typ
 `result` in the verdict is `clean` (exit 0), `findings` (exit 1) or `undecided` (exit 2: something could not be read or decided, or the command was refused). `applicable` is `false` when the script found nothing on the host to check, `true` when it judged something, and `null` when it cannot tell. `counts` holds the number of events at each level and of text lines.
 
 ```json
-{"schema":1,"seq":7,"type":"event","run":"web1-magento-check-20261124T221701Z-4711","tool":"magento-check","version":"4.1.0","host":"web1","command":"check","ts":"2026-11-24T22:17:01Z","level":"crit","msg":"1 file(s) in pub/media/custom_options/ are PHP or carry PHP code: treat the store as compromised and run hunt","cve":[],"kind":"compromise","code":"MAGENTO_UPLOAD_PHP","path":"/var/www/shop","fix":"https://privacysafe.app/docs/security-patches/web-apps/magento/"}
-{"schema":1,"seq":22,"type":"verdict","run":"web1-magento-check-20261124T221701Z-4711","tool":"magento-check","version":"4.1.0","host":"web1","command":"check","ts":"2026-11-24T22:17:01Z","msg":"findings","cve":[],"result":"findings","exit":1,"applicable":true,"duration_s":0.16,"counts":{"crit":2,"warn":5,"ok":0,"info":4,"error":0,"text":6}}
+{"schema":1,"seq":7,"type":"event","run":"web1-magento-check-20261124T221701Z-4711","tool":"magento-check","version":"4.1.0","host":"web1","command":"check","ts":"2026-11-24T22:17:01Z","ts_ms":"2026-11-24T22:17:01.412Z","level":"crit","msg":"1 file(s) in pub/media/custom_options/ are PHP or carry PHP code: treat the store as compromised and run hunt","cve":[],"kind":"compromise","code":"MAGENTO_UPLOAD_PHP","path":"/var/www/shop","fix":"https://privacysafe.app/docs/security-patches/web-apps/magento/"}
+{"schema":1,"seq":22,"type":"verdict","run":"web1-magento-check-20261124T221701Z-4711","tool":"magento-check","version":"4.1.0","host":"web1","command":"check","ts":"2026-11-24T22:17:01Z","ts_ms":"2026-11-24T22:17:01.412Z","msg":"findings","cve":[],"result":"findings","exit":1,"applicable":true,"duration_s":0.16,"counts":{"crit":2,"warn":5,"ok":0,"info":4,"error":0,"text":6}}
 ```
 
 A reader should ignore fields it does not know and treat a missing `kind`, `code` or `path` as unknown.
@@ -68,7 +72,7 @@ The records are meant to sit well in a security logging program. They follow, cl
 |---|---|
 | A structured, consistent format | One JSON object per line, the same fields from every tool, a versioned schema |
 | Each record says what happened, when, where, who and with what outcome (AU-3) | `type`, `level`, `msg`, `code` and `kind`: what; `ts`: when; `host`, `tool`, `path`: where; `euid` in the start record: who ran it; `result`, `exit` and `counts` in the verdict: the outcome |
-| Time stamps in UTC from a synchronized clock (AU-8) | `ts` is UTC in ISO 8601. The clock is the host's: keep NTP or chrony running |
+| Time stamps in UTC from a synchronized clock (AU-8) | `ts` (to the second) and `ts_ms` (to the millisecond) are UTC in ISO 8601. The clock is the host's: keep NTP or chrony running |
 | A unique identifier per event, for correlation and deduplication | `run` and `seq` |
 | Logging that does not itself weaken the host | Records go to standard output; nothing is written outside a private temporary file that is removed before output. `PSF_READ_ONLY=1` keeps scheduled runs to reading |
 | No secrets in logs (AU-3(3) and privacy) | The tools are written not to print credentials or the contents of files they read, beyond the evidence a finding needs. Records can still hold paths, account names, addresses and quoted log lines: restrict who reads them |
@@ -77,10 +81,53 @@ What stays yours, as the operator of the logging platform: collecting the record
 
 Where the records stop short, on purpose or for now:
 
-- `ts` is to the second, not the millisecond the joint guide prefers where a source supports it.
+- Every record carries its time three ways, from one reading of the clock (see [Times](#times)). Records from earlier releases have `ts` alone, and every reader takes them.
 - Records are written when a command ends, not streamed as it runs.
 - Records carry no signature or hash chain; integrity is the job of the pipeline that stores them.
-- The field names are this format's own, not Elastic Common Schema or OCSF. A suggested mapping to ECS: `ts` to `@timestamp`, `host` to `host.name`, `tool` to `event.provider`, `command` to `event.action`, `code` to `event.code`, `seq` to `event.sequence`, `level` to `log.level`, `msg` to `message`, `cve` to `vulnerability.id`, `path` to `file.path`.
+- The field names are this format's own, not Elastic Common Schema or OCSF. To get ECS names, use `psf-report --format ecs`, or add `ecs` to `FORMATS` in `psf.conf` so `psf-run` writes `records.ecs.ndjson` beside each day's records. The mapping: `ts` to `@timestamp`, `host` to `host.name`, `tool` to `event.provider`, `command` to `event.action`, `code` to `event.code`, `seq` to `event.sequence`, `level` to `log.level`, `msg` to `message`, `cve` to `vulnerability.id`, `path` to `file.path`, and `fix` to `event.reference`; each document also gets `event.id` (the run and its sequence number), `event.module`, `event.dataset` (the record type) and `ecs.version` (8.11.0), and every field ECS has no place for is kept under `psf`. The native records stay the source: ECS is written from them.
+
+## Times
+
+Every record carries the same instant three ways, so whatever reads it can take the form it handles best:
+
+| Field | Example | Use it for |
+|---|---|---|
+| `ts` | `2026-11-26T06:00:00Z` | Anything written for earlier releases: the same field and form records always had |
+| `ts_ms` | `2026-11-26T06:00:00.412Z` | Ordering and correlating events to the millisecond, as the joint logging guide prefers |
+| `ts_epoch_ms` | `1795672800412` | Tools that want a number: milliseconds since 1970, an integer |
+
+`ts` and `ts_ms` are RFC 3339 (and so ISO 8601) in UTC, with `Z`. All three come from the host's clock, so keep NTP or chrony running. On a shell without bash 5's clock, the milliseconds are `000`. `psf-report`, `psf-status` and `psf-run` read times leniently: an offset such as `+00:00` instead of `Z`, any number of fraction digits, or epoch seconds or milliseconds, so records that another tool has passed along still sort and count correctly. The ECS output puts `ts_ms` in `@timestamp`. Day folders and the names of a same-day rerun's records file use the UTC date and time.
+
+```bash
+# examples: the newest record's time as a Unix timestamp, and every critical finding after a given moment
+jq -s 'max_by(.ts_epoch_ms) | .ts_epoch_ms / 1000 | floor' records.jsonl
+jq -c 'select(.level == "crit" and .ts_epoch_ms >= 1795672800000)' records.jsonl
+```
+
+In Elasticsearch or OpenSearch, map `ts_epoch_ms` as a `date` with the format `epoch_millis`, or use the ECS output, whose `@timestamp` needs no mapping.
+
+## Accessibility
+
+The HTML report meets WCAG 2.2 AA in light and dark mode and reflows to a phone's width. The PDF report is tagged, so a screen reader reads its headings, paragraphs, tables and links in order, and skips the decoration. In a terminal, set `NO_COLOR=1` (see no-color.org) and no tool, nor `psf-status` or `psf-logs`, prints color codes.
+
+## Accepted risks
+
+Some findings are known and accepted: a CVE that cannot be reached on this host, or a folder kept on purpose. Put them in a list, with a reason, and point `ACCEPT_FILE` (or `psf-report --accept FILE`) at it:
+
+```yaml
+# an example accepted-risk list: the CVE, path and reasons are examples
+ignore:
+  cves:
+    CVE-2026-12345:
+      reason: The module is disabled on these hosts; reviewed 2026-11-26
+exclude:
+  paths:
+    - /srv/archive/old-shop
+```
+
+A critical finding or warning is accepted when every CVE it names is under `ignore: cves:`, or when its path contains one of the `exclude: paths:` entries (plain substring matching, no wildcards). An accepted finding is still listed, in an Accepted section of every report with its reason and the list it came from; it is not counted as needing attention, does not raise an alert, and does not make `--fail-on` fail. A run whose every finding is accepted shows the result `accepted`. A finding of kind `compromise`, a sign of an attack, is never accepted, whatever the list says.
+
+Other top-level sections in the file are not read, so a repository's `.aikido` file, whose `ignore` and `exclude` sections use this same shape, can serve as the list as it is. Like the settings, the list decides what stops raising alerts, so as root it must be root's and writable by no other account. A list that cannot be read never stops a run: `psf-run` checks everything, accepts nothing, and reports the problem.
 
 ## Read-only mode
 
@@ -92,11 +139,16 @@ Where the records stop short, on purpose or for now:
 |---|---|
 | `summary` (default) | A terminal, a mail, a chat message: the status, one line per run, every finding that needs attention |
 | `text` | The whole report as plain text, wrapped at 100 columns: for a log folder, `less`, `grep` or a mail body |
+| `ecs` | The records with Elastic Common Schema field names, one JSON document per line, for Elasticsearch, OpenSearch or another log platform that reads ECS |
 | `md` | A ticket, a wiki, or the context for a language model: status, the run table, findings with their CVE, code, path and link, a CVE index and, unless `--no-details`, every event |
 | `html` | One self-contained page, light and dark, that prints cleanly |
 | `pdf` | A printable report (`--paper letter` or `a4`) made with Python alone: no fonts, libraries or programs are needed on the host |
 
 [![The HTML report: the PrivacySafe logo on a dark band, a red Status: Signs of compromise label, the run table and the first findings](examples/screenshots/html-report-light.png)](examples/screenshots/html-report-light.png)
+
+The same page follows the reader's light or dark setting:
+
+[![The same HTML report in dark mode: the dark band, the red Status: Signs of compromise label, the run table and the findings on a dark background, with the links in a lighter orange](examples/screenshots/html-report-dark.png)](examples/screenshots/html-report-dark.png)
 
 [![The first page of the PDF report: the PrivacySafe logo, the status, the run table and the findings with colored bars and links](examples/screenshots/pdf-report-page-1.png)](examples/screenshots/pdf-report-page-1.png)
 
@@ -144,7 +196,7 @@ Without `jq`, `grep '"level":"crit"' *.jsonl` finds the same lines.
 
 ### A daily check: psf-run
 
-`psf-run` runs the checks, keeps their records and the reports you choose, removes logs past their retention, and alerts when something needs attention. Run it every night from `/etc/cron.d/psf-security-patches`:
+`psf-run` runs the checks, keeps their records and the reports you choose, removes logs past their retention, and alerts when something needs attention. Run it every night (this example at 03:15; pick a quiet time on your host) from `/etc/cron.d/psf-security-patches`:
 
 ```
 15 3 * * * root /usr/bin/psf-run --quiet
@@ -152,7 +204,7 @@ Without `jq`, `grep '"level":"crit"' *.jsonl` finds the same lines.
 
 With no configuration it runs every tool that writes records, keeps 90 days in `/var/log/psf-security-patches`, writes `summary.txt`, `report.txt` and `report.pdf` beside the records, and prints an alert (which cron mails to root) when a check finds something critical or a tool fails. On an ordinary night `--quiet` prints nothing. Each day gets its own folder; a second run the same day adds new records files, and the reports, `psf-status` and `psf-logs` count only the newest run of each tool on each host.
 
-[![psf-run in a terminal: psf-run show-config lists every setting with the file and line it came from and the six tools a run would use, and sudo psf-run --dry-run shows the retention, the new day folder, each tool with --output jsonl, the reports and the alert command](examples/screenshots/psf-run.png)](examples/screenshots/psf-run.png)
+[![psf-run in a terminal: psf-run show-config lists every setting with the file and line it came from and the five tools of its TOOLS list, and sudo psf-run --dry-run shows the retention, the new day folder, each tool with --output jsonl, the reports and the alert command](examples/screenshots/psf-run.png)](examples/screenshots/psf-run.png)
 
 ```bash
 sudo psf-run --dry-run          # what a run would do, changing nothing
@@ -172,11 +224,12 @@ sudo install -D -m 0644 /opt/psf-security-patches/automation/psf.conf.example /e
 |---|---|---|
 | `LOG_DIR` | `/var/log/psf-security-patches` | Where the logs go: a real folder (not a link) that only root can write |
 | `KEEP_DAYS` | `90` | Days of logs to keep; older days are removed at the start of each run |
-| `FORMATS` | `summary text pdf` | Reports beside the records: `summary`, `text`, `md`, `html`, `pdf`; the `.jsonl` records are always kept |
-| `TOOLS` | `auto` | The checks: every tool that writes records, or a list such as `web-apps/magento/magento-check.sh threats/agentic-attacks/agentic-attack-check.sh:hunt` |
+| `FORMATS` | `summary text pdf` | Reports beside the records: `summary`, `text`, `md`, `html`, `pdf`, and `ecs` (the records with Elastic Common Schema names); the `.jsonl` records are always kept |
+| `TOOLS` | `auto` | The checks: every tool that writes records, or a list such as `web-apps/magento/magento-check.sh threats/agentic-attacks/agentic-attack-check.sh:hunt`. With `auto`, a tool can say how to run it in a `# psf-run:` line near its top: a command other than `check` (`# psf-run: audit`), `none` for no command, or `manual (reason)` to stay out of the nightly run because it needs input; `show-config` lists those with their reason |
 | `ALERT_ON` | `crit` | `crit`, `warn` or `never`; a tool that fails is always reported |
 | `ALERT_COMMAND` | none | A command that also gets the alert on its input, run without a shell: `mail -s "Security check on %h: %s" root` (`%h` host, `%s` status) |
 | `TIMEOUT` | `900` | Seconds one tool may run before it is stopped and reported |
+| `ACCEPT_FILE` | (none) | An accepted-risk list (see [Accepted risks](#accepted-risks)): its findings are listed as accepted, with their reason, and raise no alert |
 | `ENV` | none | Settings for the tools, such as `SCAN_CONTAINERS=0 HUNT_DAYS=14` |
 
 The file is read, never run: one `NAME = value` per line, and a misspelled or repeated name is an error rather than a setting quietly ignored. `PSF_LOG_DIR` overrides `LOG_DIR` for one command, and `PSF_CONFIG` (or `psf-run --config FILE`) points at another file. To write the logs somewhere else, set `LOG_DIR` once and every command follows.
@@ -261,7 +314,7 @@ It removes only what `psf-run` writes: day folders named `YYYY-MM-DD` that hold 
 
 ### Several hosts
 
-Each host keeps its own folder. Copy them to one machine and render one report over all of them:
+Each host keeps its own folder. Copy them to one machine and render one report over all of them. In this example the hosts are named `web1` and `db1`, the copies go to `/srv/psf`, and the day is 25 November 2026; use your own names, folder and date:
 
 ```bash
 rsync -a web1:/var/log/psf-security-patches/ /srv/psf/web1/
@@ -292,7 +345,7 @@ psf_not_applicable "no Magento install found on the host or in running container
 
 In jsonl mode the script's output goes to a private temporary file (made with `mktemp`, mode 0600) that is opened and removed before the records are written, so nothing is left behind even if the reader stops early. The script's own `EXIT` traps still run. Nothing is executed again and no other program is started.
 
-To add the block to a script, or refresh it after `output-block.bash` changes:
+To add the block to a script, or refresh it after `output-block.bash` changes (the script named here is an example of one that does not have the block yet):
 
 ```bash
 python3 automation/psf-output.py --write web-apps/drupal/drupal-core-check.sh

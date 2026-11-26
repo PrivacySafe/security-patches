@@ -304,6 +304,10 @@ With `--output jsonl` it writes structured records for [automation](../../automa
 
 A container shows the host's kernel, so run the script on the host.
 
+What `check` shows, here on an example Debian 12 host with an affected kernel:
+
+[![sudo ./linux-kernel-noisytcp-check.sh check in a terminal: a Debian 12 kernel, upstream 6.1.191, is marked CRIT for NoisyTCP, the sibling flaw does not apply on x86, the exposure lines show SYN cookies on and four receive queues, and the verdict gives the update command](../../automation/examples/screenshots/check-noisytcp.png)](../../automation/examples/screenshots/check-noisytcp.png)
+
 ### Exposure information
 
 After the verdict, `check` reports what decides whether the race can be reached here: `net.ipv4.tcp_syncookies`, the receive queues of each interface and whether RPS or RFS spreads packets across CPUs, the TCP listeners that are not on loopback, the processor, and how many other network namespaces exist. That is information to weigh, not a verdict: a kernel below its fixed release is affected whatever it shows. Which interface faces the attacker, and which CPUs its queues are bound to, the script cannot know. Each network namespace has its own `tcp_syncookies`, so a container's value can differ from the host's, and a crash in any container takes the whole host down.
@@ -565,26 +569,26 @@ Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-25) 
 
 The columns are CVE-2026-NNNNN. The table shows, for each stream, the advisories that name each CVE (the number is the part of RHSA-2026:NNNNN after the colon; `rt` is `kernel-rt`, `kp` is a `kpatch-patch` live patch). A blank cell means no advisory in the list, not that the stream is unaffected. Each advisory is at `https://access.redhat.com/errata/RHSA-2026:NNNNN`.
 
-| Stream | 53266 | 68121 | 74469 | 80844 | 81000 | 98432 | 99288 |
-|---|---|---|---|---|---|---|---|
-| RHEL 6 | 73732 | 71649 |  | 71649 |  |  |  |
-| RHEL 7 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 |  |  |
-| RHEL 8 |  |  |  |  |  | 95754 |  |
-| RHEL 8.4 | 71565 | 71565 | 71565 | 71565 | 71565 | 94623 |  |
-| RHEL 8.6 | 70797 | 71592 | 71592 | 71592 | 71592 | 94996 |  |
-| RHEL 8.8 | 71325, 92063 kp | 71594, 92063 kp | 71594 | 71594, 92063 kp | 71594, 95601 kp | 100524 kp, 94303 | 102709 |
-| RHEL 8.10 | 39082 rt, 39083, 92062 kp | 71329, 71330 rt, 92062 kp | 71213 | 71016 rt, 71213, 92062 kp | 71016 rt, 71213, 95587 kp | 100525 kp, 93414, 93415 rt | 102218, 102219 rt |
-| RHEL 9 |  |  |  |  |  | 95754 |  |
-| RHEL 9.2 | 71601, 71606 rt, 92629 kp | 71601, 71606 rt, 92629 kp | 71601, 71606 rt | 71601, 71606 rt, 92629 kp | 71601, 71606 rt, 95600 kp | 100521 kp, 94477, 94558 rt |  |
-| RHEL 9.4 | 71569, 91639 kp | 71569, 91639 kp | 71569 | 71569, 91639 kp | 71569, 96090 kp | 100523 kp, 94109 |  |
-| RHEL 9.6 | 71327, 91638 kp | 71631, 91638 kp | 71631 | 71631, 91638 kp | 71631, 96091 kp | 100693 kp, 94438 |  |
-| RHEL 9.8 | 36645, 91650 kp | 71700, 91650 kp | 71232 | 71232, 91650 kp | 71232, 96093 kp | 100522 kp, 93412 |  |
-| RHEL 9.9 |  |  |  |  |  |  | 102167 |
-| RHEL 10.0 | 71326 | 71599 | 71599 | 71599 | 71599 | 94508 |  |
-| RHEL 10.2 | 71233, 92061 kp | 71602, 92061 kp | 71233 | 71233, 92061 kp | 71233, 99722 kp | 100694 kp, 93413 |  |
-| RHEL 10.3 |  |  |  |  | 98608 | 98608 | 102168 |
-| OpenShift (RHCOS) |  | 11 advisories | 10 advisories | 12 advisories | 11 advisories | 12 advisories |  |
-| RHEL 10 (el10nv) | 72059 | 73788 | 73788 | 74974 | 73788 | 93775 |  |
+| Stream | 53266 | 64564 | 68121 | 74469 | 80844 | 81000 | 98432 | 99288 |
+|---|---|---|---|---|---|---|---|---|
+| RHEL 6 | 73732 |  | 71649 |  | 71649 |  |  |  |
+| RHEL 7 | 71657 rt, 71687 | 70290, 70308 rt | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 | 71657 rt, 71687 |  |  |
+| RHEL 8 |  |  |  |  |  |  | 95754 |  |
+| RHEL 8.4 | 71565 | 69874 | 71565 | 71565 | 71565 | 71565 | 94623 |  |
+| RHEL 8.6 | 70797 | 69906 | 71592 | 71592 | 71592 | 71592 | 94996 |  |
+| RHEL 8.8 | 71325, 92063 kp | 69837 | 71594, 92063 kp | 71594 | 71594, 92063 kp | 71594, 95601 kp | 100524 kp, 94303 | 102709 |
+| RHEL 8.10 | 39082 rt, 39083, 92062 kp | 71016 rt, 71213 | 71329, 71330 rt, 92062 kp | 71213 | 71016 rt, 71213, 92062 kp | 71016 rt, 71213, 95587 kp | 100525 kp, 93414, 93415 rt | 102218, 102219 rt |
+| RHEL 9 |  |  |  |  |  |  | 95754 |  |
+| RHEL 9.2 | 71601, 71606 rt, 92629 kp | 70482, 70483 rt | 71601, 71606 rt, 92629 kp | 71601, 71606 rt | 71601, 71606 rt, 92629 kp | 71601, 71606 rt, 95600 kp | 100521 kp, 94477, 94558 rt |  |
+| RHEL 9.4 | 71569, 91639 kp | 69908 | 71569, 91639 kp | 71569 | 71569, 91639 kp | 71569, 96090 kp | 100523 kp, 94109 |  |
+| RHEL 9.6 | 71327, 91638 kp | 70484 | 71631, 91638 kp | 71631 | 71631, 91638 kp | 71631, 96091 kp | 100693 kp, 94438 |  |
+| RHEL 9.8 | 36645, 91650 kp | 71232 | 71700, 91650 kp | 71232 | 71232, 91650 kp | 71232, 96093 kp | 100522 kp, 93412 |  |
+| RHEL 9.9 |  |  |  |  |  |  |  | 102167 |
+| RHEL 10.0 | 71326 | 69089 | 71599 | 71599 | 71599 | 71599 | 94508 |  |
+| RHEL 10.2 | 71233, 92061 kp | 71233 | 71602, 92061 kp | 71233 | 71233, 92061 kp | 71233, 99722 kp | 100694 kp, 93413 |  |
+| RHEL 10.3 |  |  |  |  |  | 98608 | 98608 | 102168 |
+| OpenShift (RHCOS) |  | 11 advisories | 11 advisories | 10 advisories | 12 advisories | 11 advisories | 12 advisories |  |
+| RHEL 10 (el10nv) | 72059 |  | 73788 | 73788 | 74974 | 73788 | 93775 |  |
 
 The fixed kernels for CVE-2026-98432 (IPv4 TCP use-after-free), newest first. A kernel is fixed if its release is this one or a later one in the same stream:
 

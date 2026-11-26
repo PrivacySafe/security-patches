@@ -34,8 +34,9 @@ SHOTS = os.path.join(EX, "screenshots")
 MANIFEST = os.path.join(SHOTS, "MANIFEST.txt")
 INPUTS = ["automation/examples/example-records.jsonl", "automation/examples/example-report.html",
           "automation/examples/example-report.pdf", "automation/psf-status.py", "automation/psf-report.py", "automation/psf-logs.py", "automation/psf-run.py",
-          "packaging/report-screenshots.py"]
-SHOT_FILES = ["psf-status.png", "psf-status-clean.png", "psf-logs.png", "psf-run.png", "psf-report-summary.png", "html-report-light.png",
+          "packaging/report-screenshots.py", "web-apps/drupal/drupal-installer-check.sh",
+          "system/linux-kernel/linux-kernel-noisytcp-check.sh"]
+SHOT_FILES = ["check-drupal-installer.png", "check-noisytcp.png", "psf-status.png", "psf-status-clean.png", "psf-logs.png", "psf-run.png", "psf-report-summary.png", "html-report-light.png",
               "html-report-dark.png", "pdf-report-page-1.png", "pdf-report-last-page.png"]
 NOW = "2026-11-25T08:10:00Z"
 LOGS = "/var/log/psf-security-patches"
@@ -84,7 +85,10 @@ def check():
 
 ANSI_CSS = {"1;31": "color:#ff6b5e;font-weight:700", "1;33": "color:#f5c542;font-weight:700",
             "1;35": "color:#d38cff;font-weight:700", "1;32": "color:#45c870;font-weight:700",
-            "2": "color:#8c8a84", "1": "font-weight:700"}
+            "2": "color:#8c8a84", "1": "font-weight:700",
+            # the normal-intensity colors the check scripts use (RED, GREEN, YELLOW, CYAN in their common helpers)
+            "0;31": "color:#ff6b5e", "0;32": "color:#45c870", "0;33": "color:#f5c542", "0;35": "color:#d38cff", "0;36": "color:#5fc7d8",
+            "31": "color:#ff6b5e", "32": "color:#45c870", "33": "color:#f5c542", "35": "color:#d38cff", "36": "color:#5fc7d8"}
 
 
 COLS = 120     # a common terminal width; psf-status trims its lines to it, as on a real terminal
@@ -196,7 +200,10 @@ def write():
         shutil.copytree(fake, same_len)
         cfg = os.path.join(t, "psf.conf")
         with open(cfg, "w", encoding="utf-8") as fc:
-            fc.write("LOG_DIR = %s\nKEEP_DAYS = 90\nFORMATS = summary text pdf\nALERT_COMMAND = mail -s \"Security check on %%h: %%s\" root\n" % same_len)
+            # a short TOOLS list, as an admin who picks the checks writes it: with auto, the screenshot would list all 77
+            fc.write("LOG_DIR = %s\nKEEP_DAYS = 90\nFORMATS = summary text pdf\nALERT_COMMAND = mail -s \"Security check on %%h: %%s\" root\n"
+                     "TOOLS = web-apps/drupal/drupal-installer-check.sh system/linux-kernel/linux-kernel-noisytcp-check.sh "
+                     "servers/nginx/nginx-oct2026-check.sh web-apps/magento/magento-check.sh threats/agentic-attacks/agentic-attack-check.sh\n" % same_len)
         renv = dict(env, PSF_CONFIG=cfg)
         os.symlink(os.path.join(ROOT, "automation", "psf-run.py"), os.path.join(bin_dir, "psf-run"))
         def shown(text):
@@ -205,6 +212,39 @@ def write():
         c2 = shown(run_in_terminal("psf-run --dry-run --now 2026-11-25", renv))
         pages["psf-run.png"] = terminal_html("psf-run show-config", c1, [("sudo psf-run --dry-run", c2)])
         shutil.rmtree(same)
+        # two of the checks themselves, as an admin runs them: stand-in sites and a stand-in host
+        def banner(text):
+            return re.sub(r" on \S+ at \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", " on web1 at 2026-11-25T08:10:00Z", text)
+        www = os.path.join(t, "drupal", "var", "www")
+        for name, ver, inst in (("shop", "11.4.12", True), ("news", "11.4.14", False)):
+            d = os.path.join(www, name)
+            os.makedirs(os.path.join(d, "core", "lib")); os.makedirs(os.path.join(d, "sites", "default"))
+            open(os.path.join(d, "core", "lib", "Drupal.php"), "w").write("<?php\nclass Drupal {\n  const VERSION = '%s';\n}\n" % ver)
+            if inst:
+                open(os.path.join(d, "core", "install.php"), "w").write("<?php\n")
+            open(os.path.join(d, "sites", "default", "settings.php"), "w").write("<?php\n")
+        denv = dict(env, DRUPAL_ROOTS=www, NGINX_CONF=os.path.join(t, "none"), APACHE_CONF=os.path.join(t, "none"))
+        out = run_in_terminal("bash %s check" % os.path.join(ROOT, "web-apps", "drupal", "drupal-installer-check.sh"), denv)
+        pages["check-drupal-installer.png"] = terminal_html("sudo ./drupal-installer-check.sh check",
+                                                            banner(out.replace(os.path.join(t, "drupal"), "")))
+        k = os.path.join(t, "kernel")
+        os.makedirs(os.path.join(k, "sys", "net", "ipv4")); os.makedirs(os.path.join(k, "sys", "net", "core"))
+        open(os.path.join(k, "sys", "net", "ipv4", "tcp_syncookies"), "w").write("1\n")
+        open(os.path.join(k, "sys", "net", "core", "rps_sock_flow_entries"), "w").write("0\n")
+        for q in range(4):
+            qd = os.path.join(k, "net", "eth0", "queues", "rx-%d" % q); os.makedirs(qd)
+            open(os.path.join(qd, "rps_cpus"), "w").write("00000000\n"); open(os.path.join(qd, "rps_flow_cnt"), "w").write("0\n")
+        open(os.path.join(k, "os-release"), "w").write("ID=debian\nVERSION_ID=\"12\"\n")
+        kenv = dict(env, KERNEL_RELEASE="6.1.0-40-amd64", KERNEL_VERSION_STRING="#1 SMP PREEMPT_DYNAMIC Debian 6.1.191-1 (2026-11-05)",
+                    KERNEL_ARCH="x86_64", KERNEL_PROC_SYS=os.path.join(k, "sys"), KERNEL_SYS_NET=os.path.join(k, "net"),
+                    OS_RELEASE_FILE=os.path.join(k, "os-release"), KERNEL_CHANGELOG="/dev/null", KERNEL_INSTALLED_RELEASES="none")
+        # the stand-in host's listeners, so the count describes the example rather than the machine taking the shot
+        ssb = os.path.join(bin_dir, "ss")
+        open(ssb, "w").write("#!/bin/sh\nprintf 'LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*\\nLISTEN 0 511 0.0.0.0:80 0.0.0.0:*\\n"
+                             "LISTEN 0 511 0.0.0.0:443 0.0.0.0:*\\nLISTEN 0 4096 127.0.0.1:3306 0.0.0.0:*\\n'\n")
+        os.chmod(ssb, 0o755)
+        out = run_in_terminal("/bin/bash %s check" % os.path.join(ROOT, "system", "linux-kernel", "linux-kernel-noisytcp-check.sh"), kenv)
+        pages["check-noisytcp.png"] = terminal_html("sudo ./linux-kernel-noisytcp-check.sh check", banner(out))
         out = run_in_terminal("psf-report %s/2026-11-25" % os.path.join(t, "logs", "var", "log", "psf-security-patches"),
                               dict(env, SOURCE_DATE_EPOCH=str(int(datetime.datetime.strptime(NOW, "%Y-%m-%dT%H:%M:%SZ").replace(
                                   tzinfo=datetime.timezone.utc).timestamp()))))

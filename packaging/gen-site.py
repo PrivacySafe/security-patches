@@ -267,7 +267,7 @@ def commands_of(t):
 def facts_of(text):
     """Key facts from the README's own summary table, only when the page has a single one."""
     found = {}; count = {}
-    for l in text.split("\n")[:90]:
+    for l in text.split("\n"):          # the whole README: a page with several tools has several summary tables
         if not l.startswith("|"): continue
         cells = [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", l.strip().strip("|"))]
         if len(cells) != 2: continue
@@ -377,7 +377,7 @@ def nav_html(cur_out):
     shown = set()
     for date, label, d, _ in newest:
         if d in tool_dirs and d not in shown:
-            shown.add(d); o.append(link(f"{date.split()[0]} Oct: {labels[d]}", tool_out(d)))
+            shown.add(d); o.append(link(f"{date.split()[0]} {date.split()[1][:3]}: {labels[d]}", tool_out(d)))   # "25 November" -> "25 Nov"
     o.append("</ul></details>")
     for i, (title, blurb, ds) in enumerate(CATEGORIES):
         is_open = " open" if cur_dir in ds else ""
@@ -419,7 +419,8 @@ def page_html_app(out, title, body, toc, desc, crumbs, footer_nav, wide, crumb):
             "author": {"@id": "https://privacysafe.app/#organization"}, "license": "https://creativecommons.org/publicdomain/zero/1.0/"}
     ld = [page, L.breadcrumb_ld(trail)]
     html_out = L.head(title=title if is_home else f"{title} | PrivacySafe Security Patches", description=d, canonical=url, kind="patches", page_name=title, ld=ld,
-                      alternates=[(BASE_URL + "feed.xml", "application/atom+xml", "PrivacySafe Security Patches: newest advisories")],
+                      alternates=[(BASE_URL + "feed.xml", "application/atom+xml", "PrivacySafe Security Patches: newest advisories"),
+                                  (BASE_URL + "changelog.xml", "application/rss+xml", "PrivacySafe Security Patches: changelog")],
                       keywords="Security Patches, CVE, vulnerability, GNU/Linux, server hardening, mitigation", full=is_home,
                       copyright_note="Security Patches software and documentation CC0 1.0 Universal. Site source AGPL-3.0-or-later.",
                       license_url="https://creativecommons.org/publicdomain/zero/1.0/")
@@ -470,7 +471,7 @@ def page_html_offline(out, title, body, toc, desc, crumbs, footer_nav, wide, cru
         toc_html = '<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul>%s</ul></aside>' % "".join(
             '<li class="l%d"><a href="#%s">%s</a></li>' % (lv, esc(i), esc(n)) for lv, n, i in toc)
     head_title = SITE if is_home else f"{title} | {SITE}"
-    head = (f'<!doctype html>\n<html lang="en" data-root="{root}">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+    head = (f'<!doctype html>\n<html lang="en" data-root="{root}" data-scheme="dark">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
             f'<meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">\n'
             f'<title>{esc(head_title)}</title><meta name="description" content="{esc(desc or SITE)}">\n'
             f'<link rel="jslicense" href="{root}weblabels.html"><link rel="icon" href="{root}assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="{root}assets/ps-base.css"><link rel="stylesheet" href="{root}assets/docs.css"><script>{JS_FLAG}</script></head>\n')
@@ -623,7 +624,7 @@ A hunt match tells you where to look. A clean hunt means none of the published i
 
 ## Output for automation
 
-Magento, the nginx October 2026 check, Expat, the agentic attack check and NoisyTCP can write JSON Lines instead of text: `--output jsonl`. Each run gives a start record, an event for each finding, and a verdict with the exit code, the counts and whether the tool found anything on the host to check. `PSF_READ_ONLY=1` refuses every change, so a scheduled run can only read. `automation/psf-report.py` turns the records of many runs and hosts into a short summary, a full plain-text report, Markdown, an HTML page or a PDF, with Python 3 alone. The records follow, closely rather than exactly, the joint guide *Best Practices for Event Logging and Threat Detection* (2024), the NIST SP 800-53 Rev. 5 Audit and Accountability controls and OMB Memorandum M-26-14: [Output for automation](automation/README.md) has the format, how it lines up with them and where it stops short. The other tools follow.
+Every check can write JSON Lines instead of text: `--output jsonl`. Each run gives a start record, an event for each finding, and a verdict with the exit code, the counts and whether the tool found anything on the host to check. `PSF_READ_ONLY=1` refuses every change, so a scheduled run can only read. `automation/psf-report.py` turns the records of many runs and hosts into a short summary, a full plain-text report, Markdown, an HTML page or a PDF, with Python 3 alone. The records follow, closely rather than exactly, the joint guide *Best Practices for Event Logging and Threat Detection* (2024), the NIST SP 800-53 Rev. 5 Audit and Accountability controls and OMB Memorandum M-26-14: [Output for automation](automation/README.md) has the format, how it lines up with them and where it stops short. The other tools follow.
 
 ## Settings
 
@@ -737,7 +738,9 @@ DOC_DESC = {  # one description for each policy page, so no two pages share one
 }
 for src, (out, title) in DOCS.items():
     h, toc = render_md(re.sub(r"^# .+\n", "", read(src), count=1))
-    add(out, title, f"<h1>{esc(title)}</h1>" + rewriter(src, out)(h), toc, desc=DOC_DESC.get(out, ""))
+    follow = (f'<p class="lead">Follow it as a feed: <a href="{esc(BASE_URL)}changelog.xml">{esc(BASE_URL)}changelog.xml</a> (RSS), one item for each day of changes.</p>'
+              if out == "changelog.html" else "")
+    add(out, title, f"<h1>{esc(title)}</h1>" + follow + rewriter(src, out)(h), toc, desc=DOC_DESC.get(out, ""))
 lic = "<h1>License and notice</h1>" + render_md(read("NOTICE"))[0] + '<h2 id="cc0-1-0-universal">CC0 1.0 Universal</h2><pre class="license">' + esc(read("LICENSE")) + "</pre>"
 add("license.html", "License and notice", lic, desc="The CC0 1.0 Universal license and the notice that cover PrivacySafe Security Patches.")
 
@@ -803,7 +806,7 @@ for i, d in enumerate(order_tools):
     nav += "</nav>"
     cat = CATEGORIES[cat_of[d]][0]
     desc = next((r["cells"][0] for r in rows if r["dir"] == d and r["cells"]), "")
-    add(out, tool_title[d] or labels[d], f'<p class="kicker-line"><a href="{posixpath.relpath("tools.html", d)}#{ghslug(cat)}">{esc(cat)}</a></p><h1>{esc(tool_title[d])}</h1>' + glance(d) + h,
+    add(out, tool_title[d] or labels[d], f'<p class="kicker-line"><a href="{posixpath.relpath("tools.html", d)}#{ghslug(cat)}">{esc(cat)}</a></p><h1>{esc(labels[d])}</h1>' + (f'<p class="lead">{esc(tool_title[d])}</p>' if tool_title[d] and tool_title[d] != labels[d] else "") + glance(d) + h,
         toc, kind="Tool", extra_heads=cves_of[d], footer_nav=nav, crumbs=[("Tools", "tools.html")], crumb=labels[d], desc=re.sub(r"`", "", desc))
 
 # ---- manual pages
@@ -865,6 +868,37 @@ if BASE_PATH and _404: _404 = _404.replace("<head>", f'<head><base href="{esc(BA
 if _404: write("404.html", _404)
 
 open(os.path.join(OUT, "assets", "search-index.js"), "w", encoding="utf-8").write("// @license " + LIC_CC0 + "\nwindow.PSF_INDEX=" + json.dumps(pages, ensure_ascii=False, separators=(",", ":")) + ";\n// @license-end\n")
+# the changelog as RSS 2.0, in every build (the repository's docs/ and privacysafe.app): one item for each dated section of CHANGELOG.md, carrying the section itself
+import email.utils, urllib.parse
+cl_page = BASE_URL + "changelog.html"
+def absolute(html):
+    def fix(m):
+        h = m.group(2)
+        if not re.match(r"^(https?:|mailto:)", h):
+            h = urllib.parse.urljoin(cl_page, h)
+        return m.group(1) + h + m.group(3)
+    return re.sub(r'((?:href|src)=")([^"]*)(")', fix, html)
+items = ""
+for iso, md in re.findall(r"^## (\d{4}-\d{2}-\d{2})\n(.*?)(?=^## \d{4}-\d{2}-\d{2}\n|\Z)", read("CHANGELOG.md"), re.S | re.M):
+    added = re.search(r"^### Added\n(.*?)(?=^### |\Z)", md, re.S | re.M)
+    names = list(dict.fromkeys(re.findall(r"^- \[([^\]]+)\]", added.group(1), re.M))) if added else []   # each name once
+    day = datetime.date.fromisoformat(iso)
+    title = day.strftime("%-d %B %Y") + (": " + ", ".join(names[:4]) + (f" and {len(names) - 4} more" if len(names) > 4 else "") if names else "")
+    body = absolute(rewriter("CHANGELOG.md", "changelog.html")(render_md(md)[0])).replace("]]>", "]]]]><![CDATA[>")
+    when = email.utils.format_datetime(datetime.datetime(day.year, day.month, day.day, tzinfo=datetime.timezone.utc))
+    items += (f'    <item>\n      <title>{esc(title)}</title>\n      <link>{esc(cl_page)}#{iso}</link>\n'
+              f'      <guid isPermaLink="true">{esc(cl_page)}#{iso}</guid>\n      <pubDate>{when}</pubDate>\n'
+              f'      <description><![CDATA[{body}]]></description>\n    </item>\n')
+built = email.utils.format_datetime(datetime.datetime.fromisoformat(DATE).replace(tzinfo=datetime.timezone.utc))
+open(os.path.join(OUT, "changelog.xml"), "w", encoding="utf-8").write(
+    '<?xml version="1.0" encoding="utf-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n  <channel>\n'
+    '    <title>PrivacySafe Security Patches: changelog</title>\n'
+    f'    <link>{esc(cl_page)}</link>\n'
+    '    <description>New tools and changes in PrivacySafe Security Patches, free checks, hunts and protection for serious vulnerabilities, newest first.</description>\n'
+    '    <language>en-us</language>\n    <copyright>CC0 1.0 Universal</copyright>\n'
+    f'    <lastBuildDate>{built}</lastBuildDate>\n'
+    f'    <atom:link href="{esc(BASE_URL)}changelog.xml" rel="self" type="application/rss+xml"/>\n{items}  </channel>\n</rss>\n')
+
 if APP:
     feed_url = BASE_URL + "feed.xml"
     ents = ""

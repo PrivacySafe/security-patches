@@ -114,23 +114,33 @@ Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-25) 
 
 | Advisory | Released | Severity | Package and stream | CVEs on this page |
 |---|---|---|---|---|
+| [RHSA-2026:92861](https://access.redhat.com/errata/RHSA-2026:92861) | 2026-10-29 | Critical | `openvox-agent-8.31.1-1.el9sat` (RHEL 9 (el9sat)); `openvox-server-8.17.0-1.el9sat` (RHEL 9 (el9sat)); `python3.12-django-4.2.30-3.el9pc` (RHEL 9 (el9pc)); and 6 more | CVE-2026-112403 |
 | [RHSA-2026:93077](https://access.redhat.com/errata/RHSA-2026:93077) | 2026-10-30 | Critical | `python-pillow-5.1.1-36.el8_10` (RHEL 8.10) | CVE-2026-112900 |
-| [RHSA-2026:94702](https://access.redhat.com/errata/RHSA-2026:94702) | 2026-11-03 | Critical | `rhaii/vllm-cpu-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:94709](https://access.redhat.com/errata/RHSA-2026:94709) | 2026-11-03 | Critical | `rhaii/vllm-rocm-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:94715](https://access.redhat.com/errata/RHSA-2026:94715) | 2026-11-03 | Critical | `rhaii/model-opt-cuda-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:94717](https://access.redhat.com/errata/RHSA-2026:94717) | 2026-11-03 | Critical | `rhaii/vllm-spyre-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:94721](https://access.redhat.com/errata/RHSA-2026:94721) | 2026-11-03 | Critical | `rhaii/vllm-gaudi-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:94738](https://access.redhat.com/errata/RHSA-2026:94738) | 2026-11-03 | Critical | `rhaii/vllm-cuda-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:96323](https://access.redhat.com/errata/RHSA-2026:96323) | 2026-11-09 | Critical | `rhelai3/disk-image-cuda-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:96333](https://access.redhat.com/errata/RHSA-2026:96333) | 2026-11-09 | Critical | `rhelai3/bootc-cuda-rhel9` (container image); `rhelai3/bootc-aws-cuda-rhel9` (container image); `rhelai3/bootc-azure-cuda-rhel9` (container image); and 3 more | CVE-2026-112900 |
-| [RHSA-2026:96400](https://access.redhat.com/errata/RHSA-2026:96400) | 2026-11-09 | Critical | `rhaiis/vllm-rocm-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:96403](https://access.redhat.com/errata/RHSA-2026:96403) | 2026-11-09 | Critical | `rhaiis/model-opt-cuda-rhel9` (container image) | CVE-2026-112900 |
-| [RHSA-2026:96406](https://access.redhat.com/errata/RHSA-2026:96406) | 2026-11-09 | Critical | `rhaiis/vllm-cuda-rhel9` (container image) | CVE-2026-112900 |
+| [RHSA-2026:94702](https://access.redhat.com/errata/RHSA-2026:94702) | 2026-11-03 | Critical | `rhaii/vllm-cpu-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:94709](https://access.redhat.com/errata/RHSA-2026:94709) | 2026-11-03 | Critical | `rhaii/vllm-rocm-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:94715](https://access.redhat.com/errata/RHSA-2026:94715) | 2026-11-03 | Critical | `rhaii/model-opt-cuda-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:94717](https://access.redhat.com/errata/RHSA-2026:94717) | 2026-11-03 | Critical | `rhaii/vllm-spyre-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:94721](https://access.redhat.com/errata/RHSA-2026:94721) | 2026-11-03 | Critical | `rhaii/vllm-gaudi-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:94738](https://access.redhat.com/errata/RHSA-2026:94738) | 2026-11-03 | Critical | `rhaii/vllm-cuda-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:95655](https://access.redhat.com/errata/RHSA-2026:95655) | 2026-11-05 | Critical | `python-django-4.2.30-2.el8pc` (RHEL 8 (el8pc)); `python-brotli-1.2.1-1.el8pc` (RHEL 8 (el8pc)); `python-urllib3-2.8.0-1.el8pc` (RHEL 8 (el8pc)); and 19 more | CVE-2026-112403 |
+| [RHSA-2026:95656](https://access.redhat.com/errata/RHSA-2026:95656) | 2026-11-05 | Critical | `python-django-4.2.30-2.el9pc` (RHEL 9 (el9pc)); `python-brotli-1.2.1-1.el9pc` (RHEL 9 (el9pc)); `python-urllib3-2.8.0-1.el9pc` (RHEL 9 (el9pc)); and 5 more | CVE-2026-112403 |
+| [RHSA-2026:95657](https://access.redhat.com/errata/RHSA-2026:95657) | 2026-11-05 | Critical | `python3.12-pillow-13.0.0-1.el9pc` (RHEL 9 (el9pc)); `python3.12-gitpython-3.2.1-1.el9pc` (RHEL 9 (el9pc)); `python3.12-urllib3-2.8.0-1.el9pc` (RHEL 9 (el9pc)); and 6 more | CVE-2026-112403 |
+| [RHSA-2026:95872](https://access.redhat.com/errata/RHSA-2026:95872) | 2026-11-06 | Critical | `rhoai/odh-cli-rhel9` (container image); `rhoai/odh-ai-gateway-operator-rhel9` (container image); `rhoai/odh-ai-gateway-payload-processing-rhel9` (container image); and 116 more | CVE-2026-96639, CVE-2026-112403 |
+| [RHSA-2026:96323](https://access.redhat.com/errata/RHSA-2026:96323) | 2026-11-09 | Critical | `rhelai3/disk-image-cuda-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:96333](https://access.redhat.com/errata/RHSA-2026:96333) | 2026-11-09 | Critical | `rhelai3/bootc-cuda-rhel9` (container image); `rhelai3/bootc-aws-cuda-rhel9` (container image); `rhelai3/bootc-azure-cuda-rhel9` (container image); and 3 more | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:96400](https://access.redhat.com/errata/RHSA-2026:96400) | 2026-11-09 | Critical | `rhaiis/vllm-rocm-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:96403](https://access.redhat.com/errata/RHSA-2026:96403) | 2026-11-09 | Critical | `rhaiis/model-opt-cuda-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
+| [RHSA-2026:96406](https://access.redhat.com/errata/RHSA-2026:96406) | 2026-11-09 | Critical | `rhaiis/vllm-cuda-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
 | [RHSA-2026:98109](https://access.redhat.com/errata/RHSA-2026:98109) | 2026-11-11 | Critical | `python-pillow-5.1.1-20.el8_8.2` (RHEL 8.8) | CVE-2026-112900 |
 | [RHSA-2026:98111](https://access.redhat.com/errata/RHSA-2026:98111) | 2026-11-11 | Critical | `python-pillow-5.1.1-20.el8_6.2` (RHEL 8.6) | CVE-2026-112900 |
 | [RHSA-2026:98120](https://access.redhat.com/errata/RHSA-2026:98120) | 2026-11-11 | Critical | `python-pillow-5.1.1-15.el8_4.3` (RHEL 8.4) | CVE-2026-112900 |
-| [RHSA-2026:102223](https://access.redhat.com/errata/RHSA-2026:102223) | 2026-11-23 | Critical | `exploit-intelligence/agent-client-rhel9` (container image); `exploit-intelligence/vulnerability-analysis-rhel9` (container image) | CVE-2026-112900 |
+| [RHSA-2026:100634](https://access.redhat.com/errata/RHSA-2026:100634) | 2026-11-19 | Critical | `rhoai/odh-built-in-detector-rhel9` (container image); `rhoai/odh-caikit-nlp-rhel9` (container image); `rhoai/odh-caikit-tgis-serving-rhel9` (container image); and 69 more | CVE-2026-112403 |
+| [RHSA-2026:100715](https://access.redhat.com/errata/RHSA-2026:100715) | 2026-11-19 | Important | `ansible-creator-26.11.0-1.el9ap` (RHEL 9 (el9ap)); `ansible-core-2.16.20-1.el9ap` (RHEL 9 (el9ap)); `ansible-dev-tools-26.11.0-1.el9ap` (RHEL 9 (el9ap)); and 39 more | CVE-2026-112403 |
+| [RHSA-2026:102223](https://access.redhat.com/errata/RHSA-2026:102223) | 2026-11-23 | Critical | `exploit-intelligence/agent-client-rhel9` (container image); `exploit-intelligence/vulnerability-analysis-rhel9` (container image) | CVE-2026-96639, CVE-2026-112403, CVE-2026-112900 |
 | [RHSA-2026:103383](https://access.redhat.com/errata/RHSA-2026:103383) | 2026-11-24 | Critical | `rhoai/odh-autorag-rhel9` (container image); `rhoai/odh-ai-gateway-operator-rhel9` (container image); `rhoai/odh-ai-gateway-payload-processing-rhel9` (container image); and 116 more | CVE-2026-112900 |
+
+- [CVE-2026-112393](https://access.redhat.com/security/cve/CVE-2026-112393): 23 advisories, 2026-10-29 to 2026-11-23; 22 critical, 1 important; by stream, RHEL 8 4, RHEL 8 (el8pc) 1, RHEL 9 (el9ap) 1, RHEL 9 (el9pc) 2, RHEL 9 (el9sat) 1, container image 14; most often `python-pillow` (4), `python-django` (2), `openvox-agent` (1), `rhaii/vllm-cpu-rhel9` (1). All of them: [Red Hat's CVE page](https://access.redhat.com/security/cve/CVE-2026-112393).
+- [CVE-2026-112398](https://access.redhat.com/security/cve/CVE-2026-112398): 23 advisories, 2026-10-29 to 2026-11-23; 22 critical, 1 important; by stream, RHEL 8 4, RHEL 8 (el8pc) 1, RHEL 9 (el9ap) 1, RHEL 9 (el9pc) 2, RHEL 9 (el9sat) 1, container image 14; most often `python-pillow` (4), `python-django` (2), `openvox-agent` (1), `rhaii/vllm-cpu-rhel9` (1). All of them: [Red Hat's CVE page](https://access.redhat.com/security/cve/CVE-2026-112398).
 
 <!-- rhsa:end -->
 

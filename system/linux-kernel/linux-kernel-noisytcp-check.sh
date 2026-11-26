@@ -139,6 +139,10 @@ inf()     { echo -e "  ${CYAN}info${NC}  $*"; }
 # --output jsonl (or PSF_OUTPUT=jsonl) writes JSON Lines, one record per line, when the script ends:
 # a start record, an event for each finding, a text record for any other line, and a verdict.
 # The format is described in automation/README.md. --output text, the default, changes nothing.
+# NO_COLOR (https://no-color.org): set to anything, no color codes in the text output, for screen readers and logs.
+if [[ -n "${NO_COLOR:-}" ]]; then
+    for _psf_v in RED GREEN YELLOW CYAN NC BLUE BLU YEL RST GRN BOLD DIM; do [[ -n "${!_psf_v+x}" ]] && printf -v "$_psf_v" '%s' ''; done; unset _psf_v
+fi
 # PSF_READ_ONLY=1 refuses every command that changes the host, before it starts.
 _PSF_FMT="${PSF_OUTPUT:-text}"; _psf_a=()
 while (($#)); do
@@ -188,8 +192,18 @@ if [[ "$_PSF_FMT" == jsonl ]]; then
     _PSF_MARK=""; read -r _PSF_MARK </proc/sys/kernel/random/uuid 2>/dev/null || _PSF_MARK="${RANDOM}${RANDOM}${RANDOM}${RANDOM}$$"
     _PSF_MARK=$'\036'"psf-${_PSF_MARK}"$'\036'
     _psf_rec() {   # type level message [more JSON fields]: one marked record on stdout
-        local type="$1" level="$2" msg="$3" ts cves="" rest extra="${4:-}" c
-        TZ=UTC printf -v ts '%(%Y-%m-%dT%H:%M:%SZ)T' -1
+        local type="$1" level="$2" msg="$3" ts tsms ems cves="" rest extra="${4:-}" c er="${EPOCHREALTIME:-}"
+        # one reading of the clock, written three ways: ts to the second (as records always had it), ts_ms to the
+        # millisecond (as the joint event logging guide prefers), both RFC 3339 in UTC, and ts_epoch_ms, the same
+        # instant as whole milliseconds since 1970 for tools that want a number. EPOCHREALTIME (bash 5) can use a
+        # decimal comma; without it the time is whole seconds and the milliseconds are 000.
+        if [[ "$er" =~ ^([0-9]+)[.,]([0-9]{3}) ]]; then
+            TZ=UTC printf -v ts '%(%Y-%m-%dT%H:%M:%S)TZ' "${BASH_REMATCH[1]}"; tsms="${ts%Z}.${BASH_REMATCH[2]}Z"
+            ems="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        else
+            TZ=UTC printf -v ts '%(%Y-%m-%dT%H:%M:%S)TZ' -1; tsms="${ts%Z}.000Z"
+            printf -v ems '%(%s)T' -1; ems="${ems}000"
+        fi
         rest="$msg"
         while [[ "$rest" =~ (CVE-[0-9]{4}-[0-9]{4,}) ]]; do
             c="${BASH_REMATCH[1]}"; [[ ",$cves," == *",\"$c\","* ]] || cves="${cves:+$cves,}\"$c\""; rest="${rest#*"$c"}"
@@ -200,9 +214,9 @@ if [[ "$_PSF_FMT" == jsonl ]]; then
         [[ -n "${PSF_CODE:-}" ]] && extra+=",\"code\":$(_psf_s "$PSF_CODE")"
         [[ -n "${PSF_PATH:-}" ]] && extra+=",\"path\":$(_psf_s "$PSF_PATH")"
         [[ "$level" =~ ^(crit|warn)$ ]] && extra+=",\"fix\":$(_psf_s "${PSF_FIX:-$_PSF_FIX}")"
-        printf '%s{"schema":1,"type":"%s","run":%s,"tool":%s,"version":%s,"host":%s,"command":%s,"ts":"%s"%s,"msg":%s,"cve":[%s]%s}\n' \
+        printf '%s{"schema":1,"type":"%s","run":%s,"tool":%s,"version":%s,"host":%s,"command":%s,"ts":"%s","ts_ms":"%s","ts_epoch_ms":%s%s,"msg":%s,"cve":[%s]%s}\n' \
             "$_PSF_MARK" "$type" "$(_psf_s "$_PSF_RUN")" "$(_psf_s "$_PSF_TOOL")" "$(_psf_s "${SCRIPT_VERSION:-}")" "$(_psf_s "$_PSF_HOST")" \
-            "$(_psf_s "$_PSF_CMD")" "$ts" "${level:+,\"level\":\"$level\"}" "$(_psf_s "$msg")" "$cves" "$extra"
+            "$(_psf_s "$_PSF_CMD")" "$ts" "$tsms" "$ems" "${level:+,\"level\":\"$level\"}" "$(_psf_s "$msg")" "$cves" "$extra"
     }
     _psf_ev() { local level="$1" m; shift; printf -v m '%b' "$*"; m="${m#"${m%%[![:space:]]*}"}"; m="${m%"${m##*[![:space:]]}"}"; _psf_rec event "$level" "$m"; }
 

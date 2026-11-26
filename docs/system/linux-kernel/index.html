@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-root="../../">
+<html lang="en" data-root="../../" data-scheme="dark">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>Linux kernel: ebtables SNAT (CVE-2026-53266) and the local root quartet | PrivacySafe Security Patches</title><meta name="description" content="The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild">
 <link rel="jslicense" href="../../weblabels.html"><link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
@@ -44,29 +44,29 @@ document.documentElement.className+=" js"
 <li><a href="../../about.html">About and support</a></li>
 </ul>
 <details class="grp" open><summary>Newest: 2 to 25 November 2026</summary><ul>
-<li><a href="../../web-apps/drupal/index.html">25 Oct: Drupal</a></li>
-<li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
-<li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
-<li><a href="../../web-apps/aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
-<li><a href="../../runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
-<li><a href="../pam-mysql/index.html">23 Oct: pam-mysql</a></li>
-<li><a href="../../threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
-<li><a href="../../developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
-<li><a href="../../developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
-<li><a href="../../web-apps/apache-roller/index.html">22 Oct: Apache Roller XML-RPC deserialization</a></li>
-<li><a href="../ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
-<li><a href="../../web-apps/etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
-<li><a href="index.html" aria-current="page">20 Oct: Linux kernel</a></li>
-<li><a href="../../servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
-<li><a href="../../servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
-<li><a href="../../runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
-<li><a href="../../servers/nginx/index.html">18 Oct: nginx</a></li>
-<li><a href="../../developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
-<li><a href="../openssh-musl/index.html">5 Oct: OpenSSH musl password bypass</a></li>
-<li><a href="../../web-apps/wordpress-upgrade/index.html">4 Oct: WordPress upgrade window</a></li>
-<li><a href="../apt/index.html">4 Oct: APT</a></li>
-<li><a href="../pki/index.html">2 Oct: eMudhra CA compromise</a></li>
-<li><a href="../../web-apps/btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../../web-apps/drupal/index.html">25 Nov: Drupal</a></li>
+<li><a href="../../servers/vmware/index.html">23 Nov: VMware vCenter</a></li>
+<li><a href="../../servers/n-central/index.html">23 Nov: N-central and Apache Axis</a></li>
+<li><a href="../../web-apps/aspnet/index.html">23 Nov: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../../runtimes/java/index.html">23 Nov: Java4Shell (OpenJDK)</a></li>
+<li><a href="../pam-mysql/index.html">23 Nov: pam-mysql</a></li>
+<li><a href="../../threats/agentic-attacks/index.html">23 Nov: AI attack frameworks</a></li>
+<li><a href="../../developer/iterm2/index.html">23 Nov: iTerm2 (macOS)</a></li>
+<li><a href="../../developer/binary-parser/index.html">23 Nov: binary-parser</a></li>
+<li><a href="../../web-apps/apache-roller/index.html">22 Nov: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../ghostscript/index.html">22 Nov: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../../web-apps/etherpad/index.html">20 Nov: Etherpad static path traversal</a></li>
+<li><a href="index.html" aria-current="page">20 Nov: Linux kernel</a></li>
+<li><a href="../../servers/apache/index.html">19 Nov: Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/mysql/index.html">19 Nov: MySQL client programs</a></li>
+<li><a href="../../runtimes/php/index.html">19 Nov: PHP2Shell</a></li>
+<li><a href="../../servers/nginx/index.html">18 Nov: nginx</a></li>
+<li><a href="../../developer/optimizely/index.html">17 Nov: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../openssh-musl/index.html">5 Nov: OpenSSH musl password bypass</a></li>
+<li><a href="../../web-apps/wordpress-upgrade/index.html">4 Nov: WordPress upgrade window</a></li>
+<li><a href="../apt/index.html">4 Nov: APT</a></li>
+<li><a href="../pki/index.html">2 Nov: eMudhra CA compromise</a></li>
+<li><a href="../../web-apps/btcpayserver/index.html">2 Nov: BTCPay Server</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
 <li><a href="../../servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
@@ -151,7 +151,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>Linux kernel</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../../tools.html#operating-system-and-libraries">Operating system and libraries</a></p><h1>Linux kernel: ebtables SNAT (<span class="nw">CVE-2026-53266</span>) and the local root quartet</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff"><strong>Linux kernel ebtables SNAT:</strong> The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild</div><div class="aff"><strong>Linux kernel local root quartet:</strong> The Linux kernel on every distribution: four local privilege escalations with public exploits (IPsec AH6, TUN/TAP, PPPoE, SCTP), each fixed at a different release per branch</div><div class="aff"><strong>Linux kernel IPv4 TCP use-after-free:</strong> The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener</div><div class="aff"><strong>NoisyTCP:</strong> The Linux kernel from 4.4 on every distribution: a race in the lockless TCP lookup that lets anyone who can reach a TCP port crash the host, no login needed, when packets are spread across CPUs; the sibling flaw keeps it open on weakly ordered processors</div><div class="aff"><strong>Linux kernel module blocker:</strong> The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-53266</span>, <span class="nw">CVE-2026-64564</span>, <span class="nw">CVE-2026-68121</span>, <span class="nw">CVE-2026-74469</span>, <span class="nw">CVE-2026-80844</span>, <span class="nw">CVE-2026-81000</span></span> <details class="more"><summary>and 4 more</summary><span class="nw">CVE-2026-98432</span>, <span class="nw">CVE-2026-99288</span>, <span class="nw">CVE-2026-99312</span>, <span class="nw">CVE-2026-99676</span></details></dd><dt>Scripts</dt><dd><div class="scr"><code>linux-kernel-check.sh</code> (<a href="../../man/psf-linux-kernel-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-ireq-opt-check.sh</code> (<a href="../../man/psf-linux-kernel-ireq-opt-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-ireq-opt-check.sh">source</a>)<br>reads only: <code>check</code>, <code>verify</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-ireq-opt-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-kvm-escape-check.sh</code> (<a href="../../man/psf-linux-kernel-kvm-escape-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-kvm-escape-check.sh">source</a>)<br>reads only: <code>check</code>, <code>rules</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-kvm-escape-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-lpe-check.sh</code> (<a href="../../man/psf-linux-kernel-lpe-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-lpe-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-lpe-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-module-block.sh</code> (<a href="../../man/psf-linux-kernel-module-block.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-module-block.sh">source</a>)<br>reads only: <code>list</code>, <code>check</code>, <code>status</code>, <code>version</code>; can change the system: <code>block</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-module-block.sh check</code></pre></div><div class="scr"><code>linux-kernel-noisytcp-check.sh</code> (<a href="../../man/psf-linux-kernel-noisytcp-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-noisytcp-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-noisytcp-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="linux-kernel-check"></a></p>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#operating-system-and-libraries">Operating system and libraries</a></p><h1>Linux kernel</h1><p class="lead">Linux kernel: ebtables SNAT (<span class="nw">CVE-2026-53266</span>) and the local root quartet</p><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff"><strong>Linux kernel ebtables SNAT:</strong> The Linux kernel on every distribution: out-of-bounds write in the ebtables SNAT ARP rewrite, exploited in the wild</div><div class="aff"><strong>Linux kernel local root quartet:</strong> The Linux kernel on every distribution: four local privilege escalations with public exploits (IPsec AH6, TUN/TAP, PPPoE, SCTP), each fixed at a different release per branch</div><div class="aff"><strong>Linux kernel IPv4 TCP use-after-free:</strong> The Linux kernel from 4.4 on every distribution: a race in the IPv4 TCP handshake that an unauthenticated peer can trigger with IP options, remote code execution shown with an MPTCP listener</div><div class="aff"><strong>NoisyTCP:</strong> The Linux kernel from 4.4 on every distribution: a race in the lockless TCP lookup that lets anyone who can reach a TCP port crash the host, no login needed, when packets are spread across CPUs; the sibling flaw keeps it open on weakly ordered processors</div><div class="aff"><strong>Linux kernel module blocker:</strong> The Linux kernel on every distribution: stop any module from loading, with a list of 42 (recent exploits, older well known flaws, rarely needed attack surface), a status command and a rollback</div></dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-53266</span>, <span class="nw">CVE-2026-64564</span>, <span class="nw">CVE-2026-68121</span>, <span class="nw">CVE-2026-74469</span>, <span class="nw">CVE-2026-80844</span>, <span class="nw">CVE-2026-81000</span></span> <details class="more"><summary>and 4 more</summary><span class="nw">CVE-2026-98432</span>, <span class="nw">CVE-2026-99288</span>, <span class="nw">CVE-2026-99312</span>, <span class="nw">CVE-2026-99676</span></details></dd><dt>Scripts</dt><dd><div class="scr"><code>linux-kernel-check.sh</code> (<a href="../../man/psf-linux-kernel-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-ireq-opt-check.sh</code> (<a href="../../man/psf-linux-kernel-ireq-opt-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-ireq-opt-check.sh">source</a>)<br>reads only: <code>check</code>, <code>verify</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-ireq-opt-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-kvm-escape-check.sh</code> (<a href="../../man/psf-linux-kernel-kvm-escape-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-kvm-escape-check.sh">source</a>)<br>reads only: <code>check</code>, <code>rules</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-kvm-escape-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-lpe-check.sh</code> (<a href="../../man/psf-linux-kernel-lpe-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-lpe-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-lpe-check.sh check</code></pre></div><div class="scr"><code>linux-kernel-module-block.sh</code> (<a href="../../man/psf-linux-kernel-module-block.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-module-block.sh">source</a>)<br>reads only: <code>list</code>, <code>check</code>, <code>status</code>, <code>version</code>; can change the system: <code>block</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-module-block.sh check</code></pre></div><div class="scr"><code>linux-kernel-noisytcp-check.sh</code> (<a href="../../man/psf-linux-kernel-noisytcp-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/system/linux-kernel/linux-kernel-noisytcp-check.sh">source</a>)<br>reads only: <code>check</code>, <code>hunt</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/system/linux-kernel/linux-kernel-noisytcp-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="linux-kernel-check"></a></p>
 <h2 id="linux-kernel-ebtables-snat-check">Linux kernel ebtables SNAT check</h2>
 <p><span class="nw">CVE-2026-53266</span> is an out-of-bounds write in the bridge netfilter ebtables SNAT target. CISA added it to its Known Exploited Vulnerabilities catalog on 18 September 2026 with a three-day federal deadline, and Red Hat confirmed exploitation.</p>
 <div class="table-wrap" tabindex="0"><table>
@@ -697,6 +697,8 @@ chmod +x linux-kernel-noisytcp-check.sh
 </table></div>
 <p>With <code>--output jsonl</code> it writes structured records for <a href="../../automation.html">automation</a>, and <code>psf-run</code> runs it with the other tools that do. Env: <code>KERNEL_CHANGELOG</code> (a vendor changelog file to read, plain or <code>.gz</code>), <code>KERNEL_RELEASE</code>, <code>KERNEL_VERSION_STRING</code> and <code>KERNEL_ARCH</code> (override <code>uname -r</code>, <code>-v</code> and <code>-m</code>), <code>KERNEL_PROC_SYS</code> and <code>KERNEL_SYS_NET</code> (instead of <code>/proc/sys</code> and <code>/sys/class/net</code>), <code>KERNEL_LOG_FILES</code> and <code>KERNEL_CRASH_DIRS</code> (for <code>hunt</code>), <code>KERNEL_INSTALLED_RELEASES</code>, <code>OS_RELEASE_FILE</code>, and <code>STATE_DIR</code> and <code>SYSCTL_D</code> for <code>mitigate</code> and <code>rollback</code>.</p>
 <p>A container shows the host's kernel, so run the script on the host.</p>
+<p>What <code>check</code> shows, here on an example Debian 12 host with an affected kernel:</p>
+<p><a href="../../assets/img-automation-examples-screenshots-check-noisytcp.png"><img src="../../assets/img-automation-examples-screenshots-check-noisytcp.png" alt="sudo ./linux-kernel-noisytcp-check.sh check in a terminal: a Debian 12 kernel, upstream 6.1.191, is marked CRIT for NoisyTCP, the sibling flaw does not apply on x86, the exposure lines show SYN cookies on and four receive queues, and the verdict gives the update command" /></a></p>
 <h3 id="exposure-information-2">Exposure information</h3>
 <p>After the verdict, <code>check</code> reports what decides whether the race can be reached here: <code>net.ipv4.tcp_syncookies</code>, the receive queues of each interface and whether RPS or RFS spreads packets across CPUs, the TCP listeners that are not on loopback, the processor, and how many other network namespaces exist. That is information to weigh, not a verdict: a kernel below its fixed release is affected whatever it shows. Which interface faces the attacker, and which CPUs its queues are bound to, the script cannot know. Each network namespace has its own <code>tcp_syncookies</code>, so a container's value can differ from the host's, and a crash in any container takes the whole host down.</p>
 <h3 id="mitigation-mitigate-1">Mitigation: <code>mitigate</code></h3>
@@ -1119,6 +1121,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <th>Stream</th>
 <th>53266</th>
+<th>64564</th>
 <th>68121</th>
 <th>74469</th>
 <th>80844</th>
@@ -1131,6 +1134,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 6</td>
 <td>73732</td>
+<td></td>
 <td>71649</td>
 <td></td>
 <td>71649</td>
@@ -1141,6 +1145,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 7</td>
 <td>71657 rt, 71687</td>
+<td>70290, 70308 rt</td>
 <td>71657 rt, 71687</td>
 <td>71657 rt, 71687</td>
 <td>71657 rt, 71687</td>
@@ -1155,12 +1160,14 @@ chmod +x linux-kernel-lpe-check.sh
 <td></td>
 <td></td>
 <td></td>
+<td></td>
 <td>95754</td>
 <td></td>
 </tr>
 <tr>
 <td>RHEL 8.4</td>
 <td>71565</td>
+<td>69874</td>
 <td>71565</td>
 <td>71565</td>
 <td>71565</td>
@@ -1171,6 +1178,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 8.6</td>
 <td>70797</td>
+<td>69906</td>
 <td>71592</td>
 <td>71592</td>
 <td>71592</td>
@@ -1181,6 +1189,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 8.8</td>
 <td>71325, 92063 kp</td>
+<td>69837</td>
 <td>71594, 92063 kp</td>
 <td>71594</td>
 <td>71594, 92063 kp</td>
@@ -1191,6 +1200,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 8.10</td>
 <td>39082 rt, 39083, 92062 kp</td>
+<td>71016 rt, 71213</td>
 <td>71329, 71330 rt, 92062 kp</td>
 <td>71213</td>
 <td>71016 rt, 71213, 92062 kp</td>
@@ -1205,12 +1215,14 @@ chmod +x linux-kernel-lpe-check.sh
 <td></td>
 <td></td>
 <td></td>
+<td></td>
 <td>95754</td>
 <td></td>
 </tr>
 <tr>
 <td>RHEL 9.2</td>
 <td>71601, 71606 rt, 92629 kp</td>
+<td>70482, 70483 rt</td>
 <td>71601, 71606 rt, 92629 kp</td>
 <td>71601, 71606 rt</td>
 <td>71601, 71606 rt, 92629 kp</td>
@@ -1221,6 +1233,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 9.4</td>
 <td>71569, 91639 kp</td>
+<td>69908</td>
 <td>71569, 91639 kp</td>
 <td>71569</td>
 <td>71569, 91639 kp</td>
@@ -1231,6 +1244,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 9.6</td>
 <td>71327, 91638 kp</td>
+<td>70484</td>
 <td>71631, 91638 kp</td>
 <td>71631</td>
 <td>71631, 91638 kp</td>
@@ -1241,6 +1255,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 9.8</td>
 <td>36645, 91650 kp</td>
+<td>71232</td>
 <td>71700, 91650 kp</td>
 <td>71232</td>
 <td>71232, 91650 kp</td>
@@ -1256,11 +1271,13 @@ chmod +x linux-kernel-lpe-check.sh
 <td></td>
 <td></td>
 <td></td>
+<td></td>
 <td>102167</td>
 </tr>
 <tr>
 <td>RHEL 10.0</td>
 <td>71326</td>
+<td>69089</td>
 <td>71599</td>
 <td>71599</td>
 <td>71599</td>
@@ -1271,6 +1288,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 10.2</td>
 <td>71233, 92061 kp</td>
+<td>71233</td>
 <td>71602, 92061 kp</td>
 <td>71233</td>
 <td>71233, 92061 kp</td>
@@ -1284,6 +1302,7 @@ chmod +x linux-kernel-lpe-check.sh
 <td></td>
 <td></td>
 <td></td>
+<td></td>
 <td>98608</td>
 <td>98608</td>
 <td>102168</td>
@@ -1291,6 +1310,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>OpenShift (RHCOS)</td>
 <td></td>
+<td>11 advisories</td>
 <td>11 advisories</td>
 <td>10 advisories</td>
 <td>12 advisories</td>
@@ -1301,6 +1321,7 @@ chmod +x linux-kernel-lpe-check.sh
 <tr>
 <td>RHEL 10 (el10nv)</td>
 <td>72059</td>
+<td></td>
 <td>73788</td>
 <td>73788</td>
 <td>74974</td>

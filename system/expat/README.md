@@ -104,14 +104,14 @@ Red Hat's advisory list (security advisories released 2026-04-01 to 2026-11-25) 
 | Advisory | Released | Severity | Package and stream | CVEs on this page |
 |---|---|---|---|---|
 | [RHSA-2026:90325](https://access.redhat.com/errata/RHSA-2026:90325) | 2026-10-26 | Important | `expat-2.9.0-1.1.hum1` (Hummingbird) | CVE-2026-113351, CVE-2026-115506 |
-| [RHSA-2026:93593](https://access.redhat.com/errata/RHSA-2026:93593) | 2026-11-02 | Moderate | `expat-2.9.0-1.2.hum1` (Hummingbird) | CVE-2026-117610 |
-| [RHSA-2026:100671](https://access.redhat.com/errata/RHSA-2026:100671) | 2026-11-20 | Important | `expat-2.5.0-10.el8_10` (RHEL 8.10) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610 |
-| [RHSA-2026:100678](https://access.redhat.com/errata/RHSA-2026:100678) | 2026-11-20 | Important | `expat-2.5.0-6.el9_8.11` (RHEL 9.8) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610 |
-| [RHSA-2026:100679](https://access.redhat.com/errata/RHSA-2026:100679) | 2026-11-20 | Important | `expat-2.5.0-9.el9_9.8` (RHEL 9.9) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610 |
-| [RHSA-2026:100680](https://access.redhat.com/errata/RHSA-2026:100680) | 2026-11-20 | Important | `expat-2.7.3-1.el10_2.13` (RHEL 10.2) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610 |
-| [RHSA-2026:100681](https://access.redhat.com/errata/RHSA-2026:100681) | 2026-11-20 | Important | `expat-2.7.3-2.el10_3.8` (RHEL 10.3) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610 |
-| [RHSA-2026:102193](https://access.redhat.com/errata/RHSA-2026:102193) | 2026-11-23 | Important | `mingw-expat-2.5.0-7.el8_10` (RHEL 8.10) | CVE-2026-115506, CVE-2026-117610 |
-| [RHSA-2026:102947](https://access.redhat.com/errata/RHSA-2026:102947) | 2026-11-24 | Critical | `rhui5/cds-kubernetes-rhel9` (container image); `rhui5/cds-rhel9` (container image); `rhui5/haproxy-rhel9` (container image); and 2 more | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610 |
+| [RHSA-2026:93593](https://access.redhat.com/errata/RHSA-2026:93593) | 2026-11-02 | Moderate | `expat-2.9.0-1.2.hum1` (Hummingbird) | CVE-2026-117610, CVE-2026-118370 |
+| [RHSA-2026:100671](https://access.redhat.com/errata/RHSA-2026:100671) | 2026-11-20 | Important | `expat-2.5.0-10.el8_10` (RHEL 8.10) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610, CVE-2026-118370 |
+| [RHSA-2026:100678](https://access.redhat.com/errata/RHSA-2026:100678) | 2026-11-20 | Important | `expat-2.5.0-6.el9_8.11` (RHEL 9.8) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610, CVE-2026-118370 |
+| [RHSA-2026:100679](https://access.redhat.com/errata/RHSA-2026:100679) | 2026-11-20 | Important | `expat-2.5.0-9.el9_9.8` (RHEL 9.9) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610, CVE-2026-118370 |
+| [RHSA-2026:100680](https://access.redhat.com/errata/RHSA-2026:100680) | 2026-11-20 | Important | `expat-2.7.3-1.el10_2.13` (RHEL 10.2) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610, CVE-2026-118370 |
+| [RHSA-2026:100681](https://access.redhat.com/errata/RHSA-2026:100681) | 2026-11-20 | Important | `expat-2.7.3-2.el10_3.8` (RHEL 10.3) | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610, CVE-2026-118370 |
+| [RHSA-2026:102193](https://access.redhat.com/errata/RHSA-2026:102193) | 2026-11-23 | Important | `mingw-expat-2.5.0-7.el8_10` (RHEL 8.10) | CVE-2026-115506, CVE-2026-117610, CVE-2026-118370 |
+| [RHSA-2026:102947](https://access.redhat.com/errata/RHSA-2026:102947) | 2026-11-24 | Critical | `rhui5/cds-kubernetes-rhel9` (container image); `rhui5/cds-rhel9` (container image); `rhui5/haproxy-rhel9` (container image); and 2 more | CVE-2026-113351, CVE-2026-115506, CVE-2026-117610, CVE-2026-118370 |
 
 <!-- rhsa:end -->
 

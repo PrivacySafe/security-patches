@@ -122,9 +122,30 @@ def writes_records(path):
         return False
 
 
+ACCEPT_PROBLEM = []  # why ACCEPT_FILE could not be used, reported with the run
+DECLARED = re.compile(r"^# psf-run: (\S+)(?:\s+\((.*)\))?\s*$")
+MANUAL = []          # [(relative path, reason)]: tools that declare themselves out of automatic runs
+
+
+def declared(path):
+    """A tool's own word on how psf-run should run it, from a '# psf-run: ...' line near its top: a command
+    (check when there is none), none (run with no command), or manual (reason) when it needs input a nightly
+    run cannot give. (command, reason) or None."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for _, line in zip(range(80), fh):
+                m = DECLARED.match(line.rstrip("\n"))
+                if m:
+                    return m.group(1), m.group(2) or ""
+    except OSError:
+        pass
+    return None
+
+
 def tools(conf):
     """[(relative path, command, why it cannot run or None)] for the run."""
     out = []
+    del MANUAL[:]
     if conf["TOOLS"] == "auto":
         for top in ("servers", "system", "runtimes", "web-apps", "developer", "threats"):
             for root, dirs, files in os.walk(os.path.join(INSTALL, top)):
@@ -132,7 +153,11 @@ def tools(conf):
                 for f in sorted(files):
                     p = os.path.join(root, f)
                     if f.endswith(".sh") and writes_records(p):
-                        out.append((os.path.relpath(p, INSTALL), "check", None))
+                        d = declared(p)
+                        if d and d[0] == "manual":
+                            MANUAL.append((os.path.relpath(p, INSTALL), d[1] or "it needs input"))
+                        else:
+                            out.append((os.path.relpath(p, INSTALL), d[0] if d else "check", None))
         return out
     for t in conf["TOOLS"].replace(",", " ").split():
         rel, _, cmd = t.partition(":")
@@ -177,13 +202,18 @@ def show_config(conf, src, cfg):
         print("  %-*s %-6s %s" % (w, rel, cmd, why or ("refused as root: " + trust if trust else "ready")))
     if not ts:
         print("  (none: no tool here writes records yet)")
+    if MANUAL:
+        print("")
+        print("Left out of automatic runs, to run by hand (%d):" % len(MANUAL))
+        for rel, why in MANUAL:
+            print("  %-*s %s" % (w, rel, why))
     return 0
 
 
 def run_tool(path, cmd, env, day_fd, name, timeout):
     """Run one tool, its records into a new file in the day folder. (exit code or None, problem or None, file)."""
     fd = None
-    for n in [name] + ["%s-%s" % (name[:-6], time.strftime("%H%M%S")) + ".jsonl"]:
+    for n in [name] + ["%s-%s" % (name[:-6], time.strftime("%H%M%S", time.gmtime())) + ".jsonl"]:
         try:
             fd = os.open(n, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=day_fd)
             name = n
@@ -193,8 +223,10 @@ def run_tool(path, cmd, env, day_fd, name, timeout):
     if fd is None:
         return None, "cannot make a new records file for it", None
     try:
-        p = subprocess.Popen([path, cmd, "--output", "jsonl"], stdin=subprocess.DEVNULL, stdout=fd,
-                             stderr=subprocess.PIPE, env=env, cwd="/", start_new_session=True)
+        p = subprocess.Popen([path] + ([] if cmd == "none" else [cmd]) + ["--output", "jsonl"], stdin=subprocess.DEVNULL, stdout=fd,
+                             stderr=subprocess.PIPE, env=env, cwd=INSTALL, start_new_session=True)
+        # cwd: the install folder, so a tool that looks in the current folder by default (the GhostAction check
+        # scans it for repositories) looks somewhere small and known, never the whole filesystem from /
         try:
             _, err = p.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
@@ -257,6 +289,13 @@ def main(argv):
     except (R.ConfigError, OSError) as e:
         print("configuration: %s" % e, file=sys.stderr)
         return 2
+    if conf["ACCEPT_FILE"]:
+        # a broken accepted-risk file never stops the checks: they run with nothing accepted, and the run reports it
+        try:
+            R.load_accepted(conf["ACCEPT_FILE"])
+        except R.ConfigError as e:
+            ACCEPT_PROBLEM.append("ACCEPT_FILE: %s; nothing is accepted in this run" % e)
+            print("ACCEPT_FILE: %s; nothing is accepted in this run" % e, file=sys.stderr)
     if cmd == "show-config":
         return show_config(conf, src, cfg)
 
@@ -297,7 +336,7 @@ def main(argv):
     except OSError:
         print("another psf-run is still running in %s: this one stops" % log_dir, file=sys.stderr)
         return 2
-    problems = []
+    problems = list(ACCEPT_PROBLEM)
     pr = subprocess.run(logs_tool[:4] + ["prune", "--quiet"] + logs_tool[4:], capture_output=True, text=True,
                         env={"PATH": SAFE_PATH, "PSF_CONFIG": cfg, "PSF_NO_ROOT_NOTE": "1"})
     for line in (pr.stdout + pr.stderr).strip().splitlines():
@@ -324,7 +363,7 @@ def main(argv):
         if why or trust:
             problems.append("%s: skipped: %s" % (rel, why or "refused as root: " + trust))
             continue
-        name = os.path.basename(rel)[:-3] + ("" if c == "check" else "-" + c) + ".jsonl"
+        name = os.path.basename(rel)[:-3] + ("" if c in ("check", "none") else "-" + c) + ".jsonl"
         rc, problem, wrote = run_tool(path, c, env, day_fd, name, int(conf["TIMEOUT"]))
         ran += 1
         if wrote:
@@ -344,6 +383,8 @@ def main(argv):
         try:
             if f == "pdf":
                 data = R.render_pdf(runs, "Security check report", True, "letter")
+            elif f == "ecs":
+                data = R.render_ecs(runs)
             else:
                 data = {"summary": R.render_summary, "text": R.render_text, "md": R.render_md, "html": R.render_html}[f](
                     runs, "Security check report", True).encode("utf-8")

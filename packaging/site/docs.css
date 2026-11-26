@@ -127,7 +127,7 @@ html { scroll-padding-top: 96px; }
 .kicker-line { margin: 0 0 4px; font-size: 14px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700; }
 .kicker-line a { color: var(--quiet) !important; text-decoration: none !important; }
 .kicker-line a:hover { color: var(--orange) !important; }
-.doc h1 { font-size: clamp(2rem, 4.2vw, 3rem) !important; line-height: 1.12 !important; letter-spacing: -.025em !important; margin: 0 0 16px; max-width: 24ch; }
+.doc h1 { font-size: 2rem !important; line-height: 1.2 !important; letter-spacing: -.01em !important; margin: 0 0 12px; max-width: none; }
 .doc.wide h1 { max-width: none; }
 .doc h2 { font-size: clamp(1.5rem, 2.6vw, 1.9rem) !important; line-height: 1.2 !important; letter-spacing: -.018em !important; margin: 2.4rem 0 .8rem; padding-top: 1.4rem; border-top: 1px solid var(--line); }
 .doc h1 + h2, .doc h1 + .glance + h2, .doc .lead + h2 { border-top: 0; padding-top: 0; margin-top: 1.4rem; }
@@ -136,7 +136,7 @@ html { scroll-padding-top: 96px; }
 .doc p, .doc li { overflow-wrap: anywhere; }
 .doc li { margin: .3rem 0; line-height: 1.55; }
 .doc ul, .doc ol { padding-left: 1.45rem; }
-.doc p, .doc li, .doc dd, .doc td, .doc th { color: #EAE8E0; }
+.doc p, .doc li, .doc dd, .doc td, .doc th { color: var(--d-text, #EAE8E0); }
 .doc .lead { font-size: clamp(20px, 2vw, 23px); color: #E2E0D8; max-width: 62ch; }
 .doc a:not(.btn):not(.card):not(.app-card-source) { text-decoration: underline; text-decoration-style: dotted; }
 .doc a:not(.btn):hover { text-decoration-style: solid; }
@@ -178,7 +178,7 @@ html { scroll-padding-top: 96px; }
 .glance details.more { display: inline; }
 .glance details.more summary { display: inline; color: var(--orange); }
 .hint { margin: .6rem 0 0; color: var(--quiet); font-size: 16px; }
-.warn { margin: .6rem 0 0; padding: .55rem .8rem; border-left: 4px solid #D9824F; background: #141311; border-radius: 0 8px 8px 0; font-size: 16px; }
+.warn { margin: .6rem 0 0; padding: .55rem .8rem; border-left: 4px solid var(--d-link, #D9824F); background: var(--d-raise, #141311); color: var(--d-text, #EAE8E0); border-radius: 0 8px 8px 0; font-size: 16px; }
 @media (max-width: 760px) { .glance dl { grid-template-columns: minmax(0, 1fr); gap: .2rem; } .glance dt { padding-top: .6rem; } }
 
 .pn { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
@@ -258,3 +258,136 @@ html { scroll-padding-top: 96px; }
 .doc a svg.ico, .doc strong svg.ico { color: inherit; }
 
 /* Assisted-by: Claude Sonnet 5.5 */
+
+/* ===== Reading layout (November 2026): a quiet three-column documentation page =====
+   Sidebar of grouped links, the article, and an "On this page" column. Its own colors, so a page reads the
+   same with or without the main site's stylesheet; the site header and footer keep their own styles. */
+.docs {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --d-bg: #1A1916; --d-panel: #22211D; --d-raise: #2A2823; --d-line: #34322C;
+  --d-text: #FAF9F5; --d-muted: #C2C0B6; --d-faint: #8F8C83; --d-accent: #FB521F; --d-link: #D9824F; --d-link-hover: #FF8A5C;
+  background: var(--d-bg); color: var(--d-text);
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-scheme="dark"]) .docs {
+    --d-bg: #FFFFFF; --d-panel: #F7F6F2; --d-raise: #EFEDE6; --d-line: #E4E1D8;
+    --d-text: #1A1916; --d-muted: #4F4C45; --d-faint: #6B685F; --d-accent: #C23D0E; --d-link: #C23D0E; --d-link-hover: #9E300A;
+  }
+}
+.docs a { color: var(--d-link); }
+.docs a:hover { color: var(--d-link-hover); }
+
+/* the docs tabs (Docs home, Apps, ... Security Patches): plain tabs with an underline for the current one */
+.docs .docs-subnav { border-bottom: 1px solid var(--d-line); background: transparent; }
+.docs .docs-subnav ul { gap: 0 1.5rem; padding: 0 1.5rem; }
+.docs .docs-subnav a { background: none; border-radius: 0; padding: .85rem 0 .7rem; color: var(--d-muted); font-size: .95rem; border-bottom: 2px solid transparent; }
+.docs .docs-subnav a:hover { color: var(--d-text); background: none; }
+.docs .docs-subnav a[aria-current="page"], .docs .docs-subnav a[aria-current="true"] { color: var(--d-link); border-bottom-color: var(--d-link); background: none; }
+
+/* three columns */
+.docs .doc-layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr) 15rem; gap: 0 3rem; max-width: 96rem; margin: 0 auto; padding: 0 1.5rem; }
+.docs .doc-layout.no-toc { grid-template-columns: 17rem minmax(0, 1fr); }
+.docs .doc-layout.no-side { grid-template-columns: minmax(0, 1fr) 15rem; }
+.docs .doc-layout.no-side.no-toc { grid-template-columns: minmax(0, 1fr); }
+.docs .doc-layout > main { min-width: 0; padding: 2rem 0 4rem; }
+.docs .docs-side, .docs .toc { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 1.5rem 0 3rem; background: none; border: 0; }
+
+/* sidebar: small uppercase group names, quiet links, the current page in the accent color */
+.docs .docs-side .side-search { position: static; margin: 0 0 1.25rem; }
+.docs .docs-side .side-search input { width: 100%; box-sizing: border-box; background: var(--d-panel); color: var(--d-text); border: 1px solid var(--d-line); border-radius: .6rem; padding: .55rem .8rem; font-size: .9rem; }
+.docs .docs-side .side-search input::placeholder { color: var(--d-faint); }
+.docs .docs-side .side-box > summary { display: none; }
+.docs .docs-side ul { list-style: none; margin: 0 0 1rem; padding: 0; }
+.docs .docs-side li a { display: block; padding: .3rem 0; color: var(--d-muted); text-decoration: none; font-size: .92rem; line-height: 1.35; background: none; border-radius: 0; }
+.docs .docs-side li a:hover { color: var(--d-text); background: none; }
+.docs .docs-side li a[aria-current="page"] { color: var(--d-link); font-weight: 600; background: none; }
+.docs .docs-side .grp { margin: 1.1rem 0 0; border: 0; }
+.docs .docs-side .grp summary { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--d-text); padding: .25rem 0; background: none; }
+.docs .docs-side .grp summary:before { color: var(--d-faint); }
+.docs .docs-side .grp ul { margin: .25rem 0 0; }
+
+/* the article */
+.docs .crumbs { font-size: .8rem; color: var(--d-faint); margin: 0 0 .75rem; }
+.docs .crumbs a { color: var(--d-link); text-decoration: none; }
+.docs .kicker-line { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--d-faint); margin: 0 0 .5rem; }
+.docs .doc { max-width: 46rem; color: var(--d-text); font-size: 1rem; line-height: 1.65; }
+.docs .doc h1 { font-size: 2rem; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; margin: 0 0 .75rem; color: var(--d-text); }
+.docs .doc h1 + p, .docs .doc .lead { font-size: 1.1rem; color: var(--d-muted); }
+.docs .doc h2 { font-size: 1.5rem; line-height: 1.3; margin: 2.5rem 0 .75rem; color: var(--d-text); }
+.docs .doc h3 { font-size: 1.15rem; margin: 1.75rem 0 .5rem; color: var(--d-text); }
+.docs .doc p, .docs .doc li { color: var(--d-text); }
+.docs .doc code { background: var(--d-raise); border: 1px solid var(--d-line); border-radius: .3rem; padding: .05rem .3rem; font-size: .88em; color: var(--d-text); }
+.docs .doc pre { background: var(--d-panel); border: 1px solid var(--d-line); border-radius: .6rem; padding: 1rem 1.1rem; overflow-x: auto; }
+.docs .doc pre code { background: none; border: 0; padding: 0; }
+.docs .doc table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+.docs .doc th, .docs .doc td { border-bottom: 1px solid var(--d-line); padding: .5rem .6rem; text-align: left; vertical-align: top; color: var(--d-text); }
+.docs .doc th { color: var(--d-muted); font-weight: 600; }
+
+/* the "at a glance" box: readable in both themes */
+.docs .glance { background: var(--d-panel); border: 1px solid var(--d-line); border-radius: .75rem; padding: 1rem 1.25rem; margin: 1.25rem 0 2rem; color: var(--d-text); }
+.docs .glance * { color: inherit; }
+.docs .glance dt, .docs .glance th { color: var(--d-faint); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
+.docs .glance a { color: var(--d-link); }
+.docs .glance code { color: var(--d-text); }
+
+/* On this page */
+.docs .toc h2 { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--d-text); margin: 0 0 .75rem; }
+.docs .toc ul { list-style: none; margin: 0; padding: 0; }
+.docs .toc a { display: block; padding: .3rem 0; font-size: .88rem; line-height: 1.35; color: var(--d-muted); text-decoration: none; }
+.docs .toc a:hover { color: var(--d-text); }
+.docs .toc a[aria-current="true"], .docs .toc a.active { color: var(--d-link); }
+.docs .toc li.l3 a { padding-left: .9rem; font-size: .84rem; color: var(--d-faint); }
+
+/* narrower screens: the On this page column goes first, then the sidebar becomes a block above the article */
+@media (max-width: 75rem) {
+  .docs .doc-layout, .docs .doc-layout.no-side { grid-template-columns: 15rem minmax(0, 1fr); }
+  .docs .doc-layout.no-toc { grid-template-columns: 15rem minmax(0, 1fr); }
+  .docs .toc { display: none; }
+}
+@media (max-width: 50rem) {
+  .docs .doc-layout, .docs .doc-layout.no-side, .docs .doc-layout.no-toc { grid-template-columns: minmax(0, 1fr); padding: 0 1rem; }
+  .docs .docs-side { position: static; max-height: none; padding: 1rem 0 0; }
+  .docs .doc h1 { font-size: 1.6rem; }
+}
+.docs .docs-side .side-search, .docs .docs-side .side-search input { box-shadow: none; }
+
+/* WCAG 2.2 AA: contrast, links that do not rely on color, and targets of at least 24 by 24 pixels */
+.docs { --d-pull-lead: #FF7A4D; --d-pull-link: #FF8A5C; }
+@media (prefers-color-scheme: light) { html:not([data-scheme="dark"]) .docs { --d-pull-lead: #C23D0E; --d-pull-link: #9E300A; } }
+.docs .pullout { background: var(--d-panel); color: var(--d-text); border: 1px solid var(--d-line); }
+.docs .pullout-text { color: var(--d-muted); }
+.docs .pullout-lead { color: var(--d-pull-lead); }
+.docs .pullout-text a { color: var(--d-pull-link); }
+.docs .crumbs a, .docs .doc p a, .docs .doc li a, .docs .glance a { text-decoration: underline; text-underline-offset: .15em; }
+.docs .docs-side li a, .docs .toc a, .docs .docs-subnav a, .docs .crumbs a { min-height: 24px; box-sizing: border-box; }
+.docs .docs-side li a, .docs .toc a { display: flex; align-items: center; }
+.docs .crumbs a { display: inline-block; line-height: 24px; }
+.docs input[type="search"], .docs #tool-filter { background: var(--d-panel); color: var(--d-text); border: 1px solid var(--d-line); }
+.docs .navlinks a, .docs .brand, .docs .nav-actions a, .docs footer a, .docs .social-link { min-height: 24px; min-width: 24px; display: inline-flex; align-items: center; }
+.docs .hero-actions a, .docs .btn, .docs .card-links a, .docs .link-arrow { min-height: 24px; display: inline-flex; align-items: center; }
+.docs .stat { min-height: 24px; display: inline-flex; align-items: center; }
+/* a focus ring that shows on every background, for keyboard users (WCAG 2.4.7, 2.4.11) */
+.docs a:focus-visible, .docs button:focus-visible, .docs input:focus-visible, .docs summary:focus-visible, .docs [tabindex]:focus-visible {
+  outline: 2px solid var(--d-link); outline-offset: 2px; border-radius: 2px;
+}
+/* no motion for those who ask for none (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  .docs *, .docs *::before, .docs *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+/* long words, URLs and code never force a sideways scroll on a narrow screen (WCAG 1.4.10) */
+.docs .doc { overflow-wrap: anywhere; }
+.docs .doc pre, .docs .doc .table-wrap { max-width: 100%; overflow-x: auto; }
+/* boxes that had a fixed dark background follow the palette, so their text stays readable in light mode too */
+.docs .glance pre { background: var(--d-raise); color: var(--d-text); }
+.docs #search-results { background: var(--d-panel); color: var(--d-text); border-color: var(--d-line); }
+.docs #search-results a { color: var(--d-link); }
+.docs .copy { background: var(--d-raise); color: var(--d-text); }
+/* the search field keeps a visible focus ring (an older rule removed its outline) */
+.docs input[type="search"]:focus-visible, .docs #site-search:focus-visible, .docs #tool-filter:focus-visible { outline: 2px solid var(--d-link) !important; outline-offset: 2px; }
+/* the header logo never makes a page wider than the screen; max- only, so the site's own sizing still applies */
+.docs .brand img, .docs .header-brand img, .docs .brand svg, .docs .header-brand svg { max-width: min(100%, 240px); max-height: 48px; height: auto; width: auto; }
+.docs .brand, .docs .header-brand { max-width: 100%; }
+/* the docs tabs wrap onto a second line on a narrow screen instead of widening the page */
+.docs .docs-subnav ul { flex-wrap: wrap; }
+@media (max-width: 50rem) { .docs .docs-subnav ul { gap: 0 1rem; padding: 0 1rem; } }
+.docs .partner-mark, .docs .partner-mark img, .docs .card img, .docs footer img { max-width: 100%; height: auto; }

@@ -206,35 +206,46 @@ SA-CORE-2026-019 is the reason to secure the installer even on a patched site: s
 curl -fLO https://raw.githubusercontent.com/PrivacySafe/security-patches/refs/heads/main/web-apps/drupal/drupal-installer-check.sh
 less drupal-installer-check.sh
 chmod +x drupal-installer-check.sh
-sudo ./drupal-installer-check.sh check --url https://www.example.org
+sudo ./drupal-installer-check.sh check --url https://www.example.org    # example address: use your site's
 ```
 
 | Command | What it does |
 |---|---|
 | `check [--url URL ...]` (default) | Finds the Drupal sites (`core/lib/Drupal.php` under `/var/www`, `/srv`, `/home`, `/opt` and `/usr/share/nginx`, or `DRUPAL_ROOTS`) and reports, for each: the core version against both advisories, whether `core/install.php` is there, any rule naming `install.php` in its `.htaccess` or the nginx configuration, and whether the account the web server runs as can change `settings.php`. `--url` asks the live site for `/core/install.php`, `/install.php` and `/core/install.php/x`: the installer counts as blocked only when all three answer 403 or 404. Exit `0` nothing to do, `1` a site is affected or its installer reachable. Read-only |
 | `hunt` | The access logs: requests for `install.php`, of which a POST answered 200 or 302 is the strong lead; for each site, PHP files under `sites/*/files` and `settings.php` changed since 2026-11-18; and how to check user 1, as Drupal asks (the script does not open the database). Exit `0` nothing found, `1` leads, `2` no log could be read. Read-only |
-| `mitigate [--installer-only] [--dry-run]` | **Changes the sites (root).** Moves `core/install.php` into a backup and, unless `--installer-only`, sets `settings.php` to `0444` and its folder to `0555`, as Drupal recommends. Prints the web server rules |
-| `rollback [--dry-run]` | Puts back what `mitigate` moved and the modes it changed |
+| `mitigate [--remove] [--installer-only] [--dry-run]` | **Changes the web server and the sites (root).** Blocks the installer in Apache and nginx (403), checked with `apachectl -t` or `nginx -t` before the reload; `--remove` also moves `core/install.php` into a verified backup. Unless `--installer-only`, sets `settings.php` to `0444` and its folder to `0555`, as Drupal recommends |
+| `rollback [--dry-run]` | Takes back the web server changes, the installer `--remove` moved and the modes |
 
 With `--output jsonl` it writes structured records for [automation](../../automation/README.md), and `psf-run` runs it with the other tools that do.
 
-### Securing the installer, and the backup
+What `check` shows, here on two example sites:
 
-Drupal's guidance offers three ways to secure the installer: deny it in the web server configuration, deny it in `.htaccess`, or remove the file and keep it removed. `mitigate` removes it, because that works on every web server and can be checked on disk, but it never deletes a file Drupal ships. It reads `core/install.php` as the account that owns the site's folder, keeps a copy in `/var/lib/psf-security-patches/drupal-installer/backup` (readable by root only) with its path, owner, mode and SHA-256 in a manifest, and removes the original only if it still matches that copy. `rollback` checks the copy's SHA-256 again and puts the file back with its mode, as the same account; it never overwrites a file that has come back meanwhile, and keeps that backup. Every file operation works on a folder opened without following links, and a link where the installer should be is left alone.
+[![sudo ./drupal-installer-check.sh check in a terminal: an affected 11.4.12 site whose installer is open is marked CRIT twice, a patched 11.4.14 site whose installer is gone passes, and the verdict says to update, run update.php and block the installer](../../automation/examples/screenshots/check-drupal-installer.png)](../../automation/examples/screenshots/check-drupal-installer.png)
 
-A core update brings `core/install.php` back, and a Composer-scaffolded `.htaccess` is overwritten too. So `check` reports a returned installer, and the lasting fix is a web server rule, which `mitigate` prints:
+### Securing the installer: blocked in the web server, or removed with a backup
+
+Drupal's guidance offers three ways to secure the installer: deny it in the web server configuration, deny it in `.htaccess`, or remove the file and keep it removed. `mitigate` denies it in the web server, with a 403, because that lasts: a core update or a `composer install` puts a removed `core/install.php` back, and overwrites a Composer-scaffolded `.htaccess`.
+
+- **Apache:** one configuration file for every site, `psf-drupal-installer.conf`, in `conf-available` (and enabled in `conf-enabled`) on Debian and Ubuntu, or in `conf.d` on RHEL and its rebuilds.
+- **nginx:** a snippet, `snippets/psf-drupal-installer.conf`, with `location ^~ /core/install.php { return 403; }` (a prefix match, so `/core/install.php/x` is caught too), and an `include` of it right after the `root` line of each server block whose root is a Drupal site. A file reached through `sites-enabled` is edited where it lives, never through the link.
+
+Each configuration file it edits is copied to `/var/lib/psf-security-patches/drupal-installer/nginx` first. The changed configuration then goes through the server's own check (`apachectl -t`, `nginx -t`); if that check fails, every file is put back and nothing is reloaded. Only a change that passes is reloaded (`apachectl -k graceful`, `nginx -s reload`). As root it runs `apachectl` and `nginx` only when root owns each and every folder above it. On another web server (LiteSpeed, Caddy), or where it finds no server block for a site, it says so and prints the rule to add yourself:
 
 ```nginx
-# inside the site's server block: a prefix match, so /core/install.php/x is caught too
-location ^~ /core/install.php { return 404; }
+# inside the site's server block
+location ^~ /core/install.php { return 403; }
 ```
 
 ```apache
-# in the virtual host
+# in the server or virtual host configuration
 <LocationMatch "^/core/install\.php"> Require all denied </LocationMatch>
 ```
 
-After adding one, `check --url` should show all three addresses answering 403 or 404, and `update.php` must still work.
+**`--remove`** also takes the file away, for sites that want it gone from disk too, but it never deletes a file Drupal ships. It reads `core/install.php` as the account that owns the site's folder, keeps a copy in `/var/lib/psf-security-patches/drupal-installer/backup` (readable by root only) with its path, owner, mode and SHA-256 in a manifest, and removes the original only if it still matches that copy.
+
+`rollback` takes it all back: the configuration files it created or edited (a file changed since is left as it is, with its backup named), the installer `--remove` moved (checked against its SHA-256 again, and never over an installer that has come back meanwhile), and the modes of `settings.php` and its folder. Then it runs the web server's configuration test and reloads it.
+
+After `mitigate`, `check --url https://your.site` (your own address) should show `/core/install.php`, `/install.php` and `/core/install.php/x` all answering 403 or 404, and `update.php` must still work.
 
 ### Sources
 

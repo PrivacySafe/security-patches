@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-root="../../">
+<html lang="en" data-root="../../" data-scheme="dark">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#1A1916"><meta name="referrer" content="no-referrer">
 <title>Joomla core, September 2026 security release (CVE-2026-90915, CVE-2026-92222 and others) | PrivacySafe Security Patches</title><meta name="description" content="Joomla 4.0.0 to 5.4.8 and 6.0.0 to 6.1.3: 16 core fixes, two rated High (directory deletion, SSRF)">
 <link rel="jslicense" href="../../weblabels.html"><link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../../assets/ps-base.css"><link rel="stylesheet" href="../../assets/docs.css"><script>// @license magnet:?xt=urn:btih:90dc5c0be029de84e523b9b3922520e79e0e6f08&dn=cc0.txt CC0-1.0
@@ -44,29 +44,29 @@ document.documentElement.className+=" js"
 <li><a href="../../about.html">About and support</a></li>
 </ul>
 <details class="grp"><summary>Newest: 2 to 25 November 2026</summary><ul>
-<li><a href="../drupal/index.html">25 Oct: Drupal</a></li>
-<li><a href="../../servers/vmware/index.html">23 Oct: VMware vCenter</a></li>
-<li><a href="../../servers/n-central/index.html">23 Oct: N-central and Apache Axis</a></li>
-<li><a href="../aspnet/index.html">23 Oct: Idunno.AntiCsrf on IIS and Mono</a></li>
-<li><a href="../../runtimes/java/index.html">23 Oct: Java4Shell (OpenJDK)</a></li>
-<li><a href="../../system/pam-mysql/index.html">23 Oct: pam-mysql</a></li>
-<li><a href="../../threats/agentic-attacks/index.html">23 Oct: AI attack frameworks</a></li>
-<li><a href="../../developer/iterm2/index.html">23 Oct: iTerm2 (macOS)</a></li>
-<li><a href="../../developer/binary-parser/index.html">23 Oct: binary-parser</a></li>
-<li><a href="../apache-roller/index.html">22 Oct: Apache Roller XML-RPC deserialization</a></li>
-<li><a href="../../system/ghostscript/index.html">22 Oct: Ghostscript Upload2Shell sandbox escape</a></li>
-<li><a href="../etherpad/index.html">20 Oct: Etherpad static path traversal</a></li>
-<li><a href="../../system/linux-kernel/index.html">20 Oct: Linux kernel</a></li>
-<li><a href="../../servers/apache/index.html">19 Oct: Apache HTTP Server mod_http2</a></li>
-<li><a href="../../servers/mysql/index.html">19 Oct: MySQL client programs</a></li>
-<li><a href="../../runtimes/php/index.html">19 Oct: PHP2Shell</a></li>
-<li><a href="../../servers/nginx/index.html">18 Oct: nginx</a></li>
-<li><a href="../../developer/optimizely/index.html">17 Oct: Optimizely OPTIMJACK supply-chain compromise</a></li>
-<li><a href="../../system/openssh-musl/index.html">5 Oct: OpenSSH musl password bypass</a></li>
-<li><a href="../wordpress-upgrade/index.html">4 Oct: WordPress upgrade window</a></li>
-<li><a href="../../system/apt/index.html">4 Oct: APT</a></li>
-<li><a href="../../system/pki/index.html">2 Oct: eMudhra CA compromise</a></li>
-<li><a href="../btcpayserver/index.html">2 Oct: BTCPay Server</a></li>
+<li><a href="../drupal/index.html">25 Nov: Drupal</a></li>
+<li><a href="../../servers/vmware/index.html">23 Nov: VMware vCenter</a></li>
+<li><a href="../../servers/n-central/index.html">23 Nov: N-central and Apache Axis</a></li>
+<li><a href="../aspnet/index.html">23 Nov: Idunno.AntiCsrf on IIS and Mono</a></li>
+<li><a href="../../runtimes/java/index.html">23 Nov: Java4Shell (OpenJDK)</a></li>
+<li><a href="../../system/pam-mysql/index.html">23 Nov: pam-mysql</a></li>
+<li><a href="../../threats/agentic-attacks/index.html">23 Nov: AI attack frameworks</a></li>
+<li><a href="../../developer/iterm2/index.html">23 Nov: iTerm2 (macOS)</a></li>
+<li><a href="../../developer/binary-parser/index.html">23 Nov: binary-parser</a></li>
+<li><a href="../apache-roller/index.html">22 Nov: Apache Roller XML-RPC deserialization</a></li>
+<li><a href="../../system/ghostscript/index.html">22 Nov: Ghostscript Upload2Shell sandbox escape</a></li>
+<li><a href="../etherpad/index.html">20 Nov: Etherpad static path traversal</a></li>
+<li><a href="../../system/linux-kernel/index.html">20 Nov: Linux kernel</a></li>
+<li><a href="../../servers/apache/index.html">19 Nov: Apache HTTP Server mod_http2</a></li>
+<li><a href="../../servers/mysql/index.html">19 Nov: MySQL client programs</a></li>
+<li><a href="../../runtimes/php/index.html">19 Nov: PHP2Shell</a></li>
+<li><a href="../../servers/nginx/index.html">18 Nov: nginx</a></li>
+<li><a href="../../developer/optimizely/index.html">17 Nov: Optimizely OPTIMJACK supply-chain compromise</a></li>
+<li><a href="../../system/openssh-musl/index.html">5 Nov: OpenSSH musl password bypass</a></li>
+<li><a href="../wordpress-upgrade/index.html">4 Nov: WordPress upgrade window</a></li>
+<li><a href="../../system/apt/index.html">4 Nov: APT</a></li>
+<li><a href="../../system/pki/index.html">2 Nov: eMudhra CA compromise</a></li>
+<li><a href="../btcpayserver/index.html">2 Nov: BTCPay Server</a></li>
 </ul></details>
 <details class="grp"><summary>Servers, proxies and network services</summary><ul>
 <li><a href="../../servers/apache/index.html">Apache HTTP Server mod_http2</a></li>
@@ -151,7 +151,7 @@ document.documentElement.className+=" js"
 </ul></details>
 </details></nav>
 <main id="top"><nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.html">Home</a> / <a href="../../tools.html">Tools</a> / <span>Joomla</span></nav>
-<article class="doc"><p class="kicker-line"><a href="../../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>Joomla core, September 2026 security release (<span class="nw">CVE-2026-90915</span>, <span class="nw">CVE-2026-92222</span> and others)</h1><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Joomla 4.0.0 to 5.4.8 and 6.0.0 to 6.1.3: 16 core fixes, two rated High (directory deletion, SSRF)</div></dd><dt>The fix</dt><dd>5.4.9 and 6.1.4</dd><dt>Exploited</dt><dd>No exploitation reported in the sources used. Most of the flaws need a logged-in account</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-90906</span>, <span class="nw">CVE-2026-90913</span>, <span class="nw">CVE-2026-90915</span>, <span class="nw">CVE-2026-90916</span>, <span class="nw">CVE-2026-90917</span>, <span class="nw">CVE-2026-92222</span></span> <details class="more"><summary>and 5 more</summary><span class="nw">CVE-2026-92224</span>, <span class="nw">CVE-2026-92226</span>, <span class="nw">CVE-2026-92227</span>, <span class="nw">CVE-2026-92231</span>, <span class="nw">CVE-2026-92232</span></details></dd><dt>Script</dt><dd><div class="scr"><code>joomla-check.sh</code> (<a href="../../man/psf-joomla-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/web-apps/joomla/joomla-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/web-apps/joomla/joomla-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="joomla-check"></a></p>
+<article class="doc"><p class="kicker-line"><a href="../../tools.html#content-management-and-web-applications">Content management and web applications</a></p><h1>Joomla</h1><p class="lead">Joomla core, September 2026 security release (<span class="nw">CVE-2026-90915</span>, <span class="nw">CVE-2026-92222</span> and others)</p><aside class="glance" aria-label="At a glance"><h2 class="sr">At a glance</h2><dl><dt>Affects</dt><dd><div class="aff">Joomla 4.0.0 to 5.4.8 and 6.0.0 to 6.1.3: 16 core fixes, two rated High (directory deletion, SSRF)</div></dd><dt>The fix</dt><dd>5.4.9 and 6.1.4</dd><dt>Exploited</dt><dd>No exploitation reported in the sources used. Most of the flaws need a logged-in account</dd><dt>Covers</dt><dd><span class="cves"><span class="nw">CVE-2026-90906</span>, <span class="nw">CVE-2026-90913</span>, <span class="nw">CVE-2026-90915</span>, <span class="nw">CVE-2026-90916</span>, <span class="nw">CVE-2026-90917</span>, <span class="nw">CVE-2026-92222</span></span> <details class="more"><summary>and 5 more</summary><span class="nw">CVE-2026-92224</span>, <span class="nw">CVE-2026-92226</span>, <span class="nw">CVE-2026-92227</span>, <span class="nw">CVE-2026-92231</span>, <span class="nw">CVE-2026-92232</span></details></dd><dt>Script</dt><dd><div class="scr"><code>joomla-check.sh</code> (<a href="../../man/psf-joomla-check.html">manual page</a>, <a href="https://codeberg.org/PrivacySafe/security-patches/src/branch/main/web-apps/joomla/joomla-check.sh">source</a>)<br>reads only: <code>check</code>, <code>version</code>; can change the system: <code>mitigate</code>, <code>rollback</code><pre tabindex="0"><code>sudo /opt/psf-security-patches/web-apps/joomla/joomla-check.sh check</code></pre></div><p class="hint">Add <code>--dry-run</code> to see a change before it happens.</p></dd></dl></aside><p><a id="joomla-check"></a></p>
 <h2 id="joomla-core-check">Joomla core check</h2>
 <p>Joomla 5.4.9 and 6.1.4, released on 29 September 2026, fix 16 core security issues (<span class="nw">CVE-2026-90906</span> to <span class="nw">CVE-2026-92232</span>). The Joomla Security Strike Team rates two of them High and thirteen Moderate.</p>
 <div class="table-wrap" tabindex="0"><table>

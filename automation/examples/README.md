@@ -16,6 +16,16 @@ What `psf-report.py` makes from the records the tools write with `--output jsonl
 
 What an administrator sees, taken from the files above. The terminal ones are `psf-status` and `psf-report` run in a 120-column terminal on these records, laid out the way the daily check lays them out.
 
+**A check run by hand: `sudo ./drupal-installer-check.sh check`** on two example Drupal sites made for the purpose, one affected and open, one patched:
+
+[![sudo ./drupal-installer-check.sh check in a terminal: an affected 11.4.12 site whose installer is open is marked CRIT twice, a patched 11.4.14 site whose installer is gone passes, and the verdict says to update, run update.php and block the installer](screenshots/check-drupal-installer.png)](screenshots/check-drupal-installer.png)
+
+**Another: `sudo ./linux-kernel-noisytcp-check.sh check`** on an example Debian 12 host made for the purpose, with an affected kernel:
+
+[![sudo ./linux-kernel-noisytcp-check.sh check in a terminal: a Debian 12 kernel, upstream 6.1.191, is marked CRIT for NoisyTCP, the sibling flaw does not apply on x86, the exposure lines show SYN cookies on and four receive queues, and the verdict gives the update command](screenshots/check-noisytcp.png)](screenshots/check-noisytcp.png)
+
+The host name, times, paths and listeners in these two are examples, not a real server's.
+
 **`sudo psf-status` when something needs attention:**
 
 [![psf-status in a terminal: a red dot and the status Signs of compromise, when the checks last ran, one line per tool with red dots for expat-check and magento-check, a green dot for the clean agentic hunt and a hollow dot for nginx, which found nothing to check, then the critical findings in red and the warnings in yellow, and the earlier days](screenshots/psf-status.png)](screenshots/psf-status.png)

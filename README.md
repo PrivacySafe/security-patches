@@ -107,7 +107,7 @@ In [`web-apps/`](web-apps/).
 | [Roundcube Webmail October and November 2026](web-apps/roundcube/README.md#roundcube-webmail-october-2026-check) | Roundcube on GNU/Linux, including copies bundled by hosting panels; a second, unnumbered round of 17 fixes followed the first within a month | CVE-2026-114716 | Read-only check and hunt |
 | [Craft CMS](web-apps/craft/README.md#craft-cms-check) | Craft CMS 4.x and 5.x projects on GNU/Linux | CVE-2026-112777 | Read-only check |
 | [Drupal core Field UI and Entity List](web-apps/drupal/README.md#drupal-core-check) | Drupal 8.9 to 12 sites on GNU/Linux (end-of-life branches move to a supported branch) and the contributed Entity List module | CVE-2026-108097, CVE-2026-108099 | Check, Drupal's Field UI workaround (`mitigate`) and rollback |
-| [Drupal core installer](web-apps/drupal/README.md#drupal-installer-check) | Drupal 10 and 11 sites, and end-of-life branches, on GNU/Linux: anyone can use `core/install.php` to reinstall a site under conditions Drupal does not publish; exploited, and still open after the first fix for sites in an incomplete install state | CVE-2026-132165, CVE-2026-136716 | Check (`--url` tests the live installer), hunt, mitigation that moves the installer into a verified backup, rollback |
+| [Drupal core installer](web-apps/drupal/README.md#drupal-installer-check) | Drupal 10 and 11 sites, and end-of-life branches, on GNU/Linux: anyone can use `core/install.php` to reinstall a site under conditions Drupal does not publish; exploited, and still open after the first fix for sites in an incomplete install state | CVE-2026-132165, CVE-2026-136716 | Check (`--url` tests the live installer), hunt, mitigation that blocks the installer in Apache and nginx (403, checked with the server's own configuration test before the reload; `--remove` also moves it into a verified backup), rollback |
 | [YOOtheme Pro](web-apps/yootheme/README.md#yootheme-check) | YOOtheme Pro 5 on WordPress and Joomla (CVSS 10.0) | CVE-2026-102785 | Check, hunt, web server rule (`mitigate`) and rollback |
 | [Grav Login plugin](web-apps/grav/README.md#grav-login-check) | Grav CMS sites with Login 3.6.0 to 3.9.12 | CVE-2026-114658 | Read-only check and hunt |
 | [Grav core allowlist bypass](web-apps/grav/README.md#grav-core-check) | Grav 2.0.15 to 2.2.12: a page editor can run arbitrary public static methods | CVE-2026-116019 | Read-only check and hunt |
@@ -160,20 +160,20 @@ Where Red Hat has published an advisory for a CVE a tool covers, the tool's READ
 
 ## 📥 Install from a package
 
-Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.25-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
+Each release ships three files, all named `psf-security-patches` and versioned by release date, `YY.MM.DD-X.Y.Z` (for example `26.11.26-1.0.0`). Download them from the releases page on [Codeberg](https://codeberg.org/PrivacySafe/security-patches/releases) or [GitHub](https://github.com/PrivacySafe/security-patches/releases).
 
 | File | For |
 |---|---|
-| `psf-security-patches_26.11.25-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
-| `psf-security-patches-26.11.25-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
-| `psf-security-patches-26.11.25-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
+| `psf-security-patches_26.11.26-1.0.0_all.deb` | Debian, Ubuntu, Trisquel and derivatives |
+| `psf-security-patches-26.11.26-1.0.0.noarch.rpm` | RHEL, Alma, Rocky, Fedora, CloudLinux and derivatives |
+| `psf-security-patches-26.11.26-1.0.0.tar.gz` | Any GNU/Linux: the source tree, plus the scripts to rebuild the packages |
 
 Check the files against the release's `SHA256SUMS-<version>.txt` before installing, then:
 
 ```bash
-sha256sum -c SHA256SUMS-26.11.25-1.0.0.txt
-sudo apt install ./psf-security-patches_26.11.25-1.0.0_all.deb       # Debian family
-sudo dnf install ./psf-security-patches-26.11.25-1.0.0.noarch.rpm    # RPM family
+sha256sum -c SHA256SUMS-26.11.26-1.0.0.txt
+sudo apt install ./psf-security-patches_26.11.26-1.0.0_all.deb       # Debian family
+sudo dnf install ./psf-security-patches-26.11.26-1.0.0.noarch.rpm    # RPM family
 /opt/psf-security-patches/runtimes/php/php2shell-mitigate.sh check             # read only
 ```
 
@@ -216,7 +216,11 @@ A tool that changes the host (`mitigate`, `rollback`, `harden`, `block`, `apply`
 
 ## 📊 Output for automation
 
-Six tools can write JSON Lines for monitoring, a SIEM or a language model (`--output jsonl`), refuse every change when they run on a schedule (`PSF_READ_ONLY=1`), and feed `automation/psf-report.py`, which turns the records of many runs and hosts into a short summary, a full plain-text report, Markdown, an HTML page or a PDF carrying PrivacySafe's name and security contact, with Python 3 alone and nothing loaded from the network. The records follow, closely rather than exactly, the joint guide *Best Practices for Event Logging and Threat Detection* (ASD's ACSC, CISA and international partners, 2024), the NIST SP 800-53 Rev. 5 Audit and Accountability (AU) controls and OMB Memorandum M-26-14; [Output for automation](automation/README.md) says how they line up, where they stop short, and what stays your job. The other tools follow.
+Every check can write JSON Lines for monitoring, a SIEM or a language model (`--output jsonl`), refuse every change when they run on a schedule (`PSF_READ_ONLY=1`), and feed `automation/psf-report.py`, which turns the records of many runs and hosts into a short summary, a full plain-text report, Markdown, an HTML page or a PDF carrying PrivacySafe's name and security contact, with Python 3 alone and nothing loaded from the network. The records follow, closely rather than exactly, the joint guide *Best Practices for Event Logging and Threat Detection* (ASD's ACSC, CISA and international partners, 2024), the NIST SP 800-53 Rev. 5 Audit and Accountability (AU) controls and OMB Memorandum M-26-14; [Output for automation](automation/README.md) says how they line up, where they stop short, and what stays your job. The other tools follow.
+
+Every check prints what it found, then a verdict. An example, the Drupal installer check on two sites:
+
+[![sudo ./drupal-installer-check.sh check in a terminal: an affected 11.4.12 site whose installer is open is marked CRIT twice, a patched 11.4.14 site whose installer is gone passes, and the verdict says to update, run update.php and block the installer](automation/examples/screenshots/check-drupal-installer.png)](automation/examples/screenshots/check-drupal-installer.png)
 
 [![psf-status in a terminal: a red dot and the status Signs of compromise, when the checks last ran, one line per tool with colored dots, and the findings most serious first](automation/examples/screenshots/psf-status.png)](automation/examples/screenshots/psf-status.png)
 

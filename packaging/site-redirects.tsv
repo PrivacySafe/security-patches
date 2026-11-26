@@ -2,7 +2,7 @@
 # working. One line per page: the old path and the new path, separated by a tab, both relative to
 # the site root (docs/security-patches/ on privacysafe.app). gen-site.py --theme privacysafe-app
 # writes a page at each old path that forwards to the new one (meta refresh, noindex, canonical
-# address of the new page). 26.11.25 moved every tool page into its category folder.
+# address of the new page). 26.11.26 moves every tool page into its category folder.
 apache/index.html	servers/apache/index.html
 apt/index.html	system/apt/index.html
 basercms/index.html	web-apps/basercms/index.html

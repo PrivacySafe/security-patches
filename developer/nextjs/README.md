@@ -172,6 +172,8 @@ The only advisory is for a Trusted Artifact Signer container image that bundles 
 |---|---|---|---|---|
 | [RHSA-2026:98988](https://access.redhat.com/errata/RHSA-2026:98988) | 2026-11-11 | Important | `rhtas/rekor-backfill-redis-rhel9` (container image); `rhtas/certificate-transparency-rhel9` (container image); `rhtas/trillian-database-rhel9` (container image); and 7 more | CVE-2026-94482, CVE-2026-114112, CVE-2026-114113 |
 
+- [CVE-2026-96889](https://access.redhat.com/security/cve/CVE-2026-96889): 39 advisories, 2026-10-21 to 2026-11-11; 35 important, 4 critical; by stream, RHEL 7 1, RHEL 8 4, RHEL 9 5, RHEL 10 6, container image 23; most often `librsvg2` (13), `glycin-loaders` (3), `rhai/base-image-tpu-rhel9` (3), `rhai/base-image-cpu-rhel9` (3). All of them: [Red Hat's CVE page](https://access.redhat.com/security/cve/CVE-2026-96889).
+
 <!-- rhsa:end -->
 
 ---

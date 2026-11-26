@@ -6,16 +6,19 @@
 # Usage:
 #   psf-report.py [options] [FILE|FOLDER ...]      read JSON Lines (stdin when no file is given)
 #
-#   --format summary|text|md|html|pdf|jsonl   summary (default): a few lines for a terminal or a mail;
+#   --format summary|text|md|html|pdf|jsonl|ecs   summary (default): a few lines for a terminal or a mail;
 #                       text: the whole report as plain text; md: a Markdown report; html: one
 #                       self-contained page; pdf: a printable report; jsonl: the records, merged and
-#                       checked. Every format needs Python 3 alone and loads nothing from the network
+#                       checked; ecs: the records with Elastic Common Schema field names, for a log
+#                       platform. Every format needs Python 3 alone and loads nothing from the network
 #   --out FILE          write the report here instead of standard output (a PDF is never written to a
 #                       terminal)
 #   --title TEXT        the report's title (default: Security check report)
 #   --paper letter|a4   the PDF page size (default: letter)
 #   --no-details        leave out passes and notes: only what needs attention and the run table
 #   --fail-on crit|warn exit 1 when a run found something at this level or above (for CI and cron)
+#   --accept FILE       a list of accepted risks (ignore: cves: with a reason, exclude: paths:): matching findings
+#                       are shown as accepted with their reason, still listed, and not counted
 #   -h, --help          this help
 #   -V, --version       the version
 #
@@ -126,15 +129,147 @@ def read_inputs(paths):
     return [summarize(runs[k]) for k in order], skipped
 
 
+def parse_time(v):
+    """A time as an aware UTC datetime, read leniently, so records from any release or any pipeline work: an RFC 3339 or
+    ISO 8601 string (Z or an offset such as +00:00 or +0200, any number of fraction digits, T or a space between date
+    and time; no zone means UTC), or a number of seconds or milliseconds since 1970. None when it cannot be read."""
+    if isinstance(v, bool) or v is None:
+        return None
+    if isinstance(v, (int, float)):
+        x = float(v) / 1000 if abs(float(v)) > 1e11 else float(v)       # 1e11 seconds is the year 5138: so milliseconds
+        try:
+            return datetime.datetime.fromtimestamp(x, datetime.timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+    if not isinstance(v, str):
+        return None
+    m = re.match(r"^\s*(\d{4}-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:[.,](\d+))?\s*(Z|z|[+-]\d\d:?\d\d)?\s*$", v)
+    if not m:
+        return None
+    frac = "." + (m.group(3) or "")[:6].ljust(6, "0")
+    off = m.group(4) or "+00:00"
+    off = "+00:00" if off in ("Z", "z") else (off if ":" in off else off[:3] + ":" + off[3:])
+    try:
+        return datetime.datetime.fromisoformat(m.group(1) + "T" + m.group(2) + frac + off).astimezone(datetime.timezone.utc)
+    except ValueError:
+        return None
+
+
+def record_time(r):
+    """The most precise time a record carries: ts_epoch_ms, then ts_ms, then ts."""
+    for k in ("ts_epoch_ms", "ts_ms", "ts"):
+        t = parse_time(r.get(k))
+        if t:
+            return t
+    return None
+
+
 def latest_runs(runs):
     """The newest run of each tool command on each host: a rerun after a fix replaces the earlier result.
     The earlier runs stay in the records; they are history, not the current state."""
     newest = {}
     for r in runs:
         k = (r["host"], r["tool"], r["command"])
-        if k not in newest or (r["started"] or "") >= (newest[k]["started"] or ""):
+        if k not in newest or _start_key(r) >= _start_key(newest[k]):
             newest[k] = r
     return [r for r in runs if newest[(r["host"], r["tool"], r["command"])] is r]
+
+
+def _start_key(run):
+    """Order runs by when they started, to the millisecond where the records say so; a run with no readable time sorts first."""
+    t = run.get("started_dt")
+    return (1, t) if t else (0, run.get("started") or "")
+
+
+# ---------- accepted risks -----------------------------------------------------------------------
+# A reviewable list of findings a team has decided to accept, in a small YAML shape:
+#   ignore:
+#     cves:
+#       CVE-2026-12345:
+#         reason: Not reachable here; the module is disabled
+#   exclude:
+#     paths:
+#       - /srv/legacy-app
+# A critical finding or warning whose CVEs are all on the list, or whose path contains one of the paths
+# (plain substring matching, no wildcards), is shown as accepted with its reason: still listed, never hidden,
+# but not counted as needing attention and never the cause of an alert. A finding of kind compromise
+# (signs of an attack) is never accepted. Other top-level sections in the file are not read.
+ACCEPT = {"cves": {}, "paths": [], "source": ""}
+
+
+def _yaml_scalar(v):
+    v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+        return v[1:-1]
+    return re.sub(r"\s+#.*$", "", v).strip()
+
+
+def load_accepted(path):
+    """Read an accepted-risk file into ACCEPT. Raises ConfigError when it cannot be used."""
+    if not os.path.lexists(path):
+        raise ConfigError("%s: no such file" % path)
+    if os.geteuid() == 0:
+        why = untrusted_as_root([path])
+        if why:
+            raise ConfigError("%s cannot be used as root: %s. Whoever can change it decides which findings stop raising alerts." % (path, why))
+    try:
+        st = os.stat(path)
+        if not stat.S_ISREG(st.st_mode) or st.st_size > 4 * 1024 * 1024:
+            raise ConfigError("%s: not a regular file of a sensible size" % path)
+        lines = open(path, encoding="utf-8").read().split("\n")
+    except OSError as e:
+        raise ConfigError("%s: %s" % (path, e.strerror))
+    cves, paths, top, sub, cur = {}, [], None, None, None
+    for raw in lines:
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        ind = len(raw) - len(raw.lstrip(" "))
+        line = raw.strip()
+        if ind == 0:
+            top, sub, cur = line.rstrip(":").strip(), None, None
+            continue
+        if top == "ignore":
+            if line.endswith(":") and line[:-1].strip() == "cves":
+                sub = "cves"; continue
+            if sub == "cves":
+                m = re.match(r"^[\"']?(CVE-\d{4}-\d{4,7})[\"']?\s*:\s*(.*)$", line)
+                if m:
+                    cur = m.group(1)
+                    cves[cur] = _yaml_scalar(m.group(2)) if m.group(2).strip() else ""
+                    continue
+                m = re.match(r"^reason\s*:\s*(.*)$", line)
+                if m and cur:
+                    cves[cur] = _yaml_scalar(m.group(1))
+        elif top == "exclude":
+            if line.endswith(":") and line[:-1].strip() == "paths":
+                sub = "paths"; continue
+            if sub == "paths" and line.startswith("- "):
+                p = _yaml_scalar(line[2:])
+                if p:
+                    paths.append(p)
+    ACCEPT["cves"] = {c: (r or "no reason given") for c, r in cves.items()}
+    ACCEPT["paths"] = paths
+    ACCEPT["source"] = path
+    return ACCEPT
+
+
+def accepted_reason(r):
+    """Why this finding is accepted, or None."""
+    if r.get("type") != "event" or r.get("level") not in ("crit", "warn") or r.get("kind") == "compromise":
+        return None
+    cves = r.get("cve") or []
+    if cves and all(c in ACCEPT["cves"] for c in cves):
+        return "; ".join(dict.fromkeys(ACCEPT["cves"][c] for c in cves))
+    p = r.get("path") or ""
+    for x in ACCEPT["paths"]:
+        if p and x in p:
+            return "path excluded (%s)" % x
+    return None
+
+
+def accepted_items(runs):
+    """Every accepted finding, with its run."""
+    return [(run, r) for run in runs for r in run["events"] if r.get("accepted")]
 
 
 def summarize(recs):
@@ -144,9 +279,16 @@ def summarize(recs):
     verdict = next((r for r in recs if r["type"] == "verdict"), None)
     events = [r for r in recs if r["type"] in ("event", "section", "text", "applicable")]
     counts = {k: 0 for k in LEVELS}
+    counts["accepted"] = 0
     for r in recs:
         if r["type"] == "event" and r.get("level") in counts:
-            counts[r["level"]] += 1
+            why = accepted_reason(r)
+            if why:
+                r["accepted"] = why
+                counts["accepted"] += 1
+            else:
+                r.pop("accepted", None)
+                counts[r["level"]] += 1
     applicable = verdict.get("applicable") if verdict else None
     if any(r["type"] == "applicable" for r in recs):
         applicable = False
@@ -157,9 +299,12 @@ def summarize(recs):
         "version": first.get("version", ""),
         "command": first.get("command", "") or "",
         "started": start.get("ts", first.get("ts", "")),
+        "started_dt": record_time(start) or record_time(first),
         "euid": start.get("euid"),
         "read_only": start.get("read_only"),
-        "result": verdict.get("result") if verdict else "incomplete",
+        # a run whose every critical finding and warning is accepted is "accepted", not "findings"
+        "result": ("accepted" if verdict and verdict.get("result") == "findings" and counts["accepted"]
+                   and not counts["crit"] and not counts["warn"] else verdict.get("result") if verdict else "incomplete"),
         "exit": verdict.get("exit") if verdict else None,
         "duration": verdict.get("duration_s") if verdict else None,
         "applicable": applicable,
@@ -174,7 +319,7 @@ def attention(runs):
     out = []
     for run in runs:
         for r in run["events"]:
-            if r["type"] == "event" and r.get("level") in ("crit", "warn", "error"):
+            if r["type"] == "event" and r.get("level") in ("crit", "warn", "error") and not r.get("accepted"):
                 out.append((run, r))
     out.sort(key=lambda x: (x[1].get("kind") != "compromise", RANK.get(x[1].get("level"), 9),
                             KIND_RANK.get(x[1].get("kind", ""), 5), x[0]["host"], x[0]["tool"]))
@@ -295,8 +440,43 @@ def write_private(out, data):
 # ---------- configuration (/etc/psf-security-patches/psf.conf), read by psf-run, psf-status and psf-logs ----------
 CONFIG_PATH = "/etc/psf-security-patches/psf.conf"
 CONFIG_DEFAULTS = {"LOG_DIR": "/var/log/psf-security-patches", "KEEP_DAYS": "90", "FORMATS": "summary text pdf",
-                   "TOOLS": "auto", "ALERT_ON": "crit", "ALERT_COMMAND": "", "TIMEOUT": "900", "ENV": ""}
-REPORT_FORMATS = {"summary": "summary.txt", "text": "report.txt", "md": "report.md", "html": "report.html", "pdf": "report.pdf"}
+                   "TOOLS": "auto", "ALERT_ON": "crit", "ALERT_COMMAND": "", "TIMEOUT": "900", "ENV": "", "ACCEPT_FILE": ""}
+REPORT_FORMATS = {"summary": "summary.txt", "text": "report.txt", "md": "report.md", "html": "report.html", "pdf": "report.pdf",
+                  "ecs": "records.ecs.ndjson"}
+ECS_VERSION = "8.11.0"
+
+
+def render_ecs(runs):
+    """The records with Elastic Common Schema field names, one JSON document per line. The mapping is the one the
+    automation guide gives (ts @timestamp, host host.name, tool event.provider, command event.action, code event.code,
+    seq event.sequence, level log.level, msg message, cve vulnerability.id, path file.path), plus fix as
+    event.reference and run and seq as event.id; every field ECS has no place for is kept under psf."""
+    mapped = {"ts", "ts_ms", "ts_epoch_ms", "host", "tool", "command", "code", "seq", "level", "msg", "cve", "path", "fix"}
+    out = []
+    for run in runs:
+        for r in run["records"]:
+            doc = {"@timestamp": r.get("ts_ms") or r.get("ts", ""), "ecs": {"version": ECS_VERSION}, "message": r.get("msg", ""),
+                   "host": {"name": r.get("host", "")},
+                   "event": {"provider": r.get("tool", ""), "action": r.get("command", ""), "kind": "event",
+                             "module": "psf_security_patches", "dataset": "psf_security_patches." + str(r.get("type", ""))}}
+            if r.get("seq") is not None:
+                doc["event"]["sequence"] = r["seq"]
+                doc["event"]["id"] = "%s-%s" % (r.get("run", ""), r["seq"])
+            if r.get("code"):
+                doc["event"]["code"] = r["code"]
+            if str(r.get("fix", "")).startswith(("https://", "http://")):
+                doc["event"]["reference"] = r["fix"]
+            if r.get("level"):
+                doc["log"] = {"level": r["level"]}
+            if r.get("cve"):
+                doc["vulnerability"] = {"id": list(r["cve"])}
+            if r.get("path"):
+                doc["file"] = {"path": r["path"]}
+            rest = {k: v for k, v in r.items() if k not in mapped}
+            if rest:
+                doc["psf"] = rest
+            out.append(json.dumps(doc, ensure_ascii=False, separators=(",", ":")))
+    return ("\n".join(out) + "\n").encode("utf-8")
 FORBIDDEN_ENV = re.compile(r"^(PATH|IFS|ENV|BASH_ENV|BASH_FUNC_.*|LD_.*|PYTHON.*|PERL.*|RUBY.*|NODE_.*|SHELLOPTS|"
                            r"PS4|HOME|TMPDIR|PSF_READ_ONLY|PSF_OUTPUT|PSF_CONFIG|PSF_LOG_DIR)$")
 
@@ -356,6 +536,8 @@ def check_config(c):
         raise ConfigError("ALERT_ON must be crit, warn or never: %r" % c["ALERT_ON"])
     if not c["TIMEOUT"].isdigit() or not 10 <= int(c["TIMEOUT"]) <= 86400:
         raise ConfigError("TIMEOUT must be seconds, 10 to 86400: %r" % c["TIMEOUT"])
+    if c["ACCEPT_FILE"] and (not c["ACCEPT_FILE"].startswith("/") or "\n" in c["ACCEPT_FILE"]):
+        raise ConfigError("ACCEPT_FILE must be an absolute path: %r" % c["ACCEPT_FILE"])
     for item in c["ENV"].split():
         m = re.match(r"^([A-Z][A-Z0-9_]*)=(.*)$", item)
         if not m:
@@ -403,6 +585,11 @@ def render_summary(runs, title, details):
         for run, r in items:
             k = (" [%s]" % r["kind"]) if r.get("kind") else ""
             lines.append("  %s%s %s/%s: %s" % (LABEL[r["level"]], clip(k), clip(run["host"]), clip(run["tool"]), clip(r["msg"])))
+    acc = accepted_items(runs)
+    if acc:
+        lines.append("Accepted (%d, from %s), not counted:" % (len(acc), clip(ACCEPT["source"])))
+        for run, r in acc:
+            lines.append("  %s/%s: %s (accepted: %s)" % (clip(run["host"]), clip(run["tool"]), clip(r["msg"])[:120], clip(r["accepted"])))
     lines.append("%s | %s | help: %s | security issues: %s" % (BRAND_NAME, SITE_URL, HELP, CONTACT))
     return "\n".join(lines) + "\n"
 
@@ -450,6 +637,13 @@ def render_text(runs, title, details):
             out.append(para("; ".join(extra), "    "))
         if str(r.get("fix", "")).startswith(("https://", "http://")):
             out.append("    What to do: " + clip(r["fix"]))
+        out.append("")
+    acc = accepted_items(runs)
+    if acc:
+        out += ["ACCEPTED RISKS (%d, from %s)" % (len(acc), clip(ACCEPT["source"])), "-" * 24]
+        for run, r in acc:
+            out.append("[accepted] %s, %s %s: %s" % (clip(run["host"]), clip(run["tool"]), clip(run["command"]), clip(r["msg"])))
+            out.append(para("Reason: " + r["accepted"] + (("; CVE: " + ", ".join(clip(c) for c in r["cve"])) if r.get("cve") else ""), "    "))
         out.append("")
     idx = cve_index(runs)
     if idx:
@@ -542,6 +736,13 @@ def render_md(runs, title, details):
         if extra:
             out.append("  " + "; ".join(extra))
     out.append("")
+    acc = accepted_items(runs)
+    if acc:
+        out += ["## Accepted risks", "", "Listed in %s; not counted as needing attention." % md_code(ACCEPT["source"]), ""]
+        for run, r in acc:
+            out.append("- **Accepted** on %s, %s %s: %s. Reason: %s%s" % (md_text(run["host"]), md_text(run["tool"]), md_text(run["command"]),
+                       md_text(r["msg"]), md_text(r["accepted"]), ("; CVE: " + ", ".join(r["cve"])) if r.get("cve") else ""))
+        out.append("")
     idx = cve_index(runs)
     if idx:
         out += ["## CVEs behind the findings", ""]
@@ -578,7 +779,7 @@ CSS = """
 :root{--brand-bg:#1A1916;--brand-fg:#FAF9F5;--brand-muted:#C2C0B6;--brand-orange:#FB521F;--link:#C23D0E;--link-hover:#9E300A;--bg:#fff;--fg:#1b1b1f;--muted:#5d5d66;--line:#dcdce2;--panel:#f6f6f8;--crit:#b3261e;--warn:#8a5a00;--ok:#1e6b34;--error:#6b1e9e;--info:#28509b;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--link:#D9824F;--link-hover:#FF8A5C;--bg:#141417;--fg:#ececf1;--muted:#a3a3ad;--line:#34343c;--panel:#1d1d22;--crit:#ff8a80;--warn:#ffcf70;--ok:#7ed69a;--error:#d7a6ff;--info:#9ab8ff;color-scheme:dark}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
-main{max-width:1000px;margin:0 auto;padding:4px 20px 48px}h1{font-size:26px;margin:0 0 4px}
+main{max-width:1000px;margin:0 auto;padding:4px 20px 48px;overflow-wrap:anywhere}.scroll td,.scroll th{overflow-wrap:normal}h1{font-size:26px;margin:0 0 4px}
 .brand{background:var(--brand-bg);color:var(--brand-fg);border-bottom:4px solid var(--brand-orange)}.brand-in{max-width:1000px;margin:0 auto;padding:22px 20px 18px}
 .brand .ps-logo{display:block;height:30px;width:auto;max-width:100%;margin:0 0 14px}.brand h1{color:var(--brand-fg)}.brand .meta{color:var(--brand-muted);margin:0}
 .brand a{color:var(--brand-fg)}h2{font-size:19px;margin:32px 0 10px;border-bottom:1px solid var(--line);padding-bottom:4px}
@@ -636,6 +837,13 @@ def render_html(runs, title, details):
             sub.append('<a href="%s">what to do</a>' % e(r["fix"], quote=True))
         o.append('<div class="item %s"><span class="lvl %s">%s</span>%s %s<div class="sub">%s</div></div>' % (
             lv, lv, LABEL[lv], kind, e(clip(r["msg"])), " &middot; ".join(sub)))
+    acc = accepted_items(runs)
+    if acc:
+        o.append("<h2>Accepted risks</h2><p>Listed in <code>%s</code>; not counted as needing attention.</p><ul>" % e(ACCEPT["source"]))
+        for run, r in acc:
+            o.append("<li><strong>Accepted</strong> on %s, %s %s: %s <em>Reason: %s</em>%s</li>" % (e(run["host"]), e(run["tool"]), e(run["command"]),
+                     e(r["msg"]), e(r["accepted"]), (" CVE: " + ", ".join(e(c) for c in r["cve"])) if r.get("cve") else ""))
+        o.append("</ul>")
     idx = cve_index(runs)
     if idx:
         o.append("<h2>CVEs behind the findings</h2><ul>")
@@ -769,21 +977,40 @@ class PDF:
         self.w, self.h = (595.28, 841.89) if paper == "a4" else (612.0, 792.0)
         self.m = 50.0
         self.title = title
-        self.pages = []          # each: list of content operators, list of link annotations
+        self.pages = []          # each: content operators, link annotations, and the structure element of each MCID
         self.y = 0
+        # a tagged PDF (PDF/UA, for WCAG): every piece of text belongs to a structure element in reading order,
+        # decoration is an artifact, and every link annotation belongs to a Link element
+        self.root = {"tag": "Document", "kids": [], "attrs": {}}
+        self.stack = [self.root]
         self.new_page(first=True)
 
+    def begin(self, tag, **attrs):
+        el = {"tag": tag, "kids": [], "attrs": attrs}
+        self.stack[-1]["kids"].append(el)
+        self.stack.append(el)
+        return el
+
+    def end(self):
+        self.stack.pop()
+
     def new_page(self, first=False):
-        self.pages.append({"ops": [], "links": []})
+        self.pages.append({"ops": [], "links": [], "marks": []})
         self.y = self.h - self.m
         if first:
             band = 112.0
             self.rect(0, self.h - band, self.w, band, COLORS["band"])
             self.rect(0, self.h - band - 3, self.w, 3, COLORS["orange"])
             self.logo(self.m, self.h - 24, 22)
+            self.begin("Link", alt="PrivacySafe home page")
             self.link(self.m, self.h - 46, 22 * LOGO_VIEWBOX[0] / LOGO_VIEWBOX[1], 22, HOME_URL)
+            self.end()
+            self.begin("H1")
             self.text(self.m, self.h - 74, "F2", 19, pdf_ascii(self.title), COLORS["brand_fg"])
+            self.end()
+            self.begin("P")
             self.text(self.m, self.h - 94, "F1", 9.5, "%s  |  generated %s" % (BRAND_NAME, now_utc()), COLORS["brand_muted"])
+            self.end()
             self.y = self.h - band - 26
 
     def logo(self, x, ytop, height):
@@ -798,7 +1025,7 @@ class PDF:
                 ops.append("%s W n /Sh%d sh" % (path, i))
             ops.append("Q")
         ops.append("Q")
-        self.ops.append(" ".join(ops))
+        self.ops.append("/Artifact BMC " + " ".join(ops) + " EMC")
 
     @property
     def ops(self):
@@ -809,31 +1036,52 @@ class PDF:
             self.new_page()
 
     def rect(self, x, y, w, h, color):
-        self.ops.append("%.3f %.3f %.3f rg %.2f %.2f %.2f %.2f re f" % (color + (x, y, w, h)))
+        self.ops.append("/Artifact BMC %.3f %.3f %.3f rg %.2f %.2f %.2f %.2f re f EMC" % (color + (x, y, w, h)))
 
     def hline(self, x1, x2, y, color=COLORS["line"], width=0.6):
-        self.ops.append("%.3f %.3f %.3f RG %.2f w %.2f %.2f m %.2f %.2f l S" % (color + (width, x1, y, x2, y)))
+        self.ops.append("/Artifact BMC %.3f %.3f %.3f RG %.2f w %.2f %.2f m %.2f %.2f l S EMC" % (color + (width, x1, y, x2, y)))
 
     def text(self, x, y, font, size, s, color=COLORS["text"]):
-        self.ops.append("BT %.3f %.3f %.3f rg /%s %.1f Tf %.2f %.2f Td %s Tj ET" % (color + (font, size, x, y, pdf_str(s))))
+        el = self.stack[-1]
+        own = el is self.root                     # text outside any block still gets an element of its own
+        if own:
+            el = self.begin("P")
+        pg = self.pages[-1]
+        mcid = len(pg["marks"])
+        pg["marks"].append(el)
+        el["kids"].append(("mcr", len(self.pages) - 1, mcid))
+        self.ops.append("/%s << /MCID %d >> BDC BT %.3f %.3f %.3f rg /%s %.1f Tf %.2f %.2f Td %s Tj ET EMC" % (
+            (el["tag"], mcid) + color + (font, size, x, y, pdf_str(s))))
+        if own:
+            self.end()
 
     def link(self, x, y, w, h, uri):
-        self.pages[-1]["links"].append((x, y, x + w, y + h, uri))
+        el = self.stack[-1]
+        if el["tag"] != "Link":                   # a link with no Link element open gets one, named by its address
+            el = {"tag": "Link", "kids": [], "attrs": {"alt": uri}}
+            self.stack[-1]["kids"].append(el)
+        links = self.pages[-1]["links"]
+        el["kids"].append(("objr", len(self.pages) - 1, len(links)))
+        links.append((x, y, x + w, y + h, uri, el))
 
     def heading(self, s, size=14):
         self.need(size + 30)
         self.y -= 12
+        self.begin("H2")
         self.text(self.m, self.y - size, "F2", size, pdf_ascii(s))
+        self.end()
         self.y -= size + 6
         self.hline(self.m, self.w - self.m, self.y)
         self.y -= 10
 
     def para(self, s, font="F1", size=10, color=COLORS["text"], indent=0.0, gap=3.0):
         lead = size * 1.32
+        self.begin("P")
         for line in wrap(s, font, size, self.w - 2 * self.m - indent):
             self.need(lead)
             self.text(self.m + indent, self.y - size, font, size, line, color)
             self.y -= lead
+        self.end()
         self.y -= gap
 
     def linked(self, segments, size=9, color=COLORS["text"]):
@@ -842,6 +1090,7 @@ class PDF:
         lead = size * 1.35
         width = self.w - 2 * self.m
         x = None
+        self.begin("P")
         for seg in segments:
             text, url, keep = seg[0], seg[1], (len(seg) > 2 and seg[2])
             whole = url is not None or keep
@@ -853,10 +1102,14 @@ class PDF:
                     self.need(lead)
                     self.y -= lead
                     x = self.m
+                if url:
+                    self.begin("Link", alt=url)
                 self.text(x, self.y + lead - size - 1, "F1", size, piece, COLORS["info"] if url else color)
                 if url:
                     self.link(x, self.y + lead - size - 3, w, size + 3, url)
+                    self.end()
                 x += w
+        self.end()
         self.y -= 4
 
     def item(self, level, title, msg, sub, url=None):
@@ -871,18 +1124,29 @@ class PDF:
         self.rect(self.m, top - height + 2, self.w - 2 * self.m, height - 2, COLORS["panel"])
         self.rect(self.m, top - height + 2, 3.5, height - 2, COLORS.get(level, COLORS["muted"]))
         x = self.m + 12
+        self.begin("H3")
         self.text(x, top - 12, "F2", 8.5, pdf_ascii(title), COLORS.get(level, COLORS["muted"]))
+        self.end()
         y = top - 15
+        self.begin("P")
         for line in mlines:
             self.text(x, y - size, "F1", size, line)
             y -= lead
-        for line in slines:
-            self.text(x, y - 8.5, "F1", 8.5, line, COLORS["muted"])
-            y -= 11
+        self.end()
+        if slines:
+            self.begin("P")
+            for line in slines:
+                self.text(x, y - 8.5, "F1", 8.5, line, COLORS["muted"])
+                y -= 11
+            self.end()
         if url:
             s = pdf_ascii(url)
+            self.begin("P")
+            self.begin("Link", alt="What to do: " + url)
             self.text(x, y - 8.5, "F1", 8.5, s, COLORS["info"])
             self.link(x, y - 10, text_width(s, "F1", 8.5), 11, url)
+            self.end()
+            self.end()
         self.y = top - height - 4
 
     def table(self, headers, rows, widths, aligns):
@@ -891,6 +1155,7 @@ class PDF:
         size, lead = 8.5, 11.0
 
         def draw_row(cells, font, fill=None):
+            self.begin("TR")
             wrapped = [wrap(c, font, size, w - 8) for c, w in zip(cells, widths)]
             hgt = max(len(c) for c in wrapped) * lead + 6
             self.need(hgt)
@@ -898,33 +1163,51 @@ class PDF:
                 self.rect(self.m, self.y - hgt, sum(widths), hgt, fill)
             x = self.m
             for lines, w, al in zip(wrapped, widths, aligns):
+                if fill:
+                    self.begin("TH", scope="Column")
+                else:
+                    self.begin("TD")
                 yy = self.y - 3 - size
                 for line in lines:
                     tx = x + w - 4 - text_width(line, font, size) if al == "r" else x + 4
                     self.text(tx, yy, font, size, line)
                     yy -= lead
+                self.end()
                 x += w
             self.y -= hgt
             self.hline(self.m, self.m + sum(widths), self.y)
+            self.end()
 
+        self.begin("Table")
         draw_row(headers, "F2", COLORS["panel"])
         for r in rows:
             draw_row(r, "F1")
+        self.end()
         self.y -= 8
 
     def build(self, meta=None):
         n = len(self.pages)
         for i, p in enumerate(self.pages, 1):
             foot = "%s  |  page %d of %d" % (pdf_ascii(self.title), i, n)
-            p["ops"].append("BT %.3f %.3f %.3f rg /F1 8 Tf %.2f %.2f Td %s Tj ET" % (COLORS["muted"] + (self.m, 28, pdf_str(foot))))
+            p["ops"].append("/Artifact << /Type /Pagination >> BDC BT %.3f %.3f %.3f rg /F1 8 Tf %.2f %.2f Td %s Tj ET EMC" % (
+                COLORS["muted"] + (self.m, 28, pdf_str(foot))))
+            fp = {"tag": "P", "kids": [], "attrs": {}}
+            self.root["kids"].append(fp)
             parts = [("privacysafe.app", HOME_URL), ("  |  ", None), (HELP, "mailto:" + HELP), ("  |  ", None),
                      (CONTACT, "mailto:" + CONTACT)]
             x = self.w - self.m - sum(text_width(t, "F1", 8) for t, _ in parts)
             for t, url in parts:
                 tw = text_width(t, "F1", 8)
-                p["ops"].append("BT %.3f %.3f %.3f rg /F1 8 Tf %.2f %.2f Td %s Tj ET" % (COLORS["muted"] + (x, 28, pdf_str(t))))
                 if url:
-                    p["links"].append((x, 25, x + tw, 37, url))
+                    le = {"tag": "Link", "kids": [], "attrs": {"alt": t}}
+                    fp["kids"].append(le)
+                    mc = len(p["marks"]); p["marks"].append(le); le["kids"].append(("mcr", i - 1, mc))
+                    le["kids"].append(("objr", i - 1, len(p["links"])))
+                    p["ops"].append("/Link << /MCID %d >> BDC BT %.3f %.3f %.3f rg /F1 8 Tf %.2f %.2f Td %s Tj ET EMC" % (
+                        (mc,) + COLORS["muted"] + (x, 28, pdf_str(t))))
+                    p["links"].append((x, 25, x + tw, 37, url, le))
+                else:
+                    p["ops"].append("/Artifact BMC BT %.3f %.3f %.3f rg /F1 8 Tf %.2f %.2f Td %s Tj ET EMC" % (COLORS["muted"] + (x, 28, pdf_str(t))))
                 x += tw
         objs = []
 
@@ -948,16 +1231,58 @@ class PDF:
         res = "<< /Font << %s >>%s >>" % (" ".join("/%s %d 0 R" % (k, v) for k, v in fonts.items()),
                                           (" /Shading << %s >>" % " ".join(shadings)) if shadings else "")
         kids = []
-        for p in self.pages:
+        annot_id = {}            # (page index, link index) -> object number
+        annot_parent = []        # (StructParent key, Link element), after the page keys
+        for pi, p in enumerate(self.pages):
             data = zlib.compress("\n".join(p["ops"]).encode("latin-1"))
             cid = add(b"<< /Length %d /Filter /FlateDecode >>\nstream\n" % len(data) + data + b"\nendstream")
             annots = []
-            for (x1, y1, x2, y2, uri) in p["links"]:
-                annots.append(add(("<< /Type /Annot /Subtype /Link /Rect [%.2f %.2f %.2f %.2f] /Border [0 0 0] "
-                                   "/A << /S /URI /URI %s >> >>" % (x1, y1, x2, y2, pdf_str(pdf_ascii(uri)))).encode("latin-1")))
+            for li, (x1, y1, x2, y2, uri, el) in enumerate(p["links"]):
+                key = len(self.pages) + len(annot_parent)
+                a = add(("<< /Type /Annot /Subtype /Link /Rect [%.2f %.2f %.2f %.2f] /Border [0 0 0] /StructParent %d "
+                         "/Contents %s /A << /S /URI /URI %s >> >>" % (x1, y1, x2, y2, key, pdf_str(pdf_ascii(el["attrs"].get("alt") or uri)),
+                                                                     pdf_str(pdf_ascii(uri)))).encode("latin-1"))
+                annots.append(a); annot_id[(pi, li)] = a; annot_parent.append((key, el))
             ann = " /Annots [%s]" % " ".join("%d 0 R" % a for a in annots) if annots else ""
-            kids.append(add(("<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %.2f %.2f] /Resources %s /Contents %d 0 R%s >>" % (
-                pages_id, self.w, self.h, res, cid, ann)).encode("latin-1")))
+            kids.append(add(("<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %.2f %.2f] /Resources %s /Contents %d 0 R%s "
+                             "/StructParents %d /Tabs /S >>" % (pages_id, self.w, self.h, res, cid, ann, pi)).encode("latin-1")))
+        # the structure tree: an object for every element, then the parent tree that maps content back to them
+        tree_root = add(b"")
+        ids = {}
+        def number(el):
+            ids[id(el)] = add(b"")
+            for k in el["kids"]:
+                if isinstance(k, dict):
+                    number(k)
+        number(self.root)
+        def write(el, parent):
+            parts = []
+            for k in el["kids"]:
+                if isinstance(k, dict):
+                    parts.append("%d 0 R" % ids[id(k)])
+                elif k[0] == "mcr":
+                    parts.append("<< /Type /MCR /Pg %d 0 R /MCID %d >>" % (kids[k[1]], k[2]))
+                else:
+                    parts.append("<< /Type /OBJR /Obj %d 0 R /Pg %d 0 R >>" % (annot_id[(k[1], k[2])], kids[k[1]]))
+            extra = ""
+            if el["attrs"].get("alt"):
+                extra += " /Alt %s" % pdf_str(pdf_ascii(el["attrs"]["alt"]))
+            if el["attrs"].get("scope"):
+                extra += " /A << /O /Table /Scope /%s >>" % el["attrs"]["scope"]
+            objs[ids[id(el)] - 1] = ("<< /Type /StructElem /S /%s /P %d 0 R /K [%s]%s >>" % (
+                el["tag"], parent, " ".join(parts), extra)).encode("latin-1")
+            for k in el["kids"]:
+                if isinstance(k, dict):
+                    write(k, ids[id(el)])
+        write(self.root, tree_root)
+        nums = []
+        for pi, p in enumerate(self.pages):
+            nums.append("%d [%s]" % (pi, " ".join("%d 0 R" % ids[id(e)] for e in p["marks"])))
+        for key, el in annot_parent:
+            nums.append("%d %d 0 R" % (key, ids[id(el)]))
+        ptree = add(("<< /Nums [%s] >>" % " ".join(nums)).encode("latin-1"))
+        objs[tree_root - 1] = ("<< /Type /StructTreeRoot /K %d 0 R /ParentTree %d 0 R /ParentTreeNextKey %d >>" % (
+            ids[id(self.root)], ptree, len(self.pages) + len(annot_parent))).encode("latin-1")
         objs[pages_id - 1] = ("<< /Type /Pages /Kids [%s] /Count %d >>" % (" ".join("%d 0 R" % k for k in kids), len(kids))).encode()
         meta = meta or {}
         now = report_time()
@@ -990,11 +1315,11 @@ class PDF:
             iso, iso, iso, x(fields["Producer"]), x(fields["Keywords"]), x(HOME_URL))
         xb = xmp.encode("utf-8")
         mid = add(b"<< /Type /Metadata /Subtype /XML /Length %d >>\nstream\n" % len(xb) + xb + b"\nendstream")
-        objs[catalog - 1] = ("<< /Type /Catalog /Pages %d 0 R /Metadata %d 0 R /Lang (en-US) "
-                             "/ViewerPreferences << /DisplayDocTitle true >> >>" % (pages_id, mid)).encode()
+        objs[catalog - 1] = ("<< /Type /Catalog /Pages %d 0 R /Metadata %d 0 R /Lang (en-US) /MarkInfo << /Marked true >> "
+                             "/StructTreeRoot %d 0 R /ViewerPreferences << /DisplayDocTitle true >> >>" % (pages_id, mid, tree_root)).encode()
         info = add(("<< %s /CreationDate (%s) /ModDate (%s) >>" % (
             " ".join("/%s %s" % (k, pdf_str(pdf_ascii(v))) for k, v in fields.items()), stamp, stamp)).encode("latin-1"))
-        out = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+        out = bytearray(b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n")
         offs = []
         for i, b in enumerate(objs, 1):
             offs.append(len(out))
@@ -1035,6 +1360,12 @@ def render_pdf(runs, title, details, paper):
             sub.append("path " + r["path"])
         url = r.get("fix") if str(r.get("fix", "")).startswith(("https://", "http://")) else None
         d.item(r["level"], title_s, r["msg"], "; ".join(sub), url)
+    acc = accepted_items(runs)
+    if acc:
+        d.para("Accepted risks (%d), listed in %s and not counted as needing attention:" % (len(acc), ACCEPT["source"]))
+        for run, r in acc:
+            d.item("info", "Accepted  |  %s %s on %s" % (run["tool"], run["command"], run["host"]), r["msg"],
+                   "Reason: " + r["accepted"] + (("; CVE: " + ", ".join(r["cve"])) if r.get("cve") else ""), None)
     idx = cve_index(runs)
     if idx:
         d.heading("CVEs behind the findings")
@@ -1082,7 +1413,7 @@ def usage():
 
 def main(argv):
     refuse_untrusted_root([__file__])
-    fmt, out, title, paper, details, fail_on, paths = "summary", None, "Security check report", "letter", True, None, []
+    fmt, out, title, paper, details, fail_on, paths, accept = "summary", None, "Security check report", "letter", True, None, [], None
     i = 1
     while i < len(argv):
         a = argv[i]
@@ -1092,21 +1423,23 @@ def main(argv):
         if a in ("-V", "--version"):
             print("%s %s (%s)" % (NAME, VERSION, DATE))
             return 0
-        if a in ("--format", "--out", "--title", "--paper", "--fail-on"):
+        if a in ("--format", "--out", "--title", "--paper", "--fail-on", "--accept"):
             if i + 1 >= len(argv):
                 print("%s needs a value" % a, file=sys.stderr)
                 return 2
             v = argv[i + 1]
             i += 2
             if a == "--format":
-                if v not in ("summary", "text", "md", "html", "pdf", "jsonl"):
-                    print("--format: summary, text, md, html, pdf or jsonl", file=sys.stderr)
+                if v not in ("summary", "text", "md", "html", "pdf", "jsonl", "ecs"):
+                    print("--format: summary, text, md, html, pdf, jsonl or ecs", file=sys.stderr)
                     return 2
                 fmt = v
             elif a == "--out":
                 out = v
             elif a == "--title":
                 title = v
+            elif a == "--accept":
+                accept = v
             elif a == "--paper":
                 if v not in ("letter", "a4"):
                     print("--paper: letter or a4", file=sys.stderr)
@@ -1129,6 +1462,12 @@ def main(argv):
         i += 1
     root_note("psf-report only reads records and writes a report, and needs root only for records readable by root "
               "alone; for other records, run it as a regular account")
+    if accept:
+        try:
+            load_accepted(accept)
+        except ConfigError as e:
+            print("--accept: %s" % e, file=sys.stderr)
+            return 2
     try:
         runs, skipped = read_inputs([p for p in paths if p != "-"])
     except OSError as e:
@@ -1143,6 +1482,8 @@ def main(argv):
         data = render_pdf(runs, title, details, paper)
     elif fmt == "jsonl":
         data = "".join(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n" for run in runs for r in run["records"]).encode()
+    elif fmt == "ecs":
+        data = render_ecs(runs)
     else:
         data = {"summary": render_summary, "text": render_text, "md": render_md, "html": render_html}[fmt](runs, title, details).encode("utf-8")
     if out:
